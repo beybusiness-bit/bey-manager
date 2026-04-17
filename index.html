@@ -2367,10 +2367,10 @@
         
         if (isEditing) {
           html += '    <div class="category-card-emoji">';
-          html += '      <input type="text" value="' + category.emoji + '" readonly onclick="event.stopPropagation(); openEmojiPicker(\'' + category.emoji + '\', function(emoji) { updateCategoryEmoji(\'' + category.id + '\', emoji); document.querySelector(\\'.category-card.editing .category-card-emoji input\\').value = emoji; })">';
+          html += '      <input type="text" value="' + category.emoji + '" readonly onclick="event.stopPropagation(); openEmojiPicker(&apos;' + category.emoji + '&apos;, function(emoji) { updateCategoryEmoji(&apos;' + category.id + '&apos;, emoji); document.querySelector(&apos;.category-card.editing .category-card-emoji input&apos;).value = emoji; })">';
           html += '    </div>';
           html += '    <div class="category-card-name">';
-          html += '      <input type="text" value="' + category.name + '" oninput="updateCategoryName(\'' + category.id + '\', this.value)" onkeydown="if(event.key===\'Enter\') saveCategoryInline(\'' + category.id + '\'); if(event.key===\'Escape\') cancelCategoryInline(\'' + category.id + '\')" placeholder="카테고리 이름">';
+          html += '      <input type="text" value="' + category.name + '" oninput="updateCategoryName(&apos;' + category.id + '&apos;, this.value)" onkeydown="if(event.key===&apos;Enter&apos;) saveCategoryInline(&apos;' + category.id + '&apos;); if(event.key===&apos;Escape&apos;) cancelCategoryInline(&apos;' + category.id + '&apos;)" placeholder="카테고리 이름">';
           html += '    </div>';
         } else {
           html += '    <div class="category-card-emoji">' + category.emoji + '</div>';
@@ -2585,10 +2585,10 @@
         
         if (isEditing) {
           html += '  <div class="activity-card-emoji">';
-          html += '    <input type="text" value="' + activity.emoji + '" readonly onclick="event.stopPropagation(); openEmojiPicker(\'' + activity.emoji + '\', function(emoji) { updateActivityEmoji(\'' + activity.id + '\', emoji); document.querySelector(\\'.activity-card.editing .activity-card-emoji input\\').value = emoji; })">';
+          html += '    <input type="text" value="' + activity.emoji + '" readonly onclick="event.stopPropagation(); openEmojiPicker(&apos;' + activity.emoji + '&apos;, function(emoji) { updateActivityEmoji(&apos;' + activity.id + '&apos;, emoji); document.querySelector(&apos;.activity-card.editing .activity-card-emoji input&apos;).value = emoji; })">';
           html += '  </div>';
           html += '  <div class="activity-card-name">';
-          html += '    <input type="text" value="' + activity.name + '" oninput="updateActivityName(\'' + activity.id + '\', this.value)" onkeydown="if(event.key===\'Enter\') saveActivityInline(\'' + activity.id + '\'); if(event.key===\'Escape\') cancelActivityInline(\'' + activity.id + '\')" placeholder="일상 이름">';
+          html += '    <input type="text" value="' + activity.name + '" oninput="updateActivityName(&apos;' + activity.id + '&apos;, this.value)" onkeydown="if(event.key===&apos;Enter&apos;) saveActivityInline(&apos;' + activity.id + '&apos;); if(event.key===&apos;Escape&apos;) cancelActivityInline(&apos;' + activity.id + '&apos;)" placeholder="일상 이름">';
           html += '  </div>';
         } else {
           html += '  <div class="activity-card-emoji">' + activity.emoji + '</div>';
