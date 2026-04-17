@@ -455,6 +455,48 @@
     .logo-wrap {
       padding: 20px 20px 20px 24px;
       border-bottom: 1px solid var(--border-color);
+      text-align: center;
+    }
+
+    .profile-section {
+      margin-bottom: 16px;
+    }
+
+    .profile-photo-wrap {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 12px;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .profile-photo {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--primary-yellow);
+      background: var(--bg-hover);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+    }
+
+    .profile-photo img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .profile-quote {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-style: italic;
+      margin-bottom: 12px;
+      line-height: 1.4;
+      padding: 0 8px;
     }
 
     .logo {
@@ -626,6 +668,11 @@
 
     .page-header {
       margin-bottom: 24px;
+      padding-left: 60px;
+    }
+
+    .sidebar.collapsed ~ .main-content .page-header {
+      padding-left: 0;
     }
 
     .page-header h2 {
@@ -1072,6 +1119,94 @@
       font-family: inherit;
     }
 
+
+    /* 설정 페이지 섹션 */
+    .settings-menu {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .settings-menu-item {
+      background: var(--bg-card);
+      border: 2px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .settings-menu-item:hover {
+      border-color: var(--primary-yellow);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .settings-menu-item.active {
+      border-color: var(--primary-yellow);
+      background: #fffef5;
+    }
+
+    .settings-menu-item-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    .settings-menu-item-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .settings-detail {
+      display: none;
+    }
+
+    .settings-detail.active {
+      display: block;
+      animation: fadeIn 0.3s;
+    }
+
+    .profile-upload-area {
+      border: 2px dashed var(--border-color);
+      border-radius: 12px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 16px;
+    }
+
+    .profile-upload-area:hover {
+      border-color: var(--primary-yellow);
+      background: var(--bg-hover);
+    }
+
+    .profile-upload-area input {
+      display: none;
+    }
+
+    .profile-preview {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 16px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 3px solid var(--primary-yellow);
+      background: var(--bg-hover);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+    }
+
+    .profile-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
     /* 반응형 */
     @media (max-width: 768px) {
       .main-content {
@@ -1189,6 +1324,14 @@
     <!-- 사이드바 -->
     <aside class="sidebar" id="sidebar">
       <div class="logo-wrap">
+        <div class="profile-section">
+          <div class="profile-photo-wrap" onclick="openProfileSettings()">
+            <div class="profile-photo" id="sidebarProfilePhoto">
+              👤
+            </div>
+          </div>
+          <div class="profile-quote" id="sidebarProfileQuote">오늘도 화이팅! ✨</div>
+        </div>
         <div class="logo">베이 관리자</div>
         <div class="logo-sub">baekeun0@gmail.com</div>
       </div>
@@ -1361,13 +1504,82 @@
           <p>앱 설정</p>
         </div>
 
-        <div class="card settings-section">
-          <h3>메뉴 관리</h3>
+        <!-- 설정 메뉴 -->
+        <div class="settings-menu">
+          <div class="settings-menu-item" onclick="showSettingsSection('profile')">
+            <div class="settings-menu-item-icon">👤</div>
+            <div class="settings-menu-item-title">프로필 설정</div>
+          </div>
+          <div class="settings-menu-item" onclick="showSettingsSection('menu')">
+            <div class="settings-menu-item-icon">📋</div>
+            <div class="settings-menu-item-title">메뉴 관리</div>
+          </div>
+          <div class="settings-menu-item" onclick="showSettingsSection('account')">
+            <div class="settings-menu-item-icon">🔐</div>
+            <div class="settings-menu-item-title">계정 설정</div>
+          </div>
+        </div>
+
+        <!-- 프로필 설정 섹션 -->
+        <div id="settingsProfileSection" class="settings-detail card">
+          <h3>👤 프로필 설정</h3>
+          
+          <div class="profile-upload-area" onclick="document.getElementById('profilePhotoInput').click()">
+            <div class="profile-preview" id="profilePreview">
+              👤
+            </div>
+            <input type="file" id="profilePhotoInput" accept="image/*" onchange="handleProfilePhotoUpload(event)">
+            <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 8px;">
+              클릭하여 프로필 사진 업로드
+            </p>
+            <p style="font-size: 12px; color: var(--text-tertiary);">
+              권장 크기: 500x500px 이상
+            </p>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">한마디</label>
+            <input type="text" id="profileQuoteInput" placeholder="오늘도 화이팅! ✨" style="width: 100%; max-width: 500px; padding: 10px 14px; border: 2px solid var(--border-color); border-radius: 8px; font-size: 14px;">
+          </div>
+
+          <button class="btn-primary" style="width: auto; padding: 10px 24px;" onclick="saveProfile()">저장</button>
+        </div>
+
+        <!-- 메뉴 관리 섹션 -->
+        <div id="settingsMenuSection" class="settings-detail card">
+          <h3>📋 메뉴 관리</h3>
           <div class="info-box">
             💡 메뉴의 추가와 페이지 내용 변경은 클로드와 상의하세요
           </div>
           <div id="menuManager">
             <!-- 동적으로 생성 -->
+          </div>
+        </div>
+
+        <!-- 계정 설정 섹션 -->
+        <div id="settingsAccountSection" class="settings-detail card">
+          <h3>🔐 계정 설정</h3>
+          
+          <div style="margin-bottom: 24px;">
+            <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">이메일</label>
+            <input type="email" value="baekeun0@gmail.com" readonly style="width: 100%; max-width: 400px; padding: 10px 14px; border: 2px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--bg-hover);">
+          </div>
+
+          <div style="margin-bottom: 24px;">
+            <h4 style="font-size: 16px; margin-bottom: 12px;">비밀번호 변경</h4>
+            <div style="margin-bottom: 12px;">
+              <label style="display: block; font-size: 13px; margin-bottom: 6px;">현재 비밀번호</label>
+              <input type="password" id="currentPassword" placeholder="현재 비밀번호" style="width: 100%; max-width: 400px; padding: 10px 14px; border: 2px solid var(--border-color); border-radius: 8px; font-size: 14px;">
+            </div>
+            <div style="margin-bottom: 12px;">
+              <label style="display: block; font-size: 13px; margin-bottom: 6px;">새 비밀번호</label>
+              <input type="password" id="newPassword" placeholder="새 비밀번호" style="width: 100%; max-width: 400px; padding: 10px 14px; border: 2px solid var(--border-color); border-radius: 8px; font-size: 14px;">
+            </div>
+            <div style="margin-bottom: 12px;">
+              <label style="display: block; font-size: 13px; margin-bottom: 6px;">새 비밀번호 확인</label>
+              <input type="password" id="newPasswordConfirm" placeholder="새 비밀번호 확인" style="width: 100%; max-width: 400px; padding: 10px 14px; border: 2px solid var(--border-color); border-radius: 8px; font-size: 14px;">
+            </div>
+            <button class="btn-primary" style="width: auto; padding: 10px 24px;" onclick="changePassword()">비밀번호 변경</button>
           </div>
         </div>
       </div>
@@ -1526,8 +1738,8 @@
       const modalError = document.getElementById('modalError');
       
       if (emailInput.value === AUTH.USER_EMAIL) {
-        showAlert('비밀번호 전송', '비밀번호가 ' + AUTH.USER_EMAIL + '로 전송되었습니다.\n비밀번호: ' + AUTH.PASSWORD);
         closeForgotPasswordModal();
+        showAlert('비밀번호 전송', '비밀번호가 ' + AUTH.USER_EMAIL + '로 전송되었습니다.\n\n실제 이메일 발송은 SMTP 서버 설정이 필요하므로,\n현재는 시뮬레이션으로 표시됩니다.\n\n비밀번호: ' + AUTH.PASSWORD);
       } else {
         modalError.textContent = '인증 이메일이 올바르지 않습니다.';
         modalError.classList.add('show');
@@ -1668,45 +1880,188 @@
       }
       
       const EMOJI_KEYWORDS = {
-        '😀': ['웃음', 'smile', 'happy'],
-        '😃': ['웃음', 'smile', 'happy'],
-        '😄': ['웃음', 'smile', 'happy'],
-        '😁': ['웃음', 'grin', 'happy'],
-        '😆': ['웃음', 'laugh'],
-        '😅': ['웃음', 'sweat', 'laugh'],
-        '🤣': ['웃음', 'laugh', 'rofl'],
-        '😂': ['웃음', 'laugh', 'tears'],
-        '❤️': ['하트', 'heart', 'love'],
-        '🧡': ['하트', 'heart', 'orange'],
-        '💛': ['하트', 'heart', 'yellow'],
-        '💚': ['하트', 'heart', 'green'],
-        '💙': ['하트', 'heart', 'blue'],
-        '💜': ['하트', 'heart', 'purple'],
-        '👋': ['손', 'hand', 'wave'],
-        '👍': ['손', 'hand', 'thumbs', 'good'],
-        '👎': ['손', 'hand', 'thumbs', 'bad'],
-        '✊': ['손', 'hand', 'fist'],
-        '👊': ['손', 'hand', 'fist'],
-        '💼': ['업무', 'work', 'briefcase'],
-        '📁': ['폴더', 'folder'],
-        '📂': ['폴더', 'folder', 'open'],
-        '📅': ['달력', 'calendar'],
-        '📆': ['달력', 'calendar'],
+        '😀': ['웃음', 'smile', 'happy', 'grin'],
+        '😃': ['웃음', 'smile', 'happy', 'smiley'],
+        '😄': ['웃음', 'smile', 'happy', 'laugh'],
+        '😁': ['웃음', 'grin', 'happy', 'teeth'],
+        '😆': ['웃음', 'laugh', 'satisfied'],
+        '😅': ['웃음', 'sweat', 'laugh', 'relief'],
+        '🤣': ['웃음', 'laugh', 'rofl', 'rolling'],
+        '😂': ['웃음', 'laugh', 'tears', 'joy'],
+        '🙂': ['미소', 'smile', 'slight'],
+        '🙃': ['거꾸로', 'upside', 'down'],
+        '😉': ['윙크', 'wink', 'flirt'],
+        '😊': ['미소', 'blush', 'smile', 'happy'],
+        '😇': ['천사', 'angel', 'halo', 'innocent'],
+        '❤️': ['하트', 'heart', 'love', 'red'],
+        '🧡': ['하트', 'heart', 'orange', 'love'],
+        '💛': ['하트', 'heart', 'yellow', 'love'],
+        '💚': ['하트', 'heart', 'green', 'love'],
+        '💙': ['하트', 'heart', 'blue', 'love'],
+        '💜': ['하트', 'heart', 'purple', 'love'],
+        '🖤': ['하트', 'heart', 'black', 'love'],
+        '🤍': ['하트', 'heart', 'white', 'love'],
+        '🤎': ['하트', 'heart', 'brown', 'love'],
+        '💔': ['하트', 'heart', 'broken', 'break'],
+        '❣️': ['하트', 'heart', 'exclamation'],
+        '💕': ['하트', 'heart', 'love', 'two'],
+        '💞': ['하트', 'heart', 'revolving'],
+        '💓': ['하트', 'heart', 'beating'],
+        '💗': ['하트', 'heart', 'growing'],
+        '💖': ['하트', 'heart', 'sparkling'],
+        '💘': ['하트', 'heart', 'arrow', 'cupid'],
+        '💝': ['하트', 'heart', 'gift', 'box'],
+        '👋': ['손', 'hand', 'wave', 'hi', 'hello', 'bye'],
+        '🤚': ['손', 'hand', 'raised', 'back'],
+        '✋': ['손', 'hand', 'stop', 'high', 'five'],
+        '👌': ['손', 'hand', 'ok', 'okay', 'good'],
+        '✌️': ['손', 'hand', 'peace', 'victory'],
+        '🤞': ['손', 'hand', 'fingers', 'crossed', 'luck'],
+        '👍': ['손', 'hand', 'thumbs', 'up', 'good', 'like', 'yes'],
+        '👎': ['손', 'hand', 'thumbs', 'down', 'bad', 'dislike', 'no'],
+        '✊': ['손', 'hand', 'fist', 'punch'],
+        '👊': ['손', 'hand', 'fist', 'bump', 'punch'],
+        '🙏': ['손', 'hand', 'pray', 'thank', 'please'],
+        '💼': ['업무', 'work', 'briefcase', 'business', 'office'],
+        '📁': ['폴더', 'folder', 'file', 'directory'],
+        '📂': ['폴더', 'folder', 'open', 'file'],
+        '📅': ['달력', 'calendar', 'date', 'schedule'],
+        '📆': ['달력', 'calendar', 'date', 'tear'],
+        '📋': ['클립보드', 'clipboard', 'list', 'memo'],
+        '📌': ['핀', 'pin', 'pushpin', 'tack'],
+        '📍': ['핀', 'pin', 'location', 'map'],
         '🏠': ['집', 'home', 'house'],
-        '🏡': ['집', 'home', 'house'],
-        '🍔': ['음식', 'food', 'burger'],
+        '🏡': ['집', 'home', 'house', 'garden'],
+        '🏢': ['건물', 'building', 'office', 'work'],
+        '🏥': ['병원', 'hospital', 'medical', 'doctor'],
+        '🏦': ['은행', 'bank', 'money'],
+        '🏪': ['가게', 'store', 'shop', 'convenience'],
+        '🏫': ['학교', 'school', 'education'],
+        '🍔': ['음식', 'food', 'burger', 'hamburger'],
+        '🍟': ['음식', 'food', 'fries', 'french'],
         '🍕': ['음식', 'food', 'pizza'],
-        '⚽': ['운동', 'sport', 'soccer'],
-        '🏀': ['운동', 'sport', 'basketball'],
-        '🎨': ['취미', 'hobby', 'art'],
-        '📚': ['학습', 'study', 'book'],
-        '🌳': ['자연', 'nature', 'tree'],
-        '🚗': ['교통', 'car', 'transport'],
-        '⏰': ['시간', 'time', 'clock'],
-        '🎮': ['게임', 'game'],
-        '🔧': ['도구', 'tool'],
-        '⚠️': ['경고', 'warning']
-      };
+        '🌭': ['음식', 'food', 'hotdog'],
+        '🥪': ['음식', 'food', 'sandwich'],
+        '🌮': ['음식', 'food', 'taco'],
+        '🌯': ['음식', 'food', 'burrito'],
+        '🍳': ['음식', 'food', 'egg', 'cook', 'fry'],
+        '🥘': ['음식', 'food', 'pan', 'shallow'],
+        '🍲': ['음식', 'food', 'pot', 'stew'],
+        '🍱': ['음식', 'food', 'bento', 'box', 'lunch'],
+        '🍜': ['음식', 'food', 'ramen', 'noodle'],
+        '🍝': ['음식', 'food', 'spaghetti', 'pasta'],
+        '🍚': ['음식', 'food', 'rice', 'cooked'],
+        '🍛': ['음식', 'food', 'curry', 'rice'],
+        '🍣': ['음식', 'food', 'sushi'],
+        '🍤': ['음식', 'food', 'shrimp', 'fried'],
+        '🍰': ['음식', 'food', 'cake', 'dessert'],
+        '🎂': ['음식', 'food', 'cake', 'birthday'],
+        '🍪': ['음식', 'food', 'cookie'],
+        '🍩': ['음식', 'food', 'donut', 'doughnut'],
+        '🍦': ['음식', 'food', 'ice', 'cream', 'soft'],
+        '🍧': ['음식', 'food', 'ice', 'shaved'],
+        '⚽': ['운동', 'sport', 'soccer', 'football', 'ball'],
+        '🏀': ['운동', 'sport', 'basketball', 'ball'],
+        '🏈': ['운동', 'sport', 'football', 'american'],
+        '⚾': ['운동', 'sport', 'baseball', 'ball'],
+        '🎾': ['운동', 'sport', 'tennis', 'ball'],
+        '🏐': ['운동', 'sport', 'volleyball', 'ball'],
+        '🏓': ['운동', 'sport', 'ping', 'pong', 'table', 'tennis'],
+        '🏸': ['운동', 'sport', 'badminton'],
+        '🏊': ['운동', 'sport', 'swim', 'swimming', 'pool'],
+        '🏃': ['운동', 'sport', 'run', 'running', 'jog'],
+        '🚴': ['운동', 'sport', 'bike', 'bicycle', 'cycling'],
+        '⛷️': ['운동', 'sport', 'ski', 'skiing', 'snow'],
+        '🏋️': ['운동', 'sport', 'weight', 'lifting', 'gym'],
+        '🧘': ['운동', 'sport', 'yoga', 'meditation'],
+        '🎨': ['취미', 'hobby', 'art', 'paint', 'palette'],
+        '🎭': ['취미', 'hobby', 'art', 'theater', 'drama'],
+        '🎬': ['취미', 'hobby', 'movie', 'film', 'cinema'],
+        '🎤': ['취미', 'hobby', 'music', 'mic', 'microphone', 'sing'],
+        '🎧': ['취미', 'hobby', 'music', 'headphone', 'listen'],
+        '🎸': ['취미', 'hobby', 'music', 'guitar'],
+        '🎹': ['취미', 'hobby', 'music', 'piano', 'keyboard'],
+        '🎮': ['게임', 'game', 'play', 'video', 'controller'],
+        '🎯': ['취미', 'hobby', 'dart', 'target', 'bullseye'],
+        '🎲': ['게임', 'game', 'dice', 'play'],
+        '🎰': ['게임', 'game', 'slot', 'machine', 'casino'],
+        '📚': ['학습', 'study', 'book', 'books', 'library', 'read'],
+        '📖': ['학습', 'study', 'book', 'open', 'read'],
+        '📝': ['학습', 'study', 'memo', 'note', 'write'],
+        '📓': ['학습', 'study', 'notebook'],
+        '📔': ['학습', 'study', 'notebook', 'decorative'],
+        '📒': ['학습', 'study', 'ledger'],
+        '✏️': ['학습', 'study', 'pencil', 'write'],
+        '✒️': ['학습', 'study', 'pen', 'write'],
+        '🖊️': ['학습', 'study', 'pen', 'write'],
+        '🖋️': ['학습', 'study', 'pen', 'fountain'],
+        '🌳': ['자연', 'nature', 'tree', 'plant'],
+        '🌲': ['자연', 'nature', 'tree', 'evergreen'],
+        '🌱': ['자연', 'nature', 'plant', 'seedling', 'sprout'],
+        '🌿': ['자연', 'nature', 'plant', 'herb', 'leaf'],
+        '🍀': ['자연', 'nature', 'plant', 'clover', 'four', 'leaf', 'luck'],
+        '🌸': ['자연', 'nature', 'flower', 'cherry', 'blossom'],
+        '🌺': ['자연', 'nature', 'flower', 'hibiscus'],
+        '🌻': ['자연', 'nature', 'flower', 'sunflower'],
+        '🌹': ['자연', 'nature', 'flower', 'rose'],
+        '🌷': ['자연', 'nature', 'flower', 'tulip'],
+        '💐': ['자연', 'nature', 'flower', 'bouquet'],
+        '🌞': ['자연', 'nature', 'sun', 'face', 'sunny'],
+        '🌝': ['자연', 'nature', 'moon', 'face', 'full'],
+        '🌙': ['자연', 'nature', 'moon', 'crescent'],
+        '⭐': ['자연', 'nature', 'star'],
+        '🌟': ['자연', 'nature', 'star', 'glowing'],
+        '✨': ['자연', 'nature', 'sparkle', 'star'],
+        '⚡': ['자연', 'nature', 'lightning', 'bolt', 'zap'],
+        '🔥': ['자연', 'nature', 'fire', 'flame', 'hot'],
+        '🌈': ['자연', 'nature', 'rainbow'],
+        '☀️': ['자연', 'nature', 'sun', 'sunny', 'weather'],
+        '⛅': ['자연', 'nature', 'cloud', 'sun', 'weather'],
+        '☁️': ['자연', 'nature', 'cloud', 'weather'],
+        '🌧️': ['자연', 'nature', 'rain', 'weather'],
+        '⛈️': ['자연', 'nature', 'storm', 'thunder', 'weather'],
+        '❄️': ['자연', 'nature', 'snow', 'cold', 'winter'],
+        '🚗': ['교통', 'car', 'transport', 'vehicle', 'auto'],
+        '🚕': ['교통', 'car', 'taxi', 'transport'],
+        '🚙': ['교통', 'car', 'suv', 'transport'],
+        '🚌': ['교통', 'bus', 'transport', 'public'],
+        '🚎': ['교통', 'bus', 'trolley', 'transport'],
+        '🚐': ['교통', 'van', 'minibus', 'transport'],
+        '🚛': ['교통', 'truck', 'delivery', 'transport'],
+        '🚚': ['교통', 'truck', 'delivery', 'transport'],
+        '🚲': ['교통', 'bike', 'bicycle', 'cycle'],
+        '🛵': ['교통', 'scooter', 'motor'],
+        '🏍️': ['교통', 'motorcycle', 'bike'],
+        '🚇': ['교통', 'subway', 'metro', 'train'],
+        '🚆': ['교통', 'train', 'railway'],
+        '🚄': ['교통', 'train', 'bullet', 'speed'],
+        '✈️': ['교통', 'airplane', 'plane', 'flight', 'fly'],
+        '🚁': ['교통', 'helicopter', 'fly'],
+        '🚀': ['교통', 'rocket', 'space', 'launch'],
+        '⏰': ['시간', 'time', 'clock', 'alarm'],
+        '⏱️': ['시간', 'time', 'stopwatch', 'timer'],
+        '⏲️': ['시간', 'time', 'timer', 'clock'],
+        '⌚': ['시간', 'time', 'watch', 'clock'],
+        '🕐': ['시간', 'time', 'clock', 'one'],
+        '🕑': ['시간', 'time', 'clock', 'two'],
+        '🕒': ['시간', 'time', 'clock', 'three'],
+        '🔧': ['도구', 'tool', 'wrench', 'fix', 'repair'],
+        '🔨': ['도구', 'tool', 'hammer', 'fix'],
+        '⚒️': ['도구', 'tool', 'hammer', 'pick'],
+        '🛠️': ['도구', 'tool', 'hammer', 'wrench'],
+        '⚙️': ['도구', 'tool', 'gear', 'setting', 'config'],
+        '🔩': ['도구', 'tool', 'nut', 'bolt'],
+        '🪛': ['도구', 'tool', 'screwdriver'],
+        '🪚': ['도구', 'tool', 'saw', 'carpentry'],
+        '⚠️': ['경고', 'warning', 'caution', 'alert'],
+        '🚸': ['경고', 'warning', 'children', 'crossing'],
+        '⛔': ['경고', 'warning', 'no', 'entry', 'stop'],
+        '🚫': ['경고', 'warning', 'prohibited', 'no', 'ban'],
+        '❌': ['경고', 'warning', 'no', 'cross', 'x'],
+        '✅': ['확인', 'check', 'yes', 'correct', 'done'],
+        '☑️': ['확인', 'check', 'yes', 'box'],
+        '✔️': ['확인', 'check', 'yes', 'mark']
+      }
       
       let matched = [];
       Object.keys(EMOJI_DATA).forEach(function(cat) {
@@ -1791,6 +2146,7 @@
       loadSidebarState();
       loadCategories();
       loadActivities();
+      loadProfile();
       renderSidebar();
       renderMenuManager();
       updateActiveMenu();
@@ -2635,9 +2991,159 @@
     }
 
     // ========================================
+    // 프로필 관리
+    // ========================================
+    let profilePhoto = '';
+    let profileQuote = '오늘도 화이팅! ✨';
+    let currentSettingsSection = '';
+
+    function loadProfile() {
+      const savedPhoto = localStorage.getItem('profilePhoto');
+      const savedQuote = localStorage.getItem('profileQuote');
+      
+      if (savedPhoto) {
+        profilePhoto = savedPhoto;
+      }
+      if (savedQuote) {
+        profileQuote = savedQuote;
+      }
+      
+      updateProfileDisplay();
+    }
+
+    function updateProfileDisplay() {
+      const sidebarPhoto = document.getElementById('sidebarProfilePhoto');
+      const sidebarQuote = document.getElementById('sidebarProfileQuote');
+      
+      if (sidebarPhoto) {
+        if (profilePhoto) {
+          sidebarPhoto.innerHTML = '<img src="' + profilePhoto + '" alt="Profile">';
+        } else {
+          sidebarPhoto.innerHTML = '👤';
+        }
+      }
+      
+      if (sidebarQuote) {
+        sidebarQuote.textContent = profileQuote || '오늘도 화이팅! ✨';
+      }
+      
+      const preview = document.getElementById('profilePreview');
+      if (preview) {
+        if (profilePhoto) {
+          preview.innerHTML = '<img src="' + profilePhoto + '" alt="Profile">';
+        } else {
+          preview.innerHTML = '👤';
+        }
+      }
+      
+      const quoteInput = document.getElementById('profileQuoteInput');
+      if (quoteInput) {
+        quoteInput.value = profileQuote;
+      }
+    }
+
+    function handleProfilePhotoUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      if (!file.type.startsWith('image/')) {
+        showAlert('오류', '이미지 파일만 업로드 가능합니다.');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        profilePhoto = e.target.result;
+        updateProfileDisplay();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function saveProfile() {
+      const quoteInput = document.getElementById('profileQuoteInput');
+      if (quoteInput) {
+        profileQuote = quoteInput.value || '오늘도 화이팅! ✨';
+      }
+      
+      localStorage.setItem('profilePhoto', profilePhoto);
+      localStorage.setItem('profileQuote', profileQuote);
+      
+      updateProfileDisplay();
+      showAlert('저장 완료', '프로필이 저장되었습니다.');
+    }
+
+    function openProfileSettings() {
+      navigateTo('settings');
+      setTimeout(function() {
+        showSettingsSection('profile');
+      }, 100);
+    }
+
+    // ========================================
+    // 설정 페이지 섹션 관리
+    // ========================================
+    function showSettingsSection(sectionName) {
+      currentSettingsSection = sectionName;
+      
+      document.querySelectorAll('.settings-menu-item').forEach(function(item) {
+        item.classList.remove('active');
+      });
+      
+      document.querySelectorAll('.settings-detail').forEach(function(detail) {
+        detail.classList.remove('active');
+      });
+      
+      const menuItems = document.querySelectorAll('.settings-menu-item');
+      if (sectionName === 'profile' && menuItems[0]) {
+        menuItems[0].classList.add('active');
+        document.getElementById('settingsProfileSection').classList.add('active');
+      } else if (sectionName === 'menu' && menuItems[1]) {
+        menuItems[1].classList.add('active');
+        document.getElementById('settingsMenuSection').classList.add('active');
+      } else if (sectionName === 'account' && menuItems[2]) {
+        menuItems[2].classList.add('active');
+        document.getElementById('settingsAccountSection').classList.add('active');
+      }
+      
+      updateProfileDisplay();
+    }
+
+    function changePassword() {
+      const current = document.getElementById('currentPassword');
+      const newPwd = document.getElementById('newPassword');
+      const confirm = document.getElementById('newPasswordConfirm');
+      
+      if (!current || !newPwd || !confirm) return;
+      
+      if (current.value !== AUTH.PASSWORD) {
+        showAlert('오류', '현재 비밀번호가 올바르지 않습니다.');
+        return;
+      }
+      
+      if (newPwd.value.length < 6) {
+        showAlert('오류', '새 비밀번호는 6자 이상이어야 합니다.');
+        return;
+      }
+      
+      if (newPwd.value !== confirm.value) {
+        showAlert('오류', '새 비밀번호가 일치하지 않습니다.');
+        return;
+      }
+      
+      AUTH.PASSWORD = newPwd.value;
+      localStorage.setItem('userPassword', newPwd.value);
+      
+      current.value = '';
+      newPwd.value = '';
+      confirm.value = '';
+      
+      showAlert('변경 완료', '비밀번호가 변경되었습니다.');
+    }
+
+    // ========================================
     // 초기화
     // ========================================
-    console.log('베이 관리자 v1.4 로드 완료');
+    console.log('베이 관리자 v1.5 로드 완료');
     console.log('오늘 날짜:', today());
   </script>
 </body>
