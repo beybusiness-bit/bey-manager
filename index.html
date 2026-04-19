@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     * {
       margin: 0;
@@ -30,6 +31,7 @@
       --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
       --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
       --nav-width: 220px;
+      --button-radius: 8px;
     }
 
     body {
@@ -131,7 +133,7 @@
       padding: 14px;
       background: var(--primary-yellow);
       border: none;
-      border-radius: 8px;
+      border-radius: var(--button-radius);
       font-size: 16px;
       font-weight: 500;
       cursor: pointer;
@@ -240,7 +242,7 @@
     .modal-actions button {
       flex: 1;
       padding: 12px;
-      border-radius: 8px;
+      border-radius: var(--button-radius);
       font-size: 14px;
       font-weight: 500;
       cursor: pointer;
@@ -407,7 +409,7 @@
       display: block;
     }
 
-    /* 햄버거 버튼 */
+    /* 햄버거 버튼 - 항상 고정 위치 */
     .sidebar-toggle-btn {
       position: fixed;
       left: 16px;
@@ -416,7 +418,7 @@
       height: 40px;
       background: white;
       border: 1px solid var(--border-color);
-      border-radius: 8px;
+      border-radius: var(--button-radius);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -452,35 +454,67 @@
       border: none;
     }
 
+
+    /* X 버튼 - 사이드바 우측 상단에 고정 */
+    .sidebar-close-btn {
+      position: absolute;
+      right: 16px;
+      top: 16px;
+      width: 32px;
+      height: 32px;
+      background: transparent;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      transition: all 0.2s;
+    }
+
+    .sidebar-close-btn:hover {
+      color: var(--text-primary);
+      background: var(--bg-hover);
+      border-radius: 6px;
+    }
     .logo-wrap {
-      padding: 20px 20px 20px 24px;
+      padding: 60px 20px 20px 20px;
       border-bottom: 1px solid var(--border-color);
       text-align: center;
     }
 
-    .profile-section {
+    .logo {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
       margin-bottom: 16px;
     }
 
+    .profile-section {
+      margin-bottom: 0;
+    }
+
     .profile-photo-wrap {
-      width: 80px;
-      height: 80px;
+      width: 120px;
+      height: 120px;
       margin: 0 auto 12px;
       position: relative;
       cursor: pointer;
     }
 
     .profile-photo {
-      width: 80px;
-      height: 80px;
+      width: 120px;
+      height: 120px;
       border-radius: 50%;
       object-fit: cover;
-      border: 3px solid var(--primary-yellow);
+      border: 4px solid var(--primary-yellow);
       background: var(--bg-hover);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 32px;
+      font-size: 48px;
     }
 
     .profile-photo img {
@@ -494,7 +528,7 @@
       font-size: 12px;
       color: var(--text-secondary);
       font-style: italic;
-      margin-bottom: 12px;
+      margin-top: 8px;
       line-height: 1.4;
       padding: 0 8px;
     }
@@ -506,10 +540,10 @@
     }
 
     .logo-sub {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-tertiary);
       margin-top: 4px;
-      font-family: 'DM Mono', monospace;
+      word-break: break-all;
     }
 
     .sidebar-nav {
@@ -629,7 +663,7 @@
       padding: 10px;
       background: transparent;
       border: 1px solid var(--border-color);
-      border-radius: 6px;
+      border-radius: var(--button-radius);
       font-size: 14px;
       cursor: pointer;
       transition: all 0.2s;
@@ -748,7 +782,7 @@
       background: transparent;
       border: 1px solid var(--border-color);
       padding: 8px 12px;
-      border-radius: 6px;
+      border-radius: var(--button-radius);
       cursor: pointer;
       font-size: 14px;
       transition: all 0.2s;
@@ -806,7 +840,7 @@
       background: var(--primary-green);
       border: none;
       padding: 10px 16px;
-      border-radius: 6px;
+      border-radius: var(--button-radius);
       font-size: 14px;
       font-weight: 500;
       cursor: pointer;
@@ -1169,6 +1203,88 @@
       animation: fadeIn 0.3s;
     }
 
+    /* 디자인 설정 */
+    .design-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .design-row:last-child {
+      border-bottom: none;
+    }
+
+    .design-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+      min-width: 120px;
+      flex-shrink: 0;
+    }
+
+    .design-control {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .color-picker {
+      width: 60px;
+      height: 40px;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      cursor: pointer;
+      padding: 2px;
+      background: white;
+    }
+
+    .color-picker:hover {
+      border-color: var(--primary-yellow);
+    }
+
+    .design-slider {
+      flex: 1;
+      max-width: 240px;
+      height: 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--border-color);
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .design-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      background: var(--primary-yellow);
+      border: 2px solid white;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+
+    .design-slider::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      background: var(--primary-yellow);
+      border: 2px solid white;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+
+    .design-value {
+      font-size: 13px;
+      color: var(--text-secondary);
+      min-width: 60px;
+    }
+
     .profile-upload-area {
       border: 2px dashed var(--border-color);
       border-radius: 12px;
@@ -1243,33 +1359,8 @@
   <div id="loginContainer" class="login-container">
     <div class="login-box">
       <h1>🏠 베이 관리자</h1>
-      <p>비밀번호를 입력하세요</p>
-      <div class="input-group">
-        <label for="password">비밀번호</label>
-        <div class="password-input-wrapper">
-          <input type="password" id="password" placeholder="비밀번호 입력">
-          <button type="button" class="password-toggle" onclick="togglePasswordVisibility()">
-            <span id="passwordToggleIcon">👁️</span>
-          </button>
-        </div>
-      </div>
-      <button class="btn-primary" onclick="handleLogin()">로그인</button>
-      <button class="btn-link" onclick="showForgotPasswordModal()">비밀번호 찾기</button>
-      <div id="errorMsg" class="error-msg">비밀번호가 올바르지 않습니다.</div>
-    </div>
-  </div>
-
-  <!-- 비밀번호 찾기 모달 -->
-  <div id="forgotPasswordModal" class="modal-overlay">
-    <div class="modal-box">
-      <h3>🔑 비밀번호 찾기</h3>
-      <p>인증된 이메일 주소를 입력하세요</p>
-      <input type="email" id="authEmail" placeholder="이메일 주소">
-      <div id="modalError" class="error-msg"></div>
-      <div class="modal-actions">
-        <button class="btn-cancel" onclick="closeForgotPasswordModal()">취소</button>
-        <button class="btn-confirm" onclick="sendPasswordEmail()">비밀번호 전송</button>
-      </div>
+      <p>Google 계정으로 로그인하세요</p>
+      <div id="googleSignInButton"></div>
     </div>
   </div>
 
@@ -1333,7 +1424,7 @@
           <div class="profile-quote" id="sidebarProfileQuote">오늘도 화이팅! ✨</div>
         </div>
         <div class="logo">베이 관리자</div>
-        <div class="logo-sub">baekeun0@gmail.com</div>
+        <div class="logo-sub" id="sidebarUserEmail">baekeun0@gmail.com</div>
       </div>
 
       <nav class="sidebar-nav" id="sidebarNav">
@@ -1514,9 +1605,9 @@
             <div class="settings-menu-item-icon">📋</div>
             <div class="settings-menu-item-title">메뉴 관리</div>
           </div>
-          <div class="settings-menu-item" onclick="showSettingsSection('account')">
-            <div class="settings-menu-item-icon">🔐</div>
-            <div class="settings-menu-item-title">계정 설정</div>
+          <div class="settings-menu-item" onclick="showSettingsSection('design')">
+            <div class="settings-menu-item-icon">🎨</div>
+            <div class="settings-menu-item-title">디자인 설정</div>
           </div>
         </div>
 
@@ -1556,30 +1647,75 @@
           </div>
         </div>
 
-        <!-- 계정 설정 섹션 -->
-        <div id="settingsAccountSection" class="settings-detail card">
-          <h3>🔐 계정 설정</h3>
-          
-          <div style="margin-bottom: 24px;">
-            <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">이메일</label>
-            <input type="email" value="baekeun0@gmail.com" readonly style="width: 100%; max-width: 400px; padding: 10px 14px; border: 2px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--bg-hover);">
+        <!-- 디자인 설정 섹션 -->
+        <div id="settingsDesignSection" class="settings-detail card">
+          <h3>🎨 디자인 설정</h3>
+          <div class="info-box" style="background: #eafcef; border-color: #b4e8c5; color: #2d6a4f;">
+            💡 설정을 변경하면 즉시 반영되며, 다음 접속에도 유지됩니다.
           </div>
 
-          <div style="margin-bottom: 24px;">
-            <h4 style="font-size: 16px; margin-bottom: 12px;">비밀번호 변경</h4>
-            <div style="margin-bottom: 12px;">
-              <label style="display: block; font-size: 13px; margin-bottom: 6px;">현재 비밀번호</label>
-              <input type="password" id="currentPassword" placeholder="현재 비밀번호" style="width: 100%; max-width: 400px; padding: 10px 14px; border: 2px solid var(--border-color); border-radius: 8px; font-size: 14px;">
+          <!-- 색상 설정 -->
+          <div style="margin-bottom: 28px;">
+            <h4 style="font-size: 15px; margin-bottom: 12px; color: var(--text-primary);">🎯 색상</h4>
+
+            <div class="design-row">
+              <label class="design-label">키 컬러</label>
+              <div class="design-control">
+                <input type="color" id="designPrimaryColor" class="color-picker" onchange="updateDesign('primaryColor', this.value)" oninput="updateDesign('primaryColor', this.value)">
+                <span class="design-value mono" id="designPrimaryColorValue">#ffde59</span>
+              </div>
             </div>
-            <div style="margin-bottom: 12px;">
-              <label style="display: block; font-size: 13px; margin-bottom: 6px;">새 비밀번호</label>
-              <input type="password" id="newPassword" placeholder="새 비밀번호" style="width: 100%; max-width: 400px; padding: 10px 14px; border: 2px solid var(--border-color); border-radius: 8px; font-size: 14px;">
+
+            <div class="design-row">
+              <label class="design-label">사이드바 배경</label>
+              <div class="design-control">
+                <input type="color" id="designSidebarBg" class="color-picker" onchange="updateDesign('sidebarBg', this.value)" oninput="updateDesign('sidebarBg', this.value)">
+                <span class="design-value mono" id="designSidebarBgValue">#fafafa</span>
+              </div>
             </div>
-            <div style="margin-bottom: 12px;">
-              <label style="display: block; font-size: 13px; margin-bottom: 6px;">새 비밀번호 확인</label>
-              <input type="password" id="newPasswordConfirm" placeholder="새 비밀번호 확인" style="width: 100%; max-width: 400px; padding: 10px 14px; border: 2px solid var(--border-color); border-radius: 8px; font-size: 14px;">
+          </div>
+
+          <!-- 폰트 설정 -->
+          <div style="margin-bottom: 28px;">
+            <h4 style="font-size: 15px; margin-bottom: 12px; color: var(--text-primary);">🔤 폰트</h4>
+
+            <div class="design-row">
+              <label class="design-label">기본 폰트</label>
+              <div class="design-control">
+                <select id="designFontFamily" onchange="updateDesign('fontFamily', this.value)" style="flex: 1; max-width: 280px; padding: 8px 12px; border: 2px solid var(--border-color); border-radius: 6px; font-size: 14px;">
+                  <option value="'Noto Sans KR', sans-serif">Noto Sans KR (기본)</option>
+                  <option value="'Malgun Gothic', '맑은 고딕', sans-serif">맑은 고딕</option>
+                  <option value="'Nanum Gothic', sans-serif">나눔고딕</option>
+                  <option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">시스템 기본</option>
+                </select>
+              </div>
             </div>
-            <button class="btn-primary" style="width: auto; padding: 10px 24px;" onclick="changePassword()">비밀번호 변경</button>
+          </div>
+
+          <!-- 레이아웃 설정 -->
+          <div style="margin-bottom: 28px;">
+            <h4 style="font-size: 15px; margin-bottom: 12px; color: var(--text-primary);">📐 레이아웃</h4>
+
+            <div class="design-row">
+              <label class="design-label">사이드바 폭</label>
+              <div class="design-control">
+                <input type="range" id="designNavWidth" min="180" max="300" step="4" oninput="updateDesign('navWidth', this.value)" class="design-slider">
+                <span class="design-value mono" id="designNavWidthValue">220px</span>
+              </div>
+            </div>
+
+            <div class="design-row">
+              <label class="design-label">버튼 모서리</label>
+              <div class="design-control">
+                <input type="range" id="designButtonRadius" min="4" max="20" step="1" oninput="updateDesign('buttonRadius', this.value)" class="design-slider">
+                <span class="design-value mono" id="designButtonRadiusValue">8px</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 액션 버튼 -->
+          <div style="display: flex; gap: 12px; margin-top: 24px;">
+            <button class="btn-cancel" style="padding: 10px 20px; border-radius: var(--button-radius); cursor: pointer; font-size: 14px; background: transparent; border: 1px solid var(--border-color);" onclick="resetDesign()">기본값으로 초기화</button>
           </div>
         </div>
       </div>
@@ -1591,10 +1727,14 @@
     // 상수 및 설정
     // ========================================
     const AUTH = {
-      PASSWORD: 'beybeybey',
+      // Google Cloud Console에서 발급받은 OAuth 2.0 클라이언트 ID로 교체
+      GOOGLE_CLIENT_ID: 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com',
       SHEET_ID: '1cMy2OVO69IfAqIahlyrJNCQUZDuqo1e_3ZM9BomkOXI',
       USER_EMAIL: 'baekeun0@gmail.com',
     };
+
+    // 현재 로그인 사용자 정보
+    let currentUser = null;
 
     // 로컬 날짜 함수 (UTC 사용 금지)
     const today = () => {
@@ -1672,6 +1812,654 @@
       '⚠️ 기호': ['⚠️','🚸','⛔','🚫','🚳','🚭','🚯','🚱','🚷','📵','🔞','☢️','☣️','⬆️','↗️','➡️','↘️','⬇️','↙️','⬅️','↖️','↕️','↔️','↩️','↪️','⤴️','⤵️','🔃','🔄','🔙','🔚','🔛','🔜','🔝','🛐','⚛️','🕉️','✡️','☸️','☯️','✝️','☦️','☪️','☮️','🕎','🔯','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','⛎','▶️','⏸️','⏯️','⏹️','⏺️','⏭️','⏮️','⏩','⏪','⏫','⏬','◀️','🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️','↖️','↕️','↔️','↪️','↩️','⤴️','⤵️','🔀','🔁','🔂','🔄','🔃','🎵','🎶','➕','➖','➗','✖️','♾️','💲','💱','™️','©️','®️','〰️','➰','➿','🔚','🔙','🔛','🔝','🔜','✔️','☑️','🔘','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔺','🔻','🔸','🔹','🔶','🔷','🔳','🔲','▪️','▫️','◾','◽','◼️','◻️','🟥','🟧','🟨','🟩','🟦','🟪','⬛','⬜','🟫','🔈','🔇','🔉','🔊','🔔','🔕','📣','📢','💬','💭','🗯️','♠️','♣️','♥️','♦️','🃏','🎴','🀄','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚','🕛']
     };
 
+    // ========================================
+    // 이모지 키워드 (검색용) - 전역 상수
+    // 한글/영어 키워드로 이모지 검색 지원
+    // ========================================
+    const EMOJI_KEYWORDS = {
+      // 😊 표정
+      '😀': ['웃음','미소','smile','happy','grin','face'],
+      '😃': ['웃음','미소','smile','happy','smiley','face'],
+      '😄': ['웃음','미소','smile','happy','laugh','face'],
+      '😁': ['웃음','미소','grin','happy','teeth','beam'],
+      '😆': ['웃음','laugh','satisfied','squint'],
+      '😅': ['웃음','sweat','laugh','relief','땀'],
+      '🤣': ['웃음','laugh','rofl','rolling','박장대소'],
+      '😂': ['웃음','laugh','tears','joy','눈물','폭소'],
+      '🙂': ['미소','smile','slight','은은','살짝'],
+      '🙃': ['거꾸로','upside','down','반전'],
+      '😉': ['윙크','wink','flirt'],
+      '😊': ['미소','blush','smile','happy','홍조','수줍'],
+      '😇': ['천사','angel','halo','innocent','순수'],
+      '🥰': ['사랑','love','hearts','smile','반함'],
+      '😍': ['하트눈','love','heart','eyes','반함','좋아'],
+      '🤩': ['별눈','star','struck','excited','감동','신남'],
+      '😘': ['뽀뽀','kiss','blow','키스'],
+      '😗': ['뽀뽀','kiss','whistle','휘파람'],
+      '😚': ['뽀뽀','kiss','closed','eyes'],
+      '😙': ['뽀뽀','kiss','smile'],
+      '🥲': ['감동','tear','smile','눈물'],
+      '😋': ['맛있','yum','food','tasty','delicious'],
+      '😛': ['메롱','tongue','혀','놀림'],
+      '😜': ['메롱','tongue','wink','윙크','장난'],
+      '🤪': ['미친','zany','crazy','goofy','엉뚱'],
+      '😝': ['메롱','tongue','squint','장난'],
+      '🤑': ['돈','money','mouth','rich','부자'],
+      '🤗': ['포옹','hug','hugging','따뜻'],
+      '🤭': ['웃음참기','giggle','shush','입가림'],
+      '🤫': ['쉿','shush','quiet','조용'],
+      '🤔': ['생각','think','thinking','궁금','의문'],
+      '🤐': ['입다물','zipper','mouth','비밀'],
+      '🤨': ['의심','raised','eyebrow','수상'],
+      '😐': ['무표정','neutral','face','담담'],
+      '😑': ['무표정','expressionless','blank'],
+      '😶': ['무표정','no','mouth','침묵'],
+      '😏': ['음흉','smirk','sly','음험'],
+      '😒': ['언짢','unamused','시큰둥','불만'],
+      '🙄': ['눈굴림','roll','eyes','한심'],
+      '😬': ['민망','grimace','awkward','어색'],
+      '🤥': ['거짓말','lying','lie','nose','pinocchio'],
+      '😌': ['평온','relieved','content','안도'],
+      '😔': ['시무룩','pensive','sad','우울'],
+      '😪': ['졸림','sleepy','tired','피곤'],
+      '🤤': ['침흘림','drool','drooling','탐냄'],
+      '😴': ['잠','sleep','sleeping','zzz','꿈'],
+      '😷': ['마스크','mask','sick','medical','아픔'],
+      '🤒': ['아픔','sick','fever','thermometer','열'],
+      '🤕': ['부상','hurt','bandage','injury','다침'],
+      '🤢': ['구역질','nauseous','sick','역겨움'],
+      '🤮': ['토','vomit','puke','구토'],
+      '🤧': ['재채기','sneeze','cold','감기'],
+      '🥵': ['더움','hot','sweat','heat','땀'],
+      '🥶': ['추움','cold','freeze','blue'],
+      '😵': ['어지러움','dizzy','knocked','out'],
+      '🤯': ['폭발','mind','blown','shocked','충격'],
+      '🤠': ['카우보이','cowboy','hat','서부'],
+      '🥳': ['축하','party','celebrate','파티','생일'],
+      '🥸': ['변장','disguise','fake','위장'],
+      '😎': ['멋짐','cool','sunglasses','선글라스'],
+      '🤓': ['너드','nerd','geek','glasses','공부'],
+      '🧐': ['외눈안경','monocle','curious','탐구'],
+
+      // ❤️ 마음
+      '❤️': ['하트','heart','love','red','사랑','빨강'],
+      '🧡': ['하트','heart','orange','love','주황'],
+      '💛': ['하트','heart','yellow','love','노랑'],
+      '💚': ['하트','heart','green','love','초록'],
+      '💙': ['하트','heart','blue','love','파랑'],
+      '💜': ['하트','heart','purple','love','보라'],
+      '🖤': ['하트','heart','black','love','검정'],
+      '🤍': ['하트','heart','white','love','흰색'],
+      '🤎': ['하트','heart','brown','love','갈색'],
+      '💔': ['하트','heart','broken','break','상심','이별'],
+      '❣️': ['하트','heart','exclamation','느낌표'],
+      '💕': ['하트','heart','love','two','두개'],
+      '💞': ['하트','heart','revolving','회전'],
+      '💓': ['하트','heart','beating','두근'],
+      '💗': ['하트','heart','growing','커짐'],
+      '💖': ['하트','heart','sparkling','반짝'],
+      '💘': ['하트','heart','arrow','cupid','화살','큐피드'],
+      '💝': ['하트','heart','gift','box','선물'],
+      '💟': ['하트','heart','decoration','장식'],
+
+      // 👋 손
+      '👋': ['손','hand','wave','hi','hello','bye','안녕','인사'],
+      '🤚': ['손','hand','raised','back','뒷면'],
+      '🖐️': ['손','hand','fingers','splayed','펼침'],
+      '✋': ['손','hand','stop','high','five','멈춤','하이파이브'],
+      '🖖': ['손','hand','vulcan','spock','스팍'],
+      '👌': ['손','hand','ok','okay','good','좋음'],
+      '🤌': ['손','hand','pinched','fingers','이탈리아'],
+      '🤏': ['손','hand','pinch','small','조금'],
+      '✌️': ['손','hand','peace','victory','브이','승리'],
+      '🤞': ['손','hand','fingers','crossed','luck','행운'],
+      '🤟': ['손','hand','love','you','사랑해'],
+      '🤘': ['손','hand','rock','horns','록','헤비메탈'],
+      '🤙': ['손','hand','call','me','전화'],
+      '👈': ['손','hand','left','왼쪽','가리킴'],
+      '👉': ['손','hand','right','오른쪽','가리킴'],
+      '👆': ['손','hand','up','위','가리킴'],
+      '🖕': ['손','hand','middle','finger','중지','욕'],
+      '👇': ['손','hand','down','아래','가리킴'],
+      '☝️': ['손','hand','up','index','검지','위'],
+      '👍': ['손','hand','thumbs','up','good','like','yes','좋음','엄지','따봉'],
+      '👎': ['손','hand','thumbs','down','bad','dislike','no','싫음','엄지'],
+      '✊': ['손','hand','fist','punch','주먹'],
+      '👊': ['손','hand','fist','bump','punch','주먹'],
+      '🤛': ['손','hand','fist','left','왼주먹'],
+      '🤜': ['손','hand','fist','right','오른주먹'],
+      '👏': ['손','hand','clap','applause','박수'],
+      '🙌': ['손','hand','raising','celebration','만세'],
+      '👐': ['손','hand','open','hands','열린손'],
+      '🤲': ['손','hand','palms','together','두손'],
+      '🤝': ['손','hand','shake','handshake','악수'],
+      '🙏': ['손','hand','pray','thank','please','기도','감사','부탁'],
+      '✍️': ['손','hand','writing','write','쓰기'],
+      '💅': ['손톱','nail','polish','manicure','매니큐어'],
+      '🤳': ['셀카','selfie','self','portrait'],
+
+      // 💼 업무
+      '💼': ['업무','work','briefcase','business','office','가방'],
+      '📁': ['폴더','folder','file','directory'],
+      '📂': ['폴더','folder','open','file','열림'],
+      '🗂️': ['파일','file','divider','분류'],
+      '📅': ['달력','calendar','date','schedule','일정'],
+      '📆': ['달력','calendar','date','tear','날짜'],
+      '🗓️': ['달력','calendar','spiral','스케줄'],
+      '📇': ['명함','card','index','rolodex'],
+      '📈': ['그래프','chart','increase','up','상승','trend'],
+      '📉': ['그래프','chart','decrease','down','하락'],
+      '📊': ['차트','chart','bar','graph','막대'],
+      '📋': ['클립보드','clipboard','list','memo','목록'],
+      '📌': ['핀','pin','pushpin','tack','압정'],
+      '📍': ['핀','pin','location','map','위치'],
+      '📎': ['클립','clip','paperclip','종이'],
+      '🖇️': ['클립','clip','linked','paperclips'],
+      '📏': ['자','ruler','straight','measure'],
+      '📐': ['자','ruler','triangular','삼각자'],
+      '✂️': ['가위','scissors','cut','자르기'],
+      '🗃️': ['파일박스','file','box','card'],
+      '🗄️': ['파일캐비닛','file','cabinet','드로어'],
+      '🗑️': ['쓰레기','trash','wastebasket','delete','휴지통'],
+      '🔒': ['잠금','lock','secure','closed','자물쇠'],
+      '🔓': ['잠금해제','unlock','open','열림'],
+      '🔐': ['잠금','lock','key','보안'],
+      '🔑': ['열쇠','key','unlock'],
+      '🗝️': ['열쇠','key','old','옛날'],
+      '🔨': ['망치','hammer','tool','도구'],
+      '🪛': ['드라이버','screwdriver','tool'],
+      '🔧': ['렌치','wrench','tool','도구','수리'],
+      '🪚': ['톱','saw','tool','carpentry','목공'],
+      '⚙️': ['톱니','gear','setting','config','설정'],
+      '⚖️': ['저울','scales','balance','justice','공정'],
+      '🔗': ['링크','link','chain','연결'],
+      '⛓️': ['사슬','chains','chain'],
+      '🧰': ['공구','toolbox','tools','공구함'],
+      '🧲': ['자석','magnet','attract'],
+
+      // 🏠 생활
+      '🏠': ['집','home','house'],
+      '🏡': ['집','home','house','garden','정원'],
+      '🏢': ['건물','building','office','work','회사'],
+      '🏣': ['우체국','post','office','japanese'],
+      '🏤': ['우체국','post','office','european'],
+      '🏥': ['병원','hospital','medical','doctor','의료'],
+      '🏦': ['은행','bank','money','금융'],
+      '🏨': ['호텔','hotel','숙박'],
+      '🏩': ['러브호텔','love','hotel'],
+      '🏪': ['편의점','store','shop','convenience','가게'],
+      '🏫': ['학교','school','education','공부'],
+      '🏬': ['백화점','department','store','쇼핑'],
+      '🏭': ['공장','factory','industry','산업'],
+      '🏯': ['성','castle','japanese','일본'],
+      '🏰': ['성','castle','european','동화'],
+      '💒': ['교회','wedding','chapel','결혼식'],
+      '🗼': ['탑','tower','tokyo','도쿄'],
+      '🗽': ['자유의여신상','statue','liberty','뉴욕'],
+      '⛪': ['교회','church','종교'],
+      '🕌': ['모스크','mosque','이슬람'],
+      '🕍': ['시너고그','synagogue','유대교'],
+      '⛩️': ['신사','shrine','shinto','일본'],
+      '⛲': ['분수','fountain'],
+      '⛺': ['텐트','tent','camping','캠핑'],
+      '🌁': ['안개','foggy','fog'],
+      '🌃': ['밤','night','stars','별'],
+      '🏙️': ['도시','cityscape','city','스카이라인'],
+      '🌄': ['일출','sunrise','mountain','산'],
+      '🌅': ['일출','sunrise'],
+      '🌆': ['도시','city','dusk','저녁'],
+      '🌇': ['석양','sunset','buildings'],
+      '🌉': ['다리','bridge','night','밤'],
+      '♨️': ['온천','hot','springs'],
+      '🎠': ['회전목마','carousel','horse'],
+      '🎡': ['대관람차','ferris','wheel'],
+      '🎢': ['롤러코스터','roller','coaster'],
+      '🎪': ['서커스','circus','tent','텐트'],
+
+      // 🍔 음식
+      '🍔': ['음식','food','burger','hamburger','햄버거'],
+      '🍟': ['음식','food','fries','french','감자튀김'],
+      '🍕': ['음식','food','pizza','피자'],
+      '🌭': ['음식','food','hotdog','핫도그'],
+      '🥪': ['음식','food','sandwich','샌드위치'],
+      '🌮': ['음식','food','taco','타코'],
+      '🌯': ['음식','food','burrito','부리또'],
+      '🥙': ['음식','food','stuffed','flatbread'],
+      '🧆': ['음식','food','falafel'],
+      '🥚': ['음식','food','egg','계란'],
+      '🍳': ['음식','food','egg','cook','fry','계란프라이','요리'],
+      '🥘': ['음식','food','pan','shallow','팬요리'],
+      '🍲': ['음식','food','pot','stew','찌개','전골'],
+      '🥣': ['음식','food','bowl','spoon','그릇'],
+      '🥗': ['음식','food','salad','샐러드'],
+      '🍿': ['음식','food','popcorn','팝콘'],
+      '🧈': ['음식','food','butter','버터'],
+      '🧂': ['음식','food','salt','소금'],
+      '🥫': ['음식','food','canned','통조림'],
+      '🍱': ['음식','food','bento','box','lunch','도시락'],
+      '🍘': ['음식','food','rice','cracker','센베이'],
+      '🍙': ['음식','food','rice','ball','삼각김밥','주먹밥'],
+      '🍚': ['음식','food','rice','cooked','밥','쌀밥'],
+      '🍛': ['음식','food','curry','rice','카레'],
+      '🍜': ['음식','food','ramen','noodle','라면','면'],
+      '🍝': ['음식','food','spaghetti','pasta','파스타','스파게티'],
+      '🍠': ['음식','food','sweet','potato','고구마'],
+      '🍢': ['음식','food','oden','꼬치','어묵'],
+      '🍣': ['음식','food','sushi','초밥'],
+      '🍤': ['음식','food','shrimp','fried','새우튀김'],
+      '🍥': ['음식','food','fish','cake','나루토'],
+      '🥮': ['음식','food','moon','cake','월병'],
+      '🍡': ['음식','food','dango','경단'],
+      '🥟': ['음식','food','dumpling','만두'],
+      '🦀': ['음식','food','crab','게'],
+      '🦞': ['음식','food','lobster','랍스터','바닷가재'],
+      '🦐': ['음식','food','shrimp','새우'],
+      '🦑': ['음식','food','squid','오징어'],
+      '🦪': ['음식','food','oyster','굴'],
+      '🍦': ['음식','food','ice','cream','soft','아이스크림'],
+      '🍧': ['음식','food','ice','shaved','빙수','팥빙수'],
+      '🍨': ['음식','food','ice','cream','아이스크림'],
+      '🍩': ['음식','food','donut','doughnut','도넛'],
+      '🍪': ['음식','food','cookie','쿠키'],
+      '🎂': ['음식','food','cake','birthday','생일','케이크'],
+      '🍰': ['음식','food','cake','dessert','케이크','조각'],
+      '🧁': ['음식','food','cupcake','컵케이크'],
+      '🥧': ['음식','food','pie','파이'],
+      '🍫': ['음식','food','chocolate','초콜릿'],
+      '🍬': ['음식','food','candy','사탕'],
+      '🍭': ['음식','food','lollipop','막대사탕'],
+      '🍮': ['음식','food','pudding','푸딩','커스터드'],
+      '🍯': ['음식','food','honey','꿀'],
+
+      // ⚽ 운동
+      '⚽': ['운동','sport','soccer','football','ball','축구'],
+      '🏀': ['운동','sport','basketball','ball','농구'],
+      '🏈': ['운동','sport','football','american','미식축구'],
+      '⚾': ['운동','sport','baseball','ball','야구'],
+      '🥎': ['운동','sport','softball','소프트볼'],
+      '🎾': ['운동','sport','tennis','ball','테니스'],
+      '🏐': ['운동','sport','volleyball','ball','배구'],
+      '🏉': ['운동','sport','rugby','ball','럭비'],
+      '🥏': ['운동','sport','frisbee','프리스비'],
+      '🎱': ['운동','sport','billiards','pool','당구'],
+      '🪀': ['요요','yo-yo'],
+      '🏓': ['운동','sport','ping','pong','table','tennis','탁구'],
+      '🏸': ['운동','sport','badminton','배드민턴'],
+      '🏒': ['운동','sport','hockey','ice','하키'],
+      '🏑': ['운동','sport','hockey','field','필드하키'],
+      '🥍': ['운동','sport','lacrosse','라크로스'],
+      '🏏': ['운동','sport','cricket','크리켓'],
+      '🪃': ['부메랑','boomerang'],
+      '🥅': ['운동','sport','goal','골대'],
+      '⛳': ['운동','sport','golf','flag','골프','홀'],
+      '🪁': ['연','kite'],
+      '🏹': ['운동','sport','bow','arrow','활','양궁'],
+      '🎣': ['낚시','fishing','pole','fish','물고기'],
+      '🤿': ['운동','sport','diving','mask','다이빙'],
+      '🥊': ['운동','sport','boxing','glove','복싱','권투'],
+      '🥋': ['운동','sport','martial','arts','uniform','태권도','유도'],
+      '🎽': ['운동','sport','running','shirt','러닝'],
+      '🛹': ['운동','sport','skateboard','스케이트보드'],
+      '🛼': ['운동','sport','roller','skate','롤러스케이트'],
+      '🛷': ['운동','sport','sled','썰매'],
+      '⛸️': ['운동','sport','ice','skate','스케이트'],
+      '🥌': ['운동','sport','curling','stone','컬링'],
+      '🎿': ['운동','sport','ski','skis','스키'],
+      '⛷️': ['운동','sport','ski','skiing','snow','스키'],
+      '🏂': ['운동','sport','snowboarder','스노보드'],
+      '🪂': ['운동','sport','parachute','낙하산'],
+      '🏋️': ['운동','sport','weight','lifting','gym','역도','헬스'],
+      '🤸': ['운동','sport','cartwheel','체조'],
+      '🤺': ['운동','sport','fencing','펜싱'],
+      '🤾': ['운동','sport','handball','핸드볼'],
+      '🏌️': ['운동','sport','golf','골프'],
+      '🏇': ['운동','sport','horse','racing','경마'],
+      '🧘': ['운동','sport','yoga','meditation','요가','명상'],
+      '🏄': ['운동','sport','surfing','서핑'],
+      '🏊': ['운동','sport','swim','swimming','pool','수영'],
+      '🤽': ['운동','sport','water','polo','수구'],
+      '🚣': ['운동','sport','rowing','boat','조정','보트'],
+      '🧗': ['운동','sport','climbing','등산','클라이밍'],
+      '🚴': ['운동','sport','bike','bicycle','cycling','자전거'],
+      '🚵': ['운동','sport','mountain','bike','산악자전거'],
+      '🤹': ['운동','sport','juggling','저글링'],
+
+      // 🎨 취미
+      '🎨': ['취미','hobby','art','paint','palette','미술','그림'],
+      '🖼️': ['그림','picture','frame','액자'],
+      '🎭': ['연극','theater','drama','mask','가면'],
+      '🎬': ['영화','movie','film','cinema','clapper'],
+      '🎤': ['마이크','mic','microphone','sing','노래'],
+      '🎧': ['헤드폰','headphone','listen','music','음악'],
+      '🎼': ['악보','music','score','sheet'],
+      '🎹': ['피아노','piano','keyboard','키보드'],
+      '🥁': ['드럼','drum','음악'],
+      '🎷': ['색소폰','saxophone','jazz'],
+      '🎺': ['트럼펫','trumpet'],
+      '🪗': ['아코디언','accordion'],
+      '🎸': ['기타','guitar','음악'],
+      '🪕': ['밴조','banjo'],
+      '🎻': ['바이올린','violin'],
+      '🎲': ['주사위','dice','play','게임'],
+      '♟️': ['체스','chess','pawn'],
+      '🎯': ['다트','dart','target','bullseye','과녁'],
+      '🎳': ['볼링','bowling','게임'],
+      '🎮': ['게임','game','play','video','controller','비디오게임','플레이스테이션'],
+      '🎰': ['슬롯머신','slot','machine','casino','도박'],
+      '🧩': ['퍼즐','puzzle','jigsaw'],
+      '🎏': ['잉어','carp','streamer','코이노보리'],
+      '🎎': ['일본인형','japanese','dolls'],
+      '🎐': ['풍경','wind','chime','후린'],
+      '🧵': ['실','thread','sewing','바느질'],
+      '🪢': ['매듭','knot'],
+      '🧶': ['털실','yarn','knit','뜨개질'],
+      '🪡': ['바늘','sewing','needle'],
+      '🎀': ['리본','ribbon','bow'],
+      '🎁': ['선물','gift','present','box','상자'],
+
+      // 📚 학습
+      '📚': ['학습','study','book','books','library','read','책','도서관'],
+      '📖': ['학습','study','book','open','read','책','독서'],
+      '📕': ['학습','study','book','red','빨간책'],
+      '📗': ['학습','study','book','green','초록책'],
+      '📘': ['학습','study','book','blue','파란책'],
+      '📙': ['학습','study','book','orange','주황책'],
+      '📓': ['학습','study','notebook','공책'],
+      '📔': ['학습','study','notebook','decorative','노트'],
+      '📒': ['학습','study','ledger','장부'],
+      '📃': ['종이','page','curl','문서'],
+      '📜': ['두루마리','scroll','paper'],
+      '📄': ['종이','page','document','문서'],
+      '📰': ['신문','newspaper','news'],
+      '🗞️': ['신문','newspaper','rolled'],
+      '📑': ['책갈피','bookmark','tabs'],
+      '🔖': ['책갈피','bookmark'],
+      '🏷️': ['태그','label','tag'],
+      '💰': ['돈','money','bag','가방','부자'],
+      '🪙': ['동전','coin','money'],
+      '💴': ['엔화','yen','money','일본'],
+      '💵': ['달러','dollar','money','미국'],
+      '💶': ['유로','euro','money','유럽'],
+      '💷': ['파운드','pound','money','영국'],
+      '💸': ['돈날아감','money','wings','지출'],
+      '💳': ['카드','credit','card','결제'],
+      '🧾': ['영수증','receipt','계산서'],
+      '✏️': ['연필','pencil','write','쓰기'],
+      '✒️': ['펜','pen','nib','만년필'],
+      '🖊️': ['펜','pen','ballpoint','볼펜'],
+      '🖋️': ['만년필','pen','fountain'],
+      '✉️': ['편지','envelope','mail','메일'],
+      '📧': ['이메일','email','mail','메일'],
+      '📨': ['받은메일','incoming','envelope'],
+      '📩': ['메일','envelope','arrow'],
+      '📤': ['보낸메일','outbox','tray'],
+      '📥': ['받은메일','inbox','tray'],
+      '📦': ['택배','package','box','상자'],
+      '📫': ['우편함','mailbox','closed','flag'],
+      '📪': ['우편함','mailbox','closed','lowered'],
+      '📬': ['우편함','mailbox','open','flag'],
+      '📭': ['우편함','mailbox','open','lowered'],
+      '📮': ['우체통','postbox'],
+
+      // 🌳 자연
+      '🌳': ['자연','nature','tree','plant','나무'],
+      '🌲': ['자연','nature','tree','evergreen','침엽수'],
+      '🌱': ['자연','nature','plant','seedling','sprout','새싹','성장'],
+      '🌿': ['자연','nature','plant','herb','leaf','잎','허브'],
+      '☘️': ['자연','nature','shamrock','클로버'],
+      '🍀': ['자연','nature','plant','clover','four','leaf','luck','네잎클로버','행운'],
+      '🎍': ['자연','nature','bamboo','대나무'],
+      '🎋': ['자연','nature','tanabata','tree'],
+      '🍃': ['자연','nature','leaves','falling','나뭇잎'],
+      '🍂': ['자연','nature','leaf','fallen','낙엽'],
+      '🍁': ['자연','nature','maple','leaf','단풍'],
+      '🍄': ['자연','nature','mushroom','버섯'],
+      '🌾': ['자연','nature','rice','sheaf','벼'],
+      '💐': ['자연','nature','flower','bouquet','꽃다발'],
+      '🌷': ['자연','nature','flower','tulip','튤립'],
+      '🌹': ['자연','nature','flower','rose','장미'],
+      '🥀': ['자연','nature','wilted','flower','시든꽃'],
+      '🌺': ['자연','nature','flower','hibiscus','히비스커스'],
+      '🌸': ['자연','nature','flower','cherry','blossom','벚꽃'],
+      '🌼': ['자연','nature','flower','blossom','데이지'],
+      '🌻': ['자연','nature','flower','sunflower','해바라기'],
+      '🌞': ['자연','nature','sun','face','sunny','태양'],
+      '🌝': ['자연','nature','moon','face','full','보름달'],
+      '🌛': ['자연','nature','moon','first','quarter'],
+      '🌜': ['자연','nature','moon','last','quarter'],
+      '🌚': ['자연','nature','moon','new','그믐'],
+      '🌕': ['자연','nature','moon','full','보름'],
+      '🌖': ['자연','nature','moon','waning','gibbous'],
+      '🌗': ['자연','nature','moon','last','quarter'],
+      '🌘': ['자연','nature','moon','waning','crescent'],
+      '🌑': ['자연','nature','moon','new'],
+      '🌒': ['자연','nature','moon','waxing','crescent'],
+      '🌓': ['자연','nature','moon','first','quarter'],
+      '🌔': ['자연','nature','moon','waxing','gibbous'],
+      '🌙': ['자연','nature','moon','crescent','초승달'],
+      '🌎': ['자연','nature','earth','americas','지구'],
+      '🌍': ['자연','nature','earth','africa','europe','지구'],
+      '🌏': ['자연','nature','earth','asia','australia','지구'],
+      '🪐': ['자연','nature','ringed','planet','토성'],
+      '💫': ['자연','nature','dizzy','star','어지러움'],
+      '⭐': ['자연','nature','star','별'],
+      '🌟': ['자연','nature','star','glowing','반짝이는별'],
+      '✨': ['자연','nature','sparkle','star','반짝'],
+      '⚡': ['자연','nature','lightning','bolt','zap','번개'],
+      '☄️': ['자연','nature','comet','혜성'],
+      '💥': ['자연','nature','collision','boom','폭발'],
+      '🔥': ['자연','nature','fire','flame','hot','불','뜨거움'],
+      '🌈': ['자연','nature','rainbow','무지개'],
+      '☀️': ['자연','nature','sun','sunny','weather','해','맑음'],
+      '🌤️': ['자연','nature','sun','cloud','weather'],
+      '⛅': ['자연','nature','cloud','sun','weather','구름해'],
+      '🌥️': ['자연','nature','cloud','sun','weather'],
+      '☁️': ['자연','nature','cloud','weather','구름'],
+      '🌦️': ['자연','nature','cloud','rain','weather'],
+      '🌧️': ['자연','nature','rain','weather','비'],
+      '⛈️': ['자연','nature','storm','thunder','weather','폭풍'],
+      '🌩️': ['자연','nature','lightning','cloud','번개'],
+      '🌨️': ['자연','nature','snow','cloud','눈'],
+      '❄️': ['자연','nature','snow','cold','winter','눈','겨울'],
+      '☃️': ['자연','nature','snowman','눈사람'],
+      '⛄': ['자연','nature','snowman','without','snow','눈사람'],
+
+      // 🚗 교통
+      '🚗': ['교통','car','transport','vehicle','auto','자동차'],
+      '🚕': ['교통','car','taxi','transport','택시'],
+      '🚙': ['교통','car','suv','transport','SUV'],
+      '🚌': ['교통','bus','transport','public','버스'],
+      '🚎': ['교통','bus','trolley','transport','트롤리'],
+      '🏎️': ['교통','racing','car','레이싱'],
+      '🚓': ['교통','car','police','경찰차'],
+      '🚑': ['교통','ambulance','구급차'],
+      '🚒': ['교통','fire','engine','소방차'],
+      '🚐': ['교통','van','minibus','transport','승합차'],
+      '🛻': ['교통','pickup','truck','픽업트럭'],
+      '🚚': ['교통','truck','delivery','transport','트럭'],
+      '🚛': ['교통','truck','articulated','대형트럭'],
+      '🚜': ['교통','tractor','트랙터'],
+      '🛴': ['교통','scooter','kick','킥보드'],
+      '🚲': ['교통','bike','bicycle','cycle','자전거'],
+      '🛵': ['교통','scooter','motor','스쿠터'],
+      '🏍️': ['교통','motorcycle','bike','오토바이'],
+      '🛺': ['교통','auto','rickshaw','툭툭'],
+      '🚨': ['경광등','police','light','siren'],
+      '🚔': ['교통','police','car','oncoming'],
+      '🚍': ['교통','bus','oncoming'],
+      '🚘': ['교통','car','oncoming'],
+      '🚖': ['교통','taxi','oncoming'],
+      '🚡': ['교통','aerial','tramway'],
+      '🚠': ['교통','mountain','cableway'],
+      '🚟': ['교통','suspension','railway'],
+      '🚃': ['교통','railway','car'],
+      '🚋': ['교통','tram','car'],
+      '🚞': ['교통','mountain','railway'],
+      '🚝': ['교통','monorail'],
+      '🚄': ['교통','train','bullet','speed','고속열차'],
+      '🚅': ['교통','train','bullet','speed','KTX'],
+      '🚈': ['교통','light','rail','경전철'],
+      '🚂': ['교통','train','locomotive','기관차'],
+      '🚆': ['교통','train','railway','기차'],
+      '🚇': ['교통','subway','metro','train','지하철'],
+      '🚊': ['교통','tram'],
+      '🚉': ['교통','station','역'],
+      '✈️': ['교통','airplane','plane','flight','fly','비행기'],
+      '🛫': ['교통','airplane','departure','이륙'],
+      '🛬': ['교통','airplane','arrival','착륙'],
+      '🛩️': ['교통','small','airplane','경비행기'],
+      '💺': ['교통','seat','좌석'],
+      '🛰️': ['교통','satellite','위성'],
+      '🚀': ['교통','rocket','space','launch','로켓','우주'],
+      '🛸': ['교통','flying','saucer','UFO'],
+      '🚁': ['교통','helicopter','fly','헬리콥터'],
+      '🛶': ['교통','canoe','카누'],
+      '⛵': ['교통','sailboat','boat','요트'],
+      '🚤': ['교통','speedboat','보트'],
+      '🛥️': ['교통','motor','boat','모터보트'],
+      '🛳️': ['교통','passenger','ship','여객선'],
+      '⛴️': ['교통','ferry','페리'],
+      '🚢': ['교통','ship','배'],
+      '⚓': ['교통','anchor','닻'],
+      '⛽': ['교통','fuel','pump','주유소'],
+      '🚧': ['교통','construction','공사'],
+      '🚦': ['교통','traffic','light','vertical','신호등'],
+      '🚥': ['교통','traffic','light','horizontal','신호등'],
+      '🗺️': ['지도','map','world','세계'],
+      '🗿': ['모아이','moai','statue'],
+
+      // ⏰ 시간
+      '⏰': ['시간','time','clock','alarm','알람시계'],
+      '⏱️': ['시간','time','stopwatch','timer','스톱워치'],
+      '⏲️': ['시간','time','timer','clock','타이머'],
+      '⌚': ['시간','time','watch','clock','손목시계'],
+      '🕰️': ['시간','time','mantelpiece','clock','벽시계'],
+      '🕐': ['시간','time','clock','1시'],
+      '🕑': ['시간','time','clock','2시'],
+      '🕒': ['시간','time','clock','3시'],
+      '🕓': ['시간','time','clock','4시'],
+      '🕔': ['시간','time','clock','5시'],
+      '🕕': ['시간','time','clock','6시'],
+      '🕖': ['시간','time','clock','7시'],
+      '🕗': ['시간','time','clock','8시'],
+      '🕘': ['시간','time','clock','9시'],
+      '🕙': ['시간','time','clock','10시'],
+      '🕚': ['시간','time','clock','11시'],
+      '🕛': ['시간','time','clock','12시'],
+
+      // 🎮 엔터
+      '🕹️': ['게임','joystick','조이스틱'],
+      '🎴': ['화투','flower','playing','cards'],
+      '🃏': ['조커','joker','card'],
+      '🀄': ['마작','mahjong','tile'],
+      '🎵': ['음표','music','note','멜로디'],
+      '🎶': ['음표','music','notes'],
+      '📻': ['라디오','radio'],
+      '📱': ['휴대폰','mobile','phone','smartphone','스마트폰'],
+      '📲': ['휴대폰','mobile','phone','call','전화'],
+      '☎️': ['전화','telephone','phone'],
+      '📞': ['전화','phone','receiver','수화기'],
+      '📟': ['삐삐','pager','beeper'],
+      '📠': ['팩스','fax','machine'],
+      '🔋': ['배터리','battery','전지'],
+      '🔌': ['플러그','plug','electric','콘센트'],
+      '💻': ['노트북','laptop','computer','컴퓨터'],
+      '🖥️': ['데스크탑','desktop','computer','모니터'],
+      '🖨️': ['프린터','printer','프린트'],
+      '⌨️': ['키보드','keyboard'],
+      '🖱️': ['마우스','mouse','computer'],
+      '🖲️': ['트랙볼','trackball'],
+      '💽': ['디스크','minidisc','computer'],
+      '💾': ['저장','floppy','disk','save','디스켓'],
+      '💿': ['CD','optical','disk'],
+      '📀': ['DVD','disk'],
+
+      // ⚠️ 기호
+      '⚠️': ['경고','warning','caution','alert','주의'],
+      '🚸': ['경고','warning','children','crossing','어린이'],
+      '⛔': ['금지','no','entry','stop','진입금지'],
+      '🚫': ['금지','prohibited','no','ban','금지됨'],
+      '🚳': ['자전거금지','no','bicycles'],
+      '🚭': ['금연','no','smoking'],
+      '🚯': ['쓰레기금지','no','littering'],
+      '🚱': ['음용금지','non-potable','water'],
+      '🚷': ['보행자금지','no','pedestrians'],
+      '📵': ['휴대폰금지','no','mobile','phones'],
+      '🔞': ['19금','no','one','under','eighteen','성인'],
+      '☢️': ['방사능','radioactive','radiation'],
+      '☣️': ['생물학적위험','biohazard'],
+      '🛐': ['예배소','place','worship'],
+      '⚛️': ['원자','atom','science','과학'],
+      '🕉️': ['옴','om','hindu'],
+      '✡️': ['다윗의별','star','david','유대'],
+      '☸️': ['법륜','wheel','dharma'],
+      '☯️': ['음양','yin','yang'],
+      '✝️': ['십자가','cross','christian'],
+      '☦️': ['정교회','orthodox','cross'],
+      '☪️': ['초승달별','star','crescent','islam'],
+      '☮️': ['평화','peace','symbol'],
+      '🕎': ['메노라','menorah'],
+      '🔯': ['별','six','pointed','star'],
+      '♈': ['양자리','aries','zodiac'],
+      '♉': ['황소자리','taurus','zodiac'],
+      '♊': ['쌍둥이자리','gemini','zodiac'],
+      '♋': ['게자리','cancer','zodiac'],
+      '♌': ['사자자리','leo','zodiac'],
+      '♍': ['처녀자리','virgo','zodiac'],
+      '♎': ['천칭자리','libra','zodiac'],
+      '♏': ['전갈자리','scorpio','zodiac'],
+      '♐': ['사수자리','sagittarius','zodiac'],
+      '♑': ['염소자리','capricorn','zodiac'],
+      '♒': ['물병자리','aquarius','zodiac'],
+      '♓': ['물고기자리','pisces','zodiac'],
+      '⛎': ['뱀주인자리','ophiuchus','zodiac'],
+      '▶️': ['재생','play','button'],
+      '⏸️': ['일시정지','pause','button'],
+      '⏯️': ['재생일시정지','play','pause'],
+      '⏹️': ['정지','stop','button'],
+      '⏺️': ['녹화','record','button'],
+      '⏭️': ['다음','next','track'],
+      '⏮️': ['이전','previous','track'],
+      '⏩': ['빨리감기','fast','forward'],
+      '⏪': ['되감기','rewind'],
+      '⏫': ['위로','fast','up'],
+      '⏬': ['아래로','fast','down'],
+      '🔼': ['위','up','button'],
+      '🔽': ['아래','down','button'],
+      '➕': ['더하기','plus','add'],
+      '➖': ['빼기','minus','subtract'],
+      '➗': ['나누기','divide','division'],
+      '✖️': ['곱하기','multiply','x'],
+      '♾️': ['무한','infinity'],
+      '💲': ['달러','dollar','sign','money'],
+      '💱': ['환전','currency','exchange'],
+      '✔️': ['체크','check','mark','yes'],
+      '☑️': ['체크','check','box','선택'],
+      '❌': ['엑스','cross','no','wrong','틀림'],
+      '✅': ['확인','check','yes','correct','done','완료'],
+      '🔘': ['라디오버튼','radio','button'],
+      '🔴': ['빨강','red','circle','원'],
+      '🟠': ['주황','orange','circle'],
+      '🟡': ['노랑','yellow','circle'],
+      '🟢': ['초록','green','circle'],
+      '🔵': ['파랑','blue','circle'],
+      '🟣': ['보라','purple','circle'],
+      '⚫': ['검정','black','circle'],
+      '⚪': ['흰색','white','circle'],
+      '🟤': ['갈색','brown','circle'],
+      '🔔': ['벨','bell','ring','알림'],
+      '🔕': ['벨','bell','mute','무음'],
+      '📣': ['확성기','megaphone','announce'],
+      '📢': ['확성기','loudspeaker','public'],
+      '💬': ['말풍선','speech','balloon','대화'],
+      '💭': ['생각','thought','balloon'],
+      '🗯️': ['말풍선','angry','speech','bubble'],
+      '♠️': ['스페이드','spade','suit','card'],
+      '♣️': ['클로버','club','suit','card'],
+      '♥️': ['하트','heart','suit','card'],
+      '♦️': ['다이아','diamond','suit','card']
+    };
+
     // 상태 변수
     let menus = [];
     let favoritePages = [];
@@ -1692,59 +2480,90 @@
     let confirmModalCallback = null;
 
     // ========================================
-    // 로그인 관리
+    // Google OAuth 로그인 관리
     // ========================================
-    function togglePasswordVisibility() {
-      const passwordInput = document.getElementById('password');
-      const toggleIcon = document.getElementById('passwordToggleIcon');
-      
-      if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        toggleIcon.textContent = '🙈';
-      } else {
-        passwordInput.type = 'password';
-        toggleIcon.textContent = '👁️';
+
+    // JWT 토큰 디코딩 (Google id_token에서 사용자 정보 추출)
+    function decodeJwtPayload(token) {
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split('')
+            .map(function(c) {
+              return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            })
+            .join('')
+        );
+        return JSON.parse(jsonPayload);
+      } catch (e) {
+        console.error('JWT 디코딩 실패:', e);
+        return null;
       }
     }
 
-    function handleLogin() {
-      const passwordInput = document.getElementById('password');
-      const errorMsg = document.getElementById('errorMsg');
-      
-      if (passwordInput.value === AUTH.PASSWORD) {
-        sessionStorage.setItem('isLoggedIn', 'true');
-        showApp();
-      } else {
-        errorMsg.classList.add('show');
-        passwordInput.value = '';
-        passwordInput.focus();
+    // Google Sign-In 초기화
+    function initGoogleSignIn() {
+      if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
+        // GSI 스크립트 로드 대기 후 재시도
+        setTimeout(initGoogleSignIn, 200);
+        return;
+      }
+
+      google.accounts.id.initialize({
+        client_id: AUTH.GOOGLE_CLIENT_ID,
+        callback: handleGoogleCredentialResponse,
+        auto_select: false,
+        cancel_on_tap_outside: true
+      });
+
+      const btnContainer = document.getElementById('googleSignInButton');
+      if (btnContainer) {
+        google.accounts.id.renderButton(btnContainer, {
+          theme: 'outline',
+          size: 'large',
+          text: 'signin_with',
+          shape: 'rectangular',
+          logo_alignment: 'left',
+          width: 320
+        });
       }
     }
 
-    function showForgotPasswordModal() {
-      document.getElementById('forgotPasswordModal').classList.add('show');
-      document.getElementById('authEmail').focus();
-    }
-
-    function closeForgotPasswordModal() {
-      document.getElementById('forgotPasswordModal').classList.remove('show');
-      document.getElementById('authEmail').value = '';
-      document.getElementById('modalError').textContent = '';
-      document.getElementById('modalError').classList.remove('show');
-    }
-
-    function sendPasswordEmail() {
-      const emailInput = document.getElementById('authEmail');
-      const modalError = document.getElementById('modalError');
-      
-      if (emailInput.value === AUTH.USER_EMAIL) {
-        closeForgotPasswordModal();
-        showAlert('비밀번호 전송', '비밀번호가 ' + AUTH.USER_EMAIL + '로 전송되었습니다.\n\n실제 이메일 발송은 SMTP 서버 설정이 필요하므로,\n현재는 시뮬레이션으로 표시됩니다.\n\n비밀번호: ' + AUTH.PASSWORD);
-      } else {
-        modalError.textContent = '인증 이메일이 올바르지 않습니다.';
-        modalError.classList.add('show');
-        emailInput.focus();
+    // Google 로그인 성공 시 호출되는 콜백
+    function handleGoogleCredentialResponse(response) {
+      if (!response || !response.credential) {
+        console.error('Google 로그인 응답 없음');
+        return;
       }
+
+      const payload = decodeJwtPayload(response.credential);
+      if (!payload) {
+        showAlert('로그인 실패', '로그인 정보를 확인할 수 없습니다.');
+        return;
+      }
+
+      // 베이님 본인 계정만 허용 (단일 사용자 앱)
+      if (payload.email !== AUTH.USER_EMAIL) {
+        showAlert('접근 불가', '이 앱은 ' + AUTH.USER_EMAIL + ' 계정 전용입니다.\n\n로그인된 계정: ' + payload.email);
+        if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+          google.accounts.id.disableAutoSelect();
+        }
+        return;
+      }
+
+      currentUser = {
+        email: payload.email,
+        name: payload.name || '',
+        picture: payload.picture || '',
+        sub: payload.sub || ''
+      };
+
+      sessionStorage.setItem('isLoggedIn', 'true');
+      sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+      showApp();
     }
 
     function showApp() {
@@ -1756,8 +2575,11 @@
     function handleLogout() {
       showConfirm('로그아웃', '로그아웃하시겠습니까?', function(confirmed) {
         if (confirmed) {
+          if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+            google.accounts.id.disableAutoSelect();
+          }
           sessionStorage.clear();
-          localStorage.removeItem('isLoggedIn');
+          currentUser = null;
           window.location.href = window.location.href.split('#')[0];
         }
       });
@@ -1864,10 +2686,11 @@
     function filterEmoji() {
       const searchEl = document.getElementById('emojiSearch');
       if (!searchEl) return;
-      
-      const query = searchEl.value.toLowerCase().trim();
-      
-      if (!query) {
+
+      const rawQuery = searchEl.value.trim();
+
+      // 검색어가 비어있으면 현재 활성 카테고리로 복귀
+      if (!rawQuery) {
         const catKeys = Object.keys(EMOJI_DATA);
         const activeCat = document.querySelector('.emoji-cat-btn.active');
         if (activeCat) {
@@ -1878,204 +2701,59 @@
         }
         return;
       }
-      
-      const EMOJI_KEYWORDS = {
-        '😀': ['웃음', 'smile', 'happy', 'grin'],
-        '😃': ['웃음', 'smile', 'happy', 'smiley'],
-        '😄': ['웃음', 'smile', 'happy', 'laugh'],
-        '😁': ['웃음', 'grin', 'happy', 'teeth'],
-        '😆': ['웃음', 'laugh', 'satisfied'],
-        '😅': ['웃음', 'sweat', 'laugh', 'relief'],
-        '🤣': ['웃음', 'laugh', 'rofl', 'rolling'],
-        '😂': ['웃음', 'laugh', 'tears', 'joy'],
-        '🙂': ['미소', 'smile', 'slight'],
-        '🙃': ['거꾸로', 'upside', 'down'],
-        '😉': ['윙크', 'wink', 'flirt'],
-        '😊': ['미소', 'blush', 'smile', 'happy'],
-        '😇': ['천사', 'angel', 'halo', 'innocent'],
-        '❤️': ['하트', 'heart', 'love', 'red'],
-        '🧡': ['하트', 'heart', 'orange', 'love'],
-        '💛': ['하트', 'heart', 'yellow', 'love'],
-        '💚': ['하트', 'heart', 'green', 'love'],
-        '💙': ['하트', 'heart', 'blue', 'love'],
-        '💜': ['하트', 'heart', 'purple', 'love'],
-        '🖤': ['하트', 'heart', 'black', 'love'],
-        '🤍': ['하트', 'heart', 'white', 'love'],
-        '🤎': ['하트', 'heart', 'brown', 'love'],
-        '💔': ['하트', 'heart', 'broken', 'break'],
-        '❣️': ['하트', 'heart', 'exclamation'],
-        '💕': ['하트', 'heart', 'love', 'two'],
-        '💞': ['하트', 'heart', 'revolving'],
-        '💓': ['하트', 'heart', 'beating'],
-        '💗': ['하트', 'heart', 'growing'],
-        '💖': ['하트', 'heart', 'sparkling'],
-        '💘': ['하트', 'heart', 'arrow', 'cupid'],
-        '💝': ['하트', 'heart', 'gift', 'box'],
-        '👋': ['손', 'hand', 'wave', 'hi', 'hello', 'bye'],
-        '🤚': ['손', 'hand', 'raised', 'back'],
-        '✋': ['손', 'hand', 'stop', 'high', 'five'],
-        '👌': ['손', 'hand', 'ok', 'okay', 'good'],
-        '✌️': ['손', 'hand', 'peace', 'victory'],
-        '🤞': ['손', 'hand', 'fingers', 'crossed', 'luck'],
-        '👍': ['손', 'hand', 'thumbs', 'up', 'good', 'like', 'yes'],
-        '👎': ['손', 'hand', 'thumbs', 'down', 'bad', 'dislike', 'no'],
-        '✊': ['손', 'hand', 'fist', 'punch'],
-        '👊': ['손', 'hand', 'fist', 'bump', 'punch'],
-        '🙏': ['손', 'hand', 'pray', 'thank', 'please'],
-        '💼': ['업무', 'work', 'briefcase', 'business', 'office'],
-        '📁': ['폴더', 'folder', 'file', 'directory'],
-        '📂': ['폴더', 'folder', 'open', 'file'],
-        '📅': ['달력', 'calendar', 'date', 'schedule'],
-        '📆': ['달력', 'calendar', 'date', 'tear'],
-        '📋': ['클립보드', 'clipboard', 'list', 'memo'],
-        '📌': ['핀', 'pin', 'pushpin', 'tack'],
-        '📍': ['핀', 'pin', 'location', 'map'],
-        '🏠': ['집', 'home', 'house'],
-        '🏡': ['집', 'home', 'house', 'garden'],
-        '🏢': ['건물', 'building', 'office', 'work'],
-        '🏥': ['병원', 'hospital', 'medical', 'doctor'],
-        '🏦': ['은행', 'bank', 'money'],
-        '🏪': ['가게', 'store', 'shop', 'convenience'],
-        '🏫': ['학교', 'school', 'education'],
-        '🍔': ['음식', 'food', 'burger', 'hamburger'],
-        '🍟': ['음식', 'food', 'fries', 'french'],
-        '🍕': ['음식', 'food', 'pizza'],
-        '🌭': ['음식', 'food', 'hotdog'],
-        '🥪': ['음식', 'food', 'sandwich'],
-        '🌮': ['음식', 'food', 'taco'],
-        '🌯': ['음식', 'food', 'burrito'],
-        '🍳': ['음식', 'food', 'egg', 'cook', 'fry'],
-        '🥘': ['음식', 'food', 'pan', 'shallow'],
-        '🍲': ['음식', 'food', 'pot', 'stew'],
-        '🍱': ['음식', 'food', 'bento', 'box', 'lunch'],
-        '🍜': ['음식', 'food', 'ramen', 'noodle'],
-        '🍝': ['음식', 'food', 'spaghetti', 'pasta'],
-        '🍚': ['음식', 'food', 'rice', 'cooked'],
-        '🍛': ['음식', 'food', 'curry', 'rice'],
-        '🍣': ['음식', 'food', 'sushi'],
-        '🍤': ['음식', 'food', 'shrimp', 'fried'],
-        '🍰': ['음식', 'food', 'cake', 'dessert'],
-        '🎂': ['음식', 'food', 'cake', 'birthday'],
-        '🍪': ['음식', 'food', 'cookie'],
-        '🍩': ['음식', 'food', 'donut', 'doughnut'],
-        '🍦': ['음식', 'food', 'ice', 'cream', 'soft'],
-        '🍧': ['음식', 'food', 'ice', 'shaved'],
-        '⚽': ['운동', 'sport', 'soccer', 'football', 'ball'],
-        '🏀': ['운동', 'sport', 'basketball', 'ball'],
-        '🏈': ['운동', 'sport', 'football', 'american'],
-        '⚾': ['운동', 'sport', 'baseball', 'ball'],
-        '🎾': ['운동', 'sport', 'tennis', 'ball'],
-        '🏐': ['운동', 'sport', 'volleyball', 'ball'],
-        '🏓': ['운동', 'sport', 'ping', 'pong', 'table', 'tennis'],
-        '🏸': ['운동', 'sport', 'badminton'],
-        '🏊': ['운동', 'sport', 'swim', 'swimming', 'pool'],
-        '🏃': ['운동', 'sport', 'run', 'running', 'jog'],
-        '🚴': ['운동', 'sport', 'bike', 'bicycle', 'cycling'],
-        '⛷️': ['운동', 'sport', 'ski', 'skiing', 'snow'],
-        '🏋️': ['운동', 'sport', 'weight', 'lifting', 'gym'],
-        '🧘': ['운동', 'sport', 'yoga', 'meditation'],
-        '🎨': ['취미', 'hobby', 'art', 'paint', 'palette'],
-        '🎭': ['취미', 'hobby', 'art', 'theater', 'drama'],
-        '🎬': ['취미', 'hobby', 'movie', 'film', 'cinema'],
-        '🎤': ['취미', 'hobby', 'music', 'mic', 'microphone', 'sing'],
-        '🎧': ['취미', 'hobby', 'music', 'headphone', 'listen'],
-        '🎸': ['취미', 'hobby', 'music', 'guitar'],
-        '🎹': ['취미', 'hobby', 'music', 'piano', 'keyboard'],
-        '🎮': ['게임', 'game', 'play', 'video', 'controller'],
-        '🎯': ['취미', 'hobby', 'dart', 'target', 'bullseye'],
-        '🎲': ['게임', 'game', 'dice', 'play'],
-        '🎰': ['게임', 'game', 'slot', 'machine', 'casino'],
-        '📚': ['학습', 'study', 'book', 'books', 'library', 'read'],
-        '📖': ['학습', 'study', 'book', 'open', 'read'],
-        '📝': ['학습', 'study', 'memo', 'note', 'write'],
-        '📓': ['학습', 'study', 'notebook'],
-        '📔': ['학습', 'study', 'notebook', 'decorative'],
-        '📒': ['학습', 'study', 'ledger'],
-        '✏️': ['학습', 'study', 'pencil', 'write'],
-        '✒️': ['학습', 'study', 'pen', 'write'],
-        '🖊️': ['학습', 'study', 'pen', 'write'],
-        '🖋️': ['학습', 'study', 'pen', 'fountain'],
-        '🌳': ['자연', 'nature', 'tree', 'plant'],
-        '🌲': ['자연', 'nature', 'tree', 'evergreen'],
-        '🌱': ['자연', 'nature', 'plant', 'seedling', 'sprout'],
-        '🌿': ['자연', 'nature', 'plant', 'herb', 'leaf'],
-        '🍀': ['자연', 'nature', 'plant', 'clover', 'four', 'leaf', 'luck'],
-        '🌸': ['자연', 'nature', 'flower', 'cherry', 'blossom'],
-        '🌺': ['자연', 'nature', 'flower', 'hibiscus'],
-        '🌻': ['자연', 'nature', 'flower', 'sunflower'],
-        '🌹': ['자연', 'nature', 'flower', 'rose'],
-        '🌷': ['자연', 'nature', 'flower', 'tulip'],
-        '💐': ['자연', 'nature', 'flower', 'bouquet'],
-        '🌞': ['자연', 'nature', 'sun', 'face', 'sunny'],
-        '🌝': ['자연', 'nature', 'moon', 'face', 'full'],
-        '🌙': ['자연', 'nature', 'moon', 'crescent'],
-        '⭐': ['자연', 'nature', 'star'],
-        '🌟': ['자연', 'nature', 'star', 'glowing'],
-        '✨': ['자연', 'nature', 'sparkle', 'star'],
-        '⚡': ['자연', 'nature', 'lightning', 'bolt', 'zap'],
-        '🔥': ['자연', 'nature', 'fire', 'flame', 'hot'],
-        '🌈': ['자연', 'nature', 'rainbow'],
-        '☀️': ['자연', 'nature', 'sun', 'sunny', 'weather'],
-        '⛅': ['자연', 'nature', 'cloud', 'sun', 'weather'],
-        '☁️': ['자연', 'nature', 'cloud', 'weather'],
-        '🌧️': ['자연', 'nature', 'rain', 'weather'],
-        '⛈️': ['자연', 'nature', 'storm', 'thunder', 'weather'],
-        '❄️': ['자연', 'nature', 'snow', 'cold', 'winter'],
-        '🚗': ['교통', 'car', 'transport', 'vehicle', 'auto'],
-        '🚕': ['교통', 'car', 'taxi', 'transport'],
-        '🚙': ['교통', 'car', 'suv', 'transport'],
-        '🚌': ['교통', 'bus', 'transport', 'public'],
-        '🚎': ['교통', 'bus', 'trolley', 'transport'],
-        '🚐': ['교통', 'van', 'minibus', 'transport'],
-        '🚛': ['교통', 'truck', 'delivery', 'transport'],
-        '🚚': ['교통', 'truck', 'delivery', 'transport'],
-        '🚲': ['교통', 'bike', 'bicycle', 'cycle'],
-        '🛵': ['교통', 'scooter', 'motor'],
-        '🏍️': ['교통', 'motorcycle', 'bike'],
-        '🚇': ['교통', 'subway', 'metro', 'train'],
-        '🚆': ['교통', 'train', 'railway'],
-        '🚄': ['교통', 'train', 'bullet', 'speed'],
-        '✈️': ['교통', 'airplane', 'plane', 'flight', 'fly'],
-        '🚁': ['교통', 'helicopter', 'fly'],
-        '🚀': ['교통', 'rocket', 'space', 'launch'],
-        '⏰': ['시간', 'time', 'clock', 'alarm'],
-        '⏱️': ['시간', 'time', 'stopwatch', 'timer'],
-        '⏲️': ['시간', 'time', 'timer', 'clock'],
-        '⌚': ['시간', 'time', 'watch', 'clock'],
-        '🕐': ['시간', 'time', 'clock', 'one'],
-        '🕑': ['시간', 'time', 'clock', 'two'],
-        '🕒': ['시간', 'time', 'clock', 'three'],
-        '🔧': ['도구', 'tool', 'wrench', 'fix', 'repair'],
-        '🔨': ['도구', 'tool', 'hammer', 'fix'],
-        '⚒️': ['도구', 'tool', 'hammer', 'pick'],
-        '🛠️': ['도구', 'tool', 'hammer', 'wrench'],
-        '⚙️': ['도구', 'tool', 'gear', 'setting', 'config'],
-        '🔩': ['도구', 'tool', 'nut', 'bolt'],
-        '🪛': ['도구', 'tool', 'screwdriver'],
-        '🪚': ['도구', 'tool', 'saw', 'carpentry'],
-        '⚠️': ['경고', 'warning', 'caution', 'alert'],
-        '🚸': ['경고', 'warning', 'children', 'crossing'],
-        '⛔': ['경고', 'warning', 'no', 'entry', 'stop'],
-        '🚫': ['경고', 'warning', 'prohibited', 'no', 'ban'],
-        '❌': ['경고', 'warning', 'no', 'cross', 'x'],
-        '✅': ['확인', 'check', 'yes', 'correct', 'done'],
-        '☑️': ['확인', 'check', 'yes', 'box'],
-        '✔️': ['확인', 'check', 'yes', 'mark']
-      }
-      
+
+      // 공백 구분 AND 검색 지원: "웃음 happy" → 둘 다 매칭돼야 결과
+      const tokens = rawQuery.toLowerCase().split(/\s+/).filter(function(t) { return t.length > 0; });
+      if (tokens.length === 0) return;
+
       let matched = [];
+
       Object.keys(EMOJI_DATA).forEach(function(cat) {
+        // 카테고리명도 검색 대상에 포함 (폴백 매칭)
+        const catNameLower = cat.toLowerCase();
+
         EMOJI_DATA[cat].forEach(function(emoji) {
-          const keywords = EMOJI_KEYWORDS[emoji] || [];
-          const match = keywords.some(function(kw) {
-            return kw.toLowerCase().indexOf(query) >= 0;
-          });
-          if (match && matched.indexOf(emoji) === -1) {
+          if (matched.indexOf(emoji) >= 0) return;
+
+          // 1) 이모지 문자 자체 매칭 (사용자가 이모지를 붙여넣어 검색하는 경우)
+          if (tokens.some(function(t) { return emoji.indexOf(t) >= 0; })) {
             matched.push(emoji);
+            return;
+          }
+
+          // 2) 키워드 매칭 (모든 토큰이 최소 1개 키워드에 부분 일치해야 함 = AND)
+          const keywords = EMOJI_KEYWORDS[emoji] || [];
+          const keywordsLower = keywords.map(function(kw) { return kw.toLowerCase(); });
+
+          const allTokensMatch = tokens.every(function(token) {
+            // 각 토큰이 키워드 중 하나에라도 부분 일치
+            if (keywordsLower.some(function(kw) { return kw.indexOf(token) >= 0; })) {
+              return true;
+            }
+            // 카테고리명에 부분 일치 (폴백)
+            if (catNameLower.indexOf(token) >= 0) {
+              return true;
+            }
+            return false;
+          });
+
+          if (allTokensMatch && keywordsLower.length > 0) {
+            matched.push(emoji);
+            return;
+          }
+
+          // 3) 키워드가 없는 이모지라도 카테고리명 매칭이면 포함 (폴백)
+          if (keywordsLower.length === 0) {
+            const allMatchCat = tokens.every(function(token) {
+              return catNameLower.indexOf(token) >= 0;
+            });
+            if (allMatchCat) {
+              matched.push(emoji);
+            }
           }
         });
       });
-      
+
       renderEmojiGrid(matched);
     }
 
@@ -2113,27 +2791,26 @@
     }
 
     function initLogin() {
-      const passwordInput = document.getElementById('password');
-      if (passwordInput) {
-        passwordInput.addEventListener('keypress', function(e) {
-          if (e.key === 'Enter') {
-            handleLogin();
-          }
-        });
-      }
-
-      const authEmailInput = document.getElementById('authEmail');
-      if (authEmailInput) {
-        authEmailInput.addEventListener('keypress', function(e) {
-          if (e.key === 'Enter') {
-            sendPasswordEmail();
-          }
-        });
-      }
-
+      // 기존 세션 확인
       if (sessionStorage.getItem('isLoggedIn') === 'true') {
-        showApp();
+        const savedUser = sessionStorage.getItem('currentUser');
+        if (savedUser) {
+          try {
+            currentUser = JSON.parse(savedUser);
+          } catch (e) {
+            currentUser = null;
+          }
+        }
+        if (currentUser && currentUser.email === AUTH.USER_EMAIL) {
+          showApp();
+          return;
+        } else {
+          sessionStorage.clear();
+        }
       }
+
+      // Google Sign-In 초기화
+      initGoogleSignIn();
     }
 
     // ========================================
@@ -2147,6 +2824,7 @@
       loadCategories();
       loadActivities();
       loadProfile();
+      loadDesignSettings();
       renderSidebar();
       renderMenuManager();
       updateActiveMenu();
@@ -3015,9 +3693,12 @@
       const sidebarPhoto = document.getElementById('sidebarProfilePhoto');
       const sidebarQuote = document.getElementById('sidebarProfileQuote');
       
+      // 우선순위: 업로드된 사진 → Google 프로필 사진 → 기본 이모지
+      const displayPhoto = profilePhoto || (currentUser && currentUser.picture) || '';
+      
       if (sidebarPhoto) {
-        if (profilePhoto) {
-          sidebarPhoto.innerHTML = '<img src="' + profilePhoto + '" alt="Profile">';
+        if (displayPhoto) {
+          sidebarPhoto.innerHTML = '<img src="' + displayPhoto + '" alt="Profile">';
         } else {
           sidebarPhoto.innerHTML = '👤';
         }
@@ -3029,8 +3710,8 @@
       
       const preview = document.getElementById('profilePreview');
       if (preview) {
-        if (profilePhoto) {
-          preview.innerHTML = '<img src="' + profilePhoto + '" alt="Profile">';
+        if (displayPhoto) {
+          preview.innerHTML = '<img src="' + displayPhoto + '" alt="Profile">';
         } else {
           preview.innerHTML = '👤';
         }
@@ -3039,6 +3720,12 @@
       const quoteInput = document.getElementById('profileQuoteInput');
       if (quoteInput) {
         quoteInput.value = profileQuote;
+      }
+
+      // 사이드바 이메일 업데이트
+      const sidebarEmail = document.getElementById('sidebarUserEmail');
+      if (sidebarEmail && currentUser && currentUser.email) {
+        sidebarEmail.textContent = currentUser.email;
       }
     }
 
@@ -3100,50 +3787,124 @@
       } else if (sectionName === 'menu' && menuItems[1]) {
         menuItems[1].classList.add('active');
         document.getElementById('settingsMenuSection').classList.add('active');
-      } else if (sectionName === 'account' && menuItems[2]) {
+      } else if (sectionName === 'design' && menuItems[2]) {
         menuItems[2].classList.add('active');
-        document.getElementById('settingsAccountSection').classList.add('active');
+        document.getElementById('settingsDesignSection').classList.add('active');
+        renderDesignSettings();
       }
       
       updateProfileDisplay();
     }
 
-    function changePassword() {
-      const current = document.getElementById('currentPassword');
-      const newPwd = document.getElementById('newPassword');
-      const confirm = document.getElementById('newPasswordConfirm');
-      
-      if (!current || !newPwd || !confirm) return;
-      
-      if (current.value !== AUTH.PASSWORD) {
-        showAlert('오류', '현재 비밀번호가 올바르지 않습니다.');
-        return;
+    // ========================================
+    // 디자인 설정 관리
+    // ========================================
+    const DESIGN_DEFAULTS = {
+      primaryColor: '#ffde59',
+      sidebarBg: '#fafafa',
+      fontFamily: "'Noto Sans KR', sans-serif",
+      navWidth: 220,
+      buttonRadius: 8
+    };
+
+    let designSettings = Object.assign({}, DESIGN_DEFAULTS);
+
+    function loadDesignSettings() {
+      const saved = localStorage.getItem('designSettings');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          designSettings = Object.assign({}, DESIGN_DEFAULTS, parsed);
+        } catch (e) {
+          designSettings = Object.assign({}, DESIGN_DEFAULTS);
+        }
       }
-      
-      if (newPwd.value.length < 6) {
-        showAlert('오류', '새 비밀번호는 6자 이상이어야 합니다.');
-        return;
+      applyDesignSettings();
+    }
+
+    function saveDesignSettings() {
+      localStorage.setItem('designSettings', JSON.stringify(designSettings));
+    }
+
+    function applyDesignSettings() {
+      const root = document.documentElement;
+      root.style.setProperty('--primary-yellow', designSettings.primaryColor);
+      root.style.setProperty('--bg-side', designSettings.sidebarBg);
+      root.style.setProperty('--nav-width', designSettings.navWidth + 'px');
+      root.style.setProperty('--button-radius', designSettings.buttonRadius + 'px');
+      document.body.style.fontFamily = designSettings.fontFamily;
+
+      // 사이드바 토글 버튼 위치도 갱신 (--nav-width 연동)
+      const toggleBtn = document.getElementById('sidebarToggleBtn');
+      if (toggleBtn && !isSidebarCollapsed) {
+        toggleBtn.style.left = (parseInt(designSettings.navWidth) + 36) + 'px';
       }
-      
-      if (newPwd.value !== confirm.value) {
-        showAlert('오류', '새 비밀번호가 일치하지 않습니다.');
-        return;
+    }
+
+    function renderDesignSettings() {
+      // 색상 입력 반영
+      const primaryColor = document.getElementById('designPrimaryColor');
+      const primaryColorValue = document.getElementById('designPrimaryColorValue');
+      if (primaryColor) primaryColor.value = designSettings.primaryColor;
+      if (primaryColorValue) primaryColorValue.textContent = designSettings.primaryColor;
+
+      const sidebarBg = document.getElementById('designSidebarBg');
+      const sidebarBgValue = document.getElementById('designSidebarBgValue');
+      if (sidebarBg) sidebarBg.value = designSettings.sidebarBg;
+      if (sidebarBgValue) sidebarBgValue.textContent = designSettings.sidebarBg;
+
+      // 폰트
+      const fontFamily = document.getElementById('designFontFamily');
+      if (fontFamily) fontFamily.value = designSettings.fontFamily;
+
+      // 슬라이더
+      const navWidth = document.getElementById('designNavWidth');
+      const navWidthValue = document.getElementById('designNavWidthValue');
+      if (navWidth) navWidth.value = designSettings.navWidth;
+      if (navWidthValue) navWidthValue.textContent = designSettings.navWidth + 'px';
+
+      const buttonRadius = document.getElementById('designButtonRadius');
+      const buttonRadiusValue = document.getElementById('designButtonRadiusValue');
+      if (buttonRadius) buttonRadius.value = designSettings.buttonRadius;
+      if (buttonRadiusValue) buttonRadiusValue.textContent = designSettings.buttonRadius + 'px';
+    }
+
+    function updateDesign(key, value) {
+      if (key === 'navWidth' || key === 'buttonRadius') {
+        designSettings[key] = parseInt(value);
+      } else {
+        designSettings[key] = value;
       }
-      
-      AUTH.PASSWORD = newPwd.value;
-      localStorage.setItem('userPassword', newPwd.value);
-      
-      current.value = '';
-      newPwd.value = '';
-      confirm.value = '';
-      
-      showAlert('변경 완료', '비밀번호가 변경되었습니다.');
+
+      // 실시간 미리보기 값 표시 갱신
+      const valueEl = document.getElementById('design' + key.charAt(0).toUpperCase() + key.slice(1) + 'Value');
+      if (valueEl) {
+        if (key === 'navWidth' || key === 'buttonRadius') {
+          valueEl.textContent = designSettings[key] + 'px';
+        } else if (key === 'primaryColor' || key === 'sidebarBg') {
+          valueEl.textContent = designSettings[key];
+        }
+      }
+
+      applyDesignSettings();
+      saveDesignSettings();
+    }
+
+    function resetDesign() {
+      showConfirm('초기화 확인', '디자인 설정을 기본값으로 되돌리시겠습니까?', function(confirmed) {
+        if (confirmed) {
+          designSettings = Object.assign({}, DESIGN_DEFAULTS);
+          applyDesignSettings();
+          saveDesignSettings();
+          renderDesignSettings();
+        }
+      });
     }
 
     // ========================================
     // 초기화
     // ========================================
-    console.log('베이 관리자 v1.5 로드 완료');
+    console.log('베이 관리자 v2.1 로드 완료');
     console.log('오늘 날짜:', today());
   </script>
 </body>
