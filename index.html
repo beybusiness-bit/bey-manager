@@ -981,6 +981,22 @@
       margin-bottom: 8px;
     }
 
+    .activity-card-category select {
+      width: 100%;
+      padding: 4px 6px;
+      font-size: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background: #fff;
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+
+    .activity-card-category select:focus {
+      outline: none;
+      border-color: var(--primary-yellow);
+    }
+
     .activity-card-badges {
       display: flex;
       flex-wrap: wrap;
@@ -3682,6 +3698,13 @@
       }
     }
 
+    function updateActivityCategory(activityId, categoryId) {
+      const activity = activities.find(function(a) { return a.id === activityId; });
+      if (activity) {
+        activity.categoryId = categoryId || null;
+      }
+    }
+
     function toggleActivityActive(activityId) {
       const activity = activities.find(function(a) { return a.id === activityId; });
       if (activity) {
@@ -3738,8 +3761,20 @@
           html += '  <div class="activity-card-emoji">' + activity.emoji + '</div>';
           html += '  <div class="activity-card-name">' + activity.name + '</div>';
         }
-        
-        html += '  <div class="activity-card-category">' + categoryLabel + '</div>';
+
+        if (isEditing) {
+          html += '  <div class="activity-card-category">';
+          html += '    <select onclick="event.stopPropagation()" onchange="updateActivityCategory(&apos;' + activity.id + '&apos;, this.value)">';
+          html += '      <option value=""' + (!activity.categoryId ? ' selected' : '') + '>미지정</option>';
+          categories.forEach(function(cat) {
+            const selected = (activity.categoryId === cat.id) ? ' selected' : '';
+            html += '      <option value="' + cat.id + '"' + selected + '>' + cat.emoji + ' ' + cat.name + '</option>';
+          });
+          html += '    </select>';
+          html += '  </div>';
+        } else {
+          html += '  <div class="activity-card-category">' + categoryLabel + '</div>';
+        }
         
         if (!isEditing) {
           html += '  <div class="activity-card-badges">';
