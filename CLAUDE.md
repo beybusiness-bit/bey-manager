@@ -8,8 +8,8 @@
 ## 1. 앱 기본 정보
 
 - **앱 이름**: 베이 관리자
-- **저장소**: (GitHub 리포 URL을 여기 채워넣을 것)
-- **배포 URL**: (GitHub Pages URL을 여기 채워넣을 것)
+- **저장소**: https://github.com/beybusiness-bit/bey-manager
+- **배포 URL**: https://beybusiness-bit.github.io/bey-manager/
 
 ### AUTH 상수 (현재 코드에 반영된 값)
 
