@@ -438,15 +438,13 @@
       background: var(--bg-hover);
     }
 
-    /* 데스크탑: 사이드바 펼침 상태에서는 X 표시만 남기고 테두리·배경 제거 */
-    @media (min-width: 769px) {
-      .sidebar-toggle-btn.expanded {
-        background: transparent;
-        border-color: transparent;
-      }
-      .sidebar-toggle-btn.expanded:hover {
-        background: rgba(0, 0, 0, 0.05);
-      }
+    /* 사이드바 펼침 상태에서는 X 표시만 남기고 테두리·배경 제거 (데스크탑·모바일 공통) */
+    .sidebar-toggle-btn.expanded {
+      background: transparent;
+      border-color: transparent;
+    }
+    .sidebar-toggle-btn.expanded:hover {
+      background: rgba(0, 0, 0, 0.05);
     }
 
     /* 사이드바 */
@@ -1841,11 +1839,69 @@
       height: 100%;
       object-fit: cover;
     }
+    /* 모바일 상단 스티키 바 (데스크탑에선 숨김) */
+    .mobile-top-bar {
+      display: none;
+    }
+
     /* 반응형 */
     @media (max-width: 768px) {
       .main-content {
         margin-left: 0;
         padding: 12px;
+      }
+
+      /* 모바일: 상단 스티키 바 노출 */
+      .mobile-top-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        position: sticky;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 52px;
+        padding: 0 14px;
+        background: var(--bg-card);
+        border-bottom: 1px solid var(--border-color);
+        z-index: 90;
+      }
+      .mobile-top-hamburger {
+        width: 36px;
+        height: 36px;
+        background: transparent;
+        border: none;
+        border-radius: var(--button-radius);
+        font-size: 22px;
+        color: var(--text-primary);
+        cursor: pointer;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .mobile-top-hamburger:hover {
+        background: rgba(0,0,0,0.05);
+      }
+      .mobile-top-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1;
+        min-width: 0;
+      }
+
+      /* 모바일: 사이드바 접힘 상태의 햄버거 버튼 숨김 (스티키 바가 대체) */
+      .sidebar-toggle-btn:not(.expanded) {
+        display: none;
+      }
+
+      /* 모바일: 페이지 내 헤더(제목 + 부제) 숨김 — 스티키 바가 제목 담당 */
+      .page-header {
+        display: none;
       }
 
       .card {
@@ -1929,6 +1985,12 @@
 
   <!-- 메인 앱 -->
   <div id="appContainer" class="app-container">
+    <!-- 모바일 상단 스티키 바 (사이드바 접힘 시만 노출) -->
+    <div class="mobile-top-bar" id="mobileTopBar">
+      <button class="mobile-top-hamburger" onclick="toggleSidebar()" aria-label="메뉴 열기">☰</button>
+      <div class="mobile-top-title" id="mobileTopTitle">베이 관리자</div>
+    </div>
+
     <!-- 햄버거 버튼 -->
     <button class="sidebar-toggle-btn" id="sidebarToggleBtn" onclick="toggleSidebar()">
       <span id="sidebarToggleIcon">✕</span>
@@ -3556,6 +3618,7 @@
       renderActivities();
       renderCategories();
       renderScheduleThumbnails();
+      updateMobileTopTitle();
     }
 
     function loadMenus() {
@@ -3764,20 +3827,32 @@
     // ========================================
     function navigateTo(pageId) {
       currentPage = pageId;
-      
+
       document.querySelectorAll('.page').forEach(function(page) {
         page.classList.remove('active');
       });
-      
+
       const targetPage = document.getElementById(pageId + 'Page');
       if (targetPage) {
         targetPage.classList.add('active');
       }
-      
+
       updateActiveMenu();
-      
+      updateMobileTopTitle();
+
       if (window.innerWidth <= 768) {
         toggleSidebar();
+      }
+    }
+
+    function updateMobileTopTitle() {
+      const titleEl = document.getElementById('mobileTopTitle');
+      if (!titleEl) return;
+      const activePage = document.querySelector('.page.active .page-header h2');
+      if (activePage) {
+        titleEl.textContent = activePage.textContent.trim();
+      } else {
+        titleEl.textContent = '베이 관리자';
       }
     }
 
