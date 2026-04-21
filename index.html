@@ -438,6 +438,17 @@
       background: var(--bg-hover);
     }
 
+    /* 데스크탑: 사이드바 펼침 상태에서는 X 표시만 남기고 테두리·배경 제거 */
+    @media (min-width: 769px) {
+      .sidebar-toggle-btn.expanded {
+        background: transparent;
+        border-color: transparent;
+      }
+      .sidebar-toggle-btn.expanded:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+    }
+
     /* 사이드바 */
     .sidebar {
       position: fixed;
@@ -542,13 +553,7 @@
       font-size: 20px;
       font-weight: 700;
       color: var(--text-primary);
-    }
-
-    .logo-sub {
-      font-size: 11px;
-      color: var(--text-tertiary);
-      margin-top: 4px;
-      word-break: break-all;
+      margin-bottom: 16px;
     }
 
     .sidebar-nav {
@@ -1160,6 +1165,33 @@
 
     .schedule-hero-card:hover {
       box-shadow: 0 2px 10px rgba(255,77,109,0.15);
+    }
+
+    .schedule-hero-card.empty {
+      background: #fafafa;
+      border: 2px dashed #d0d0d0;
+      color: var(--text-tertiary);
+      cursor: default;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 12px;
+      opacity: 0.85;
+    }
+
+    .schedule-hero-card.empty:hover {
+      box-shadow: none;
+    }
+
+    .hero-empty-emoji {
+      font-size: 42px;
+      opacity: 0.45;
+      line-height: 1;
+    }
+
+    .hero-empty-msg {
+      font-size: 14px;
+      color: var(--text-secondary);
     }
 
     .hero-checkbox-wrap {
@@ -1905,6 +1937,7 @@
     <!-- 사이드바 -->
     <aside class="sidebar" id="sidebar">
       <div class="logo-wrap">
+        <div class="logo">베이 관리자</div>
         <div class="profile-section">
           <div class="profile-photo-wrap" onclick="openProfileSettings()">
             <div class="profile-photo" id="sidebarProfilePhoto">
@@ -1913,8 +1946,6 @@
           </div>
           <div class="profile-quote" id="sidebarProfileQuote">오늘도 화이팅! ✨</div>
         </div>
-        <div class="logo">베이 관리자</div>
-        <div class="logo-sub" id="sidebarUserEmail">baekeun0@gmail.com</div>
       </div>
 
       <nav class="sidebar-nav" id="sidebarNav">
@@ -3573,9 +3604,11 @@
           isSidebarCollapsed = JSON.parse(saved);
           if (isSidebarCollapsed) {
             document.getElementById('sidebar').classList.add('collapsed');
+            document.getElementById('sidebarToggleBtn').classList.remove('expanded');
             document.getElementById('sidebarToggleIcon').textContent = '☰';
             document.getElementById('sidebarToggleBtn').style.left = '16px';
           } else {
+            document.getElementById('sidebarToggleBtn').classList.add('expanded');
             document.getElementById('sidebarToggleIcon').textContent = '✕';
             document.getElementById('sidebarToggleBtn').style.left = (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-width')) - 48) + "px";
           }
@@ -3585,6 +3618,7 @@
       } else {
         const navWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-width'));
         document.getElementById('sidebarToggleBtn').style.left = (navWidth - 48) + "px";
+        document.getElementById('sidebarToggleBtn').classList.add('expanded');
       }
     }
 
@@ -3713,10 +3747,12 @@
       
       if (isSidebarCollapsed) {
         sidebar.classList.add('collapsed');
+        toggleBtn.classList.remove('expanded');
         toggleIcon.textContent = '☰';
         toggleBtn.style.left = '16px';
       } else {
         sidebar.classList.remove('collapsed');
+        toggleBtn.classList.add('expanded');
         toggleIcon.textContent = '✕';
         const navWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-width'));
         toggleBtn.style.left = (navWidth - 48) + "px";
@@ -4475,7 +4511,7 @@
         emoji: getRandomEmoji(),
         description: '',
         tags: [],
-        isLiked: schedules.length === 0,
+        isLiked: false,
         createdAt: today(),
         updatedAt: today()
       };
@@ -4712,11 +4748,17 @@
 
     function renderHeroSchedule(liked) {
       const section = document.getElementById('scheduleHeroSection');
+      section.style.display = 'block';
       if (liked.length === 0) {
-        section.style.display = 'none';
+        section.innerHTML =
+          '<div class="schedule-hero-row">' +
+          '  <div class="schedule-hero-card empty">' +
+          '    <div class="hero-empty-emoji">💛</div>' +
+          '    <div class="hero-empty-msg">좋아하는 시간표가 아직 없습니다</div>' +
+          '  </div>' +
+          '</div>';
         return;
       }
-      section.style.display = 'block';
 
       if (scheduleHeroIndex >= liked.length) scheduleHeroIndex = 0;
       const sch = liked[scheduleHeroIndex];
@@ -4866,12 +4908,6 @@
       const quoteInput = document.getElementById('profileQuoteInput');
       if (quoteInput) {
         quoteInput.value = profileQuote;
-      }
-
-      // 사이드바 이메일 업데이트
-      const sidebarEmail = document.getElementById('sidebarUserEmail');
-      if (sidebarEmail && currentUser && currentUser.email) {
-        sidebarEmail.textContent = currentUser.email;
       }
     }
 
