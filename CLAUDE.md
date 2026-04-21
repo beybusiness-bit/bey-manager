@@ -60,7 +60,7 @@ const AUTH = {
 ```
 bey-manager/
 ├── CLAUDE.md                    # Claude Code용 프로젝트 지침 (이 파일)
-├── bey-manager.html             # 메인 앱 (단일 파일, 현재 ~4021줄)
+├── index.html                   # 메인 앱 (단일 파일, 현재 ~5094줄) — bey-manager.html에서 index.html로 리네임됨
 ├── README.md                    # GitHub 리포 소개 (선택)
 └── docs/
     ├── guide.md                 # 사용 가이드 (Phase 4에서 생성)
@@ -337,8 +337,21 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 - [x] 12단계: Google OAuth JavaScript 연동 ✅
 - [x] 13단계: 이모지 시스템 대폭 확장 (450+ 이모지, AND 검색, 🐶 동물 카테고리 포함) ✅
 - [x] 14단계: 설정 페이지 개편 (계정 설정 제거, 디자인 설정 추가) ✅
-- [ ] 15단계: 시간표 탭 - 썸네일뷰 기본 구조 🔲 **← 다음 작업**
+- [~] 15단계: 시간표 탭 **진행 중** (15-A·15-B 완료, 15-C·15-D 대기)
+  - [x] 15-A: 데이터 모델 + 좋아요(하트 SVG) + 일상 대표 색상 + 마이그레이션 ✅
+  - [x] 15-B: 썸네일뷰 (Hero 캐러셀 + Others 가로 슬라이더 + 검색 + 일괄선택 + 전체선택) ✅
+  - [ ] 15-C: 목록뷰 + 페이저 + 정렬 + 필터 + 뷰 토글 🔲 **← 다음 세션 이어갈 작업**
+  - [ ] 15-D: 이모지 피커 My Emojies 업로드 탭 🔲
 - [ ] 16단계: 홈 대시보드 위젯 🔲
+
+### Phase 5 내 곁가지 개선 (15단계 진행 중 반영됨)
+- [x] 사이드바 접기 버튼을 사이드바 안쪽 우상단으로 이동 (position: fixed로 자동 스티키)
+- [x] 페이지 헤더 좌측 여백 조정 (펼침 28px / 접힘 48px)
+- [x] 일상 카드 뷰 모드 = 대표 색상 배경(투명도) + 자동 대비 텍스트 색(WCAG 휘도 150 기준)
+- [x] 하트 아이콘 SVG 통일 (fill만 토글, 동일 실루엣)
+- [x] "일상 종류 관리" → "일상 종류" 탭명 단축
+- [x] 디자인 설정 확장: 강조 버튼 배경색/글자색, 기본 글자크기, 기본 테두리색, 카드 배경색
+- [x] 모바일 가로 overflow 차단 (html/body overflow-x:hidden, 그리드 minmax(0,1fr), 카드 패딩 축소)
 
 ### Phase 6: 리팩토링 (후순위)
 - [ ] R1단계: `USER_EMAIL` → `ALLOWED_EMAILS` 배열로 리팩토링 🔲 (15단계 이후)
@@ -483,43 +496,69 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 
 ## 10. 다음 세션 시작점
 
-### 🎯 이어서 할 작업: **15단계 - 시간표 탭 썸네일뷰 기본 구조**
+### 🚨 세션 시작 직후 가장 먼저 할 일
 
-**목표**: 현재 `dailyScheduleTab`의 "시간표 기능을 개발 중입니다" 플레이스홀더를 실제 시간표 목록 UI로 교체
+**이전 세션에서 15-A·15-B를 구현하고 배포까지 마쳤으나, 사용자가 피드백을 주기 전에 세션을 종료했음.**
 
-**세부 작업**:
-1. `dailyScheduleTab` 플레이스홀더 제거
-2. "**새 시간표 만들기**" 버튼 상단 배치
-3. 시간표 목록을 **카드 그리드** 형태로 표시:
-   - 각 카드: 제목, 일정 개수, 태그, 생성일
-   - `isPrimary: true`인 시간표에 "주요" 뱃지 강조
-   - 카드 클릭 시 상세 화면으로 (17단계에서 구현, 지금은 일단 placeholder)
-4. `schedules = []`, `scheduleItems = []` 상태 변수 추가
-5. `loadSchedules()`, `saveSchedules()` localStorage 헬퍼
-6. `renderScheduleThumbnails()` 렌더링 함수
-7. `initializeApp()`에서 시간표 로드 추가
-8. 빈 상태 UI (시간표 하나도 없을 때)
+세션 시작 시 사용자에게 먼저 물어볼 것:
+> "이전 세션에서 15-A·15-B와 디자인 설정 확장까지 배포 완료했습니다. 배포 URL(`https://beybusiness-bit.github.io/bey-manager/`)에서 모바일 하드리프레시 후 테스트해보셨다면 피드백부터 받고 이어가겠습니다. 문제 없으면 15-C(목록뷰 + 페이저)로 진행할게요."
 
-**디자인 참고**:
-- 일상 종류 카드(`.activity-card`) 스타일 참고
-- 카테고리 카드(`.category-card`) 스타일 참고
-- 그리드: `grid-template-columns: repeat(auto-fill, minmax(240px, 1fr))`
+피드백이 나오면 그걸 먼저 반영. 없으면 15-C로.
 
-**DB 구조 (재확인)**:
-- 시트3(시간표): `id, title, tags, isPrimary, createdAt, updatedAt`
-- 시트4(시간표_일정): `id, scheduleId, activityId, weekdays, startTime, endTime, createdAt`
-- 지금은 localStorage에 `schedules`, `scheduleItems` 키로 저장
+### 🎯 다음에 구현할 단계 (우선순위 순)
 
-**세션 시작 시 확인 사항**:
-- 현재 파일 라인 수: ~4021줄
-- 현재 버전: v2.1 (+ 🐶 동물 카테고리 추가)
-- `dailyScheduleTab`의 현재 상태는 단순 플레이스홀더 텍스트 (HTML만 있음)
+#### 15-C · 시간표 목록뷰 + 뷰 토글 + 페이저
+- 테이블 뷰: 체크박스(전체선택 포함) / 시간표 이름 / 태그 / 최종수정일 / 좋아요 버튼
+- 페이저: `~/Downloads/pongdang-manager/index.html`의 페이저 구조를 **구조만 차용**, 베이 관리자 디자인(노랑 키컬러, DM Mono, 현재 `--button-radius` 등)에 맞춰 리스타일
+- 정렬: 좋아요 / 가나다 / 최종수정일 각각 오름차순·내림차순 토글
+- 필터: 좋아요된 것만 / 좋아요 안된 것만 / 전체
+- 검색창(썸네일뷰와 공유 · 이미 `scheduleSearchQuery` 전역 상태 존재)
+- **뷰 토글 버튼**: ⊞(썸네일)과 ☰(목록) 두 아이콘 작게, 페이저 근처 배치. 썸네일이 디폴트.
+- 상태 변수 추가 제안: `scheduleViewMode: 'thumbnail' | 'list'`, `scheduleListPage`, `scheduleListPerPage`, `scheduleSortKey`, `scheduleSortDir`, `scheduleFilterLiked`
 
-**진행 방식**:
-1. 기존 `dailyScheduleTab` HTML 위치 `Read`로 확인
-2. 단계별로 구현하고 사용자 확인 받으며 진행
-3. 코드 완료됐다고 자동으로 단계 마무리 판단 금지 — 사용자 테스트 + "다음" 명시적 확인 후 이동
-4. 매 Edit 후 문법 검사 실행
+#### 15-D · 이모지 피커 "My Emojies" 업로드 탭
+- 이모지 피커(`openEmojiPicker`)에 새 탭 "🖼️ My Emojies" 추가
+- 이미지 업로드 → base64로 localStorage에 저장 (키: `myEmojis` 배열)
+- 업로드 화면 안내: "권장 128×128 정사각, 최대 200KB, PNG/JPG/WebP"
+- 업로드된 이미지는 이모지 자리에 `<img>`로 렌더 (이모지 문자열 대신 `data-img:<id>` 같은 마커 방식 고려, 또는 base64 URL을 그대로 저장)
+- 삭제 버튼 제공
+- 기존 이모지 피커는 이미 글로벌(`openEmojiPicker(current, callback)`) — 새 탭 하나만 추가하면 됨
+
+#### 15-E (만약 15-D 마치면)  — 추가 피드백에 따라
+- 시간표 썸네일(주별 시간표 그리드 축소판)은 **16단계 이후 주간 그리드 실데이터가 생긴 뒤** hero 카드 썸네일 자리에 렌더링하도록 연결
+
+### 📌 설계 결정 기록 (다음 세션이 맥락 파악하도록)
+
+**시간표 관련**
+- 하트(좋아요)는 `isLiked` 필드, **카드당 1개 동작만** — 기존 "주요" 개념 폐기. 마이그레이션 로직이 `loadSchedules()`에 있음 (`isPrimary → isLiked`, 이후 isPrimary 삭제).
+- 새 시간표 생성 시 **이모지는 `EMOJI_DATA` 전체에서 랜덤**(`getRandomEmoji()`)
+- **첫 번째 시간표만 자동 좋아요** — `isLiked: schedules.length === 0`. 사용자가 hero에서 바로 편집할 수 있게 하려는 UX.  ← **단, 15-B 마지막 피드백에서 hero는 읽기 전용으로 바뀜.** 편집은 17단계 상세화면에서. 따라서 "첫 번째 자동 좋아요" UX 명분이 약해짐. 다음 세션에 사용자에게 "첫 번째 자동 좋아요 유지할지 뺄지" 물어볼 것.
+- Hero 카드는 **읽기 전용 + 전체 클릭 시 `openScheduleDetail`**. 체크박스·하트만 `event.stopPropagation()`. 이모지/제목/설명 모두 표시만.
+- Others 섹션 헤더 문구는 "**전체 시간표**" (이전 "기타 시간표"에서 변경됨 — 사용자 요청)
+- "전체 선택" 체크박스는 **현재 검색 필터 결과 기준 전체**(좋아요+안된 것 합산) 토글. `indeterminate` 상태 지원.
+
+**일상 종류**
+- 일상(`activity`)에 `color` 필드 추가. 기본 `#ffde59`. 편집 모드에 HTML `<input type="color">` 사용 (OS 네이티브 그라디언트 피커 제공).
+- 뷰 모드 카드 배경 = 선택 색상 **40% 알파** + 흰색 합성 결과의 휘도가 150 미만이면 텍스트 흰색, 아니면 `#333`. `getActivityCardStyle(color)` 헬퍼가 담당.
+
+**레이아웃**
+- 사이드바 토글 버튼 위치: 접힘 시 `left: 16px`, 펼침 시 `navWidth - 48px` (사이드바 안쪽 우상단). 4군데(loadSidebarState 2곳, toggleSidebar, applyDesignSettings)에서 모두 `navWidth - 48`로 통일.
+- `.page-header padding-left`: 펼침 28px / 접힘 48px (`.sidebar.collapsed ~ .main-content .page-header` 셀렉터).
+
+**디자인 설정 (section 확장됨)**
+- CSS 변수: `--primary-yellow`(키컬러), `--bg-side`, `--primary-green`(강조버튼), `--accent-btn-color`, `--base-font-size`, `--border-color`, `--bg-card`, `--nav-width`, `--button-radius`.
+- 더 추가 요청 있으면 `DESIGN_DEFAULTS` + `applyDesignSettings` + `renderDesignSettings` + UI HTML + `updateDesign` 모두 갱신해야 함.
+
+### 🔄 현재 진행 상태 (마지막 커밋 기준)
+- 마지막 커밋: `e6c8fcb docs: 저장소 & 배포 URL 기록`
+- 그 이전: `21e899a docs: 자동 배포 플로우 + 푸시 보류 상황 지침 추가`, `47e532b feat: 시간표 썸네일뷰...`
+- 배포된 상태 = 15-B + 디자인 설정 확장 완료 시점
+- 파일 라인 수 변동 大 — 세션 시작 시 `wc -l index.html`로 재확인
+
+### ⚠️ 다음 세션에 유의
+1. **자동 배포 플로우**가 CLAUDE.md §5에 추가됨. 기본은 "수정 → 문법검증 → 자동 commit+push → 하드리프레시 안내". WIP거나 큰 변경은 푸시 보류 제안.
+2. 세션 시작 시 `git log -5 --oneline`, `wc -l index.html`, CLAUDE.md 전체 스캔.
+3. 사용자의 피드백 없이 15-C로 그냥 진행하지 말 것. 피드백 먼저 받기.
 
 ---
 
@@ -559,6 +598,21 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 - 분할하려면 반드시 로컬 서버(`python3 -m http.server`) 전제
 - 현재는 단일 HTML 유지 (안전)
 
+### 썸네일뷰/목록뷰처럼 같은 데이터에 대한 여러 뷰를 만들 때
+- 검색·선택 상태는 **뷰 간 공유** 해야 UX 자연스러움 (15-B에서 `scheduleSearchQuery`, `selectedScheduleIds`를 전역으로 둔 이유)
+- 페이지 번호·정렬 상태는 각 뷰별 독립으로 유지 (썸네일은 `scheduleOthersPage`, 목록은 `scheduleListPage` 따로)
+
+### 모바일 overflow 디버깅 순서
+1. `html, body { overflow-x: hidden }` 기본 보호
+2. CSS Grid의 1fr 트랙에 `minmax(0, 1fr)` 명시 (min-content 때문에 overflow 발생 방지)
+3. 그리드 자식 요소에 `min-width: 0` 추가 (텍스트/flex 안에 긴 콘텐츠가 있을 때)
+4. 카드 내부 긴 텍스트는 `text-overflow: ellipsis` 또는 `word-break: break-word`
+5. 그래도 overflow 있으면 해당 자식 요소에 `overflow: hidden`
+
+### 하트/좋아요 토글 아이콘은 SVG `fill` 토글이 가장 깔끔
+- `♥`/`♡` 유니코드는 글리프가 다름 (크기·모양 미묘하게 다름)
+- 인라인 SVG path 하나에 `fill="none"` vs `fill="색상"`으로만 구분하면 완벽하게 동일 실루엣
+
 ---
 
-**마지막 업데이트**: Claude Code 이관 시점 (v2.1 + 🐶 동물 카테고리 추가 완료 상태)
+**마지막 업데이트**: 2026-04-21, 15-B 및 디자인 설정 확장 배포 완료 · 사용자 피드백 대기 상태
