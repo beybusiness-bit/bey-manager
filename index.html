@@ -34,11 +34,16 @@
       --button-radius: 8px;
     }
 
+    html, body {
+      overflow-x: hidden;
+    }
+
     body {
       font-family: 'Noto Sans KR', sans-serif;
       background: var(--bg-main);
       color: var(--text-primary);
       line-height: 1.6;
+      font-size: var(--base-font-size, 14px);
     }
 
     .mono {
@@ -702,11 +707,11 @@
 
     .page-header {
       margin-bottom: 24px;
-      padding-left: 60px;
+      padding-left: 28px;
     }
 
     .sidebar.collapsed ~ .main-content .page-header {
-      padding-left: 0;
+      padding-left: 48px;
     }
 
     .page-header h2 {
@@ -838,10 +843,11 @@
 
     .btn-add {
       background: var(--primary-green);
+      color: var(--accent-btn-color, #1a1a1a);
       border: none;
       padding: 10px 16px;
       border-radius: var(--button-radius);
-      font-size: 14px;
+      font-size: var(--base-font-size, 14px);
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s;
@@ -895,6 +901,470 @@
     }
 
     /* ============================================ */
+    /* 좋아요(하트) 아이콘 공통 — SVG 기반, fill만 토글 */
+    .heart-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      line-height: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s ease;
+    }
+
+    .heart-btn svg {
+      width: 22px;
+      height: 22px;
+      stroke: #c8c8c8;
+      stroke-width: 2;
+      fill: none;
+      transition: fill 0.2s ease, stroke 0.2s ease;
+    }
+
+    .heart-btn:hover {
+      transform: scale(1.15);
+    }
+
+    .heart-btn.liked svg {
+      fill: #ff4d6d;
+      stroke: #ff4d6d;
+    }
+
+    /* 일상 대표 색상 점 */
+    .activity-color-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .activity-card-color {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .activity-card-color input[type="color"] {
+      width: 32px;
+      height: 24px;
+      padding: 0;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    /* 뷰 모드에서 대표 색상이 배경으로 적용된 카드 */
+    .activity-card.colored .activity-card-name {
+      color: inherit;
+    }
+
+    .activity-card.colored .activity-card-category {
+      color: inherit;
+      opacity: 0.75;
+    }
+
+    .activity-card.colored .activity-badge {
+      background: rgba(255,255,255,0.35);
+      color: inherit;
+    }
+
+    /* 시간표 카드 레이아웃 */
+    .schedule-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    .schedule-card {
+      position: relative;
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--button-radius, 8px);
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .schedule-card:hover {
+      border-color: var(--primary-yellow);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .schedule-card.liked {
+      border-color: #ff4d6d;
+      background: #fff7f8;
+    }
+
+    .schedule-card-heart {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+    }
+
+    .schedule-card-emoji {
+      font-size: 24px;
+      margin-bottom: 2px;
+    }
+
+    .schedule-card-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      padding-right: 60px;
+    }
+
+    .schedule-card-meta {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .schedule-card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 2px;
+    }
+
+    .schedule-tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: var(--bg-hover);
+      color: var(--text-secondary);
+    }
+
+    .schedule-card-date {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: auto;
+      padding-top: 4px;
+    }
+
+    .schedule-card-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .schedule-card-actions button {
+      font-size: 11px;
+      padding: 4px 8px;
+    }
+
+    .schedule-empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    /* 시간표 - 공용 툴바(검색 + 액션) */
+    .schedule-toolbar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .schedule-search {
+      flex: 1;
+      min-width: 180px;
+      max-width: 320px;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--button-radius, 8px);
+      font-size: 14px;
+      background: #fff;
+    }
+
+    .schedule-search:focus {
+      outline: none;
+      border-color: var(--primary-yellow);
+    }
+
+    .schedule-bulk-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-left: auto;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* 네비게이션 화살표 공통 — 단출한 텍스트 스타일 */
+    .nav-arrow-btn {
+      background: transparent;
+      border: none;
+      width: 20px;
+      padding: 4px 2px;
+      cursor: pointer;
+      font-size: 18px;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: color 0.15s, opacity 0.15s;
+    }
+
+    .nav-arrow-btn:hover:not(:disabled) {
+      color: var(--primary-yellow);
+    }
+
+    .nav-arrow-btn:disabled {
+      opacity: 0.25;
+      cursor: not-allowed;
+    }
+
+    /* Hero(좋아요된 시간표) 섹션 */
+    .schedule-hero-section {
+      margin-bottom: 32px;
+    }
+
+    .schedule-hero-row {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 6px;
+      align-items: stretch;
+      min-width: 0;
+    }
+
+    .schedule-hero-card {
+      position: relative;
+      background: #fff7f8;
+      border: 2px solid #ff4d6d;
+      border-radius: 14px;
+      padding: 40px 18px 18px;
+      min-height: 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .schedule-hero-card:hover {
+      box-shadow: 0 2px 10px rgba(255,77,109,0.15);
+    }
+
+    .hero-checkbox-wrap {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+    }
+
+    .hero-heart-wrap {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+    }
+
+    .hero-emoji-title {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 8px;
+    }
+
+    .hero-emoji {
+      font-size: 40px;
+      user-select: none;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .hero-title-display {
+      font-size: 20px;
+      font-weight: 700;
+      flex: 1;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+
+    .hero-description-display {
+      font-size: 13px;
+      color: var(--text-secondary);
+      word-break: break-word;
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .hero-description-display.empty {
+      color: var(--text-tertiary);
+      font-style: italic;
+    }
+
+    .hero-thumbnail-frame {
+      border: 2px dashed #d0d0d0;
+      border-radius: 10px;
+      min-height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      font-size: 12px;
+      background: rgba(255,255,255,0.5);
+      text-align: center;
+      padding: 8px;
+    }
+
+    .hero-tags-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .hero-meta-row {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: auto;
+    }
+
+    .hero-indicators {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .hero-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ddd;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: none;
+      padding: 0;
+    }
+
+    .hero-indicator.active {
+      background: #ff4d6d;
+      transform: scale(1.35);
+    }
+
+    /* Others(좋아요 안 된 시간표) 섹션 */
+    .schedule-others-section {
+      margin-bottom: 16px;
+    }
+
+    .schedule-others-header {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      margin-bottom: 10px;
+    }
+
+    .schedule-others-row {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 6px;
+      align-items: stretch;
+      min-width: 0;
+    }
+
+    .schedule-others-track {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      min-width: 0;
+    }
+
+    @media (max-width: 767px) {
+      .schedule-others-track {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .schedule-hero-card {
+        padding: 36px 14px 14px;
+        min-height: 260px;
+      }
+      .hero-emoji { font-size: 32px; }
+      .hero-title-display { font-size: 18px; }
+    }
+
+    .schedule-mini-card {
+      position: relative;
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--button-radius, 10px);
+      padding: 14px 10px 12px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      min-height: 130px;
+      transition: all 0.15s;
+    }
+
+    .schedule-mini-card:hover {
+      border-color: var(--primary-yellow);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    }
+
+    .mini-checkbox-wrap {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+    }
+
+    .mini-heart-wrap {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+    }
+
+    .schedule-mini-emoji {
+      font-size: 30px;
+      margin-top: 22px;
+      line-height: 1;
+    }
+
+    .schedule-mini-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      color: var(--text-primary);
+      word-break: keep-all;
+      padding: 0 4px;
+    }
+
+    .schedule-mini-date {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* 체크박스 공통 */
+    .schedule-select-checkbox {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: var(--primary-yellow);
+    }
+
     /* 일상 종류 카드 레이아웃 */
     /* ============================================ */
     .activity-grid {
@@ -1343,6 +1813,10 @@
     @media (max-width: 768px) {
       .main-content {
         margin-left: 0;
+        padding: 12px;
+      }
+
+      .card {
         padding: 16px;
       }
 
@@ -1479,14 +1953,48 @@
         <!-- 탭 네비게이션 -->
         <div class="tab-nav">
           <button class="tab-btn active" onclick="switchDailyTab('schedule')">📅 시간표</button>
-          <button class="tab-btn" onclick="switchDailyTab('activities')">🏷️ 일상 종류 관리</button>
+          <button class="tab-btn" onclick="switchDailyTab('activities')">🏷️ 일상 종류</button>
         </div>
 
         <!-- 시간표 탭 -->
         <div id="dailyScheduleTab" class="tab-content active">
           <div class="card">
-            <h3>시간표</h3>
-            <p>시간표 기능을 개발 중입니다.</p>
+            <h3>📅 시간표</h3>
+
+            <!-- 툴바: 추가 버튼 + 검색 + 일괄 액션 -->
+            <div class="schedule-toolbar">
+              <button class="btn-add" onclick="addSchedule()">+ 새 시간표 만들기</button>
+              <input type="text" id="scheduleSearch" class="schedule-search" placeholder="🔍 시간표 검색 (이름·설명·태그)" oninput="handleScheduleSearch(this.value)">
+              <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text-secondary); cursor:pointer; user-select:none;">
+                <input type="checkbox" id="scheduleSelectAll" class="schedule-select-checkbox" onchange="toggleSelectAllSchedules(this.checked)">
+                전체 선택
+              </label>
+              <div class="schedule-bulk-actions" id="scheduleBulkActions" style="display:none;">
+                <span id="scheduleBulkCount">0개 선택됨</span>
+                <button class="btn-icon btn-danger" onclick="bulkDeleteSchedules()">선택 삭제</button>
+                <button class="btn-icon" onclick="clearScheduleSelection()">선택 해제</button>
+              </div>
+            </div>
+
+            <!-- 좋아요된 시간표 Hero 섹션 -->
+            <div id="scheduleHeroSection" class="schedule-hero-section" style="display:none;">
+              <!-- 동적 생성 -->
+            </div>
+
+            <!-- 그 외 시간표 섹션 -->
+            <div id="scheduleOthersSection" class="schedule-others-section" style="display:none;">
+              <!-- 동적 생성 -->
+            </div>
+
+            <!-- 빈 상태 -->
+            <div id="scheduleEmpty" class="schedule-empty" style="display:none;">
+              아직 시간표가 없습니다.<br>위의 "+ 새 시간표 만들기" 버튼을 눌러 추가하세요.
+            </div>
+
+            <!-- 검색 결과 없음 -->
+            <div id="scheduleNoResult" class="schedule-empty" style="display:none;">
+              검색 결과가 없습니다.
+            </div>
           </div>
         </div>
 
@@ -1725,6 +2233,56 @@
               <div class="design-control">
                 <input type="range" id="designButtonRadius" min="4" max="20" step="1" oninput="updateDesign('buttonRadius', this.value)" class="design-slider">
                 <span class="design-value mono" id="designButtonRadiusValue">8px</span>
+              </div>
+            </div>
+
+            <div class="design-row">
+              <label class="design-label">기본 글자 크기</label>
+              <div class="design-control">
+                <input type="range" id="designBaseFontSize" min="12" max="18" step="1" oninput="updateDesign('baseFontSize', this.value)" class="design-slider">
+                <span class="design-value mono" id="designBaseFontSizeValue">14px</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 강조 버튼 설정 -->
+          <div style="margin-bottom: 28px;">
+            <h4 style="font-size: 15px; margin-bottom: 12px; color: var(--text-primary);">🔘 강조 버튼 (+ 추가 버튼 등)</h4>
+
+            <div class="design-row">
+              <label class="design-label">배경색</label>
+              <div class="design-control">
+                <input type="color" id="designAccentBtnBg" class="color-picker" onchange="updateDesign('accentBtnBg', this.value)" oninput="updateDesign('accentBtnBg', this.value)">
+                <span class="design-value mono" id="designAccentBtnBgValue">#c1ff72</span>
+              </div>
+            </div>
+
+            <div class="design-row">
+              <label class="design-label">글자색</label>
+              <div class="design-control">
+                <input type="color" id="designAccentBtnColor" class="color-picker" onchange="updateDesign('accentBtnColor', this.value)" oninput="updateDesign('accentBtnColor', this.value)">
+                <span class="design-value mono" id="designAccentBtnColorValue">#1a1a1a</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 테두리 & 카드 설정 -->
+          <div style="margin-bottom: 28px;">
+            <h4 style="font-size: 15px; margin-bottom: 12px; color: var(--text-primary);">🧱 테두리 & 카드</h4>
+
+            <div class="design-row">
+              <label class="design-label">기본 테두리색</label>
+              <div class="design-control">
+                <input type="color" id="designBorderColor" class="color-picker" onchange="updateDesign('borderColor', this.value)" oninput="updateDesign('borderColor', this.value)">
+                <span class="design-value mono" id="designBorderColorValue">#e0e0e0</span>
+              </div>
+            </div>
+
+            <div class="design-row">
+              <label class="design-label">카드 배경색</label>
+              <div class="design-control">
+                <input type="color" id="designCardBg" class="color-picker" onchange="updateDesign('cardBg', this.value)" oninput="updateDesign('cardBg', this.value)">
+                <span class="design-value mono" id="designCardBgValue">#ffffff</span>
               </div>
             </div>
           </div>
@@ -2602,6 +3160,14 @@
     let currentEmojiCallback = null;
     let currentSelectedEmoji = '';
 
+    // 시간표 상태 변수
+    let schedules = [];
+    let scheduleItems = [];
+    let scheduleHeroIndex = 0;
+    let scheduleOthersPage = 0;
+    let scheduleSearchQuery = '';
+    let selectedScheduleIds = [];
+
     // 모달 콜백
     let confirmModalCallback = null;
 
@@ -2949,6 +3515,7 @@
       loadSidebarState();
       loadCategories();
       loadActivities();
+      loadSchedules();
       loadProfile();
       loadDesignSettings();
       renderSidebar();
@@ -2957,6 +3524,7 @@
       renderCategoryFilter();
       renderActivities();
       renderCategories();
+      renderScheduleThumbnails();
     }
 
     function loadMenus() {
@@ -3009,14 +3577,14 @@
             document.getElementById('sidebarToggleBtn').style.left = '16px';
           } else {
             document.getElementById('sidebarToggleIcon').textContent = '✕';
-            document.getElementById('sidebarToggleBtn').style.left = (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-width')) + 36) + 'px';
+            document.getElementById('sidebarToggleBtn').style.left = (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-width')) - 48) + "px";
           }
         } catch (e) {
           // 기본값 유지
         }
       } else {
         const navWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-width'));
-        document.getElementById('sidebarToggleBtn').style.left = (navWidth + 36) + 'px';
+        document.getElementById('sidebarToggleBtn').style.left = (navWidth - 48) + "px";
       }
     }
 
@@ -3151,7 +3719,7 @@
         sidebar.classList.remove('collapsed');
         toggleIcon.textContent = '✕';
         const navWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-width'));
-        toggleBtn.style.left = (navWidth + 36) + 'px';
+        toggleBtn.style.left = (navWidth - 48) + "px";
       }
     }
 
@@ -3618,6 +4186,16 @@
       } else {
         activities = [];
       }
+
+      // 마이그레이션: 누락된 color 필드 기본값 지정
+      let needsSave = false;
+      activities.forEach(function(a) {
+        if (!a.color) {
+          a.color = '#ffde59';
+          needsSave = true;
+        }
+      });
+      if (needsSave) saveActivities();
     }
 
     function saveActivities() {
@@ -3630,6 +4208,7 @@
         categoryId: selectedCategoryFilter === 'unassigned' ? null : (selectedCategoryFilter || null),
         emoji: '',
         name: '',
+        color: '#ffde59',
         active: true,
         createdAt: today(),
         isNew: true
@@ -3705,6 +4284,13 @@
       }
     }
 
+    function updateActivityColor(activityId, color) {
+      const activity = activities.find(function(a) { return a.id === activityId; });
+      if (activity) {
+        activity.color = color;
+      }
+    }
+
     function toggleActivityActive(activityId) {
       const activity = activities.find(function(a) { return a.id === activityId; });
       if (activity) {
@@ -3748,8 +4334,9 @@
         const categoryLabel = category ? (category.emoji + ' ' + category.name) : '미지정';
         const isEditing = (editingActivityId === activity.id);
         
-        html += '<div class="activity-card' + (isEditing ? ' editing' : '') + '" onclick="' + (isEditing ? '' : 'editActivity(\'' + activity.id + '\')') + '">';
-        
+        const cardStyle = isEditing ? '' : ' style="' + getActivityCardStyle(activity.color) + '"';
+        html += '<div class="activity-card' + (isEditing ? ' editing' : ' colored') + '"' + cardStyle + ' onclick="' + (isEditing ? '' : 'editActivity(\'' + activity.id + '\')') + '">';
+
         if (isEditing) {
           html += '  <div class="activity-card-emoji">';
           html += '    <input type="text" value="' + activity.emoji + '" readonly onclick="event.stopPropagation(); openEmojiPicker(&apos;' + activity.emoji + '&apos;, function(emoji) { updateActivityEmoji(&apos;' + activity.id + '&apos;, emoji); document.querySelector(&apos;.activity-card.editing .activity-card-emoji input&apos;).value = emoji; })">';
@@ -3771,6 +4358,10 @@
             html += '      <option value="' + cat.id + '"' + selected + '>' + cat.emoji + ' ' + cat.name + '</option>';
           });
           html += '    </select>';
+          html += '  </div>';
+          html += '  <div class="activity-card-color">';
+          html += '    <label>대표 색상</label>';
+          html += '    <input type="color" value="' + (activity.color || '#ffde59') + '" onclick="event.stopPropagation()" oninput="updateActivityColor(&apos;' + activity.id + '&apos;, this.value)">';
           html += '  </div>';
         } else {
           html += '  <div class="activity-card-category">' + categoryLabel + '</div>';
@@ -3798,6 +4389,416 @@
       });
 
       container.innerHTML = html;
+    }
+
+    // ========================================
+    // 시간표 관리
+    // ========================================
+    function getRandomEmoji() {
+      const allEmojis = [];
+      Object.keys(EMOJI_DATA).forEach(function(cat) {
+        EMOJI_DATA[cat].forEach(function(e) { allEmojis.push(e); });
+      });
+      return allEmojis[Math.floor(Math.random() * allEmojis.length)];
+    }
+
+    // 배경색 → 대비되는 텍스트 색 자동 계산
+    function hexToRgb(hex) {
+      if (!hex) return { r: 255, g: 222, b: 89 };
+      let h = hex.replace('#', '');
+      if (h.length === 3) h = h.split('').map(function(c){ return c + c; }).join('');
+      const num = parseInt(h, 16);
+      return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+    }
+
+    function getActivityCardStyle(color) {
+      const rgb = hexToRgb(color || '#ffde59');
+      const alpha = 0.4;
+      // 흰 배경에 alpha만큼 합성된 색상의 밝기 계산
+      const blendedR = alpha * rgb.r + (1 - alpha) * 255;
+      const blendedG = alpha * rgb.g + (1 - alpha) * 255;
+      const blendedB = alpha * rgb.b + (1 - alpha) * 255;
+      const brightness = (blendedR * 299 + blendedG * 587 + blendedB * 114) / 1000;
+      const textColor = brightness < 150 ? '#ffffff' : '#333333';
+      const bg = 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + alpha + ')';
+      return 'background: ' + bg + '; color: ' + textColor + ';';
+    }
+
+    function loadSchedules() {
+      const saved = localStorage.getItem('schedules');
+      if (saved) {
+        try { schedules = JSON.parse(saved); } catch (e) { schedules = []; }
+      } else {
+        schedules = [];
+      }
+
+      const savedItems = localStorage.getItem('scheduleItems');
+      if (savedItems) {
+        try { scheduleItems = JSON.parse(savedItems); } catch (e) { scheduleItems = []; }
+      } else {
+        scheduleItems = [];
+      }
+
+      // 마이그레이션: isPrimary → isLiked, 누락된 필드 채우기
+      let needsSave = false;
+      schedules.forEach(function(s) {
+        if (typeof s.isLiked === 'undefined') {
+          s.isLiked = !!s.isPrimary;
+          needsSave = true;
+        }
+        if (typeof s.isPrimary !== 'undefined') {
+          delete s.isPrimary;
+          needsSave = true;
+        }
+        if (!s.emoji) {
+          s.emoji = getRandomEmoji();
+          needsSave = true;
+        }
+        if (typeof s.description === 'undefined') {
+          s.description = '';
+          needsSave = true;
+        }
+      });
+      if (needsSave) saveSchedules();
+    }
+
+    function saveSchedules() {
+      localStorage.setItem('schedules', JSON.stringify(schedules));
+      localStorage.setItem('scheduleItems', JSON.stringify(scheduleItems));
+    }
+
+    function addSchedule() {
+      const nextNumber = schedules.length + 1;
+      const newSchedule = {
+        id: generateId(),
+        title: '새 시간표 ' + nextNumber,
+        emoji: getRandomEmoji(),
+        description: '',
+        tags: [],
+        isLiked: schedules.length === 0,
+        createdAt: today(),
+        updatedAt: today()
+      };
+      schedules.push(newSchedule);
+      saveSchedules();
+      renderScheduleThumbnails();
+    }
+
+    function updateScheduleTitle(scheduleId, title) {
+      const s = schedules.find(function(x) { return x.id === scheduleId; });
+      if (s) {
+        s.title = title;
+        s.updatedAt = today();
+        saveSchedules();
+      }
+    }
+
+    function updateScheduleDescription(scheduleId, desc) {
+      const s = schedules.find(function(x) { return x.id === scheduleId; });
+      if (s) {
+        s.description = desc;
+        s.updatedAt = today();
+        saveSchedules();
+      }
+    }
+
+    function updateScheduleEmoji(scheduleId, emoji) {
+      const s = schedules.find(function(x) { return x.id === scheduleId; });
+      if (s) {
+        s.emoji = emoji;
+        s.updatedAt = today();
+        saveSchedules();
+        renderScheduleThumbnails();
+      }
+    }
+
+    function filterSchedulesBySearch() {
+      if (!scheduleSearchQuery) return schedules.slice();
+      const q = scheduleSearchQuery.toLowerCase();
+      return schedules.filter(function(s) {
+        const title = (s.title || '').toLowerCase();
+        const desc = (s.description || '').toLowerCase();
+        const tagMatch = (s.tags || []).some(function(t) { return t.toLowerCase().indexOf(q) >= 0; });
+        return title.indexOf(q) >= 0 || desc.indexOf(q) >= 0 || tagMatch;
+      });
+    }
+
+    function handleScheduleSearch(query) {
+      scheduleSearchQuery = query || '';
+      scheduleHeroIndex = 0;
+      scheduleOthersPage = 0;
+      renderScheduleThumbnails();
+    }
+
+    function heroPrev() {
+      const liked = filterSchedulesBySearch().filter(function(s) { return s.isLiked; });
+      if (liked.length === 0) return;
+      scheduleHeroIndex = (scheduleHeroIndex - 1 + liked.length) % liked.length;
+      renderScheduleThumbnails();
+    }
+
+    function heroNext() {
+      const liked = filterSchedulesBySearch().filter(function(s) { return s.isLiked; });
+      if (liked.length === 0) return;
+      scheduleHeroIndex = (scheduleHeroIndex + 1) % liked.length;
+      renderScheduleThumbnails();
+    }
+
+    function setHeroIndex(i) {
+      scheduleHeroIndex = i;
+      renderScheduleThumbnails();
+    }
+
+    function getOthersPerPage() {
+      return window.innerWidth < 768 ? 2 : 4;
+    }
+
+    function othersPrev() {
+      const perPage = getOthersPerPage();
+      const others = filterSchedulesBySearch().filter(function(s) { return !s.isLiked; });
+      const totalPages = Math.max(1, Math.ceil(others.length / perPage));
+      scheduleOthersPage = (scheduleOthersPage - 1 + totalPages) % totalPages;
+      renderScheduleThumbnails();
+    }
+
+    function othersNext() {
+      const perPage = getOthersPerPage();
+      const others = filterSchedulesBySearch().filter(function(s) { return !s.isLiked; });
+      const totalPages = Math.max(1, Math.ceil(others.length / perPage));
+      scheduleOthersPage = (scheduleOthersPage + 1) % totalPages;
+      renderScheduleThumbnails();
+    }
+
+    function toggleScheduleSelect(scheduleId) {
+      const idx = selectedScheduleIds.indexOf(scheduleId);
+      if (idx >= 0) selectedScheduleIds.splice(idx, 1);
+      else selectedScheduleIds.push(scheduleId);
+      updateScheduleBulkBar();
+    }
+
+    function clearScheduleSelection() {
+      selectedScheduleIds = [];
+      renderScheduleThumbnails();
+    }
+
+    function toggleSelectAllSchedules(checked) {
+      if (checked) {
+        // 현재 필터 결과 전체를 선택
+        const filtered = filterSchedulesBySearch();
+        selectedScheduleIds = filtered.map(function(s) { return s.id; });
+      } else {
+        selectedScheduleIds = [];
+      }
+      renderScheduleThumbnails();
+    }
+
+    function syncSelectAllCheckbox() {
+      const chk = document.getElementById('scheduleSelectAll');
+      if (!chk) return;
+      const filtered = filterSchedulesBySearch();
+      if (filtered.length === 0) {
+        chk.checked = false;
+        chk.indeterminate = false;
+        return;
+      }
+      const allSelected = filtered.every(function(s) { return selectedScheduleIds.indexOf(s.id) >= 0; });
+      const anySelected = filtered.some(function(s) { return selectedScheduleIds.indexOf(s.id) >= 0; });
+      chk.checked = allSelected;
+      chk.indeterminate = anySelected && !allSelected;
+    }
+
+    function bulkDeleteSchedules() {
+      if (selectedScheduleIds.length === 0) return;
+      const count = selectedScheduleIds.length;
+      showConfirm('시간표 삭제', count + '개 시간표를 삭제하시겠습니까?\n(포함된 일정도 함께 삭제됩니다)', function(confirmed) {
+        if (!confirmed) return;
+        schedules = schedules.filter(function(s) { return selectedScheduleIds.indexOf(s.id) < 0; });
+        scheduleItems = scheduleItems.filter(function(i) { return selectedScheduleIds.indexOf(i.scheduleId) < 0; });
+        selectedScheduleIds = [];
+        saveSchedules();
+        renderScheduleThumbnails();
+      });
+    }
+
+    function updateScheduleBulkBar() {
+      const bar = document.getElementById('scheduleBulkActions');
+      const countEl = document.getElementById('scheduleBulkCount');
+      if (bar && countEl) {
+        if (selectedScheduleIds.length > 0) {
+          bar.style.display = 'flex';
+          countEl.textContent = selectedScheduleIds.length + '개 선택됨';
+        } else {
+          bar.style.display = 'none';
+        }
+      }
+      syncSelectAllCheckbox();
+    }
+
+    // 윈도우 리사이즈 시 others 페이지네이션 재계산
+    window.addEventListener('resize', function() {
+      if (document.getElementById('scheduleOthersSection')) {
+        clearTimeout(window._scheduleResizeTimer);
+        window._scheduleResizeTimer = setTimeout(function() {
+          renderScheduleThumbnails();
+        }, 150);
+      }
+    });
+
+    function toggleScheduleLike(scheduleId) {
+      const sch = schedules.find(function(s) { return s.id === scheduleId; });
+      if (!sch) return;
+      sch.isLiked = !sch.isLiked;
+      sch.updatedAt = today();
+      saveSchedules();
+      renderScheduleThumbnails();
+    }
+
+    function deleteSchedule(scheduleId) {
+      showConfirm('시간표 삭제', '이 시간표를 삭제하시겠습니까?\n(포함된 일정도 함께 삭제됩니다)', function(confirmed) {
+        if (!confirmed) return;
+        schedules = schedules.filter(function(s) { return s.id !== scheduleId; });
+        scheduleItems = scheduleItems.filter(function(i) { return i.scheduleId !== scheduleId; });
+        saveSchedules();
+        renderScheduleThumbnails();
+      });
+    }
+
+    function openScheduleDetail(scheduleId) {
+      showAlert('준비 중', '시간표 상세 화면은 다음 단계(17단계)에서 구현됩니다.');
+    }
+
+    const HEART_SVG = '<svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.5-9C0.5 8 3 4 7 4c2.2 0 3.7 1.1 5 2.8C13.3 5.1 14.8 4 17 4c4 0 6.5 4 4.5 8-2.5 4.5-9.5 9-9.5 9z"/></svg>';
+
+    function escapeHtml(str) {
+      if (str == null) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function renderScheduleThumbnails() {
+      const heroSection = document.getElementById('scheduleHeroSection');
+      const othersSection = document.getElementById('scheduleOthersSection');
+      const emptyEl = document.getElementById('scheduleEmpty');
+      const noResultEl = document.getElementById('scheduleNoResult');
+      if (!heroSection || !othersSection) return;
+
+      updateScheduleBulkBar();
+
+      // 전체가 비어있으면 빈 상태
+      if (schedules.length === 0) {
+        heroSection.style.display = 'none';
+        othersSection.style.display = 'none';
+        if (noResultEl) noResultEl.style.display = 'none';
+        if (emptyEl) emptyEl.style.display = 'block';
+        return;
+      }
+
+      if (emptyEl) emptyEl.style.display = 'none';
+
+      const filtered = filterSchedulesBySearch();
+      if (filtered.length === 0) {
+        heroSection.style.display = 'none';
+        othersSection.style.display = 'none';
+        if (noResultEl) noResultEl.style.display = 'block';
+        return;
+      }
+      if (noResultEl) noResultEl.style.display = 'none';
+
+      const liked = filtered.filter(function(s) { return s.isLiked; });
+      const others = filtered.filter(function(s) { return !s.isLiked; });
+
+      renderHeroSchedule(liked);
+      renderOtherSchedules(others);
+    }
+
+    function renderHeroSchedule(liked) {
+      const section = document.getElementById('scheduleHeroSection');
+      if (liked.length === 0) {
+        section.style.display = 'none';
+        return;
+      }
+      section.style.display = 'block';
+
+      if (scheduleHeroIndex >= liked.length) scheduleHeroIndex = 0;
+      const sch = liked[scheduleHeroIndex];
+      const itemCount = scheduleItems.filter(function(i) { return i.scheduleId === sch.id; }).length;
+      const isSelected = selectedScheduleIds.indexOf(sch.id) >= 0;
+      const tags = (sch.tags || []).map(function(t) { return '<span class="schedule-tag">' + escapeHtml(t) + '</span>'; }).join('');
+      const canNav = liked.length > 1;
+      const descText = sch.description ? escapeHtml(sch.description) : '세부 설명 없음';
+      const descClass = sch.description ? 'hero-description-display' : 'hero-description-display empty';
+
+      let html = '<div class="schedule-hero-row">';
+      html += '  <button class="nav-arrow-btn" onclick="heroPrev()"' + (canNav ? '' : ' disabled') + ' title="이전">◀</button>';
+      html += '  <div class="schedule-hero-card" onclick="openScheduleDetail(&apos;' + sch.id + '&apos;)">';
+      html += '    <label class="hero-checkbox-wrap" onclick="event.stopPropagation()"><input type="checkbox" class="schedule-select-checkbox"' + (isSelected ? ' checked' : '') + ' onchange="toggleScheduleSelect(&apos;' + sch.id + '&apos;)"></label>';
+      html += '    <button class="heart-btn liked hero-heart-wrap" onclick="event.stopPropagation(); toggleScheduleLike(&apos;' + sch.id + '&apos;)" title="좋아요 해제">' + HEART_SVG + '</button>';
+      html += '    <div class="hero-emoji-title">';
+      html += '      <span class="hero-emoji">' + (sch.emoji || '📅') + '</span>';
+      html += '      <span class="hero-title-display">' + escapeHtml(sch.title) + '</span>';
+      html += '    </div>';
+      html += '    <div class="' + descClass + '">' + descText + '</div>';
+      html += '    <div class="hero-thumbnail-frame">시간표 미리보기 (일정 추가 구현 후 연결)</div>';
+      if (tags) {
+        html += '    <div class="hero-tags-row">' + tags + '</div>';
+      }
+      html += '    <div class="hero-meta-row">' + itemCount + '개 일정 · 최종수정 ' + (sch.updatedAt || sch.createdAt) + '</div>';
+      html += '  </div>';
+      html += '  <button class="nav-arrow-btn" onclick="heroNext()"' + (canNav ? '' : ' disabled') + ' title="다음">▶</button>';
+      html += '</div>';
+
+      if (liked.length > 1) {
+        html += '<div class="hero-indicators">';
+        for (let i = 0; i < liked.length; i++) {
+          html += '<button class="hero-indicator' + (i === scheduleHeroIndex ? ' active' : '') + '" onclick="setHeroIndex(' + i + ')" aria-label="' + (i + 1) + '"></button>';
+        }
+        html += '</div>';
+      }
+
+      section.innerHTML = html;
+    }
+
+    function renderOtherSchedules(others) {
+      const section = document.getElementById('scheduleOthersSection');
+      if (others.length === 0) {
+        section.style.display = 'none';
+        return;
+      }
+      section.style.display = 'block';
+
+      const perPage = getOthersPerPage();
+      const totalPages = Math.max(1, Math.ceil(others.length / perPage));
+      if (scheduleOthersPage >= totalPages) scheduleOthersPage = 0;
+
+      const start = scheduleOthersPage * perPage;
+      const visible = others.slice(start, start + perPage);
+      const canNav = totalPages > 1;
+
+      let html = '<div class="schedule-others-header">전체 시간표 (' + others.length + '개)' + (canNav ? ' · ' + (scheduleOthersPage + 1) + '/' + totalPages : '') + '</div>';
+      html += '<div class="schedule-others-row">';
+      html += '  <button class="nav-arrow-btn" onclick="othersPrev()"' + (canNav ? '' : ' disabled') + ' title="이전">◀</button>';
+      html += '  <div class="schedule-others-track">';
+
+      visible.forEach(function(sch) {
+        const isSelected = selectedScheduleIds.indexOf(sch.id) >= 0;
+        html += '<div class="schedule-mini-card" onclick="openScheduleDetail(&apos;' + sch.id + '&apos;)">';
+        html += '  <label class="mini-checkbox-wrap" onclick="event.stopPropagation()"><input type="checkbox" class="schedule-select-checkbox"' + (isSelected ? ' checked' : '') + ' onchange="toggleScheduleSelect(&apos;' + sch.id + '&apos;)"></label>';
+        html += '  <button class="heart-btn mini-heart-wrap" onclick="event.stopPropagation(); toggleScheduleLike(&apos;' + sch.id + '&apos;)" title="좋아요">' + HEART_SVG + '</button>';
+        html += '  <div class="schedule-mini-emoji">' + (sch.emoji || '📅') + '</div>';
+        html += '  <div class="schedule-mini-title">' + escapeHtml(sch.title) + '</div>';
+        html += '  <div class="schedule-mini-date">' + (sch.updatedAt || sch.createdAt) + '</div>';
+        html += '</div>';
+      });
+
+      // 빈 슬롯 채우기 (선택사항: 레이아웃 유지)
+      for (let i = visible.length; i < perPage; i++) {
+        html += '<div style="visibility:hidden;"></div>';
+      }
+
+      html += '  </div>';
+      html += '  <button class="nav-arrow-btn" onclick="othersNext()"' + (canNav ? '' : ' disabled') + ' title="다음">▶</button>';
+      html += '</div>';
+
+      section.innerHTML = html;
     }
 
     // ========================================
@@ -3949,7 +4950,12 @@
       sidebarBg: '#fafafa',
       fontFamily: "'Noto Sans KR', sans-serif",
       navWidth: 220,
-      buttonRadius: 8
+      buttonRadius: 8,
+      accentBtnBg: '#c1ff72',
+      accentBtnColor: '#1a1a1a',
+      baseFontSize: 14,
+      borderColor: '#e0e0e0',
+      cardBg: '#ffffff'
     };
 
     let designSettings = Object.assign({}, DESIGN_DEFAULTS);
@@ -3977,12 +4983,18 @@
       root.style.setProperty('--bg-side', designSettings.sidebarBg);
       root.style.setProperty('--nav-width', designSettings.navWidth + 'px');
       root.style.setProperty('--button-radius', designSettings.buttonRadius + 'px');
+      root.style.setProperty('--primary-green', designSettings.accentBtnBg);
+      root.style.setProperty('--accent-btn-color', designSettings.accentBtnColor);
+      root.style.setProperty('--base-font-size', designSettings.baseFontSize + 'px');
+      root.style.setProperty('--border-color', designSettings.borderColor);
+      root.style.setProperty('--bg-card', designSettings.cardBg);
       document.body.style.fontFamily = designSettings.fontFamily;
+      document.body.style.fontSize = designSettings.baseFontSize + 'px';
 
       // 사이드바 토글 버튼 위치도 갱신 (--nav-width 연동)
       const toggleBtn = document.getElementById('sidebarToggleBtn');
       if (toggleBtn && !isSidebarCollapsed) {
-        toggleBtn.style.left = (parseInt(designSettings.navWidth) + 36) + 'px';
+        toggleBtn.style.left = (parseInt(designSettings.navWidth) - 48) + "px";
       }
     }
 
@@ -4012,10 +5024,36 @@
       const buttonRadiusValue = document.getElementById('designButtonRadiusValue');
       if (buttonRadius) buttonRadius.value = designSettings.buttonRadius;
       if (buttonRadiusValue) buttonRadiusValue.textContent = designSettings.buttonRadius + 'px';
+
+      const baseFontSize = document.getElementById('designBaseFontSize');
+      const baseFontSizeValue = document.getElementById('designBaseFontSizeValue');
+      if (baseFontSize) baseFontSize.value = designSettings.baseFontSize;
+      if (baseFontSizeValue) baseFontSizeValue.textContent = designSettings.baseFontSize + 'px';
+
+      const accentBtnBg = document.getElementById('designAccentBtnBg');
+      const accentBtnBgValue = document.getElementById('designAccentBtnBgValue');
+      if (accentBtnBg) accentBtnBg.value = designSettings.accentBtnBg;
+      if (accentBtnBgValue) accentBtnBgValue.textContent = designSettings.accentBtnBg;
+
+      const accentBtnColor = document.getElementById('designAccentBtnColor');
+      const accentBtnColorValue = document.getElementById('designAccentBtnColorValue');
+      if (accentBtnColor) accentBtnColor.value = designSettings.accentBtnColor;
+      if (accentBtnColorValue) accentBtnColorValue.textContent = designSettings.accentBtnColor;
+
+      const borderColor = document.getElementById('designBorderColor');
+      const borderColorValue = document.getElementById('designBorderColorValue');
+      if (borderColor) borderColor.value = designSettings.borderColor;
+      if (borderColorValue) borderColorValue.textContent = designSettings.borderColor;
+
+      const cardBg = document.getElementById('designCardBg');
+      const cardBgValue = document.getElementById('designCardBgValue');
+      if (cardBg) cardBg.value = designSettings.cardBg;
+      if (cardBgValue) cardBgValue.textContent = designSettings.cardBg;
     }
 
     function updateDesign(key, value) {
-      if (key === 'navWidth' || key === 'buttonRadius') {
+      const numericKeys = ['navWidth', 'buttonRadius', 'baseFontSize'];
+      if (numericKeys.indexOf(key) >= 0) {
         designSettings[key] = parseInt(value);
       } else {
         designSettings[key] = value;
@@ -4024,9 +5062,9 @@
       // 실시간 미리보기 값 표시 갱신
       const valueEl = document.getElementById('design' + key.charAt(0).toUpperCase() + key.slice(1) + 'Value');
       if (valueEl) {
-        if (key === 'navWidth' || key === 'buttonRadius') {
+        if (numericKeys.indexOf(key) >= 0) {
           valueEl.textContent = designSettings[key] + 'px';
-        } else if (key === 'primaryColor' || key === 'sidebarBg') {
+        } else {
           valueEl.textContent = designSettings[key];
         }
       }
