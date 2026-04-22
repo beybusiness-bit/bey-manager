@@ -60,7 +60,7 @@ const AUTH = {
 ```
 bey-manager/
 ├── CLAUDE.md                    # Claude Code용 프로젝트 지침 (이 파일)
-├── index.html                   # 메인 앱 (단일 파일, 현재 ~5094줄) — bey-manager.html에서 index.html로 리네임됨
+├── index.html                   # 메인 앱 (단일 파일, 현재 ~5376줄) — 과거 bey-manager.html에서 index.html로 리네임됨
 ├── README.md                    # GitHub 리포 소개 (선택)
 └── docs/
     ├── guide.md                 # 사용 가이드 (Phase 4에서 생성)
@@ -78,8 +78,8 @@ bey-manager/
 
 1. **CLAUDE.md 읽기** (자동으로 시스템 프롬프트에 포함됨)
 2. `git log -5 --oneline`으로 최근 커밋 확인
-3. `wc -l bey-manager.html`로 파일 라인 수 확인
-4. `grep "console.log('베이 관리자" bey-manager.html`로 현재 버전 확인
+3. `wc -l index.html`로 파일 라인 수 확인
+4. `grep "console.log('베이 관리자" index.html`로 현재 버전 확인
 5. CLAUDE.md의 **"10. 다음 세션 시작점"** 섹션을 읽고 이어서 작업
 
 ### 세션 마무리 루틴 (단계 완료 또는 사용자가 "마무리" 명시 시)
@@ -88,10 +88,12 @@ bey-manager/
 2. Git 커밋 (의미 있는 메시지)
 3. **CLAUDE.md 직접 갱신**:
    - "7. 개발 단계 현황"에서 완료한 단계 ✅로 체크
-   - "10. 다음 세션 시작점" 업데이트
+   - "10. 다음 세션 시작점" 업데이트 (**축약·생략 없이** 사용자가 다른 기기에서 이어받을 수 있도록 상세히)
    - 새로 배운 교훈이 있으면 "11. 교훈" 섹션에 추가
    - 파일 라인 수, 버전 번호 최신화
-4. 푸시는 수행하지 않음 (베이님이 판단해서 직접 push)
+4. **푸시 정책** (§4 자동 배포 플로우와 정합):
+   - 사용자가 "다른 기기에서 이어가겠다" / "세션 마무리" / "푸시해라" 명시 → CLAUDE.md 포함 **자동 푸시**
+   - 그 외 애매할 때만 사용자에게 확인
 
 ### 단계 완료 자동 판단 금지
 
@@ -147,7 +149,7 @@ const today = () => {
 # JS 문법 검사 (매 Edit 후 실행 권장)
 python3 -c "
 import re
-with open('bey-manager.html','r',encoding='utf-8') as f: html = f.read()
+with open('index.html','r',encoding='utf-8') as f: html = f.read()
 m = re.findall(r'<script(?![^>]*src=)[^>]*>(.*?)</script>', html, re.DOTALL)
 open('/tmp/check.js','w',encoding='utf-8').write('\n'.join(m))
 " && node --check /tmp/check.js && echo "✅ 문법 OK"
@@ -170,19 +172,19 @@ open('/tmp/check.js','w',encoding='utf-8').write('\n'.join(m))
 ```bash
 # 로컬 개발 서버 (Google 로그인 테스트용, CORS 회피)
 python3 -m http.server 8000
-# → 브라우저에서 http://localhost:8000/bey-manager.html 열기
+# → 브라우저에서 http://localhost:8000/index.html 열기
 
 # 파일 상태 확인
-wc -l bey-manager.html
-grep -n "console.log('베이 관리자" bey-manager.html
+wc -l index.html
+grep -n "console.log('베이 관리자" index.html
 
 # JS 문법 검사 (위에 있음)
 
 # 주요 함수/변수 존재 확인
-grep -n "function filterEmoji\|const EMOJI_KEYWORDS\|AUTH.PASSWORD" bey-manager.html
+grep -n "function filterEmoji\|const EMOJI_KEYWORDS\|AUTH.PASSWORD" index.html
 
 # Git 스냅샷 (단계 완료 시)
-git add bey-manager.html CLAUDE.md
+git add index.html CLAUDE.md
 git commit -m "feat: 15단계 시간표 썸네일뷰"
 ```
 
@@ -267,7 +269,7 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 
 ## 5. Phase 3 — 배포 프로토콜
 
-1. `bey-manager.html` → `index.html`로 이름 바꿔서 GitHub 저장소 업로드 (또는 리포에서 `index.html`로 링크)
+1. (완료) `bey-manager.html` → `index.html`로 리네임 후 GitHub 저장소 업로드
 2. GitHub → Settings → Pages → Branch: `main` → Save
 3. Google Cloud Console 설정 (✅ Client ID는 이미 발급 완료):
    - 승인된 자바스크립트 원본: GitHub Pages URL 추가
@@ -337,9 +339,14 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 - [x] 12단계: Google OAuth JavaScript 연동 ✅
 - [x] 13단계: 이모지 시스템 대폭 확장 (450+ 이모지, AND 검색, 🐶 동물 카테고리 포함) ✅
 - [x] 14단계: 설정 페이지 개편 (계정 설정 제거, 디자인 설정 추가) ✅
-- [~] 15단계: 시간표 탭 **진행 중** (15-A·15-B 완료, 15-C·15-D 대기)
+- [~] 15단계: 시간표 탭 **진행 중** (15-A·15-B 완료 + 피드백 반영 완료, 15-C·15-D 대기)
   - [x] 15-A: 데이터 모델 + 좋아요(하트 SVG) + 일상 대표 색상 + 마이그레이션 ✅
   - [x] 15-B: 썸네일뷰 (Hero 캐러셀 + Others 가로 슬라이더 + 검색 + 일괄선택 + 전체선택) ✅
+  - [x] 15-B 후속 피드백 반영 (2026-04-22 세션): ✅
+      - 첫 시간표 자동 좋아요 제거 (`isLiked: false` 기본)
+      - Hero 빈 상태 UI 추가 ("좋아하는 시간표가 아직 없습니다" 비활성 카드)
+      - Hero/Others **드래그 스크롤** 전환 (◀▶ 화살표 제거, scroll-snap + 마우스 드래그 + 터치 드래그)
+      - 스크롤 힌트: 양쪽 끝 fade 그라디언트(동적 on/off) + Hero 도트 인디케이터(스크롤 동기화)
   - [ ] 15-C: 목록뷰 + 페이저 + 정렬 + 필터 + 뷰 토글 🔲 **← 다음 세션 이어갈 작업**
   - [ ] 15-D: 이모지 피커 My Emojies 업로드 탭 🔲
 - [ ] 16단계: 홈 대시보드 위젯 🔲
@@ -350,8 +357,17 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 - [x] 일상 카드 뷰 모드 = 대표 색상 배경(투명도) + 자동 대비 텍스트 색(WCAG 휘도 150 기준)
 - [x] 하트 아이콘 SVG 통일 (fill만 토글, 동일 실루엣)
 - [x] "일상 종류 관리" → "일상 종류" 탭명 단축
-- [x] 디자인 설정 확장: 강조 버튼 배경색/글자색, 기본 글자크기, 기본 테두리색, 카드 배경색
+- [x] 디자인 설정 확장 1차: 강조 버튼 배경색/글자색, 기본 글자크기, 기본 테두리색, 카드 배경색
 - [x] 모바일 가로 overflow 차단 (html/body overflow-x:hidden, 그리드 minmax(0,1fr), 카드 패딩 축소)
+- [x] **(2026-04-22 세션)** 사이드바 프로필 영역 재배치: `앱 이름 → 프로필 사진 → 한마디` 순서, 로그인 이메일 제거
+- [x] **(2026-04-22 세션)** 사이드바 펼침 상태 토글 버튼(X) 테두리·배경 제거 (데스크탑·모바일 공통)
+- [x] **(2026-04-22 세션)** 모바일 상단 스티키 바 추가 (햄버거 + 현재 페이지 제목)
+      - 모바일에서 기존 햄버거 숨김, 페이지 내 `.page-header` 숨김 → 스티키 바가 대체
+      - `position: fixed`로 구현 (sticky가 `overflow-x:hidden` 환경에서 불안정)
+      - `.main-content`에 `padding-top: 64px`로 바와 겹침 방지
+- [x] **(2026-04-22 세션)** 디자인 설정 확장 2차:
+      - 🔘 **기본 버튼** 배경/글자색 (`--primary-btn-bg`, `--primary-btn-color`) — 키 컬러와 분리
+      - 📱 **모바일 상단 바** 배경/라인/글자색 (`--mobile-topbar-bg/border/text`)
 
 ### Phase 6: 리팩토링 (후순위)
 - [ ] R1단계: `USER_EMAIL` → `ALLOWED_EMAILS` 배열로 리팩토링 🔲 (15단계 이후)
@@ -420,14 +436,16 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 
 업로드하지 않아도 Google 프로필 사진이 자동 표시. 업로드하면 업로드본이 우선.
 
-### 사이드바 이메일 표시
-- 로그인한 Google 계정 이메일이 사이드바 프로필 영역 하단에 자동 표시
-- 긴 이메일은 줄바꿈 (`word-break: break-all`)
+### ~~사이드바 이메일 표시~~ (2026-04-22 제거)
+- 로그인한 Google 계정 이메일은 **더 이상 사이드바에 표시되지 않음**. 사용자 정보는 프로필 사진으로 대체.
+- 필요하다면 추후 설정 페이지에서 볼 수 있게 확장 가능.
 
-### 사이드바 기능
-- **프로필 영역 순서**: "베이 관리자" 제목 → 프로필 사진(120px 원형) → 한마디 → 이메일
-- **X 버튼**: 사이드바 우측 상단 (사이드바 닫기)
-- **햄버거 버튼**: 화면 좌측 상단 고정
+### 사이드바 기능 (2026-04-22 업데이트)
+- **프로필 영역 순서**: "베이 관리자" 제목 → 프로필 사진(120px 원형) → 한마디 (이메일 제거됨)
+- **X 버튼 (사이드바 펼침 상태)**: 사이드바 안쪽 우상단, **테두리·배경 없이 X 표시만**. 호버 시 옅은 회색 배경.
+- **햄버거 버튼 (사이드바 접힘 상태)**:
+    - 데스크탑: 화면 좌측 상단 고정 (흰 배경 + 회색 테두리)
+    - 모바일: **모바일 상단 바 안쪽**(좌측)에 위치. 화면 좌측 상단의 독립 햄버거는 숨김.
 - **즐겨찾기**: 메뉴 마우스 오버 시 별(☆) → 클릭으로 ★
 - **대분류**: 클릭 시 하위 메뉴 펼침/접힘 (▶/▼)
 - **메뉴 구조**:
@@ -443,13 +461,32 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 - 한마디 입력
 - 저장 시 사이드바 즉시 반영
 
-### 설정 - 디자인 (v2.1 신규)
+### 설정 - 디자인 (v2.1 + 2026-04-22 확장)
 - **색상**: 키 컬러 / 사이드바 배경 (컬러 피커)
 - **폰트**: Noto Sans KR / 맑은 고딕 / 나눔고딕 / 시스템 기본
-- **사이드바 폭**: 180~300px (4px 단위)
-- **버튼 모서리**: 4~20px (1px 단위)
+- **레이아웃**: 사이드바 폭 180~300px / 버튼 모서리 4~20px / 기본 글자 크기 12~18px
+- **기본 버튼** (저장·확인·로그인): 배경색·글자색 (키 컬러와 분리 설정 가능)
+- **강조 버튼** (+ 새 시간표 / + 일상 추가): 배경색·글자색
+- **테두리 & 카드**: 기본 테두리색·카드 배경색
+- **모바일 상단 바**: 배경색·라인 색·글자색
 - 실시간 미리보기 + localStorage 자동 저장 + 기본값 초기화
 - CSS 변수 기반이라 전 페이지 즉시 반영
+
+### 모바일 상단 고정 바 (2026-04-22 신규)
+- 모바일(가로 768px 이하)에서 화면 **상단에 고정**되어 스크롤해도 사라지지 않음
+- 왼쪽: 햄버거(☰) 아이콘 — 탭하면 사이드바 열림
+- 오른쪽: 현재 페이지 제목 (페이지 이동 시 자동 갱신)
+- 이 바가 있을 때 기존 페이지 내 제목/부제는 모바일에서 숨김 처리 (중복 방지)
+- 데스크탑에서는 기존 UI 유지 (바 없음, 페이지 내 제목 보임)
+
+### 시간표 썸네일뷰 인터랙션 (2026-04-22 업데이트)
+- Hero(좋아요된 시간표)와 전체 시간표 모두 **가로 드래그 스크롤** 방식
+- 터치: 좌우 스와이프로 자연스럽게 넘김 (스냅 스크롤)
+- 마우스: 카드를 잡고 끌어서(drag) 스크롤 가능. 살짝 클릭하면 상세 화면으로 이동.
+- 트랙패드: 두 손가락 좌우 스와이프
+- Hero 아래 **도트 인디케이터**가 현재 위치 표시 (클릭으로 해당 카드로 이동 가능)
+- 양쪽 끝에 **살짝 흐려지는 fade** — 더 넘길 수 있다는 힌트
+- 좋아요된 시간표가 하나도 없을 때 Hero 자리에는 "좋아하는 시간표가 아직 없습니다"라는 비활성 카드 표시
 
 ### 설정 - 메뉴 관리
 - 대분류와 하위 메뉴의 이모지/이름/slug 수정, ↑/↓ 순서 변경
@@ -496,25 +533,68 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 
 ## 10. 다음 세션 시작점
 
+> **이 세션은 2026-04-22에 마무리됨. 다른 기기에서 이어받을 때 이 섹션을 가장 먼저 정독.**
+
 ### 🚨 세션 시작 직후 가장 먼저 할 일
 
-**이전 세션에서 15-A·15-B를 구현하고 배포까지 마쳤으나, 사용자가 피드백을 주기 전에 세션을 종료했음.**
+**지난 세션(2026-04-22)에 15-B 피드백을 받아 아래 내용을 모두 배포 완료함. 하지만 3차 푸시(드래그 스크롤 + 디자인 설정 2차 확장)에 대해 사용자가 아직 피드백을 주지 않은 상태로 세션을 종료했음.**
 
-세션 시작 시 사용자에게 먼저 물어볼 것:
-> "이전 세션에서 15-A·15-B와 디자인 설정 확장까지 배포 완료했습니다. 배포 URL(`https://beybusiness-bit.github.io/bey-manager/`)에서 모바일 하드리프레시 후 테스트해보셨다면 피드백부터 받고 이어가겠습니다. 문제 없으면 15-C(목록뷰 + 페이저)로 진행할게요."
+**세션 시작 시 사용자에게 먼저 이렇게 물어볼 것:**
 
-피드백이 나오면 그걸 먼저 반영. 없으면 15-C로.
+> "지난 세션에서 아래 3가지 푸시를 완료했습니다. 모바일·데스크탑 모두 **하드 리프레시(Cmd+Shift+R)** 후 테스트해주세요:
+>
+> 1. **1차** (커밋 `00e5f0f`): 첫 시간표 자동 좋아요 제거 / Hero 빈 상태 / 사이드바 프로필 재배치 / 데스크탑 접기 버튼 스타일
+> 2. **2차** (커밋 `36bb478` + 수정 `ce6413a`): 모바일 상단 스티키 바 (fixed 방식) / 접기 버튼 테두리 제거를 모바일까지 확장
+> 3. **3차** (커밋 `647775c`): Hero/Others 드래그 스크롤 (scroll-snap + 마우스 드래그 + fade 힌트 + 도트 싱크) / 디자인 설정에 '기본 버튼' 및 '모바일 상단 바' 항목 추가
+>
+> 피드백 항목별로 주시거나 '다 마음에 든다'고 해주시면 다음 단계(15-C 목록뷰)로 진행하겠습니다."
 
-### 🎯 다음에 구현할 단계 (우선순위 순)
+### 🧪 사용자가 아직 피드백 주지 않은 항목 (최우선)
+
+#### 3차 푸시 관련 (드래그 스크롤 + 디자인 설정)
+
+**드래그 스크롤 — 모바일**
+- [ ] 시간표 탭 Hero 카드 좌우 **터치 스와이프** 자연스러움?
+- [ ] Others 섹션 좌우 터치 스와이프 자연스러움?
+- [ ] 스크롤 중 카드 탭 시 의도대로 상세 화면(stub) 열리는지
+- [ ] 양끝 fade 힌트 적절한지 (진하기, 너비 24px)
+- [ ] Hero 도트 인디케이터가 스와이프 위치 따라 자연스럽게 이동하는지
+
+**드래그 스크롤 — 데스크탑**
+- [ ] 마우스로 카드 **드래그해서 스크롤**되는지 (5px 이상 움직이면 클릭 억제)
+- [ ] 그냥 클릭 시 상세 화면 열리는지 (드래그로 오인 안 되고)
+- [ ] 트랙패드 좌우 스와이프도 동작하는지
+- [ ] 커서 모양 `grab` / `grabbing` 잘 바뀌는지
+
+**디자인 설정 2차 확장**
+- [ ] 설정 → 디자인에 **"🔘 기본 버튼"** 섹션이 있는지 (배경색·글자색 2개)
+- [ ] **"🔘 강조 버튼 (+ 새 시간표 / + 일상 추가 등)"** 섹션의 설명 문구가 달라졌는지 확인
+- [ ] **"📱 모바일 상단 바"** 섹션 있는지 (배경색·라인 색·글자색 3개)
+- [ ] 기본 버튼 배경을 빨강으로 바꿨을 때 저장·로그인 버튼만 빨강이 되는지 (+ 새 시간표 버튼은 영향 없음)
+- [ ] 모바일 상단 바 배경을 파랑으로 바꿨을 때 모바일 상단 바만 파랑이 되는지
+- [ ] 기본값으로 초기화 버튼으로 새 항목들도 모두 복원되는지
+
+#### 2차 푸시 관련 (모바일 상단 바)
+
+- [ ] 모바일에서 스크롤해도 **상단 바가 따라와서 고정**되어 있는지 (sticky → fixed 수정 후)
+- [ ] 바 아래 본문이 바에 가려지지 않는지 (`padding-top: 64px` 적용됨)
+
+#### 1차 푸시 관련 (이미 일부 피드백은 받음)
+
+- C-3 (일상 카드 어두운 색에서 텍스트 검정 유지) → **유지 결정 (2026-04-22 세션)**, 추가 조치 불필요
+- 그 외 1차 항목은 "따로 언급 없는 항목은 마음에 드는 것"이라고 하셔서 **암묵적 OK**로 처리
+
+### 🎯 피드백 반영 완료 후 진행할 다음 단계 (우선순위 순)
 
 #### 15-C · 시간표 목록뷰 + 뷰 토글 + 페이저
 - 테이블 뷰: 체크박스(전체선택 포함) / 시간표 이름 / 태그 / 최종수정일 / 좋아요 버튼
-- 페이저: `~/Downloads/pongdang-manager/index.html`의 페이저 구조를 **구조만 차용**, 베이 관리자 디자인(노랑 키컬러, DM Mono, 현재 `--button-radius` 등)에 맞춰 리스타일
+- 페이저: `~/projects/pongdang-manager/index.html`의 페이저 구조를 **구조만 차용**, 베이 관리자 디자인(노랑 키컬러, DM Mono, 현재 `--button-radius` 등)에 맞춰 리스타일
 - 정렬: 좋아요 / 가나다 / 최종수정일 각각 오름차순·내림차순 토글
 - 필터: 좋아요된 것만 / 좋아요 안된 것만 / 전체
 - 검색창(썸네일뷰와 공유 · 이미 `scheduleSearchQuery` 전역 상태 존재)
 - **뷰 토글 버튼**: ⊞(썸네일)과 ☰(목록) 두 아이콘 작게, 페이저 근처 배치. 썸네일이 디폴트.
 - 상태 변수 추가 제안: `scheduleViewMode: 'thumbnail' | 'list'`, `scheduleListPage`, `scheduleListPerPage`, `scheduleSortKey`, `scheduleSortDir`, `scheduleFilterLiked`
+- **주의**: `scheduleOthersPage`는 이번 세션에서 **제거됨** (드래그 스크롤로 바뀌어 페이지 개념 없음). 목록뷰 전용 페이지 상태는 별도 이름(`scheduleListPage`)으로 신설할 것.
 
 #### 15-D · 이모지 피커 "My Emojies" 업로드 탭
 - 이모지 피커(`openEmojiPicker`)에 새 탭 "🖼️ My Emojies" 추가
@@ -524,41 +604,80 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 - 삭제 버튼 제공
 - 기존 이모지 피커는 이미 글로벌(`openEmojiPicker(current, callback)`) — 새 탭 하나만 추가하면 됨
 
-#### 15-E (만약 15-D 마치면)  — 추가 피드백에 따라
+#### 15-E (만약 15-D 마치면) — 추가 피드백에 따라
 - 시간표 썸네일(주별 시간표 그리드 축소판)은 **16단계 이후 주간 그리드 실데이터가 생긴 뒤** hero 카드 썸네일 자리에 렌더링하도록 연결
 
 ### 📌 설계 결정 기록 (다음 세션이 맥락 파악하도록)
 
-**시간표 관련**
+**시간표 관련 (2026-04-22 업데이트)**
 - 하트(좋아요)는 `isLiked` 필드, **카드당 1개 동작만** — 기존 "주요" 개념 폐기. 마이그레이션 로직이 `loadSchedules()`에 있음 (`isPrimary → isLiked`, 이후 isPrimary 삭제).
 - 새 시간표 생성 시 **이모지는 `EMOJI_DATA` 전체에서 랜덤**(`getRandomEmoji()`)
-- **첫 번째 시간표만 자동 좋아요** — `isLiked: schedules.length === 0`. 사용자가 hero에서 바로 편집할 수 있게 하려는 UX.  ← **단, 15-B 마지막 피드백에서 hero는 읽기 전용으로 바뀜.** 편집은 17단계 상세화면에서. 따라서 "첫 번째 자동 좋아요" UX 명분이 약해짐. 다음 세션에 사용자에게 "첫 번째 자동 좋아요 유지할지 뺄지" 물어볼 것.
+- ~~첫 번째 시간표만 자동 좋아요~~ → **2026-04-22 세션에서 제거됨**. 이제 모든 새 시간표는 `isLiked: false`. Hero가 비면 "좋아하는 시간표가 아직 없습니다" 비활성 카드 표시.
 - Hero 카드는 **읽기 전용 + 전체 클릭 시 `openScheduleDetail`**. 체크박스·하트만 `event.stopPropagation()`. 이모지/제목/설명 모두 표시만.
 - Others 섹션 헤더 문구는 "**전체 시간표**" (이전 "기타 시간표"에서 변경됨 — 사용자 요청)
 - "전체 선택" 체크박스는 **현재 검색 필터 결과 기준 전체**(좋아요+안된 것 합산) 토글. `indeterminate` 상태 지원.
+- **(2026-04-22)** Hero·Others 모두 **드래그 스크롤**로 전환. `scroll-snap-type: x mandatory`. 구버전의 ◀▶ 버튼 / 페이지네이션은 **완전 제거**.
+    - Hero는 여전히 **한 번에 한 카드만 크게** 보임 (`flex: 0 0 100%`)
+    - Others는 카드 **160px(데스크탑) / 130px(모바일) 고정 너비**, 여러 개 가시
+    - 마우스 드래그: `attachDragScroll(el)` 헬퍼 — 5px 이상 움직이면 click capture 단계에서 `stopPropagation + preventDefault`
+    - fade 힌트: `.schedule-scroll-wrap::before/::after` + `data-scroll-start/end` 속성 기반 동적 토글
+    - Hero 도트 인디케이터: `scroll` 이벤트에서 `Math.round(scrollLeft / clientWidth)`로 활성 인덱스 계산
 
 **일상 종류**
 - 일상(`activity`)에 `color` 필드 추가. 기본 `#ffde59`. 편집 모드에 HTML `<input type="color">` 사용 (OS 네이티브 그라디언트 피커 제공).
 - 뷰 모드 카드 배경 = 선택 색상 **40% 알파** + 흰색 합성 결과의 휘도가 150 미만이면 텍스트 흰색, 아니면 `#333`. `getActivityCardStyle(color)` 헬퍼가 담당.
+- **(2026-04-22)** 아주 어두운 색 지정 시에도 텍스트가 검정으로 표시되는 경우 있음 (투명도 40%라 가독성엔 문제 없어 **현 상태 유지** 결정).
 
-**레이아웃**
+**레이아웃 (2026-04-22 업데이트)**
 - 사이드바 토글 버튼 위치: 접힘 시 `left: 16px`, 펼침 시 `navWidth - 48px` (사이드바 안쪽 우상단). 4군데(loadSidebarState 2곳, toggleSidebar, applyDesignSettings)에서 모두 `navWidth - 48`로 통일.
+- 사이드바 **펼침 상태**의 토글 버튼은 `.expanded` 클래스로 테두리·배경 제거 (X 표시만). 데스크탑·모바일 공통. 3곳(loadSidebarState 두 분기 + toggleSidebar + 암묵적으로 렌더 초기값) 모두 `.expanded` 클래스 토글 필요.
 - `.page-header padding-left`: 펼침 28px / 접힘 48px (`.sidebar.collapsed ~ .main-content .page-header` 셀렉터).
+- **모바일 상단 바** (`.mobile-top-bar`):
+    - `position: fixed; top: 0; height: 52px; z-index: 90`
+    - 모바일에서만 노출 (`@media (max-width: 768px)` 블록 내 `display: flex`)
+    - **모바일에서는** `.sidebar-toggle-btn:not(.expanded)` 숨김 + `.page-header` 숨김
+    - `.main-content { padding-top: 64px; }` 필수 (바 높이 52 + 12 여백)
+    - 제목은 `navigateTo(pageId)` → `updateMobileTopTitle()`이 활성 페이지 `h2` 텍스트를 복사
+- 사이드바 프로필 영역 순서 (2026-04-22 변경): `.logo(앱이름) → .profile-section(사진 + 한마디)`. 이메일 라인(`sidebarUserEmail`, `.logo-sub`) 제거.
 
-**디자인 설정 (section 확장됨)**
-- CSS 변수: `--primary-yellow`(키컬러), `--bg-side`, `--primary-green`(강조버튼), `--accent-btn-color`, `--base-font-size`, `--border-color`, `--bg-card`, `--nav-width`, `--button-radius`.
-- 더 추가 요청 있으면 `DESIGN_DEFAULTS` + `applyDesignSettings` + `renderDesignSettings` + UI HTML + `updateDesign` 모두 갱신해야 함.
+**디자인 설정 (섹션 및 CSS 변수 총정리 — 2026-04-22 최신)**
+- 현재 사용 중인 CSS 변수 (모두 `:root`에 설정, `designSettings` 객체로 관리):
+    - `--primary-yellow` ← `primaryColor` ("키 컬러")
+    - `--bg-side` ← `sidebarBg`
+    - `--nav-width` ← `navWidth` (숫자)
+    - `--button-radius` ← `buttonRadius` (숫자)
+    - `--primary-green` ← `accentBtnBg` ("강조 버튼 배경")
+    - `--accent-btn-color` ← `accentBtnColor` ("강조 버튼 글자")
+    - `--base-font-size` ← `baseFontSize` (숫자)
+    - `--border-color` ← `borderColor`
+    - `--bg-card` ← `cardBg`
+    - `--primary-btn-bg` ← `primaryBtnBg` **(신설 2026-04-22)**
+    - `--primary-btn-color` ← `primaryBtnColor` **(신설 2026-04-22)**
+    - `--mobile-topbar-bg` ← `mobileTopbarBg` **(신설 2026-04-22)**
+    - `--mobile-topbar-border` ← `mobileTopbarBorder` **(신설 2026-04-22)**
+    - `--mobile-topbar-text` ← `mobileTopbarText` **(신설 2026-04-22)**
+- 폰트는 CSS 변수 대신 `document.body.style.fontFamily/fontSize`로 직접 적용
+- 더 추가 요청 있으면 `DESIGN_DEFAULTS` + `applyDesignSettings` + `renderDesignSettings` + UI HTML(설정 페이지) + `updateDesign` 모두 갱신해야 함.
+- **버튼 2종 구분 규칙**:
+    - 기본 버튼 = `btn-primary` (저장/확인/로그인) → `--primary-btn-bg/color` 사용
+    - 강조 버튼 = `btn-add` (+ 새 시간표 / + 일상 추가 등) → `--primary-green`(bg) + `--accent-btn-color` 사용
 
 ### 🔄 현재 진행 상태 (마지막 커밋 기준)
-- 마지막 커밋: `e6c8fcb docs: 저장소 & 배포 URL 기록`
-- 그 이전: `21e899a docs: 자동 배포 플로우 + 푸시 보류 상황 지침 추가`, `47e532b feat: 시간표 썸네일뷰...`
-- 배포된 상태 = 15-B + 디자인 설정 확장 완료 시점
-- 파일 라인 수 변동 大 — 세션 시작 시 `wc -l index.html`로 재확인
+- **마지막 커밋**: `647775c feat: Hero/Others 드래그 스크롤 + 디자인 설정 확장 (기본 버튼·모바일 상단 바)`
+- 이전 커밋 순서:
+    - `ce6413a fix: 모바일 상단 바 스크롤 시 사라지는 현상 (sticky → fixed)`
+    - `36bb478 feat: 모바일 상단 스티키 바 + 접기 버튼 모바일에도 적용`
+    - `00e5f0f feat: 시간표 Hero 빈 상태 + 사이드바 프로필 재배치 + 접기 버튼 스타일`
+    - `cd2eadd docs: 15-A·15-B 완료 반영, 다음 세션 핸드오프 노트 정리` (지난 세션 마지막)
+- **배포 상태 = 위 4개 코드 커밋 전부 배포 완료** (GitHub Pages)
+- **파일 라인 수**: 5,376줄 (`wc -l index.html`로 재확인 가능)
 
 ### ⚠️ 다음 세션에 유의
-1. **자동 배포 플로우**가 CLAUDE.md §5에 추가됨. 기본은 "수정 → 문법검증 → 자동 commit+push → 하드리프레시 안내". WIP거나 큰 변경은 푸시 보류 제안.
+1. **자동 배포 플로우**가 CLAUDE.md §4에 있음. 기본은 "수정 → 문법검증 → 자동 commit+push → 하드리프레시 안내". WIP거나 큰 변경(레이아웃, 인터랙션)은 푸시 보류 제안.
 2. 세션 시작 시 `git log -5 --oneline`, `wc -l index.html`, CLAUDE.md 전체 스캔.
-3. 사용자의 피드백 없이 15-C로 그냥 진행하지 말 것. 피드백 먼저 받기.
+3. 위 "🧪 사용자가 아직 피드백 주지 않은 항목" 리스트를 **축약하지 말고** 그대로 사용자에게 제시할 것. 여러 날이 지났을 수도 있으니, 사용자가 "다 마음에 든다"라고 해도 항목별로 명시적으로 확인 받는 편이 안전.
+4. **새 컴퓨터에서 시작**: `git pull`로 최신 CLAUDE.md와 index.html 동기화 먼저. 그리고 `git log -5 --oneline`로 위에 기록된 커밋 SHA들(`647775c, ce6413a, 36bb478, 00e5f0f, cd2eadd`)이 이미 로컬에 있는지 확인.
+5. 피드백 반영 없이 15-C로 그냥 진행하지 말 것.
 
 ---
 
@@ -613,6 +732,46 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 - `♥`/`♡` 유니코드는 글리프가 다름 (크기·모양 미묘하게 다름)
 - 인라인 SVG path 하나에 `fill="none"` vs `fill="색상"`으로만 구분하면 완벽하게 동일 실루엣
 
+### position:sticky는 overflow-x:hidden 환경에서 불안정 (2026-04-22 교훈)
+- 베이 관리자는 `html, body { overflow-x: hidden }`이라 `position: sticky`가 스크롤 시 해제되는 현상 발생 (모바일 상단 바가 스크롤하면 사라짐)
+- **해결**: `position: fixed; top: 0; left: 0; right: 0`로 변경 + 본문 요소에 `padding-top`으로 겹침 방지
+- 근본 원인: sticky는 스크롤 조상 요소를 찾아가는데, overflow-x:hidden이 새 스크롤 컨텍스트를 만들면 꼬임
+- 교훈: 모바일 전역 상단 바는 `fixed`가 기본값. `sticky`는 컨테이너 내부에서 쓸 때만 안전.
+
+### 드래그 스크롤 + 카드 클릭 충돌 해결 패턴 (2026-04-22 교훈)
+- 가로 스크롤 컨테이너에서 마우스 드래그로 스크롤하면, 드래그 종료 시 카드의 `click`이 실행되어 원치 않는 상세 화면이 열리는 문제
+- **해결 패턴** (`attachDragScroll`):
+  1. `mousedown` 시 `startX`, `scrollStart` 기록, `moved=false`
+  2. `mousemove` 시 `Math.abs(dx) > 5` 이면 `moved=true` + `e.preventDefault()` + 스크롤 갱신
+  3. `click` 이벤트 capture 단계에서 `moved=true`면 `stopPropagation + preventDefault`로 카드 클릭 차단
+  4. 이벤트 리스너는 컨테이너에만 붙이고, `moved` 플래그를 closure로 공유
+- 터치는 네이티브로 잘 동작하므로 JS 불필요. 데스크탑 마우스용.
+
+### scroll-snap + fade 힌트 동적 토글 (2026-04-22 교훈)
+- 가로 스크롤 영역의 양쪽 끝에 fade 그라디언트를 보이되, 실제 스크롤 가능한 방향에 맞게 동적으로 on/off 해야 자연스러움
+- **해결 패턴**:
+  1. 스크롤 컨테이너를 `.schedule-scroll-wrap`으로 감싸기
+  2. `::before`(왼쪽 fade), `::after`(오른쪽 fade) pseudo-element로 그라디언트 표시
+  3. `data-scroll-start`(= `scrollLeft <= 2`), `data-scroll-end`(= `scrollLeft + clientWidth >= scrollWidth - 2`) 속성을 wrap에 붙이고 CSS attribute selector로 opacity 제어
+  4. scroll 이벤트에서 `updateScrollHintState(scrollEl)` 호출하여 실시간 갱신
+- 초기 렌더 시점에서도 한 번 호출해야 초기 상태 맞음
+
+### `.logo` 클래스 중복 정의는 마이그레이션 과정에서 생기기 쉬움 (2026-04-22 교훈)
+- 사이드바 프로필 영역을 재배치하다 보니 기존 `.logo` 정의가 두 번 존재하는 걸 발견 (font-size 18px → 20px로 덮어써지며 margin-bottom 누락)
+- **해결**: 하나로 통합하고 필요한 속성 병합
+- 교훈: CSS 섹션이 여러 곳에서 같은 클래스를 정의하면 예상치 못한 덮어쓰기 발생. 수정 시 `Grep`으로 클래스명 전체 검색 먼저.
+
+### 페이지 헤더 동기화는 `h2` 텍스트 복사가 가장 단순 (2026-04-22 교훈)
+- 모바일 상단 바에 현재 페이지 제목을 띄우려면 메뉴 데이터 구조와 엮을 수도 있지만, 각 페이지에 이미 `.page-header h2`가 있으므로 **활성 페이지의 h2 텍스트를 그대로 복사**하는 게 가장 단순
+- `document.querySelector('.page.active .page-header h2').textContent.trim()` 한 줄
+- 페이지 헤더 자체는 모바일에서 `display: none`이지만 DOM에는 존재하므로 텍스트 읽기는 가능
+- `navigateTo()`와 `initializeApp()` 두 곳에서 호출
+
+### "기본 버튼"과 "강조 버튼" 구분은 CSS 변수 이름으로 의도 명확화 (2026-04-22 교훈)
+- 과거에는 `.btn-primary`가 `--primary-yellow`(키 컬러)를 그대로 재사용 → 사용자가 키 컬러를 바꾸면 버튼도 같이 바뀌어 원치 않는 연동 발생
+- **해결**: `--primary-btn-bg`, `--primary-btn-color` CSS 변수를 신설하고 `DESIGN_DEFAULTS`에 별도 기본값 저장. 기본값은 키 컬러와 동일(`#ffde59`)이라 초기 모습은 유지되지만 이후 분리 설정 가능.
+- 교훈: "지금은 같은 값이지만 개념적으로 다른 것"이면 CSS 변수를 처음부터 분리해두는 게 미래 확장에 유리.
+
 ---
 
-**마지막 업데이트**: 2026-04-21, 15-B 및 디자인 설정 확장 배포 완료 · 사용자 피드백 대기 상태
+**마지막 업데이트**: 2026-04-22 세션 마무리 · 3차 푸시(드래그 스크롤 + 디자인 설정 2차 확장)까지 배포 완료 · 사용자 피드백 대기 상태
