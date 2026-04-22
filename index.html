@@ -1851,12 +1851,12 @@
         padding: 12px;
       }
 
-      /* 모바일: 상단 스티키 바 노출 */
+      /* 모바일: 상단 바 고정 (fixed — overflow-x:hidden에서도 안정적) */
       .mobile-top-bar {
         display: flex;
         align-items: center;
         gap: 10px;
-        position: sticky;
+        position: fixed;
         top: 0;
         left: 0;
         right: 0;
@@ -1865,6 +1865,11 @@
         background: var(--bg-card);
         border-bottom: 1px solid var(--border-color);
         z-index: 90;
+      }
+
+      /* 모바일: 본문 상단 여백 확보 (고정 바 높이 + 약간의 gap) */
+      .main-content {
+        padding-top: 64px;
       }
       .mobile-top-hamburger {
         width: 36px;
