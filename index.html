@@ -136,7 +136,8 @@
     .btn-primary {
       width: 100%;
       padding: 14px;
-      background: var(--primary-yellow);
+      background: var(--primary-btn-bg, var(--primary-yellow));
+      color: var(--primary-btn-color, inherit);
       border: none;
       border-radius: var(--button-radius);
       font-size: 16px;
@@ -1109,41 +1110,92 @@
     }
 
     /* 네비게이션 화살표 공통 — 단출한 텍스트 스타일 */
-    .nav-arrow-btn {
-      background: transparent;
-      border: none;
-      width: 20px;
-      padding: 4px 2px;
-      cursor: pointer;
-      font-size: 18px;
-      color: var(--text-primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      transition: color 0.15s, opacity 0.15s;
-    }
-
-    .nav-arrow-btn:hover:not(:disabled) {
-      color: var(--primary-yellow);
-    }
-
-    .nav-arrow-btn:disabled {
-      opacity: 0.25;
-      cursor: not-allowed;
-    }
-
     /* Hero(좋아요된 시간표) 섹션 */
     .schedule-hero-section {
       margin-bottom: 32px;
     }
 
-    .schedule-hero-row {
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr) auto;
-      gap: 6px;
-      align-items: stretch;
+    /* 드래그 스크롤 공통 컨테이너 (fade 힌트용) */
+    .schedule-scroll-wrap {
+      position: relative;
       min-width: 0;
+    }
+
+    .schedule-scroll-wrap::before,
+    .schedule-scroll-wrap::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 4px;
+      width: 24px;
+      pointer-events: none;
+      z-index: 2;
+      transition: opacity 0.2s;
+    }
+
+    .schedule-scroll-wrap::before {
+      left: 0;
+      background: linear-gradient(to right, var(--bg-card, #fff) 0%, rgba(255,255,255,0) 100%);
+      opacity: 0;
+    }
+
+    .schedule-scroll-wrap::after {
+      right: 0;
+      background: linear-gradient(to left, var(--bg-card, #fff) 0%, rgba(255,255,255,0) 100%);
+      opacity: 1;
+    }
+
+    .schedule-scroll-wrap[data-scroll-start="false"]::before {
+      opacity: 1;
+    }
+
+    .schedule-scroll-wrap[data-scroll-end="true"]::after {
+      opacity: 0;
+    }
+
+    .schedule-hero-scroll,
+    .schedule-others-scroll {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      overflow-y: visible;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      min-width: 0;
+      cursor: grab;
+    }
+
+    .schedule-hero-scroll::-webkit-scrollbar,
+    .schedule-others-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .schedule-hero-scroll.dragging,
+    .schedule-others-scroll.dragging {
+      cursor: grabbing;
+      scroll-behavior: auto;
+      scroll-snap-type: none;
+    }
+
+    .schedule-hero-scroll > .schedule-hero-card {
+      flex: 0 0 100%;
+      scroll-snap-align: center;
+      min-width: 0;
+    }
+
+    .schedule-others-scroll > .schedule-mini-card {
+      flex: 0 0 160px;
+      scroll-snap-align: start;
+    }
+
+    @media (max-width: 767px) {
+      .schedule-others-scroll > .schedule-mini-card {
+        flex: 0 0 130px;
+      }
     }
 
     .schedule-hero-card {
@@ -1308,25 +1360,7 @@
       margin-bottom: 10px;
     }
 
-    .schedule-others-row {
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr) auto;
-      gap: 6px;
-      align-items: stretch;
-      min-width: 0;
-    }
-
-    .schedule-others-track {
-      display: grid;
-      gap: 10px;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      min-width: 0;
-    }
-
     @media (max-width: 767px) {
-      .schedule-others-track {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
       .schedule-hero-card {
         padding: 36px 14px 14px;
         min-height: 260px;
@@ -1862,8 +1896,8 @@
         right: 0;
         height: 52px;
         padding: 0 14px;
-        background: var(--bg-card);
-        border-bottom: 1px solid var(--border-color);
+        background: var(--mobile-topbar-bg, var(--bg-card));
+        border-bottom: 1px solid var(--mobile-topbar-border, var(--border-color));
         z-index: 90;
       }
 
@@ -1878,7 +1912,7 @@
         border: none;
         border-radius: var(--button-radius);
         font-size: 22px;
-        color: var(--text-primary);
+        color: var(--mobile-topbar-text, var(--text-primary));
         cursor: pointer;
         padding: 0;
         display: flex;
@@ -1891,7 +1925,7 @@
       .mobile-top-title {
         font-size: 16px;
         font-weight: 700;
-        color: var(--text-primary);
+        color: var(--mobile-topbar-text, var(--text-primary));
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -2343,9 +2377,31 @@
             </div>
           </div>
 
+          <!-- 기본 버튼 설정 -->
+          <div style="margin-bottom: 28px;">
+            <h4 style="font-size: 15px; margin-bottom: 12px; color: var(--text-primary);">🔘 기본 버튼 (저장 / 확인 / 로그인 등)</h4>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px;">키 컬러와 별개로 기본 버튼 색을 따로 설정할 수 있어요.</p>
+
+            <div class="design-row">
+              <label class="design-label">배경색</label>
+              <div class="design-control">
+                <input type="color" id="designPrimaryBtnBg" class="color-picker" onchange="updateDesign('primaryBtnBg', this.value)" oninput="updateDesign('primaryBtnBg', this.value)">
+                <span class="design-value mono" id="designPrimaryBtnBgValue">#ffde59</span>
+              </div>
+            </div>
+
+            <div class="design-row">
+              <label class="design-label">글자색</label>
+              <div class="design-control">
+                <input type="color" id="designPrimaryBtnColor" class="color-picker" onchange="updateDesign('primaryBtnColor', this.value)" oninput="updateDesign('primaryBtnColor', this.value)">
+                <span class="design-value mono" id="designPrimaryBtnColorValue">#1a1a1a</span>
+              </div>
+            </div>
+          </div>
+
           <!-- 강조 버튼 설정 -->
           <div style="margin-bottom: 28px;">
-            <h4 style="font-size: 15px; margin-bottom: 12px; color: var(--text-primary);">🔘 강조 버튼 (+ 추가 버튼 등)</h4>
+            <h4 style="font-size: 15px; margin-bottom: 12px; color: var(--text-primary);">🔘 강조 버튼 (+ 새 시간표 / + 일상 추가 등)</h4>
 
             <div class="design-row">
               <label class="design-label">배경색</label>
@@ -2360,6 +2416,36 @@
               <div class="design-control">
                 <input type="color" id="designAccentBtnColor" class="color-picker" onchange="updateDesign('accentBtnColor', this.value)" oninput="updateDesign('accentBtnColor', this.value)">
                 <span class="design-value mono" id="designAccentBtnColorValue">#1a1a1a</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 모바일 상단 바 설정 -->
+          <div style="margin-bottom: 28px;">
+            <h4 style="font-size: 15px; margin-bottom: 12px; color: var(--text-primary);">📱 모바일 상단 바</h4>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px;">모바일에서만 상단에 고정 표시되는 바의 색상입니다.</p>
+
+            <div class="design-row">
+              <label class="design-label">배경색</label>
+              <div class="design-control">
+                <input type="color" id="designMobileTopbarBg" class="color-picker" onchange="updateDesign('mobileTopbarBg', this.value)" oninput="updateDesign('mobileTopbarBg', this.value)">
+                <span class="design-value mono" id="designMobileTopbarBgValue">#ffffff</span>
+              </div>
+            </div>
+
+            <div class="design-row">
+              <label class="design-label">라인 색</label>
+              <div class="design-control">
+                <input type="color" id="designMobileTopbarBorder" class="color-picker" onchange="updateDesign('mobileTopbarBorder', this.value)" oninput="updateDesign('mobileTopbarBorder', this.value)">
+                <span class="design-value mono" id="designMobileTopbarBorderValue">#e0e0e0</span>
+              </div>
+            </div>
+
+            <div class="design-row">
+              <label class="design-label">글자색</label>
+              <div class="design-control">
+                <input type="color" id="designMobileTopbarText" class="color-picker" onchange="updateDesign('mobileTopbarText', this.value)" oninput="updateDesign('mobileTopbarText', this.value)">
+                <span class="design-value mono" id="designMobileTopbarTextValue">#1a1a1a</span>
               </div>
             </div>
           </div>
@@ -3262,7 +3348,6 @@
     let schedules = [];
     let scheduleItems = [];
     let scheduleHeroIndex = 0;
-    let scheduleOthersPage = 0;
     let scheduleSearchQuery = '';
     let selectedScheduleIds = [];
 
@@ -4642,47 +4727,74 @@
     function handleScheduleSearch(query) {
       scheduleSearchQuery = query || '';
       scheduleHeroIndex = 0;
-      scheduleOthersPage = 0;
       renderScheduleThumbnails();
     }
 
-    function heroPrev() {
-      const liked = filterSchedulesBySearch().filter(function(s) { return s.isLiked; });
-      if (liked.length === 0) return;
-      scheduleHeroIndex = (scheduleHeroIndex - 1 + liked.length) % liked.length;
-      renderScheduleThumbnails();
+    function scrollHeroTo(i) {
+      const el = document.getElementById('scheduleHeroScroll');
+      if (!el) return;
+      const target = el.children[i];
+      if (!target) return;
+      el.scrollTo({ left: target.offsetLeft, behavior: 'smooth' });
     }
 
-    function heroNext() {
-      const liked = filterSchedulesBySearch().filter(function(s) { return s.isLiked; });
-      if (liked.length === 0) return;
-      scheduleHeroIndex = (scheduleHeroIndex + 1) % liked.length;
-      renderScheduleThumbnails();
+    function updateHeroIndicators() {
+      const indicators = document.querySelectorAll('.hero-indicator');
+      indicators.forEach(function(ind, i) {
+        ind.classList.toggle('active', i === scheduleHeroIndex);
+      });
     }
 
-    function setHeroIndex(i) {
-      scheduleHeroIndex = i;
-      renderScheduleThumbnails();
+    // 드래그 스크롤 + fade 힌트 동기화
+    function attachDragScroll(el) {
+      if (!el || el._dragAttached) return;
+      el._dragAttached = true;
+
+      let isDown = false, startX = 0, scrollStart = 0, moved = false;
+
+      const onDown = function(e) {
+        isDown = true;
+        moved = false;
+        startX = e.pageX;
+        scrollStart = el.scrollLeft;
+        el.classList.add('dragging');
+      };
+      const onMove = function(e) {
+        if (!isDown) return;
+        const dx = e.pageX - startX;
+        if (Math.abs(dx) > 5) moved = true;
+        if (moved) {
+          e.preventDefault();
+          el.scrollLeft = scrollStart - dx;
+        }
+      };
+      const onUp = function() {
+        if (!isDown) return;
+        isDown = false;
+        el.classList.remove('dragging');
+      };
+
+      el.addEventListener('mousedown', onDown);
+      el.addEventListener('mousemove', onMove);
+      el.addEventListener('mouseup', onUp);
+      el.addEventListener('mouseleave', onUp);
+      // 드래그 직후 click 이벤트(카드 클릭) 억제
+      el.addEventListener('click', function(e) {
+        if (moved) {
+          e.stopPropagation();
+          e.preventDefault();
+          moved = false;
+        }
+      }, true);
     }
 
-    function getOthersPerPage() {
-      return window.innerWidth < 768 ? 2 : 4;
-    }
-
-    function othersPrev() {
-      const perPage = getOthersPerPage();
-      const others = filterSchedulesBySearch().filter(function(s) { return !s.isLiked; });
-      const totalPages = Math.max(1, Math.ceil(others.length / perPage));
-      scheduleOthersPage = (scheduleOthersPage - 1 + totalPages) % totalPages;
-      renderScheduleThumbnails();
-    }
-
-    function othersNext() {
-      const perPage = getOthersPerPage();
-      const others = filterSchedulesBySearch().filter(function(s) { return !s.isLiked; });
-      const totalPages = Math.max(1, Math.ceil(others.length / perPage));
-      scheduleOthersPage = (scheduleOthersPage + 1) % totalPages;
-      renderScheduleThumbnails();
+    function updateScrollHintState(scrollEl) {
+      const wrap = scrollEl.closest('.schedule-scroll-wrap');
+      if (!wrap) return;
+      const atStart = scrollEl.scrollLeft <= 2;
+      const atEnd = scrollEl.scrollLeft + scrollEl.clientWidth >= scrollEl.scrollWidth - 2;
+      wrap.dataset.scrollStart = atStart ? 'true' : 'false';
+      wrap.dataset.scrollEnd = atEnd ? 'true' : 'false';
     }
 
     function toggleScheduleSelect(scheduleId) {
@@ -4831,52 +4943,77 @@
       section.style.display = 'block';
       if (liked.length === 0) {
         section.innerHTML =
-          '<div class="schedule-hero-row">' +
-          '  <div class="schedule-hero-card empty">' +
-          '    <div class="hero-empty-emoji">💛</div>' +
-          '    <div class="hero-empty-msg">좋아하는 시간표가 아직 없습니다</div>' +
+          '<div class="schedule-scroll-wrap" data-scroll-start="true" data-scroll-end="true">' +
+          '  <div class="schedule-hero-scroll">' +
+          '    <div class="schedule-hero-card empty">' +
+          '      <div class="hero-empty-emoji">💛</div>' +
+          '      <div class="hero-empty-msg">좋아하는 시간표가 아직 없습니다</div>' +
+          '    </div>' +
           '  </div>' +
           '</div>';
         return;
       }
 
       if (scheduleHeroIndex >= liked.length) scheduleHeroIndex = 0;
-      const sch = liked[scheduleHeroIndex];
-      const itemCount = scheduleItems.filter(function(i) { return i.scheduleId === sch.id; }).length;
-      const isSelected = selectedScheduleIds.indexOf(sch.id) >= 0;
-      const tags = (sch.tags || []).map(function(t) { return '<span class="schedule-tag">' + escapeHtml(t) + '</span>'; }).join('');
-      const canNav = liked.length > 1;
-      const descText = sch.description ? escapeHtml(sch.description) : '세부 설명 없음';
-      const descClass = sch.description ? 'hero-description-display' : 'hero-description-display empty';
 
-      let html = '<div class="schedule-hero-row">';
-      html += '  <button class="nav-arrow-btn" onclick="heroPrev()"' + (canNav ? '' : ' disabled') + ' title="이전">◀</button>';
-      html += '  <div class="schedule-hero-card" onclick="openScheduleDetail(&apos;' + sch.id + '&apos;)">';
-      html += '    <label class="hero-checkbox-wrap" onclick="event.stopPropagation()"><input type="checkbox" class="schedule-select-checkbox"' + (isSelected ? ' checked' : '') + ' onchange="toggleScheduleSelect(&apos;' + sch.id + '&apos;)"></label>';
-      html += '    <button class="heart-btn liked hero-heart-wrap" onclick="event.stopPropagation(); toggleScheduleLike(&apos;' + sch.id + '&apos;)" title="좋아요 해제">' + HEART_SVG + '</button>';
-      html += '    <div class="hero-emoji-title">';
-      html += '      <span class="hero-emoji">' + (sch.emoji || '📅') + '</span>';
-      html += '      <span class="hero-title-display">' + escapeHtml(sch.title) + '</span>';
-      html += '    </div>';
-      html += '    <div class="' + descClass + '">' + descText + '</div>';
-      html += '    <div class="hero-thumbnail-frame">시간표 미리보기 (일정 추가 구현 후 연결)</div>';
-      if (tags) {
-        html += '    <div class="hero-tags-row">' + tags + '</div>';
-      }
-      html += '    <div class="hero-meta-row">' + itemCount + '개 일정 · 최종수정 ' + (sch.updatedAt || sch.createdAt) + '</div>';
+      let html = '<div class="schedule-scroll-wrap" data-scroll-start="true" data-scroll-end="' + (liked.length <= 1 ? 'true' : 'false') + '">';
+      html += '  <div class="schedule-hero-scroll" id="scheduleHeroScroll">';
+
+      liked.forEach(function(sch) {
+        const itemCount = scheduleItems.filter(function(i) { return i.scheduleId === sch.id; }).length;
+        const isSelected = selectedScheduleIds.indexOf(sch.id) >= 0;
+        const tags = (sch.tags || []).map(function(t) { return '<span class="schedule-tag">' + escapeHtml(t) + '</span>'; }).join('');
+        const descText = sch.description ? escapeHtml(sch.description) : '세부 설명 없음';
+        const descClass = sch.description ? 'hero-description-display' : 'hero-description-display empty';
+
+        html += '<div class="schedule-hero-card" onclick="openScheduleDetail(&apos;' + sch.id + '&apos;)">';
+        html += '  <label class="hero-checkbox-wrap" onclick="event.stopPropagation()"><input type="checkbox" class="schedule-select-checkbox"' + (isSelected ? ' checked' : '') + ' onchange="toggleScheduleSelect(&apos;' + sch.id + '&apos;)"></label>';
+        html += '  <button class="heart-btn liked hero-heart-wrap" onclick="event.stopPropagation(); toggleScheduleLike(&apos;' + sch.id + '&apos;)" title="좋아요 해제">' + HEART_SVG + '</button>';
+        html += '  <div class="hero-emoji-title">';
+        html += '    <span class="hero-emoji">' + (sch.emoji || '📅') + '</span>';
+        html += '    <span class="hero-title-display">' + escapeHtml(sch.title) + '</span>';
+        html += '  </div>';
+        html += '  <div class="' + descClass + '">' + descText + '</div>';
+        html += '  <div class="hero-thumbnail-frame">시간표 미리보기 (일정 추가 구현 후 연결)</div>';
+        if (tags) {
+          html += '  <div class="hero-tags-row">' + tags + '</div>';
+        }
+        html += '  <div class="hero-meta-row">' + itemCount + '개 일정 · 최종수정 ' + (sch.updatedAt || sch.createdAt) + '</div>';
+        html += '</div>';
+      });
+
       html += '  </div>';
-      html += '  <button class="nav-arrow-btn" onclick="heroNext()"' + (canNav ? '' : ' disabled') + ' title="다음">▶</button>';
       html += '</div>';
 
       if (liked.length > 1) {
         html += '<div class="hero-indicators">';
         for (let i = 0; i < liked.length; i++) {
-          html += '<button class="hero-indicator' + (i === scheduleHeroIndex ? ' active' : '') + '" onclick="setHeroIndex(' + i + ')" aria-label="' + (i + 1) + '"></button>';
+          html += '<button class="hero-indicator' + (i === scheduleHeroIndex ? ' active' : '') + '" onclick="scrollHeroTo(' + i + ')" aria-label="' + (i + 1) + '"></button>';
         }
         html += '</div>';
       }
 
       section.innerHTML = html;
+
+      const scrollEl = document.getElementById('scheduleHeroScroll');
+      if (scrollEl) {
+        // 이전 인덱스가 유효하면 해당 카드로 즉시 스크롤 (애니메이션 없이)
+        if (scheduleHeroIndex > 0) {
+          const target = scrollEl.children[scheduleHeroIndex];
+          if (target) scrollEl.scrollLeft = target.offsetLeft;
+        }
+        updateScrollHintState(scrollEl);
+        scrollEl.addEventListener('scroll', function() {
+          const cardWidth = scrollEl.clientWidth;
+          const idx = Math.round(scrollEl.scrollLeft / cardWidth);
+          if (idx !== scheduleHeroIndex && idx >= 0 && idx < liked.length) {
+            scheduleHeroIndex = idx;
+            updateHeroIndicators();
+          }
+          updateScrollHintState(scrollEl);
+        });
+        attachDragScroll(scrollEl);
+      }
     }
 
     function renderOtherSchedules(others) {
@@ -4887,20 +5024,11 @@
       }
       section.style.display = 'block';
 
-      const perPage = getOthersPerPage();
-      const totalPages = Math.max(1, Math.ceil(others.length / perPage));
-      if (scheduleOthersPage >= totalPages) scheduleOthersPage = 0;
+      let html = '<div class="schedule-others-header">전체 시간표 (' + others.length + '개)</div>';
+      html += '<div class="schedule-scroll-wrap" data-scroll-start="true" data-scroll-end="false">';
+      html += '  <div class="schedule-others-scroll" id="scheduleOthersScroll">';
 
-      const start = scheduleOthersPage * perPage;
-      const visible = others.slice(start, start + perPage);
-      const canNav = totalPages > 1;
-
-      let html = '<div class="schedule-others-header">전체 시간표 (' + others.length + '개)' + (canNav ? ' · ' + (scheduleOthersPage + 1) + '/' + totalPages : '') + '</div>';
-      html += '<div class="schedule-others-row">';
-      html += '  <button class="nav-arrow-btn" onclick="othersPrev()"' + (canNav ? '' : ' disabled') + ' title="이전">◀</button>';
-      html += '  <div class="schedule-others-track">';
-
-      visible.forEach(function(sch) {
+      others.forEach(function(sch) {
         const isSelected = selectedScheduleIds.indexOf(sch.id) >= 0;
         html += '<div class="schedule-mini-card" onclick="openScheduleDetail(&apos;' + sch.id + '&apos;)">';
         html += '  <label class="mini-checkbox-wrap" onclick="event.stopPropagation()"><input type="checkbox" class="schedule-select-checkbox"' + (isSelected ? ' checked' : '') + ' onchange="toggleScheduleSelect(&apos;' + sch.id + '&apos;)"></label>';
@@ -4911,16 +5039,19 @@
         html += '</div>';
       });
 
-      // 빈 슬롯 채우기 (선택사항: 레이아웃 유지)
-      for (let i = visible.length; i < perPage; i++) {
-        html += '<div style="visibility:hidden;"></div>';
-      }
-
       html += '  </div>';
-      html += '  <button class="nav-arrow-btn" onclick="othersNext()"' + (canNav ? '' : ' disabled') + ' title="다음">▶</button>';
       html += '</div>';
 
       section.innerHTML = html;
+
+      const scrollEl = document.getElementById('scheduleOthersScroll');
+      if (scrollEl) {
+        updateScrollHintState(scrollEl);
+        scrollEl.addEventListener('scroll', function() {
+          updateScrollHintState(scrollEl);
+        });
+        attachDragScroll(scrollEl);
+      }
     }
 
     // ========================================
@@ -5071,7 +5202,12 @@
       accentBtnColor: '#1a1a1a',
       baseFontSize: 14,
       borderColor: '#e0e0e0',
-      cardBg: '#ffffff'
+      cardBg: '#ffffff',
+      primaryBtnBg: '#ffde59',
+      primaryBtnColor: '#1a1a1a',
+      mobileTopbarBg: '#ffffff',
+      mobileTopbarBorder: '#e0e0e0',
+      mobileTopbarText: '#1a1a1a'
     };
 
     let designSettings = Object.assign({}, DESIGN_DEFAULTS);
@@ -5104,6 +5240,11 @@
       root.style.setProperty('--base-font-size', designSettings.baseFontSize + 'px');
       root.style.setProperty('--border-color', designSettings.borderColor);
       root.style.setProperty('--bg-card', designSettings.cardBg);
+      root.style.setProperty('--primary-btn-bg', designSettings.primaryBtnBg);
+      root.style.setProperty('--primary-btn-color', designSettings.primaryBtnColor);
+      root.style.setProperty('--mobile-topbar-bg', designSettings.mobileTopbarBg);
+      root.style.setProperty('--mobile-topbar-border', designSettings.mobileTopbarBorder);
+      root.style.setProperty('--mobile-topbar-text', designSettings.mobileTopbarText);
       document.body.style.fontFamily = designSettings.fontFamily;
       document.body.style.fontSize = designSettings.baseFontSize + 'px';
 
@@ -5165,6 +5306,31 @@
       const cardBgValue = document.getElementById('designCardBgValue');
       if (cardBg) cardBg.value = designSettings.cardBg;
       if (cardBgValue) cardBgValue.textContent = designSettings.cardBg;
+
+      const primaryBtnBg = document.getElementById('designPrimaryBtnBg');
+      const primaryBtnBgValue = document.getElementById('designPrimaryBtnBgValue');
+      if (primaryBtnBg) primaryBtnBg.value = designSettings.primaryBtnBg;
+      if (primaryBtnBgValue) primaryBtnBgValue.textContent = designSettings.primaryBtnBg;
+
+      const primaryBtnColor = document.getElementById('designPrimaryBtnColor');
+      const primaryBtnColorValue = document.getElementById('designPrimaryBtnColorValue');
+      if (primaryBtnColor) primaryBtnColor.value = designSettings.primaryBtnColor;
+      if (primaryBtnColorValue) primaryBtnColorValue.textContent = designSettings.primaryBtnColor;
+
+      const mobileTopbarBg = document.getElementById('designMobileTopbarBg');
+      const mobileTopbarBgValue = document.getElementById('designMobileTopbarBgValue');
+      if (mobileTopbarBg) mobileTopbarBg.value = designSettings.mobileTopbarBg;
+      if (mobileTopbarBgValue) mobileTopbarBgValue.textContent = designSettings.mobileTopbarBg;
+
+      const mobileTopbarBorder = document.getElementById('designMobileTopbarBorder');
+      const mobileTopbarBorderValue = document.getElementById('designMobileTopbarBorderValue');
+      if (mobileTopbarBorder) mobileTopbarBorder.value = designSettings.mobileTopbarBorder;
+      if (mobileTopbarBorderValue) mobileTopbarBorderValue.textContent = designSettings.mobileTopbarBorder;
+
+      const mobileTopbarText = document.getElementById('designMobileTopbarText');
+      const mobileTopbarTextValue = document.getElementById('designMobileTopbarTextValue');
+      if (mobileTopbarText) mobileTopbarText.value = designSettings.mobileTopbarText;
+      if (mobileTopbarTextValue) mobileTopbarTextValue.textContent = designSettings.mobileTopbarText;
     }
 
     function updateDesign(key, value) {
