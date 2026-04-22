@@ -1153,6 +1153,12 @@
       opacity: 0;
     }
 
+    /* Hero 섹션은 도트 인디케이터로 힌트를 주므로 fade 힌트 생략 */
+    #scheduleHeroSection .schedule-scroll-wrap::before,
+    #scheduleHeroSection .schedule-scroll-wrap::after {
+      display: none;
+    }
+
     .schedule-hero-scroll,
     .schedule-others-scroll {
       display: flex;
@@ -1704,55 +1710,6 @@
     }
 
 
-    /* 설정 페이지 섹션 */
-    .settings-menu {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-
-    .settings-menu-item {
-      background: var(--bg-card);
-      border: 2px solid var(--border-color);
-      border-radius: 12px;
-      padding: 20px;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-align: center;
-    }
-
-    .settings-menu-item:hover {
-      border-color: var(--primary-yellow);
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .settings-menu-item.active {
-      border-color: var(--primary-yellow);
-      background: #fffef5;
-    }
-
-    .settings-menu-item-icon {
-      font-size: 32px;
-      margin-bottom: 8px;
-    }
-
-    .settings-menu-item-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-
-    .settings-detail {
-      display: none;
-    }
-
-    .settings-detail.active {
-      display: block;
-      animation: fadeIn 0.3s;
-    }
-
     /* 디자인 설정 */
     .design-row {
       display: flex;
@@ -2251,24 +2208,16 @@
           <p>앱 설정</p>
         </div>
 
-        <!-- 설정 메뉴 -->
-        <div class="settings-menu">
-          <div class="settings-menu-item" onclick="showSettingsSection('profile')">
-            <div class="settings-menu-item-icon">👤</div>
-            <div class="settings-menu-item-title">프로필 설정</div>
-          </div>
-          <div class="settings-menu-item" onclick="showSettingsSection('menu')">
-            <div class="settings-menu-item-icon">📋</div>
-            <div class="settings-menu-item-title">메뉴 관리</div>
-          </div>
-          <div class="settings-menu-item" onclick="showSettingsSection('design')">
-            <div class="settings-menu-item-icon">🎨</div>
-            <div class="settings-menu-item-title">디자인 설정</div>
-          </div>
+        <!-- 설정 탭 네비게이션 (일상 페이지와 동일한 구조) -->
+        <div class="tab-nav">
+          <button class="tab-btn active" onclick="showSettingsSection('profile')">👤 프로필 설정</button>
+          <button class="tab-btn" onclick="showSettingsSection('menu')">📋 메뉴 관리</button>
+          <button class="tab-btn" onclick="showSettingsSection('design')">🎨 디자인 설정</button>
         </div>
 
         <!-- 프로필 설정 섹션 -->
-        <div id="settingsProfileSection" class="settings-detail card">
+        <div id="settingsProfileSection" class="tab-content active">
+          <div class="card">
           <h3>👤 프로필 설정</h3>
           
           <div class="profile-upload-area" onclick="document.getElementById('profilePhotoInput').click()">
@@ -2290,10 +2239,12 @@
           </div>
 
           <button class="btn-primary" style="width: auto; padding: 10px 24px;" onclick="saveProfile()">저장</button>
+          </div>
         </div>
 
         <!-- 메뉴 관리 섹션 -->
-        <div id="settingsMenuSection" class="settings-detail card">
+        <div id="settingsMenuSection" class="tab-content">
+          <div class="card">
           <h3>📋 메뉴 관리</h3>
           <div class="info-box">
             💡 메뉴의 추가와 페이지 내용 변경은 클로드와 상의하세요
@@ -2301,10 +2252,12 @@
           <div id="menuManager">
             <!-- 동적으로 생성 -->
           </div>
+          </div>
         </div>
 
         <!-- 디자인 설정 섹션 -->
-        <div id="settingsDesignSection" class="settings-detail card">
+        <div id="settingsDesignSection" class="tab-content">
+          <div class="card">
           <h3>🎨 디자인 설정</h3>
           <div class="info-box" style="background: #eafcef; border-color: #b4e8c5; color: #2d6a4f;">
             💡 설정을 변경하면 즉시 반영되며, 다음 접속에도 유지됩니다.
@@ -2474,6 +2427,7 @@
           <!-- 액션 버튼 -->
           <div style="display: flex; gap: 12px; margin-top: 24px;">
             <button class="btn-cancel" style="padding: 10px 20px; border-radius: var(--button-radius); cursor: pointer; font-size: 14px; background: transparent; border: 1px solid var(--border-color);" onclick="resetDesign()">기본값으로 초기화</button>
+          </div>
           </div>
         </div>
       </div>
@@ -4124,22 +4078,21 @@
     // 탭 관리
     // ========================================
     function switchDailyTab(tabName) {
-      // 모든 탭 버튼 비활성화
-      document.querySelectorAll('.tab-btn').forEach(function(btn) {
+      // 일상 페이지 내부의 탭만 제어 (설정 페이지 탭과 충돌 방지)
+      document.querySelectorAll('#dailyPage .tab-btn').forEach(function(btn) {
         btn.classList.remove('active');
       });
 
-      // 모든 탭 콘텐츠 숨기기
-      document.querySelectorAll('.tab-content').forEach(function(content) {
+      document.querySelectorAll('#dailyPage .tab-content').forEach(function(content) {
         content.classList.remove('active');
       });
 
-      // 선택된 탭 활성화
-      if (tabName === 'schedule') {
-        document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+      const tabBtns = document.querySelectorAll('#dailyPage .tab-btn');
+      if (tabName === 'schedule' && tabBtns[0]) {
+        tabBtns[0].classList.add('active');
         document.getElementById('dailyScheduleTab').classList.add('active');
-      } else if (tabName === 'activities') {
-        document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+      } else if (tabName === 'activities' && tabBtns[1]) {
+        tabBtns[1].classList.add('active');
         document.getElementById('dailyActivitiesTab').classList.add('active');
         renderCategoryFilter();
         renderActivities();
@@ -5164,16 +5117,17 @@
     // ========================================
     function showSettingsSection(sectionName) {
       currentSettingsSection = sectionName;
-      
-      document.querySelectorAll('.settings-menu-item').forEach(function(item) {
-        item.classList.remove('active');
+
+      // 설정 페이지 내부의 탭만 제어 (일상 페이지의 .tab-btn과 충돌 방지)
+      document.querySelectorAll('#settingsPage .tab-btn').forEach(function(btn) {
+        btn.classList.remove('active');
       });
-      
-      document.querySelectorAll('.settings-detail').forEach(function(detail) {
-        detail.classList.remove('active');
+
+      document.querySelectorAll('#settingsPage .tab-content').forEach(function(content) {
+        content.classList.remove('active');
       });
-      
-      const menuItems = document.querySelectorAll('.settings-menu-item');
+
+      const menuItems = document.querySelectorAll('#settingsPage .tab-btn');
       if (sectionName === 'profile' && menuItems[0]) {
         menuItems[0].classList.add('active');
         document.getElementById('settingsProfileSection').classList.add('active');
@@ -5185,7 +5139,7 @@
         document.getElementById('settingsDesignSection').classList.add('active');
         renderDesignSettings();
       }
-      
+
       updateProfileDisplay();
     }
 
