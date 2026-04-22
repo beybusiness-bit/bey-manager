@@ -1435,6 +1435,201 @@
       accent-color: var(--primary-yellow);
     }
 
+    /* 시간표 뷰 컨트롤 (필터 + 정렬 + 뷰 토글) */
+    .schedule-view-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .schedule-filter-group {
+      display: flex;
+      gap: 4px;
+    }
+
+    .schedule-filter-btn {
+      padding: 5px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--button-radius, 8px);
+      background: var(--bg-card);
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.15s;
+    }
+
+    .schedule-filter-btn.active {
+      background: var(--primary-yellow);
+      border-color: var(--primary-yellow);
+      color: #333;
+      font-weight: 600;
+    }
+
+    .schedule-filter-btn:hover:not(.active) {
+      border-color: var(--primary-yellow);
+    }
+
+    .schedule-sort-select {
+      padding: 5px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--button-radius, 8px);
+      font-size: 13px;
+      background: var(--bg-card);
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+
+    .schedule-view-toggle-group {
+      margin-left: auto;
+      display: flex;
+      gap: 2px;
+    }
+
+    .schedule-view-btn {
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--button-radius, 8px);
+      background: var(--bg-card);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      color: var(--text-secondary);
+      transition: all 0.15s;
+    }
+
+    .schedule-view-btn.active {
+      background: var(--primary-yellow);
+      border-color: var(--primary-yellow);
+      color: #333;
+    }
+
+    /* 시간표 목록뷰 테이블 */
+    .schedule-list-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    .schedule-list-table th {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 2px solid var(--border-color);
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .schedule-list-table th:first-child {
+      cursor: default;
+      width: 36px;
+    }
+
+    .schedule-list-table th:last-child {
+      cursor: default;
+      width: 52px;
+      text-align: center;
+    }
+
+    .schedule-list-table th:hover:not(:first-child):not(:last-child) {
+      color: var(--text-primary);
+    }
+
+    .schedule-list-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: middle;
+    }
+
+    .schedule-list-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .schedule-list-table tr:hover td {
+      background: #fffef5;
+    }
+
+    .schedule-list-row-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .schedule-list-row-name:hover {
+      color: var(--primary-yellow);
+    }
+
+    .schedule-list-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .schedule-list-date {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-family: 'DM Mono', monospace;
+      white-space: nowrap;
+    }
+
+    .sort-arrow {
+      font-size: 11px;
+      margin-left: 3px;
+      opacity: 0.45;
+    }
+
+    .sort-arrow.on {
+      opacity: 1;
+    }
+
+    /* 페이저 */
+    .schedule-pager {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      margin-top: 16px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .pg-btn {
+      min-width: 32px;
+      height: 32px;
+      padding: 0 8px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--button-radius, 8px);
+      background: var(--bg-card);
+      font-size: 13px;
+      font-family: 'DM Mono', monospace;
+      cursor: pointer;
+      color: var(--text-primary);
+      transition: all 0.15s;
+    }
+
+    .pg-btn:hover:not(:disabled):not(.active) {
+      border-color: var(--primary-yellow);
+    }
+
+    .pg-btn.active {
+      background: var(--primary-yellow);
+      border-color: var(--primary-yellow);
+      font-weight: 700;
+    }
+
+    .pg-btn:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+
     /* 일상 종류 카드 레이아웃 */
     /* ============================================ */
     .activity-grid {
@@ -2065,6 +2260,26 @@
               </div>
             </div>
 
+            <!-- 뷰 컨트롤: 필터 + 정렬 + 뷰 토글 -->
+            <div class="schedule-view-controls">
+              <div class="schedule-filter-group">
+                <button class="schedule-filter-btn active" data-filter="all" onclick="setScheduleFilter('all')">전체</button>
+                <button class="schedule-filter-btn" data-filter="liked" onclick="setScheduleFilter('liked')">❤️ 좋아요만</button>
+                <button class="schedule-filter-btn" data-filter="unliked" onclick="setScheduleFilter('unliked')">🤍 미좋아요</button>
+              </div>
+              <select class="schedule-sort-select" id="scheduleSortSelect" onchange="handleScheduleSort(this.value)">
+                <option value="updatedAt_desc">최신순</option>
+                <option value="updatedAt_asc">오래된순</option>
+                <option value="title_asc">가나다순</option>
+                <option value="title_desc">가나다역순</option>
+                <option value="isLiked_desc">좋아요순</option>
+              </select>
+              <div class="schedule-view-toggle-group">
+                <button class="schedule-view-btn active" id="viewBtnThumbnail" onclick="switchScheduleView('thumbnail')" title="썸네일 뷰">⊞</button>
+                <button class="schedule-view-btn" id="viewBtnList" onclick="switchScheduleView('list')" title="목록 뷰">☰</button>
+              </div>
+            </div>
+
             <!-- 좋아요된 시간표 Hero 섹션 -->
             <div id="scheduleHeroSection" class="schedule-hero-section" style="display:none;">
               <!-- 동적 생성 -->
@@ -2083,6 +2298,11 @@
             <!-- 검색 결과 없음 -->
             <div id="scheduleNoResult" class="schedule-empty" style="display:none;">
               검색 결과가 없습니다.
+            </div>
+
+            <!-- 목록뷰 -->
+            <div id="scheduleListView" style="display:none;">
+              <!-- 동적 생성 -->
             </div>
           </div>
         </div>
@@ -3304,6 +3524,12 @@
     let scheduleHeroIndex = 0;
     let scheduleSearchQuery = '';
     let selectedScheduleIds = [];
+    let scheduleViewMode = 'thumbnail';
+    let scheduleListPage = 1;
+    let scheduleListPerPage = 10;
+    let scheduleSortKey = 'updatedAt';
+    let scheduleSortDir = 'desc';
+    let scheduleFilterLiked = 'all';
 
     // 모달 콜백
     let confirmModalCallback = null;
@@ -4635,7 +4861,7 @@
       };
       schedules.push(newSchedule);
       saveSchedules();
-      renderScheduleThumbnails();
+      renderCurrentScheduleView();
     }
 
     function updateScheduleTitle(scheduleId, title) {
@@ -4662,25 +4888,65 @@
         s.emoji = emoji;
         s.updatedAt = today();
         saveSchedules();
-        renderScheduleThumbnails();
+        renderCurrentScheduleView();
       }
     }
 
-    function filterSchedulesBySearch() {
-      if (!scheduleSearchQuery) return schedules.slice();
-      const q = scheduleSearchQuery.toLowerCase();
-      return schedules.filter(function(s) {
-        const title = (s.title || '').toLowerCase();
-        const desc = (s.description || '').toLowerCase();
-        const tagMatch = (s.tags || []).some(function(t) { return t.toLowerCase().indexOf(q) >= 0; });
-        return title.indexOf(q) >= 0 || desc.indexOf(q) >= 0 || tagMatch;
+    function getSortedFilteredSchedules() {
+      let result = schedules.slice();
+
+      // 검색 필터
+      if (scheduleSearchQuery) {
+        const q = scheduleSearchQuery.toLowerCase();
+        result = result.filter(function(s) {
+          const title = (s.title || '').toLowerCase();
+          const desc = (s.description || '').toLowerCase();
+          const tagMatch = (s.tags || []).some(function(t) { return t.toLowerCase().indexOf(q) >= 0; });
+          return title.indexOf(q) >= 0 || desc.indexOf(q) >= 0 || tagMatch;
+        });
+      }
+
+      // 좋아요 필터
+      if (scheduleFilterLiked === 'liked') {
+        result = result.filter(function(s) { return s.isLiked; });
+      } else if (scheduleFilterLiked === 'unliked') {
+        result = result.filter(function(s) { return !s.isLiked; });
+      }
+
+      // 정렬
+      result.sort(function(a, b) {
+        var va, vb;
+        if (scheduleSortKey === 'title') {
+          va = (a.title || '').toLowerCase();
+          vb = (b.title || '').toLowerCase();
+        } else if (scheduleSortKey === 'isLiked') {
+          va = a.isLiked ? 1 : 0;
+          vb = b.isLiked ? 1 : 0;
+        } else {
+          va = a.updatedAt || a.createdAt || '';
+          vb = b.updatedAt || b.createdAt || '';
+        }
+        if (va < vb) return scheduleSortDir === 'asc' ? -1 : 1;
+        if (va > vb) return scheduleSortDir === 'asc' ? 1 : -1;
+        return 0;
       });
+
+      return result;
     }
 
     function handleScheduleSearch(query) {
       scheduleSearchQuery = query || '';
       scheduleHeroIndex = 0;
-      renderScheduleThumbnails();
+      scheduleListPage = 1;
+      renderCurrentScheduleView();
+    }
+
+    function renderCurrentScheduleView() {
+      if (scheduleViewMode === 'list') {
+        renderScheduleList();
+      } else {
+        renderScheduleThumbnails();
+      }
     }
 
     function scrollHeroTo(i) {
@@ -4759,24 +5025,23 @@
 
     function clearScheduleSelection() {
       selectedScheduleIds = [];
-      renderScheduleThumbnails();
+      renderCurrentScheduleView();
     }
 
     function toggleSelectAllSchedules(checked) {
       if (checked) {
-        // 현재 필터 결과 전체를 선택
-        const filtered = filterSchedulesBySearch();
+        const filtered = getSortedFilteredSchedules();
         selectedScheduleIds = filtered.map(function(s) { return s.id; });
       } else {
         selectedScheduleIds = [];
       }
-      renderScheduleThumbnails();
+      renderCurrentScheduleView();
     }
 
     function syncSelectAllCheckbox() {
       const chk = document.getElementById('scheduleSelectAll');
       if (!chk) return;
-      const filtered = filterSchedulesBySearch();
+      const filtered = getSortedFilteredSchedules();
       if (filtered.length === 0) {
         chk.checked = false;
         chk.indeterminate = false;
@@ -4797,7 +5062,7 @@
         scheduleItems = scheduleItems.filter(function(i) { return selectedScheduleIds.indexOf(i.scheduleId) < 0; });
         selectedScheduleIds = [];
         saveSchedules();
-        renderScheduleThumbnails();
+        renderCurrentScheduleView();
       });
     }
 
@@ -4815,12 +5080,11 @@
       syncSelectAllCheckbox();
     }
 
-    // 윈도우 리사이즈 시 others 페이지네이션 재계산
     window.addEventListener('resize', function() {
-      if (document.getElementById('scheduleOthersSection')) {
+      if (document.getElementById('scheduleHeroSection')) {
         clearTimeout(window._scheduleResizeTimer);
         window._scheduleResizeTimer = setTimeout(function() {
-          renderScheduleThumbnails();
+          renderCurrentScheduleView();
         }, 150);
       }
     });
@@ -4831,7 +5095,7 @@
       sch.isLiked = !sch.isLiked;
       sch.updatedAt = today();
       saveSchedules();
-      renderScheduleThumbnails();
+      renderCurrentScheduleView();
     }
 
     function deleteSchedule(scheduleId) {
@@ -4840,12 +5104,176 @@
         schedules = schedules.filter(function(s) { return s.id !== scheduleId; });
         scheduleItems = scheduleItems.filter(function(i) { return i.scheduleId !== scheduleId; });
         saveSchedules();
-        renderScheduleThumbnails();
+        renderCurrentScheduleView();
       });
     }
 
     function openScheduleDetail(scheduleId) {
       showAlert('준비 중', '시간표 상세 화면은 다음 단계(17단계)에서 구현됩니다.');
+    }
+
+    function switchScheduleView(mode) {
+      scheduleViewMode = mode;
+      scheduleListPage = 1;
+      const thumbBtn = document.getElementById('viewBtnThumbnail');
+      const listBtn = document.getElementById('viewBtnList');
+      if (thumbBtn) thumbBtn.classList.toggle('active', mode === 'thumbnail');
+      if (listBtn) listBtn.classList.toggle('active', mode === 'list');
+      const heroSection = document.getElementById('scheduleHeroSection');
+      const othersSection = document.getElementById('scheduleOthersSection');
+      const listView = document.getElementById('scheduleListView');
+      const emptyEl = document.getElementById('scheduleEmpty');
+      const noResultEl = document.getElementById('scheduleNoResult');
+      if (mode === 'list') {
+        if (heroSection) heroSection.style.display = 'none';
+        if (othersSection) othersSection.style.display = 'none';
+        if (emptyEl) emptyEl.style.display = 'none';
+        if (noResultEl) noResultEl.style.display = 'none';
+        if (listView) listView.style.display = 'block';
+        renderScheduleList();
+      } else {
+        if (listView) listView.style.display = 'none';
+        renderScheduleThumbnails();
+      }
+    }
+
+    function setScheduleFilter(filter) {
+      scheduleFilterLiked = filter;
+      scheduleListPage = 1;
+      document.querySelectorAll('.schedule-filter-btn').forEach(function(btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-filter') === filter);
+      });
+      renderCurrentScheduleView();
+    }
+
+    function handleScheduleSort(value) {
+      var parts = value.split('_');
+      scheduleSortKey = parts[0];
+      scheduleSortDir = parts[1];
+      scheduleListPage = 1;
+      renderCurrentScheduleView();
+    }
+
+    function getSortIcon(key) {
+      if (scheduleSortKey !== key) return '<span class="sort-arrow">↕</span>';
+      return '<span class="sort-arrow on">' + (scheduleSortDir === 'asc' ? '↑' : '↓') + '</span>';
+    }
+
+    function toggleListSort(key) {
+      if (scheduleSortKey === key) {
+        scheduleSortDir = scheduleSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        scheduleSortKey = key;
+        scheduleSortDir = 'desc';
+      }
+      scheduleListPage = 1;
+      var sel = document.getElementById('scheduleSortSelect');
+      if (sel) sel.value = scheduleSortKey + '_' + scheduleSortDir;
+      renderScheduleList();
+    }
+
+    function renderScheduleList() {
+      var listView = document.getElementById('scheduleListView');
+      var emptyEl = document.getElementById('scheduleEmpty');
+      var noResultEl = document.getElementById('scheduleNoResult');
+      if (!listView) return;
+
+      updateScheduleBulkBar();
+
+      if (schedules.length === 0) {
+        listView.innerHTML = '';
+        if (emptyEl) emptyEl.style.display = 'block';
+        if (noResultEl) noResultEl.style.display = 'none';
+        return;
+      }
+      if (emptyEl) emptyEl.style.display = 'none';
+
+      var filtered = getSortedFilteredSchedules();
+      if (filtered.length === 0) {
+        listView.innerHTML = '';
+        if (noResultEl) noResultEl.style.display = 'block';
+        return;
+      }
+      if (noResultEl) noResultEl.style.display = 'none';
+
+      var total = filtered.length;
+      var start = (scheduleListPage - 1) * scheduleListPerPage;
+      var paged = filtered.slice(start, start + scheduleListPerPage);
+
+      var html = '<table class="schedule-list-table"><thead><tr>';
+      html += '<th><input type="checkbox" class="schedule-select-checkbox" id="listSelectAll" onchange="toggleSelectAllSchedules(this.checked)"></th>';
+      html += '<th onclick="toggleListSort(&apos;title&apos;)">이름' + getSortIcon('title') + '</th>';
+      html += '<th>태그</th>';
+      html += '<th onclick="toggleListSort(&apos;updatedAt&apos;)">최종수정' + getSortIcon('updatedAt') + '</th>';
+      html += '<th>좋아요</th>';
+      html += '</tr></thead><tbody>';
+
+      paged.forEach(function(sch) {
+        var isSelected = selectedScheduleIds.indexOf(sch.id) >= 0;
+        var tags = (sch.tags || []).map(function(t) {
+          return '<span class="schedule-tag">' + escapeHtml(t) + '</span>';
+        }).join('');
+        var date = (sch.updatedAt || sch.createdAt || '').substring(0, 10);
+        var heartCls = sch.isLiked ? 'heart-btn liked' : 'heart-btn';
+        html += '<tr>';
+        html += '<td><input type="checkbox" class="schedule-select-checkbox"' + (isSelected ? ' checked' : '') + ' onchange="toggleScheduleSelect(&apos;' + sch.id + '&apos;)"></td>';
+        html += '<td><div class="schedule-list-row-name" onclick="openScheduleDetail(&apos;' + sch.id + '&apos;)">';
+        html += '<span>' + (sch.emoji || '📅') + '</span><span>' + escapeHtml(sch.title) + '</span></div></td>';
+        html += '<td><div class="schedule-list-tags">' + (tags || '<span style="color:var(--text-secondary);font-size:12px;">-</span>') + '</div></td>';
+        html += '<td class="schedule-list-date">' + date + '</td>';
+        html += '<td style="text-align:center;"><button class="' + heartCls + '" onclick="toggleScheduleLike(&apos;' + sch.id + '&apos;)" title="' + (sch.isLiked ? '좋아요 해제' : '좋아요') + '">' + HEART_SVG + '</button></td>';
+        html += '</tr>';
+      });
+
+      html += '</tbody></table><div class="schedule-pager" id="scheduleListPager"></div>';
+      listView.innerHTML = html;
+
+      // 전체선택 체크박스 상태
+      var listSelectAll = document.getElementById('listSelectAll');
+      if (listSelectAll) {
+        var allIds = filtered.map(function(s) { return s.id; });
+        var checkedCount = allIds.filter(function(id) { return selectedScheduleIds.indexOf(id) >= 0; }).length;
+        listSelectAll.checked = checkedCount === allIds.length && allIds.length > 0;
+        listSelectAll.indeterminate = checkedCount > 0 && checkedCount < allIds.length;
+      }
+
+      renderSchedulePager(total);
+    }
+
+    function renderSchedulePager(total) {
+      var pagerEl = document.getElementById('scheduleListPager');
+      if (!pagerEl) return;
+      var totalPages = Math.ceil(total / scheduleListPerPage);
+      if (totalPages <= 1) { pagerEl.innerHTML = ''; return; }
+
+      var html = '<button class="pg-btn" onclick="goScheduleListPage(' + (scheduleListPage - 1) + ')"' + (scheduleListPage <= 1 ? ' disabled' : '') + '>‹</button>';
+
+      var maxBtns = 7;
+      var s = Math.max(1, scheduleListPage - 3);
+      var e = Math.min(totalPages, s + maxBtns - 1);
+      if (e - s < maxBtns - 1) s = Math.max(1, e - maxBtns + 1);
+
+      if (s > 1) {
+        html += '<button class="pg-btn" onclick="goScheduleListPage(1)">1</button>';
+        if (s > 2) html += '<span style="padding:0 4px;color:var(--text-secondary)">…</span>';
+      }
+      for (var i = s; i <= e; i++) {
+        html += '<button class="pg-btn' + (i === scheduleListPage ? ' active' : '') + '" onclick="goScheduleListPage(' + i + ')">' + i + '</button>';
+      }
+      if (e < totalPages) {
+        if (e < totalPages - 1) html += '<span style="padding:0 4px;color:var(--text-secondary)">…</span>';
+        html += '<button class="pg-btn" onclick="goScheduleListPage(' + totalPages + ')">' + totalPages + '</button>';
+      }
+      html += '<button class="pg-btn" onclick="goScheduleListPage(' + (scheduleListPage + 1) + ')"' + (scheduleListPage >= totalPages ? ' disabled' : '') + '>›</button>';
+      pagerEl.innerHTML = html;
+    }
+
+    function goScheduleListPage(page) {
+      var filtered = getSortedFilteredSchedules();
+      var totalPages = Math.ceil(filtered.length / scheduleListPerPage);
+      if (page < 1 || page > totalPages) return;
+      scheduleListPage = page;
+      renderScheduleList();
     }
 
     const HEART_SVG = '<svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.5-9C0.5 8 3 4 7 4c2.2 0 3.7 1.1 5 2.8C13.3 5.1 14.8 4 17 4c4 0 6.5 4 4.5 8-2.5 4.5-9.5 9-9.5 9z"/></svg>';
@@ -4875,10 +5303,12 @@
 
       if (emptyEl) emptyEl.style.display = 'none';
 
-      const filtered = filterSchedulesBySearch();
+      const filtered = getSortedFilteredSchedules();
       if (filtered.length === 0) {
         heroSection.style.display = 'none';
         othersSection.style.display = 'none';
+        const listView = document.getElementById('scheduleListView');
+        if (listView) listView.style.display = 'none';
         if (noResultEl) noResultEl.style.display = 'block';
         return;
       }
