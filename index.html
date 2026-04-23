@@ -1801,11 +1801,11 @@
       display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
     }
     .sched-detail-back {
-      background: none; border: 1px solid var(--border-color); border-radius: var(--button-radius,8px);
-      padding: 6px 12px; cursor: pointer; font-size: 13px; color: inherit;
-      display: flex; align-items: center; gap: 4px; white-space: nowrap;
+      background: transparent; border: 1px solid var(--border-color); border-radius: var(--button-radius, 8px);
+      padding: 8px 12px; cursor: pointer; font-size: 14px; color: inherit; font-family: inherit;
+      display: flex; align-items: center; gap: 4px; white-space: nowrap; transition: all 0.2s;
     }
-    .sched-detail-back:hover { background: #f5f5f5; }
+    .sched-detail-back:hover { background: var(--bg-hover); }
     .sched-detail-title-wrap { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
     .sched-detail-emoji { font-size: 28px; line-height: 1; flex-shrink: 0; }
     .sched-detail-title { font-size: 18px; font-weight: 700; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1833,9 +1833,9 @@
       transition: filter 0.1s;
     }
     .sched-item-block:hover { filter: brightness(0.94); }
-    .sched-item-emoji { font-size: 14px; line-height: 1.1; margin-bottom: 1px; }
-    .sched-item-emoji img { width: 14px; height: 14px; vertical-align: middle; border-radius: 2px; }
-    .sched-item-name { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+    .sched-item-emoji { font-size: 18px; line-height: 1.1; margin-bottom: 1px; }
+    .sched-item-emoji img { width: 18px; height: 18px; vertical-align: middle; border-radius: 2px; }
+    .sched-item-name { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
     .sched-item-time { font-size: 11px; color: #444; margin-top: 1px; }
     .sched-empty-cell { cursor: pointer; }
     .sched-empty-cell:hover { background: rgba(255, 222, 89, 0.12); }
@@ -1843,12 +1843,13 @@
     /* 상세/수정 메타 영역 */
     .sched-meta-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--button-radius,8px); padding: 14px; margin-bottom: 14px; }
     .sched-meta-card input, .sched-meta-card textarea {
-      width: 100%; border: 1px solid var(--border-color); border-radius: 6px;
-      padding: 6px 10px; font-size: 14px; box-sizing: border-box; background: white;
-      font-family: inherit;
+      width: 100%; border: 1px solid var(--border-color); border-radius: var(--button-radius, 8px);
+      padding: 8px 10px; font-size: 14px; box-sizing: border-box; background: var(--bg-card);
+      font-family: inherit; transition: border-color 0.15s;
     }
-    .sched-meta-card textarea { resize: vertical; min-height: 48px; }
-    .sched-meta-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .sched-meta-card input:focus, .sched-meta-card textarea:focus { outline: none; border-color: var(--primary-yellow); }
+    .sched-meta-card textarea { resize: vertical; min-height: 56px; }
+    .sched-meta-label { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 6px; }
     .sched-meta-value { font-size: 14px; margin-bottom: 10px; white-space: pre-wrap; }
     .sched-meta-value:empty::after { content: '—'; color: #bbb; }
     .sched-tag-chip { display: inline-block; background: var(--primary-yellow); border-radius: 12px; padding: 2px 10px; font-size: 12px; margin: 0 4px 4px 0; }
@@ -2457,7 +2458,7 @@
         </div>
       </div>
       <div class="si-form-row">
-        <label style="display:flex; align-items:center; gap:6px; font-weight:500; font-size:13px; cursor:pointer;">
+        <label style="display:inline-flex; align-items:center; gap:6px; font-weight:500; font-size:13px; cursor:pointer; white-space:nowrap; margin-bottom:0;">
           <input type="checkbox" id="siSameTime" checked onchange="renderScheduleItemTimeInputs()"> 요일별 시간 동일
         </label>
       </div>
@@ -3915,6 +3916,7 @@
     let scheduleViewMode2 = 'detail'; // 'detail' | 'edit'
     let scheduleDraft = null; // 수정 모드 draft
     let addItemPrefill = null; // {weekday, startTime, endTime}
+    var siTimeCache = {start: '', end: ''}; // 요일별 시간 동일 토글 시 시간 보존용
     var SLOT_HEIGHT = 28;
     var WEEKDAYS_EN = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
     var WEEKDAYS_KR = ['월','화','수','목','금','토','일'];
@@ -5806,10 +5808,8 @@
       var isEdit = (scheduleViewMode2 === 'edit');
       var gridStart = 6 * 60, gridEnd = 22 * 60;
       if (items.length > 0) {
-        var minS = items.reduce(function(m, i) { return Math.min(m, timeToMin(i.startTime)); }, Infinity);
         var maxE = items.reduce(function(m, i) { return Math.max(m, timeToMin(i.endTime)); }, 0);
-        gridStart = Math.max(0, Math.floor((minS - 30) / 30) * 30);
-        gridEnd = Math.min(24 * 60, Math.ceil((maxE + 30) / 30) * 30);
+        if (maxE > gridEnd) gridEnd = Math.min(24 * 60, Math.ceil((maxE + 30) / 30) * 30);
       }
       var totalSlots = (gridEnd - gridStart) / 30;
       var totalHeight = totalSlots * SLOT_HEIGHT;
@@ -5968,17 +5968,23 @@
       var modal = document.getElementById('scheduleItemModal');
       var selectedDays = [];
       modal.querySelectorAll('.si-day-check:checked').forEach(function(cb) { selectedDays.push(cb.value); });
-      if (sameTime || selectedDays.length === 0) {
-        var prevStart = (container.querySelector('.si-start-same') || {}).value || '';
-        var prevEnd = (container.querySelector('.si-end-same') || {}).value || '';
+
+      if (sameTime) {
+        // 체크 상태: 캐시에서 복원
         container.innerHTML =
           '<div class="si-time-group">' +
-          '  <input type="time" class="si-start-same" value="' + prevStart + '">' +
-          '  <span class="si-time-sep">~</span>' +
-          '  <input type="time" class="si-end-same" value="' + prevEnd + '">' +
+          '<input type="time" class="si-start-same" value="' + siTimeCache.start + '">' +
+          '<span class="si-time-sep">~</span>' +
+          '<input type="time" class="si-end-same" value="' + siTimeCache.end + '">' +
           '</div>';
       } else {
-        // 요일별 시간 입력
+        // 해제 상태: 기존 단일 시간값 캐시에 저장 후 요일별 행 생성
+        var prevSingleStart = container.querySelector('.si-start-same');
+        var prevSingleEnd = container.querySelector('.si-end-same');
+        if (prevSingleStart) siTimeCache.start = prevSingleStart.value;
+        if (prevSingleEnd) siTimeCache.end = prevSingleEnd.value;
+
+        // 이미 표시 중이던 요일별 값 보존
         var prev = {};
         container.querySelectorAll('.si-per-day-row').forEach(function(row) {
           var d = row.dataset.day;
@@ -5987,17 +5993,25 @@
             end: row.querySelector('.si-end-each').value
           };
         });
-        var html = '';
+
+        if (selectedDays.length === 0) {
+          container.innerHTML = '<div style="color:#aaa;font-size:13px;padding:4px 0;">요일을 먼저 선택해주세요</div>';
+          return;
+        }
+
         var dayOrd = { MON:0, TUE:1, WED:2, THU:3, FRI:4, SAT:5, SUN:6 };
         selectedDays.sort(function(a, b) { return dayOrd[a] - dayOrd[b]; });
+        var html = '';
         selectedDays.forEach(function(d) {
           var p = prev[d] || {};
+          var startVal = p.start || siTimeCache.start;
+          var endVal   = p.end   || siTimeCache.end;
           var kr = WEEKDAYS_KR[WEEKDAYS_EN.indexOf(d)];
           html += '<div class="si-per-day-row" data-day="' + d + '">';
           html += '<div class="si-per-day-row-label">' + kr + '</div>';
-          html += '<input type="time" class="si-start-each" value="' + (p.start || '') + '">';
+          html += '<input type="time" class="si-start-each" value="' + startVal + '">';
           html += '<span class="si-time-sep">~</span>';
-          html += '<input type="time" class="si-end-each" value="' + (p.end || '') + '">';
+          html += '<input type="time" class="si-end-each" value="' + endVal + '">';
           html += '</div>';
         });
         container.innerHTML = html;
@@ -6020,6 +6034,7 @@
       modal.querySelectorAll('.si-day-check').forEach(function(cb) { cb.checked = false; });
       document.getElementById('siSameTime').checked = true;
       document.getElementById('siTimeContainer').innerHTML = '';
+      siTimeCache = {start: '', end: ''};
       renderScheduleItemTimeInputs();
 
       if (itemId) {
@@ -6030,6 +6045,7 @@
             var cb = modal.querySelector('.si-day-check[value="' + d + '"]');
             if (cb) cb.checked = true;
           });
+          siTimeCache = {start: item.startTime || '', end: item.endTime || ''};
           renderScheduleItemTimeInputs();
           var startEl = modal.querySelector('.si-start-same');
           var endEl = modal.querySelector('.si-end-same');
@@ -6037,6 +6053,7 @@
           if (endEl) endEl.value = item.endTime;
         }
       } else if (addItemPrefill) {
+        siTimeCache = {start: addItemPrefill.startTime || '', end: addItemPrefill.endTime || ''};
         var cb = modal.querySelector('.si-day-check[value="' + addItemPrefill.weekday + '"]');
         if (cb) cb.checked = true;
         renderScheduleItemTimeInputs();
