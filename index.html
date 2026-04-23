@@ -1827,15 +1827,41 @@
     .sched-bg-slot { height: 24px; border-top: 1px solid #f8f8f8; box-sizing: border-box; }
     .sched-bg-slot.hour { border-top-color: #e8e8e8; }
     .sched-item-block {
-      position: absolute; left: 1px; right: 1px; border-radius: 3px;
-      padding: 2px 3px; overflow: hidden; cursor: pointer;
-      border-left: 3px solid transparent; box-sizing: border-box;
+      position: absolute; left: 2px; right: 2px; border-radius: 4px;
+      padding: 3px 5px; overflow: hidden; cursor: pointer;
+      border-left: 4px solid transparent; box-sizing: border-box;
       transition: filter 0.1s;
     }
-    .sched-item-block:hover { filter: brightness(0.92); }
-    .sched-item-emoji { font-size: 10px; line-height: 1.2; }
-    .sched-item-name { font-size: 10px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .sched-item-time { font-size: 9px; color: #666; }
+    .sched-item-block:hover { filter: brightness(0.94); }
+    .sched-item-emoji { font-size: 14px; line-height: 1.1; margin-bottom: 1px; }
+    .sched-item-emoji img { width: 14px; height: 14px; vertical-align: middle; border-radius: 2px; }
+    .sched-item-name { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+    .sched-item-time { font-size: 11px; color: #444; margin-top: 1px; }
+    .sched-empty-cell { cursor: pointer; }
+    .sched-empty-cell:hover { background: rgba(255, 222, 89, 0.12); }
+
+    /* 상세/수정 메타 영역 */
+    .sched-meta-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--button-radius,8px); padding: 14px; margin-bottom: 14px; }
+    .sched-meta-card input, .sched-meta-card textarea {
+      width: 100%; border: 1px solid var(--border-color); border-radius: 6px;
+      padding: 6px 10px; font-size: 14px; box-sizing: border-box; background: white;
+      font-family: inherit;
+    }
+    .sched-meta-card textarea { resize: vertical; min-height: 48px; }
+    .sched-meta-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .sched-meta-value { font-size: 14px; margin-bottom: 10px; white-space: pre-wrap; }
+    .sched-meta-value:empty::after { content: '—'; color: #bbb; }
+    .sched-tag-chip { display: inline-block; background: var(--primary-yellow); border-radius: 12px; padding: 2px 10px; font-size: 12px; margin: 0 4px 4px 0; }
+
+    /* 시간표 썸네일 미니 그리드 */
+    .sched-mini-grid { display: flex; width: 100%; height: 72px; border: 1px solid var(--border-color); border-radius: 4px; overflow: hidden; background: #fafafa; }
+    .sched-mini-col { flex: 1; position: relative; border-left: 1px solid #f0f0f0; }
+    .sched-mini-col:first-child { border-left: none; }
+    .sched-mini-block { position: absolute; left: 0; right: 0; display: flex; align-items: center; justify-content: center; font-size: 8px; overflow: hidden; }
+    .sched-mini-block img { width: 8px; height: 8px; object-fit: cover; }
+    .sched-hero-card .sched-mini-grid { height: 120px; }
+    .sched-hero-card .sched-mini-block { font-size: 12px; }
+    .sched-hero-card .sched-mini-block img { width: 12px; height: 12px; }
 
     /* 일정 목록 */
     .sched-item-list { display: flex; flex-direction: column; gap: 8px; }
@@ -1860,15 +1886,18 @@
     }
     .si-weekday-group { display: flex; gap: 6px; flex-wrap: wrap; }
     .si-weekday-label {
-      display: flex; align-items: center; justify-content: center;
-      width: 36px; height: 36px; border-radius: 50%;
+      display: inline-block; text-align: center;
+      width: 36px; height: 36px; line-height: 34px; border-radius: 50%;
       border: 1px solid var(--border-color); cursor: pointer; font-size: 13px; font-weight: 600;
-      user-select: none; transition: all 0.1s;
+      user-select: none; transition: all 0.1s; box-sizing: border-box; padding: 0;
     }
     .si-weekday-label:has(input:checked) { background: var(--primary-yellow); border-color: var(--primary-yellow); }
-    .si-weekday-label input { display: none; }
+    .si-weekday-label input { position: absolute; opacity: 0; pointer-events: none; width: 0; height: 0; }
     .si-weekday-label.sat { color: #55a; }
     .si-weekday-label.sun { color: #e05; }
+    .si-per-day-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .si-per-day-row-label { width: 28px; font-weight: 600; font-size: 13px; flex-shrink: 0; }
+    .si-per-day-row input { flex: 1; }
     .si-time-group { display: flex; align-items: center; gap: 8px; }
     .si-time-group input { flex: 1; }
     .si-time-sep { color: #888; font-size: 16px; }
@@ -2428,12 +2457,13 @@
         </div>
       </div>
       <div class="si-form-row">
+        <label style="display:flex; align-items:center; gap:6px; font-weight:500; font-size:13px; cursor:pointer;">
+          <input type="checkbox" id="siSameTime" checked onchange="renderScheduleItemTimeInputs()"> 요일별 시간 동일
+        </label>
+      </div>
+      <div class="si-form-row">
         <label>시간</label>
-        <div class="si-time-group">
-          <input type="time" id="siStartTime">
-          <span class="si-time-sep">~</span>
-          <input type="time" id="siEndTime">
-        </div>
+        <div id="siTimeContainer"></div>
       </div>
       <div class="modal-actions">
         <button class="btn-cancel" onclick="closeScheduleItemModal()">취소</button>
@@ -2556,8 +2586,8 @@
       <!-- 일상 페이지 -->
       <div id="dailyPage" class="page">
         <div class="page-header">
-          <h2>📅 일상</h2>
-          <p>시간표와 일상 관리</p>
+          <h2>📅 시간표</h2>
+          <p>주간 시간표와 일상 종류 관리</p>
         </div>
 
         <!-- 탭 네비게이션 -->
@@ -2684,11 +2714,11 @@
             <span class="sched-detail-emoji" id="detailScheduleEmoji"></span>
             <span class="sched-detail-title" id="detailScheduleTitle"></span>
           </div>
-          <div class="sched-detail-actions">
-            <button class="btn-add" onclick="openScheduleItemForm(null)">+ 일정 추가</button>
-          </div>
+          <div class="sched-detail-actions" id="detailActionButtons"></div>
         </div>
-        <p class="sched-detail-desc" id="detailScheduleDesc" style="display:none;"></p>
+
+        <!-- 메타 영역 (이름/설명/태그) -->
+        <div class="sched-meta-card" id="detailMetaCard"></div>
 
         <!-- 탭 -->
         <div class="tab-nav" id="scheduleDetailTabNav">
@@ -3044,7 +3074,7 @@
         name: '일상 관리', 
         order: 1,
         children: [
-          { id: 'daily', type: 'page', icon: '📅', name: '일상', slug: 'daily', order: 0 },
+          { id: 'daily', type: 'page', icon: '📅', name: '시간표', slug: 'daily', order: 0 },
         ]
       },
       {
@@ -3882,7 +3912,10 @@
     let currentDetailScheduleId = null;
     let editingScheduleItemId = null;
     let scheduleDetailTab = 'grid';
-    var SLOT_HEIGHT = 24;
+    let scheduleViewMode2 = 'detail'; // 'detail' | 'edit'
+    let scheduleDraft = null; // 수정 모드 draft
+    let addItemPrefill = null; // {weekday, startTime, endTime}
+    var SLOT_HEIGHT = 28;
     var WEEKDAYS_EN = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
     var WEEKDAYS_KR = ['월','화','수','목','금','토','일'];
     let scheduleHeroIndex = 0;
@@ -4378,6 +4411,16 @@
       } else {
         menus = JSON.parse(JSON.stringify(DEFAULT_MENUS));
       }
+      // 마이그레이션: '일상' 메뉴명 → '시간표'
+      var migrated = false;
+      function walkRename(list) {
+        list.forEach(function(m) {
+          if (m.slug === 'daily' && m.name === '일상') { m.name = '시간표'; migrated = true; }
+          if (m.children) walkRename(m.children);
+        });
+      }
+      walkRename(menus);
+      if (migrated) saveMenus();
     }
 
     function saveMenus() {
@@ -5616,6 +5659,8 @@
     function openScheduleDetail(scheduleId) {
       currentDetailScheduleId = scheduleId;
       scheduleDetailTab = 'grid';
+      scheduleViewMode2 = 'detail';
+      scheduleDraft = null;
       document.querySelector('#dailyPage .tab-nav').style.display = 'none';
       document.querySelectorAll('#dailyPage .tab-content').forEach(function(el) { el.style.display = 'none'; });
       var dv = document.getElementById('scheduleDetailView');
@@ -5623,8 +5668,67 @@
       renderScheduleDetail();
     }
 
+    function enterScheduleEditMode() {
+      var schedule = schedules.find(function(s) { return s.id === currentDetailScheduleId; });
+      if (!schedule) return;
+      scheduleViewMode2 = 'edit';
+      scheduleDraft = {
+        title: schedule.title,
+        emoji: schedule.emoji,
+        description: schedule.description || '',
+        tags: (schedule.tags || []).slice()
+      };
+      renderScheduleDetail();
+    }
+
+    function saveScheduleEdit() {
+      if (!scheduleDraft) return;
+      var schedule = schedules.find(function(s) { return s.id === currentDetailScheduleId; });
+      if (!schedule) return;
+      schedule.title = (scheduleDraft.title || '').trim() || schedule.title;
+      schedule.emoji = scheduleDraft.emoji;
+      schedule.description = scheduleDraft.description || '';
+      schedule.tags = scheduleDraft.tags || [];
+      schedule.updatedAt = today();
+      saveSchedules();
+      scheduleViewMode2 = 'detail';
+      scheduleDraft = null;
+      renderScheduleDetail();
+      renderCurrentScheduleView();
+    }
+
+    function cancelScheduleEdit() {
+      scheduleViewMode2 = 'detail';
+      scheduleDraft = null;
+      renderScheduleDetail();
+    }
+
+    function deleteCurrentSchedule() {
+      var schedule = schedules.find(function(s) { return s.id === currentDetailScheduleId; });
+      if (!schedule) return;
+      showConfirm('시간표 삭제', '이 시간표와 포함된 모든 일정을 삭제하시겠습니까?', function(confirmed) {
+        if (!confirmed) return;
+        var sid = schedule.id;
+        schedules = schedules.filter(function(s) { return s.id !== sid; });
+        scheduleItems = scheduleItems.filter(function(i) { return i.scheduleId !== sid; });
+        selectedScheduleIds = selectedScheduleIds.filter(function(id) { return id !== sid; });
+        saveSchedules();
+        closeScheduleDetail();
+        renderCurrentScheduleView();
+      });
+    }
+
+    function updateDraftTitle(v) { if (scheduleDraft) scheduleDraft.title = v; }
+    function updateDraftDesc(v) { if (scheduleDraft) scheduleDraft.description = v; }
+    function updateDraftTags(v) {
+      if (!scheduleDraft) return;
+      scheduleDraft.tags = v.split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t.length > 0; });
+    }
+
     function closeScheduleDetail() {
       currentDetailScheduleId = null;
+      scheduleDraft = null;
+      scheduleViewMode2 = 'detail';
       var dv = document.getElementById('scheduleDetailView');
       if (dv) dv.style.display = 'none';
       document.querySelector('#dailyPage .tab-nav').style.display = '';
@@ -5634,12 +5738,54 @@
     function renderScheduleDetail() {
       var schedule = schedules.find(function(s) { return s.id === currentDetailScheduleId; });
       if (!schedule) return;
-      document.getElementById('detailScheduleEmoji').innerHTML = renderEmoji(schedule.emoji);
-      document.getElementById('detailScheduleTitle').textContent = schedule.title;
-      var descEl = document.getElementById('detailScheduleDesc');
-      if (schedule.description) { descEl.textContent = schedule.description; descEl.style.display = 'block'; }
-      else { descEl.style.display = 'none'; }
-      // 탭 버튼 active 동기화
+      var isEdit = (scheduleViewMode2 === 'edit');
+      var data = isEdit && scheduleDraft ? scheduleDraft : schedule;
+
+      document.getElementById('detailScheduleEmoji').innerHTML = renderEmoji(data.emoji);
+      document.getElementById('detailScheduleTitle').textContent = isEdit ? '시간표 수정' : data.title;
+
+      // 액션 버튼
+      var actionsEl = document.getElementById('detailActionButtons');
+      if (isEdit) {
+        actionsEl.innerHTML =
+          '<button class="btn-cancel" onclick="cancelScheduleEdit()">취소</button>' +
+          '<button class="btn-confirm" onclick="saveScheduleEdit()">저장</button>';
+      } else {
+        actionsEl.innerHTML =
+          '<button class="btn-icon" onclick="enterScheduleEditMode()">수정</button>' +
+          '<button class="btn-icon btn-danger" onclick="deleteCurrentSchedule()">삭제</button>';
+      }
+
+      // 메타 카드 (이름/설명/태그)
+      var metaEl = document.getElementById('detailMetaCard');
+      if (isEdit) {
+        var tagsStr = (data.tags || []).join(', ');
+        var mh = '';
+        mh += '<div class="sched-meta-label">이름</div>';
+        mh += '<input type="text" value="' + (data.title || '').replace(/"/g,'&quot;') + '" placeholder="시간표 이름" oninput="updateDraftTitle(this.value)" style="margin-bottom:10px;">';
+        mh += '<div class="sched-meta-label">상세 설명</div>';
+        mh += '<textarea placeholder="상세 설명 (선택)" oninput="updateDraftDesc(this.value)" style="margin-bottom:10px;">' + (data.description || '') + '</textarea>';
+        mh += '<div class="sched-meta-label">태그 (쉼표로 구분)</div>';
+        mh += '<input type="text" value="' + tagsStr.replace(/"/g,'&quot;') + '" placeholder="예: 여름학기, 평일용" oninput="updateDraftTags(this.value)">';
+        metaEl.innerHTML = mh;
+      } else {
+        var mh = '';
+        mh += '<div class="sched-meta-label">이름</div>';
+        mh += '<div class="sched-meta-value">' + (data.title || '') + '</div>';
+        mh += '<div class="sched-meta-label">상세 설명</div>';
+        mh += '<div class="sched-meta-value">' + (data.description || '') + '</div>';
+        mh += '<div class="sched-meta-label">태그</div>';
+        mh += '<div>';
+        if (data.tags && data.tags.length) {
+          data.tags.forEach(function(t) { mh += '<span class="sched-tag-chip">' + t + '</span>'; });
+        } else {
+          mh += '<div class="sched-meta-value"></div>';
+        }
+        mh += '</div>';
+        metaEl.innerHTML = mh;
+      }
+
+      // 탭
       document.querySelectorAll('#scheduleDetailTabNav .tab-btn').forEach(function(btn) {
         btn.classList.toggle('active', btn.dataset.tab === scheduleDetailTab);
       });
@@ -5657,6 +5803,7 @@
 
     function renderScheduleGrid() {
       var items = scheduleItems.filter(function(i) { return i.scheduleId === currentDetailScheduleId; });
+      var isEdit = (scheduleViewMode2 === 'edit');
       var gridStart = 6 * 60, gridEnd = 22 * 60;
       if (items.length > 0) {
         var minS = items.reduce(function(m, i) { return Math.min(m, timeToMin(i.startTime)); }, Infinity);
@@ -5678,11 +5825,18 @@
         html += '<div class="sched-time-slot-label' + (isH ? ' hour' : '') + '">' + (isH ? minToTimeStr(t) : '') + '</div>';
       }
       html += '</div>';
-      WEEKDAYS_EN.forEach(function(day) {
+      WEEKDAYS_EN.forEach(function(day, dayIdx) {
         var di = items.filter(function(i) { return i.weekdays && i.weekdays.indexOf(day) >= 0; });
-        html += '<div class="sched-day-col" style="height:' + totalHeight + 'px;">';
+        html += '<div class="sched-day-col" style="height:' + totalHeight + 'px;" data-day="' + day + '">';
         for (var s = 0; s < totalSlots; s++) {
-          html += '<div class="sched-bg-slot' + (((gridStart + s * 30) % 60 === 0) ? ' hour' : '') + '"></div>';
+          var slotMin = gridStart + s * 30;
+          var cellClass = 'sched-bg-slot' + (((slotMin) % 60 === 0) ? ' hour' : '');
+          if (isEdit) {
+            cellClass += ' sched-empty-cell';
+            html += '<div class="' + cellClass + '" onclick="onGridCellClick(&apos;' + day + '&apos;,' + slotMin + ')"></div>';
+          } else {
+            html += '<div class="' + cellClass + '"></div>';
+          }
         }
         di.forEach(function(item) {
           var sMin = timeToMin(item.startTime), eMin = timeToMin(item.endTime);
@@ -5692,48 +5846,162 @@
           var emoji = act ? renderEmoji(act.emoji) : '📅';
           var name = act ? act.name : '(삭제된 일상)';
           var color = act ? (act.color || '#ffde59') : '#ffde59';
-          html += '<div class="sched-item-block" style="top:' + top + 'px;height:' + height + 'px;background:' + color + '30;border-left-color:' + color + ';" onclick="openScheduleItemForm(&apos;' + item.id + '&apos;)">';
-          if (height >= 32) html += '<div class="sched-item-emoji">' + emoji + '</div><div class="sched-item-name">' + name + '</div>';
-          if (height >= 44) html += '<div class="sched-item-time">' + item.startTime + '-' + item.endTime + '</div>';
+          var clickHandler = isEdit ? ('onclick="event.stopPropagation(); openScheduleItemForm(&apos;' + item.id + '&apos;)"') : '';
+          var cursorStyle = isEdit ? 'cursor:pointer;' : 'cursor:default;';
+          html += '<div class="sched-item-block" style="' + cursorStyle + 'top:' + top + 'px;height:' + height + 'px;background:' + color + '30;border-left-color:' + color + ';" ' + clickHandler + '>';
+          if (height >= 28) html += '<div class="sched-item-emoji">' + emoji + '</div>';
+          if (height >= 42) html += '<div class="sched-item-name">' + name + '</div>';
+          if (height >= 60) html += '<div class="sched-item-time">' + item.startTime + '-' + item.endTime + '</div>';
           html += '</div>';
         });
         html += '</div>';
       });
       html += '</div></div></div>';
+      if (isEdit) {
+        html += '<div style="margin-top:14px; text-align:center;"><button class="btn-add" onclick="openScheduleItemForm(null)">+ 일정 추가</button></div>';
+      }
       var c = document.getElementById('schedDetailGridContent');
       if (c) c.innerHTML = html;
     }
 
+    function onGridCellClick(day, startMin) {
+      var endMin = Math.min(24 * 60, startMin + 60);
+      addItemPrefill = {
+        weekday: day,
+        startTime: minToTimeStr(startMin),
+        endTime: minToTimeStr(endMin)
+      };
+      openScheduleItemForm(null);
+    }
+
+    function renderScheduleMiniGrid(scheduleId) {
+      var items = scheduleItems.filter(function(i) { return i.scheduleId === scheduleId; });
+      if (items.length === 0) {
+        return '<div class="sched-mini-grid" style="display:flex; align-items:center; justify-content:center; color:#bbb; font-size:10px;">빈 시간표</div>';
+      }
+      var minS = items.reduce(function(m, i) { return Math.min(m, timeToMin(i.startTime)); }, Infinity);
+      var maxE = items.reduce(function(m, i) { return Math.max(m, timeToMin(i.endTime)); }, 0);
+      var gStart = Math.max(0, Math.floor(minS / 30) * 30);
+      var gEnd = Math.min(24 * 60, Math.ceil(maxE / 30) * 30);
+      if (gEnd - gStart < 60) gEnd = gStart + 60;
+      var range = gEnd - gStart;
+      var html = '<div class="sched-mini-grid">';
+      WEEKDAYS_EN.forEach(function(day) {
+        html += '<div class="sched-mini-col">';
+        items.filter(function(i) { return i.weekdays && i.weekdays.indexOf(day) >= 0; }).forEach(function(item) {
+          var sMin = timeToMin(item.startTime), eMin = timeToMin(item.endTime);
+          var topPct = (sMin - gStart) / range * 100;
+          var heightPct = (eMin - sMin) / range * 100;
+          var act = activities.find(function(a) { return a.id === item.activityId; });
+          var color = act ? (act.color || '#ffde59') : '#ffde59';
+          var emoji = act ? renderEmoji(act.emoji) : '';
+          html += '<div class="sched-mini-block" style="top:' + topPct + '%;height:' + heightPct + '%;background:' + color + ';">' + emoji + '</div>';
+        });
+        html += '</div>';
+      });
+      html += '</div>';
+      return html;
+    }
+
+    function formatDurationMin(totalMin) {
+      if (totalMin <= 0) return '0분';
+      var h = Math.floor(totalMin / 60);
+      var m = totalMin % 60;
+      if (h && m) return h + '시간 ' + m + '분';
+      if (h) return h + '시간';
+      return m + '분';
+    }
+
     function renderScheduleDetailItemList() {
       var items = scheduleItems.filter(function(i) { return i.scheduleId === currentDetailScheduleId; });
+      var isEdit = (scheduleViewMode2 === 'edit');
       var c = document.getElementById('schedDetailListContent');
       if (!c) return;
-      if (items.length === 0) { c.innerHTML = '<div class="schedule-empty" style="margin:20px 0;">일정이 없습니다. 위의 + 일정 추가 버튼으로 추가하세요.</div>'; return; }
+      if (items.length === 0) {
+        var addBtn = isEdit ? '<div style="text-align:center; margin-top:14px;"><button class="btn-add" onclick="openScheduleItemForm(null)">+ 일정 추가</button></div>' : '';
+        c.innerHTML = '<div class="schedule-empty" style="margin:20px 0;">일정이 없습니다.' + (isEdit ? ' 아래 버튼 또는 주간 그리드 빈 칸을 클릭해서 추가하세요.' : '') + '</div>' + addBtn;
+        return;
+      }
       var dayOrd = { MON:0, TUE:1, WED:2, THU:3, FRI:4, SAT:5, SUN:6 };
       items.sort(function(a, b) {
         var af = a.weekdays && a.weekdays.length ? dayOrd[a.weekdays[0]] : 7;
         var bf = b.weekdays && b.weekdays.length ? dayOrd[b.weekdays[0]] : 7;
         return af !== bf ? af - bf : timeToMin(a.startTime) - timeToMin(b.startTime);
       });
-      var html = '<div class="sched-item-list">';
+      var totalWeekMin = 0;
+      items.forEach(function(item) {
+        var dur = timeToMin(item.endTime) - timeToMin(item.startTime);
+        totalWeekMin += dur * (item.weekdays ? item.weekdays.length : 0);
+      });
+      var html = '<div style="font-size:13px; color:#666; margin-bottom:8px;">총 <b>' + items.length + '개</b> 일정 · 주간 합계 <b>' + formatDurationMin(totalWeekMin) + '</b></div>';
+      html += '<div class="sched-item-list">';
       items.forEach(function(item) {
         var act = activities.find(function(a) { return a.id === item.activityId; });
         var emoji = act ? renderEmoji(act.emoji) : '📅';
         var name = act ? act.name : '(삭제된 일상)';
         var color = act ? (act.color || '#ffde59') : '#ffde59';
         var days = (item.weekdays || []).map(function(d) { return WEEKDAYS_KR[WEEKDAYS_EN.indexOf(d)] || d; }).join('·');
+        var perDayMin = timeToMin(item.endTime) - timeToMin(item.startTime);
+        var weekTotal = perDayMin * (item.weekdays ? item.weekdays.length : 0);
         html += '<div class="sched-list-item">';
         html += '<div class="sched-list-item-color" style="background:' + color + ';"></div>';
         html += '<div class="sched-list-item-emoji">' + emoji + '</div>';
         html += '<div class="sched-list-item-info"><div class="sched-list-item-name">' + name + '</div>';
-        html += '<div class="sched-list-item-meta">' + days + ' · ' + item.startTime + ' – ' + item.endTime + '</div></div>';
-        html += '<div class="sched-list-item-actions">';
-        html += '<button class="btn-icon" onclick="openScheduleItemForm(&apos;' + item.id + '&apos;)">수정</button>';
-        html += '<button class="btn-icon btn-danger" onclick="deleteScheduleItem(&apos;' + item.id + '&apos;)">삭제</button>';
-        html += '</div></div>';
+        html += '<div class="sched-list-item-meta">' + days + ' · ' + item.startTime + ' – ' + item.endTime + ' · 주간 ' + formatDurationMin(weekTotal) + '</div></div>';
+        if (isEdit) {
+          html += '<div class="sched-list-item-actions">';
+          html += '<button class="btn-icon" onclick="openScheduleItemForm(&apos;' + item.id + '&apos;)">수정</button>';
+          html += '<button class="btn-icon btn-danger" onclick="deleteScheduleItem(&apos;' + item.id + '&apos;)">삭제</button>';
+          html += '</div>';
+        }
+        html += '</div>';
       });
       html += '</div>';
+      if (isEdit) html += '<div style="margin-top:14px; text-align:center;"><button class="btn-add" onclick="openScheduleItemForm(null)">+ 일정 추가</button></div>';
       c.innerHTML = html;
+    }
+
+    function renderScheduleItemTimeInputs() {
+      var container = document.getElementById('siTimeContainer');
+      if (!container) return;
+      var sameTime = document.getElementById('siSameTime').checked;
+      var modal = document.getElementById('scheduleItemModal');
+      var selectedDays = [];
+      modal.querySelectorAll('.si-day-check:checked').forEach(function(cb) { selectedDays.push(cb.value); });
+      if (sameTime || selectedDays.length === 0) {
+        var prevStart = (container.querySelector('.si-start-same') || {}).value || '';
+        var prevEnd = (container.querySelector('.si-end-same') || {}).value || '';
+        container.innerHTML =
+          '<div class="si-time-group">' +
+          '  <input type="time" class="si-start-same" value="' + prevStart + '">' +
+          '  <span class="si-time-sep">~</span>' +
+          '  <input type="time" class="si-end-same" value="' + prevEnd + '">' +
+          '</div>';
+      } else {
+        // 요일별 시간 입력
+        var prev = {};
+        container.querySelectorAll('.si-per-day-row').forEach(function(row) {
+          var d = row.dataset.day;
+          prev[d] = {
+            start: row.querySelector('.si-start-each').value,
+            end: row.querySelector('.si-end-each').value
+          };
+        });
+        var html = '';
+        var dayOrd = { MON:0, TUE:1, WED:2, THU:3, FRI:4, SAT:5, SUN:6 };
+        selectedDays.sort(function(a, b) { return dayOrd[a] - dayOrd[b]; });
+        selectedDays.forEach(function(d) {
+          var p = prev[d] || {};
+          var kr = WEEKDAYS_KR[WEEKDAYS_EN.indexOf(d)];
+          html += '<div class="si-per-day-row" data-day="' + d + '">';
+          html += '<div class="si-per-day-row-label">' + kr + '</div>';
+          html += '<input type="time" class="si-start-each" value="' + (p.start || '') + '">';
+          html += '<span class="si-time-sep">~</span>';
+          html += '<input type="time" class="si-end-each" value="' + (p.end || '') + '">';
+          html += '</div>';
+        });
+        container.innerHTML = html;
+      }
     }
 
     function openScheduleItemForm(itemId) {
@@ -5750,8 +6018,10 @@
         actSel.appendChild(opt);
       });
       modal.querySelectorAll('.si-day-check').forEach(function(cb) { cb.checked = false; });
-      document.getElementById('siStartTime').value = '';
-      document.getElementById('siEndTime').value = '';
+      document.getElementById('siSameTime').checked = true;
+      document.getElementById('siTimeContainer').innerHTML = '';
+      renderScheduleItemTimeInputs();
+
       if (itemId) {
         var item = scheduleItems.find(function(i) { return i.id === itemId; });
         if (item) {
@@ -5760,10 +6030,28 @@
             var cb = modal.querySelector('.si-day-check[value="' + d + '"]');
             if (cb) cb.checked = true;
           });
-          document.getElementById('siStartTime').value = item.startTime;
-          document.getElementById('siEndTime').value = item.endTime;
+          renderScheduleItemTimeInputs();
+          var startEl = modal.querySelector('.si-start-same');
+          var endEl = modal.querySelector('.si-end-same');
+          if (startEl) startEl.value = item.startTime;
+          if (endEl) endEl.value = item.endTime;
         }
+      } else if (addItemPrefill) {
+        var cb = modal.querySelector('.si-day-check[value="' + addItemPrefill.weekday + '"]');
+        if (cb) cb.checked = true;
+        renderScheduleItemTimeInputs();
+        var s = modal.querySelector('.si-start-same');
+        var e = modal.querySelector('.si-end-same');
+        if (s) s.value = addItemPrefill.startTime;
+        if (e) e.value = addItemPrefill.endTime;
       }
+      addItemPrefill = null;
+
+      // 요일 체크박스 토글 시 시간 입력 다시 그리기
+      modal.querySelectorAll('.si-day-check').forEach(function(cb) {
+        cb.onchange = function() { renderScheduleItemTimeInputs(); };
+      });
+
       modal.style.display = 'flex';
     }
 
@@ -5771,31 +6059,59 @@
       var modal = document.getElementById('scheduleItemModal');
       if (modal) modal.style.display = 'none';
       editingScheduleItemId = null;
+      addItemPrefill = null;
     }
 
     function saveScheduleItem() {
       var modal = document.getElementById('scheduleItemModal');
       var actId = document.getElementById('siActivitySelect').value;
-      var startTime = document.getElementById('siStartTime').value;
-      var endTime = document.getElementById('siEndTime').value;
+      var sameTime = document.getElementById('siSameTime').checked;
       var weekdays = [];
       modal.querySelectorAll('.si-day-check:checked').forEach(function(cb) { weekdays.push(cb.value); });
       if (!actId) { showAlert('입력 오류', '일상 종류를 선택해주세요.'); return; }
       if (!weekdays.length) { showAlert('입력 오류', '요일을 하나 이상 선택해주세요.'); return; }
-      if (!startTime) { showAlert('입력 오류', '시작 시간을 입력해주세요.'); return; }
-      if (!endTime) { showAlert('입력 오류', '종료 시간을 입력해주세요.'); return; }
-      if (timeToMin(endTime) <= timeToMin(startTime)) { showAlert('입력 오류', '종료 시간은 시작 시간보다 늦어야 합니다.'); return; }
-      if (editingScheduleItemId) {
-        var ex = scheduleItems.find(function(i) { return i.id === editingScheduleItemId; });
-        if (ex) { ex.activityId = actId; ex.weekdays = weekdays; ex.startTime = startTime; ex.endTime = endTime; }
+
+      var perDayData = []; // { weekdays:[], start, end }
+      if (sameTime) {
+        var s = (modal.querySelector('.si-start-same') || {}).value || '';
+        var e = (modal.querySelector('.si-end-same') || {}).value || '';
+        if (!s || !e) { showAlert('입력 오류', '시간을 입력해주세요.'); return; }
+        if (timeToMin(e) <= timeToMin(s)) { showAlert('입력 오류', '종료 시간은 시작 시간보다 늦어야 합니다.'); return; }
+        perDayData.push({ weekdays: weekdays.slice(), start: s, end: e });
       } else {
-        scheduleItems.push({ id: generateId(), scheduleId: currentDetailScheduleId, activityId: actId, weekdays: weekdays, startTime: startTime, endTime: endTime, createdAt: today() });
+        var rows = modal.querySelectorAll('.si-per-day-row');
+        for (var i = 0; i < rows.length; i++) {
+          var d = rows[i].dataset.day;
+          var ss = rows[i].querySelector('.si-start-each').value;
+          var ee = rows[i].querySelector('.si-end-each').value;
+          if (!ss || !ee) { showAlert('입력 오류', WEEKDAYS_KR[WEEKDAYS_EN.indexOf(d)] + '요일 시간을 입력해주세요.'); return; }
+          if (timeToMin(ee) <= timeToMin(ss)) { showAlert('입력 오류', WEEKDAYS_KR[WEEKDAYS_EN.indexOf(d)] + '요일 종료 시간이 시작 시간보다 늦어야 합니다.'); return; }
+          perDayData.push({ weekdays: [d], start: ss, end: ee });
+        }
       }
+
+      // 편집 중이면 기존 item을 삭제하고 새로 생성 (요일별 시간 다를 수 있으니)
+      if (editingScheduleItemId) {
+        scheduleItems = scheduleItems.filter(function(i) { return i.id !== editingScheduleItemId; });
+      }
+      perDayData.forEach(function(d) {
+        scheduleItems.push({
+          id: generateId(),
+          scheduleId: currentDetailScheduleId,
+          activityId: actId,
+          weekdays: d.weekdays,
+          startTime: d.start,
+          endTime: d.end,
+          createdAt: today()
+        });
+      });
+
       var sch = schedules.find(function(s) { return s.id === currentDetailScheduleId; });
       if (sch) sch.updatedAt = today();
       saveSchedules();
       closeScheduleItemModal();
       renderScheduleDetail();
+      renderCurrentScheduleView();
     }
 
     function deleteScheduleItem(itemId) {
@@ -6073,7 +6389,7 @@
         html += '    <span class="hero-title-display">' + escapeHtml(sch.title) + '</span>';
         html += '  </div>';
         html += '  <div class="' + descClass + '">' + descText + '</div>';
-        html += '  <div class="hero-thumbnail-frame">시간표 미리보기 (일정 추가 구현 후 연결)</div>';
+        html += '  <div class="hero-thumbnail-frame sched-hero-card">' + renderScheduleMiniGrid(sch.id) + '</div>';
         if (tags) {
           html += '  <div class="hero-tags-row">' + tags + '</div>';
         }
@@ -6133,6 +6449,7 @@
         html += '  <label class="mini-checkbox-wrap" onclick="event.stopPropagation()"><input type="checkbox" class="schedule-select-checkbox"' + (isSelected ? ' checked' : '') + ' onchange="toggleScheduleSelect(&apos;' + sch.id + '&apos;)"></label>';
         html += '  <button class="heart-btn mini-heart-wrap" onclick="event.stopPropagation(); toggleScheduleLike(&apos;' + sch.id + '&apos;)" title="좋아요">' + HEART_SVG + '</button>';
         html += '  <div class="schedule-mini-emoji">' + renderEmoji(sch.emoji) + '</div>';
+        html += '  <div style="width:100%; margin:4px 0;">' + renderScheduleMiniGrid(sch.id) + '</div>';
         html += '  <div class="schedule-mini-title">' + escapeHtml(sch.title) + '</div>';
         html += '  <div class="schedule-mini-date">' + (sch.updatedAt || sch.createdAt) + '</div>';
         html += '</div>';
