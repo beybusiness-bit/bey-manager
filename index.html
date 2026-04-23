@@ -2326,7 +2326,7 @@
   </div>
 
   <!-- 공통 확인 모달 -->
-  <div id="confirmModal" class="modal-overlay">
+  <div id="confirmModal" class="modal-overlay" style="z-index:1200;">
     <div class="modal-box">
       <h3 id="confirmTitle">확인</h3>
       <p id="confirmMessage"></p>
@@ -2338,7 +2338,7 @@
   </div>
 
   <!-- 공통 알림 모달 -->
-  <div id="alertModal" class="modal-overlay">
+  <div id="alertModal" class="modal-overlay" style="z-index:1200;">
     <div class="modal-box">
       <h3 id="alertTitle">알림</h3>
       <p id="alertMessage"></p>
@@ -4677,7 +4677,20 @@
       return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     }
 
+    function isInlineEditingInProgress() {
+      return editingActivityId !== null || editingCategoryId !== null;
+    }
+
+    function blockIfInlineEditing() {
+      if (isInlineEditingInProgress()) {
+        showAlert('편집 중', '진행 중인 수정/추가를 먼저 저장하거나 취소해주세요.');
+        return true;
+      }
+      return false;
+    }
+
     function addCategoryInline() {
+      if (blockIfInlineEditing()) return;
       const newCategory = {
         id: generateId(),
         emoji: '',
@@ -4726,6 +4739,8 @@
     }
 
     function editCategory(categoryId) {
+      if (editingCategoryId === categoryId) return;
+      if (blockIfInlineEditing()) return;
       editingCategoryId = categoryId;
       renderCategories();
 
@@ -4908,6 +4923,7 @@
     }
 
     function addActivityInline() {
+      if (blockIfInlineEditing()) return;
       const newActivity = {
         id: generateId(),
         categoryId: selectedCategoryFilter === 'unassigned' ? null : (selectedCategoryFilter || null),
@@ -4955,6 +4971,8 @@
     }
 
     function editActivity(activityId) {
+      if (editingActivityId === activityId) return;
+      if (blockIfInlineEditing()) return;
       editingActivityId = activityId;
       renderActivities();
 
