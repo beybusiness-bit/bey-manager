@@ -1863,25 +1863,22 @@
       gap: 8px;
     }
 
-    .activity-card-emoji input {
+    .emoji-edit-btn {
       width: 44px;
       height: 44px;
       border: 2px solid var(--border-color);
       border-radius: 6px;
       font-size: 24px;
-      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
       background: white;
+      user-select: none;
+      flex-shrink: 0;
     }
-
-    .activity-card-emoji input:hover {
-      border-color: var(--primary-yellow);
-    }
-
-    .activity-card-emoji input:focus {
-      outline: none;
-      border-color: var(--primary-yellow);
-    }
+    .emoji-edit-btn:hover { border-color: var(--primary-yellow); }
+    .emoji-edit-btn img { width: 28px; height: 28px; object-fit: cover; border-radius: 2px; }
 
     .activity-card-name {
       font-size: 14px;
@@ -2376,6 +2373,7 @@
           <span style="font-size:11px;">PNG·JPG·WebP, 정사각 128×128px 권장, 최대 200KB</span>
         </div>
         <input type="file" id="myEmojiUploadInput" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="handleMyEmojiUpload(this)">
+        <div id="myEmojiUploadError" style="display:none;color:#e53e3e;font-size:12px;margin:4px 0;"></div>
         <div class="emoji-my-grid" id="emojiMyGrid"></div>
       </div>
       <div class="emoji-picker-footer">
@@ -3968,20 +3966,26 @@
     }
 
     function deleteMyEmoji(id) {
-      myEmojis = myEmojis.filter(function(e) { return e.id !== id; });
-      saveMyEmojis();
-      if (currentSelectedEmoji === 'myimg:' + id) currentSelectedEmoji = '';
-      renderMyEmojisGrid();
+      showConfirm('이미지 삭제', '이 이미지를 삭제하시겠습니까?', function(confirmed) {
+        if (!confirmed) return;
+        myEmojis = myEmojis.filter(function(e) { return e.id !== id; });
+        saveMyEmojis();
+        if (currentSelectedEmoji === 'myimg:' + id) currentSelectedEmoji = '';
+        renderMyEmojisGrid();
+      });
     }
 
     function handleMyEmojiUpload(input) {
       var file = input.files && input.files[0];
+      var errEl = document.getElementById('myEmojiUploadError');
       if (!file) return;
       if (file.size > 200 * 1024) {
-        showAlert('파일 크기 초과', '최대 200KB까지 업로드할 수 있습니다.');
+        var kb = Math.round(file.size / 1024);
+        if (errEl) { errEl.textContent = '❌ 파일이 너무 큽니다 (' + kb + 'KB). 최대 200KB까지 가능합니다.'; errEl.style.display = 'block'; }
         input.value = '';
         return;
       }
+      if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
       var reader = new FileReader();
       reader.onload = function(e) {
         var id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -4724,12 +4728,10 @@
     function editCategory(categoryId) {
       editingCategoryId = categoryId;
       renderCategories();
-      
+
       setTimeout(function() {
-        const emojiInput = document.querySelector('.category-card.editing .category-card-emoji input');
-        if (emojiInput) {
-          emojiInput.focus();
-        }
+        const nameInput = document.querySelector('.category-card.editing .category-card-name input');
+        if (nameInput) nameInput.focus();
       }, 100);
     }
 
@@ -4793,12 +4795,12 @@
         const isEditing = (editingCategoryId === category.id);
         const isSelected = (selectedCategoryFilter === category.id);
         
-        html += '<div class="category-card' + (isEditing ? ' editing' : '') + (isSelected ? ' selected' : '') + '" onclick="' + (isEditing ? '' : 'selectCategoryFilter(\'' + category.id + '\')') + '">';
+        html += '<div class="category-card' + (isEditing ? ' editing' : '') + (isSelected ? ' selected' : '') + '" onclick="' + (isEditing ? '' : 'editCategory(\'' + category.id + '\')') + '">';
         html += '  <div class="category-card-header">';
         
         if (isEditing) {
           html += '    <div class="category-card-emoji">';
-          html += '      <input type="text" value="' + emojiDisplayVal(category.emoji) + '" readonly onclick="event.stopPropagation(); openEmojiPicker(&apos;' + category.emoji + '&apos;, function(emoji) { updateCategoryEmoji(&apos;' + category.id + '&apos;, emoji); document.querySelector(&apos;.category-card.editing .category-card-emoji input&apos;).value = emojiDisplayVal(emoji); })">';
+          html += '      <div class="emoji-edit-btn" onclick="event.stopPropagation(); openEmojiPicker(&apos;' + category.emoji + '&apos;, function(emoji) { updateCategoryEmoji(&apos;' + category.id + '&apos;, emoji); var btn=document.querySelector(&apos;.category-card.editing .emoji-edit-btn&apos;); if(btn) btn.innerHTML=renderEmoji(emoji); })">' + renderEmoji(category.emoji) + '</div>';
           html += '    </div>';
           html += '    <div class="category-card-name">';
           html += '      <input type="text" value="' + category.name + '" oninput="updateCategoryName(&apos;' + category.id + '&apos;, this.value)" onkeydown="if(event.key===&apos;Enter&apos;) saveCategoryInline(&apos;' + category.id + '&apos;); if(event.key===&apos;Escape&apos;) cancelCategoryInline(&apos;' + category.id + '&apos;)" placeholder="카테고리 이름">';
@@ -4922,10 +4924,8 @@
       renderActivities();
       
       setTimeout(function() {
-        const emojiInput = document.querySelector('.activity-card.editing .activity-card-emoji input');
-        if (emojiInput) {
-          emojiInput.focus();
-        }
+        const nameInput = document.querySelector('.activity-card.editing .activity-card-name input');
+        if (nameInput) nameInput.focus();
       }, 100);
     }
 
@@ -4957,12 +4957,10 @@
     function editActivity(activityId) {
       editingActivityId = activityId;
       renderActivities();
-      
+
       setTimeout(function() {
-        const emojiInput = document.querySelector('.activity-card.editing .activity-card-emoji input');
-        if (emojiInput) {
-          emojiInput.focus();
-        }
+        const nameInput = document.querySelector('.activity-card.editing .activity-card-name input');
+        if (nameInput) nameInput.focus();
       }, 100);
     }
 
@@ -5042,7 +5040,7 @@
 
         if (isEditing) {
           html += '  <div class="activity-card-emoji">';
-          html += '    <input type="text" value="' + emojiDisplayVal(activity.emoji) + '" readonly onclick="event.stopPropagation(); openEmojiPicker(&apos;' + activity.emoji + '&apos;, function(emoji) { updateActivityEmoji(&apos;' + activity.id + '&apos;, emoji); document.querySelector(&apos;.activity-card.editing .activity-card-emoji input&apos;).value = emojiDisplayVal(emoji); })">';
+          html += '    <div class="emoji-edit-btn" onclick="event.stopPropagation(); openEmojiPicker(&apos;' + activity.emoji + '&apos;, function(emoji) { updateActivityEmoji(&apos;' + activity.id + '&apos;, emoji); var btn=document.querySelector(&apos;.activity-card.editing .emoji-edit-btn&apos;); if(btn) btn.innerHTML=renderEmoji(emoji); })">' + renderEmoji(activity.emoji) + '</div>';
           html += '  </div>';
           html += '  <div class="activity-card-name">';
           html += '    <input type="text" value="' + activity.name + '" oninput="updateActivityName(&apos;' + activity.id + '&apos;, this.value)" onkeydown="if(event.key===&apos;Enter&apos;) saveActivityInline(&apos;' + activity.id + '&apos;); if(event.key===&apos;Escape&apos;) cancelActivityInline(&apos;' + activity.id + '&apos;)" placeholder="일상 이름">';
