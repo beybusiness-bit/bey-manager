@@ -1591,14 +1591,99 @@
       opacity: 1;
     }
 
+    /* 페이저 바 (per-page + 페이저) */
+    .schedule-pager-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 12px 0;
+    }
+
+    .schedule-per-page {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .schedule-per-page select {
+      padding: 4px 8px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--button-radius, 8px);
+      font-size: 12px;
+      background: var(--bg-card);
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+
     /* 페이저 */
     .schedule-pager {
       display: flex;
       align-items: center;
-      justify-content: center;
       gap: 4px;
-      margin-top: 16px;
       font-family: 'DM Mono', monospace;
+    }
+
+    /* 모바일 목록뷰 → 카드형 */
+    @media (max-width: 767px) {
+      .schedule-list-table,
+      .schedule-list-table thead,
+      .schedule-list-table tbody,
+      .schedule-list-table tr,
+      .schedule-list-table td {
+        display: block;
+      }
+      .schedule-list-table thead {
+        display: none;
+      }
+      .schedule-list-table tr {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--button-radius, 8px);
+        padding: 36px 14px 12px;
+        margin-bottom: 8px;
+        position: relative;
+      }
+      .schedule-list-table tr:hover td {
+        background: transparent;
+      }
+      .schedule-list-table td {
+        padding: 3px 0;
+        border-bottom: none;
+      }
+      /* 1번째 td = 체크박스 → 좌상단 */
+      .schedule-list-table td:nth-child(1) {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        padding: 0;
+      }
+      /* 5번째 td = 좋아요 → 우상단 */
+      .schedule-list-table td:nth-child(5) {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        padding: 0;
+        text-align: right;
+      }
+      .schedule-list-row-name {
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .schedule-list-row-name span:first-child {
+        font-size: 20px;
+      }
+      .schedule-list-tags {
+        font-size: 12px;
+      }
+      .schedule-list-date {
+        font-size: 11px;
+        margin-top: 2px;
+      }
     }
 
     .pg-btn {
@@ -2262,11 +2347,11 @@
 
             <!-- 뷰 컨트롤: 필터 + 정렬 + 뷰 토글 -->
             <div class="schedule-view-controls">
-              <div class="schedule-filter-group">
-                <button class="schedule-filter-btn active" data-filter="all" onclick="setScheduleFilter('all')">전체</button>
-                <button class="schedule-filter-btn" data-filter="liked" onclick="setScheduleFilter('liked')">❤️ 좋아요만</button>
-                <button class="schedule-filter-btn" data-filter="unliked" onclick="setScheduleFilter('unliked')">🤍 미좋아요</button>
-              </div>
+              <select class="schedule-sort-select" id="scheduleFilterSelect" onchange="setScheduleFilter(this.value)" style="display:none;">
+                <option value="all">전체</option>
+                <option value="liked">❤️ 좋아요만</option>
+                <option value="unliked">🤍 미좋아요</option>
+              </select>
               <select class="schedule-sort-select" id="scheduleSortSelect" onchange="handleScheduleSort(this.value)">
                 <option value="updatedAt_desc">최신순</option>
                 <option value="updatedAt_asc">오래된순</option>
@@ -4073,11 +4158,11 @@
     function toggleSidebar() {
       isSidebarCollapsed = !isSidebarCollapsed;
       localStorage.setItem('isSidebarCollapsed', JSON.stringify(isSidebarCollapsed));
-      
+
       const sidebar = document.getElementById('sidebar');
       const toggleBtn = document.getElementById('sidebarToggleBtn');
       const toggleIcon = document.getElementById('sidebarToggleIcon');
-      
+
       if (isSidebarCollapsed) {
         sidebar.classList.add('collapsed');
         toggleBtn.classList.remove('expanded');
@@ -4091,6 +4176,16 @@
         toggleBtn.style.left = (navWidth - 48) + "px";
       }
     }
+
+    // 사이드바 펼친 상태에서 외부 클릭/터치 시 접기
+    document.addEventListener('click', function(e) {
+      if (isSidebarCollapsed) return;
+      const sidebar = document.getElementById('sidebar');
+      if (!sidebar) return;
+      if (sidebar.contains(e.target)) return;
+      if (e.target.closest && (e.target.closest('.sidebar-toggle-btn') || e.target.closest('.mobile-top-bar'))) return;
+      toggleSidebar();
+    });
 
     // ========================================
     // 네비게이션
@@ -5119,6 +5214,12 @@
       const listBtn = document.getElementById('viewBtnList');
       if (thumbBtn) thumbBtn.classList.toggle('active', mode === 'thumbnail');
       if (listBtn) listBtn.classList.toggle('active', mode === 'list');
+      const filterSel = document.getElementById('scheduleFilterSelect');
+      if (filterSel) filterSel.style.display = mode === 'list' ? 'inline-block' : 'none';
+      if (mode === 'thumbnail') {
+        scheduleFilterLiked = 'all';
+        if (filterSel) filterSel.value = 'all';
+      }
       const heroSection = document.getElementById('scheduleHeroSection');
       const othersSection = document.getElementById('scheduleOthersSection');
       const listView = document.getElementById('scheduleListView');
@@ -5140,9 +5241,8 @@
     function setScheduleFilter(filter) {
       scheduleFilterLiked = filter;
       scheduleListPage = 1;
-      document.querySelectorAll('.schedule-filter-btn').forEach(function(btn) {
-        btn.classList.toggle('active', btn.getAttribute('data-filter') === filter);
-      });
+      var sel = document.getElementById('scheduleFilterSelect');
+      if (sel) sel.value = filter;
       renderCurrentScheduleView();
     }
 
@@ -5197,10 +5297,15 @@
       if (noResultEl) noResultEl.style.display = 'none';
 
       var total = filtered.length;
+      var totalPages = Math.max(1, Math.ceil(total / scheduleListPerPage));
+      if (scheduleListPage > totalPages) scheduleListPage = totalPages;
       var start = (scheduleListPage - 1) * scheduleListPerPage;
       var paged = filtered.slice(start, start + scheduleListPerPage);
 
-      var html = '<table class="schedule-list-table"><thead><tr>';
+      var pagerBar = buildPagerBar(total);
+
+      var html = pagerBar;
+      html += '<table class="schedule-list-table"><thead><tr>';
       html += '<th><input type="checkbox" class="schedule-select-checkbox" id="listSelectAll" onchange="toggleSelectAllSchedules(this.checked)"></th>';
       html += '<th onclick="toggleListSort(&apos;title&apos;)">이름' + getSortIcon('title') + '</th>';
       html += '<th>태그</th>';
@@ -5225,7 +5330,8 @@
         html += '</tr>';
       });
 
-      html += '</tbody></table><div class="schedule-pager" id="scheduleListPager"></div>';
+      html += '</tbody></table>';
+      html += pagerBar;
       listView.innerHTML = html;
 
       // 전체선택 체크박스 상태
@@ -5236,36 +5342,40 @@
         listSelectAll.checked = checkedCount === allIds.length && allIds.length > 0;
         listSelectAll.indeterminate = checkedCount > 0 && checkedCount < allIds.length;
       }
-
-      renderSchedulePager(total);
     }
 
-    function renderSchedulePager(total) {
-      var pagerEl = document.getElementById('scheduleListPager');
-      if (!pagerEl) return;
-      var totalPages = Math.ceil(total / scheduleListPerPage);
-      if (totalPages <= 1) { pagerEl.innerHTML = ''; return; }
+    function buildPagerBar(total) {
+      var totalPages = Math.max(1, Math.ceil(total / scheduleListPerPage));
+      var perPageOpts = [10, 20, 50, 100];
+      var perPageHtml = '<div class="schedule-per-page"><span>페이지당</span><select onchange="setSchedulePerPage(this.value)">';
+      perPageOpts.forEach(function(n) {
+        perPageHtml += '<option value="' + n + '"' + (n === scheduleListPerPage ? ' selected' : '') + '>' + n + '개</option>';
+      });
+      perPageHtml += '</select></div>';
 
-      var html = '<button class="pg-btn" onclick="goScheduleListPage(' + (scheduleListPage - 1) + ')"' + (scheduleListPage <= 1 ? ' disabled' : '') + '>‹</button>';
+      var pagerHtml = '<div class="schedule-pager">';
+      if (totalPages > 1) {
+        pagerHtml += '<button class="pg-btn" onclick="goScheduleListPage(' + (scheduleListPage - 1) + ')"' + (scheduleListPage <= 1 ? ' disabled' : '') + '>‹</button>';
+        var maxBtns = 7;
+        var s = Math.max(1, scheduleListPage - 3);
+        var e = Math.min(totalPages, s + maxBtns - 1);
+        if (e - s < maxBtns - 1) s = Math.max(1, e - maxBtns + 1);
+        if (s > 1) {
+          pagerHtml += '<button class="pg-btn" onclick="goScheduleListPage(1)">1</button>';
+          if (s > 2) pagerHtml += '<span style="padding:0 4px;color:var(--text-secondary)">…</span>';
+        }
+        for (var i = s; i <= e; i++) {
+          pagerHtml += '<button class="pg-btn' + (i === scheduleListPage ? ' active' : '') + '" onclick="goScheduleListPage(' + i + ')">' + i + '</button>';
+        }
+        if (e < totalPages) {
+          if (e < totalPages - 1) pagerHtml += '<span style="padding:0 4px;color:var(--text-secondary)">…</span>';
+          pagerHtml += '<button class="pg-btn" onclick="goScheduleListPage(' + totalPages + ')">' + totalPages + '</button>';
+        }
+        pagerHtml += '<button class="pg-btn" onclick="goScheduleListPage(' + (scheduleListPage + 1) + ')"' + (scheduleListPage >= totalPages ? ' disabled' : '') + '>›</button>';
+      }
+      pagerHtml += '</div>';
 
-      var maxBtns = 7;
-      var s = Math.max(1, scheduleListPage - 3);
-      var e = Math.min(totalPages, s + maxBtns - 1);
-      if (e - s < maxBtns - 1) s = Math.max(1, e - maxBtns + 1);
-
-      if (s > 1) {
-        html += '<button class="pg-btn" onclick="goScheduleListPage(1)">1</button>';
-        if (s > 2) html += '<span style="padding:0 4px;color:var(--text-secondary)">…</span>';
-      }
-      for (var i = s; i <= e; i++) {
-        html += '<button class="pg-btn' + (i === scheduleListPage ? ' active' : '') + '" onclick="goScheduleListPage(' + i + ')">' + i + '</button>';
-      }
-      if (e < totalPages) {
-        if (e < totalPages - 1) html += '<span style="padding:0 4px;color:var(--text-secondary)">…</span>';
-        html += '<button class="pg-btn" onclick="goScheduleListPage(' + totalPages + ')">' + totalPages + '</button>';
-      }
-      html += '<button class="pg-btn" onclick="goScheduleListPage(' + (scheduleListPage + 1) + ')"' + (scheduleListPage >= totalPages ? ' disabled' : '') + '>›</button>';
-      pagerEl.innerHTML = html;
+      return '<div class="schedule-pager-bar">' + perPageHtml + pagerHtml + '</div>';
     }
 
     function goScheduleListPage(page) {
@@ -5273,6 +5383,12 @@
       var totalPages = Math.ceil(filtered.length / scheduleListPerPage);
       if (page < 1 || page > totalPages) return;
       scheduleListPage = page;
+      renderScheduleList();
+    }
+
+    function setSchedulePerPage(val) {
+      scheduleListPerPage = parseInt(val, 10) || 10;
+      scheduleListPage = 1;
       renderScheduleList();
     }
 
