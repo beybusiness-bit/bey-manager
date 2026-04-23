@@ -1796,6 +1796,88 @@
       }
     }
 
+    /* ====== 시간표 상세 화면 ====== */
+    .sched-detail-header {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .sched-detail-back {
+      background: none; border: 1px solid var(--border-color); border-radius: var(--button-radius,8px);
+      padding: 6px 12px; cursor: pointer; font-size: 13px; color: inherit;
+      display: flex; align-items: center; gap: 4px; white-space: nowrap;
+    }
+    .sched-detail-back:hover { background: #f5f5f5; }
+    .sched-detail-title-wrap { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+    .sched-detail-emoji { font-size: 28px; line-height: 1; flex-shrink: 0; }
+    .sched-detail-title { font-size: 18px; font-weight: 700; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sched-detail-desc { font-size: 13px; color: #888; margin: 0 0 12px 0; }
+    .sched-detail-actions { display: flex; gap: 6px; margin-left: auto; flex-shrink: 0; }
+
+    /* 주간 그리드 */
+    .sched-grid-outer { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -4px; }
+    .sched-grid-wrap { min-width: 340px; }
+    .sched-header-row { display: flex; border-bottom: 2px solid var(--border-color); }
+    .sched-time-gutter-h { flex: 0 0 44px; }
+    .sched-day-header { flex: 1; text-align: center; font-size: 12px; font-weight: 700; padding: 4px 0; min-width: 36px; }
+    .sched-day-header.weekend { color: #e05; }
+    .sched-body { display: flex; }
+    .sched-time-gutter { flex: 0 0 44px; }
+    .sched-time-slot-label { height: 24px; line-height: 24px; font-size: 9px; color: #bbb; text-align: right; padding-right: 4px; box-sizing: border-box; }
+    .sched-time-slot-label.hour { font-size: 10px; color: #999; border-top: 1px solid #e0e0e0; }
+    .sched-day-col { flex: 1; position: relative; border-left: 1px solid #ececec; min-width: 36px; }
+    .sched-bg-slot { height: 24px; border-top: 1px solid #f8f8f8; box-sizing: border-box; }
+    .sched-bg-slot.hour { border-top-color: #e8e8e8; }
+    .sched-item-block {
+      position: absolute; left: 1px; right: 1px; border-radius: 3px;
+      padding: 2px 3px; overflow: hidden; cursor: pointer;
+      border-left: 3px solid transparent; box-sizing: border-box;
+      transition: filter 0.1s;
+    }
+    .sched-item-block:hover { filter: brightness(0.92); }
+    .sched-item-emoji { font-size: 10px; line-height: 1.2; }
+    .sched-item-name { font-size: 10px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sched-item-time { font-size: 9px; color: #666; }
+
+    /* 일정 목록 */
+    .sched-item-list { display: flex; flex-direction: column; gap: 8px; }
+    .sched-list-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border: 1px solid var(--border-color);
+      border-radius: var(--button-radius,8px); background: var(--bg-card);
+    }
+    .sched-list-item-color { width: 4px; height: 36px; border-radius: 2px; flex-shrink: 0; }
+    .sched-list-item-emoji { font-size: 22px; flex-shrink: 0; }
+    .sched-list-item-info { flex: 1; min-width: 0; }
+    .sched-list-item-name { font-size: 14px; font-weight: 600; }
+    .sched-list-item-meta { font-size: 12px; color: #888; margin-top: 2px; }
+    .sched-list-item-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+    /* 시간표 항목 모달 */
+    .si-form-row { margin-bottom: 14px; }
+    .si-form-row label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+    .si-form-row select, .si-form-row input[type=time] {
+      width: 100%; padding: 8px 10px; border: 1px solid var(--border-color);
+      border-radius: 6px; font-size: 14px; box-sizing: border-box; background: var(--bg-card);
+    }
+    .si-weekday-group { display: flex; gap: 6px; flex-wrap: wrap; }
+    .si-weekday-label {
+      display: flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 1px solid var(--border-color); cursor: pointer; font-size: 13px; font-weight: 600;
+      user-select: none; transition: all 0.1s;
+    }
+    .si-weekday-label:has(input:checked) { background: var(--primary-yellow); border-color: var(--primary-yellow); }
+    .si-weekday-label input { display: none; }
+    .si-weekday-label.sat { color: #55a; }
+    .si-weekday-label.sun { color: #e05; }
+    .si-time-group { display: flex; align-items: center; gap: 8px; }
+    .si-time-group input { flex: 1; }
+    .si-time-sep { color: #888; font-size: 16px; }
+    @media (max-width: 767px) {
+      .sched-detail-title { font-size: 15px; }
+      .sched-detail-emoji { font-size: 22px; }
+      .sched-list-item { padding: 8px 10px; }
+    }
+
     .pg-btn {
       min-width: 32px;
       height: 32px;
@@ -2325,6 +2407,41 @@
     </div>
   </div>
 
+  <!-- 시간표 항목 추가/수정 모달 -->
+  <div id="scheduleItemModal" class="modal-overlay" style="z-index:1200;display:none;">
+    <div class="modal-box" style="max-width:420px;width:100%;">
+      <h3 id="siModalTitle">일정 추가</h3>
+      <div class="si-form-row">
+        <label>일상 종류</label>
+        <select id="siActivitySelect"></select>
+      </div>
+      <div class="si-form-row">
+        <label>요일</label>
+        <div class="si-weekday-group">
+          <label class="si-weekday-label"><input type="checkbox" class="si-day-check" value="MON">월</label>
+          <label class="si-weekday-label"><input type="checkbox" class="si-day-check" value="TUE">화</label>
+          <label class="si-weekday-label"><input type="checkbox" class="si-day-check" value="WED">수</label>
+          <label class="si-weekday-label"><input type="checkbox" class="si-day-check" value="THU">목</label>
+          <label class="si-weekday-label"><input type="checkbox" class="si-day-check" value="FRI">금</label>
+          <label class="si-weekday-label sat"><input type="checkbox" class="si-day-check" value="SAT">토</label>
+          <label class="si-weekday-label sun"><input type="checkbox" class="si-day-check" value="SUN">일</label>
+        </div>
+      </div>
+      <div class="si-form-row">
+        <label>시간</label>
+        <div class="si-time-group">
+          <input type="time" id="siStartTime">
+          <span class="si-time-sep">~</span>
+          <input type="time" id="siEndTime">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeScheduleItemModal()">취소</button>
+        <button class="btn-confirm" onclick="saveScheduleItem()">저장</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 공통 확인 모달 -->
   <div id="confirmModal" class="modal-overlay" style="z-index:1200;">
     <div class="modal-box">
@@ -2555,6 +2672,38 @@
               <!-- 동적으로 생성 -->
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- 시간표 상세 뷰 (dailyPage 안에서 탭 위에 오버레이) -->
+      <div id="scheduleDetailView" style="display:none;">
+        <!-- 상세 헤더 -->
+        <div class="sched-detail-header">
+          <button class="sched-detail-back" onclick="closeScheduleDetail()">← 뒤로</button>
+          <div class="sched-detail-title-wrap">
+            <span class="sched-detail-emoji" id="detailScheduleEmoji"></span>
+            <span class="sched-detail-title" id="detailScheduleTitle"></span>
+          </div>
+          <div class="sched-detail-actions">
+            <button class="btn-add" onclick="openScheduleItemForm(null)">+ 일정 추가</button>
+          </div>
+        </div>
+        <p class="sched-detail-desc" id="detailScheduleDesc" style="display:none;"></p>
+
+        <!-- 탭 -->
+        <div class="tab-nav" id="scheduleDetailTabNav">
+          <button class="tab-btn active" data-tab="grid" onclick="switchScheduleDetailTab('grid')">📅 주간 그리드</button>
+          <button class="tab-btn" data-tab="items" onclick="switchScheduleDetailTab('items')">☰ 일정 목록</button>
+        </div>
+
+        <!-- 주간 그리드 탭 -->
+        <div class="sched-tab-content" data-tab="grid">
+          <div id="schedDetailGridContent" style="margin-top:12px;"></div>
+        </div>
+
+        <!-- 일정 목록 탭 -->
+        <div class="sched-tab-content" data-tab="items" style="display:none;">
+          <div id="schedDetailListContent" style="margin-top:12px;"></div>
         </div>
       </div>
 
@@ -3730,6 +3879,12 @@
     // 시간표 상태 변수
     let schedules = [];
     let scheduleItems = [];
+    let currentDetailScheduleId = null;
+    let editingScheduleItemId = null;
+    let scheduleDetailTab = 'grid';
+    var SLOT_HEIGHT = 24;
+    var WEEKDAYS_EN = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+    var WEEKDAYS_KR = ['월','화','수','목','금','토','일'];
     let scheduleHeroIndex = 0;
     let scheduleSearchQuery = '';
     let selectedScheduleIds = [];
@@ -5448,8 +5603,208 @@
       });
     }
 
+    function timeToMin(hhmm) {
+      if (!hhmm) return 0;
+      var p = hhmm.split(':');
+      return parseInt(p[0]) * 60 + parseInt(p[1]);
+    }
+    function minToTimeStr(min) {
+      var h = Math.floor(min / 60), m = min % 60;
+      return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+    }
+
     function openScheduleDetail(scheduleId) {
-      showAlert('준비 중', '시간표 상세 화면은 다음 단계(17단계)에서 구현됩니다.');
+      currentDetailScheduleId = scheduleId;
+      scheduleDetailTab = 'grid';
+      document.querySelector('#dailyPage .tab-nav').style.display = 'none';
+      document.querySelectorAll('#dailyPage .tab-content').forEach(function(el) { el.style.display = 'none'; });
+      var dv = document.getElementById('scheduleDetailView');
+      if (dv) dv.style.display = 'block';
+      renderScheduleDetail();
+    }
+
+    function closeScheduleDetail() {
+      currentDetailScheduleId = null;
+      var dv = document.getElementById('scheduleDetailView');
+      if (dv) dv.style.display = 'none';
+      document.querySelector('#dailyPage .tab-nav').style.display = '';
+      document.querySelectorAll('#dailyPage .tab-content').forEach(function(el) { el.style.display = ''; });
+    }
+
+    function renderScheduleDetail() {
+      var schedule = schedules.find(function(s) { return s.id === currentDetailScheduleId; });
+      if (!schedule) return;
+      document.getElementById('detailScheduleEmoji').innerHTML = renderEmoji(schedule.emoji);
+      document.getElementById('detailScheduleTitle').textContent = schedule.title;
+      var descEl = document.getElementById('detailScheduleDesc');
+      if (schedule.description) { descEl.textContent = schedule.description; descEl.style.display = 'block'; }
+      else { descEl.style.display = 'none'; }
+      // 탭 버튼 active 동기화
+      document.querySelectorAll('#scheduleDetailTabNav .tab-btn').forEach(function(btn) {
+        btn.classList.toggle('active', btn.dataset.tab === scheduleDetailTab);
+      });
+      document.querySelectorAll('#scheduleDetailView .sched-tab-content').forEach(function(el) {
+        el.style.display = (el.dataset.tab === scheduleDetailTab) ? 'block' : 'none';
+      });
+      if (scheduleDetailTab === 'grid') renderScheduleGrid();
+      else renderScheduleDetailItemList();
+    }
+
+    function switchScheduleDetailTab(tab) {
+      scheduleDetailTab = tab;
+      renderScheduleDetail();
+    }
+
+    function renderScheduleGrid() {
+      var items = scheduleItems.filter(function(i) { return i.scheduleId === currentDetailScheduleId; });
+      var gridStart = 6 * 60, gridEnd = 22 * 60;
+      if (items.length > 0) {
+        var minS = items.reduce(function(m, i) { return Math.min(m, timeToMin(i.startTime)); }, Infinity);
+        var maxE = items.reduce(function(m, i) { return Math.max(m, timeToMin(i.endTime)); }, 0);
+        gridStart = Math.max(0, Math.floor((minS - 30) / 30) * 30);
+        gridEnd = Math.min(24 * 60, Math.ceil((maxE + 30) / 30) * 30);
+      }
+      var totalSlots = (gridEnd - gridStart) / 30;
+      var totalHeight = totalSlots * SLOT_HEIGHT;
+
+      var html = '<div class="sched-grid-outer"><div class="sched-grid-wrap">';
+      html += '<div class="sched-header-row"><div class="sched-time-gutter-h"></div>';
+      WEEKDAYS_KR.forEach(function(d, i) {
+        html += '<div class="sched-day-header' + (i >= 5 ? ' weekend' : '') + '">' + d + '</div>';
+      });
+      html += '</div><div class="sched-body"><div class="sched-time-gutter">';
+      for (var t = gridStart; t < gridEnd; t += 30) {
+        var isH = (t % 60 === 0);
+        html += '<div class="sched-time-slot-label' + (isH ? ' hour' : '') + '">' + (isH ? minToTimeStr(t) : '') + '</div>';
+      }
+      html += '</div>';
+      WEEKDAYS_EN.forEach(function(day) {
+        var di = items.filter(function(i) { return i.weekdays && i.weekdays.indexOf(day) >= 0; });
+        html += '<div class="sched-day-col" style="height:' + totalHeight + 'px;">';
+        for (var s = 0; s < totalSlots; s++) {
+          html += '<div class="sched-bg-slot' + (((gridStart + s * 30) % 60 === 0) ? ' hour' : '') + '"></div>';
+        }
+        di.forEach(function(item) {
+          var sMin = timeToMin(item.startTime), eMin = timeToMin(item.endTime);
+          var top = (sMin - gridStart) / 30 * SLOT_HEIGHT;
+          var height = Math.max(SLOT_HEIGHT, (eMin - sMin) / 30 * SLOT_HEIGHT);
+          var act = activities.find(function(a) { return a.id === item.activityId; });
+          var emoji = act ? renderEmoji(act.emoji) : '📅';
+          var name = act ? act.name : '(삭제된 일상)';
+          var color = act ? (act.color || '#ffde59') : '#ffde59';
+          html += '<div class="sched-item-block" style="top:' + top + 'px;height:' + height + 'px;background:' + color + '30;border-left-color:' + color + ';" onclick="openScheduleItemForm(&apos;' + item.id + '&apos;)">';
+          if (height >= 32) html += '<div class="sched-item-emoji">' + emoji + '</div><div class="sched-item-name">' + name + '</div>';
+          if (height >= 44) html += '<div class="sched-item-time">' + item.startTime + '-' + item.endTime + '</div>';
+          html += '</div>';
+        });
+        html += '</div>';
+      });
+      html += '</div></div></div>';
+      var c = document.getElementById('schedDetailGridContent');
+      if (c) c.innerHTML = html;
+    }
+
+    function renderScheduleDetailItemList() {
+      var items = scheduleItems.filter(function(i) { return i.scheduleId === currentDetailScheduleId; });
+      var c = document.getElementById('schedDetailListContent');
+      if (!c) return;
+      if (items.length === 0) { c.innerHTML = '<div class="schedule-empty" style="margin:20px 0;">일정이 없습니다. 위의 + 일정 추가 버튼으로 추가하세요.</div>'; return; }
+      var dayOrd = { MON:0, TUE:1, WED:2, THU:3, FRI:4, SAT:5, SUN:6 };
+      items.sort(function(a, b) {
+        var af = a.weekdays && a.weekdays.length ? dayOrd[a.weekdays[0]] : 7;
+        var bf = b.weekdays && b.weekdays.length ? dayOrd[b.weekdays[0]] : 7;
+        return af !== bf ? af - bf : timeToMin(a.startTime) - timeToMin(b.startTime);
+      });
+      var html = '<div class="sched-item-list">';
+      items.forEach(function(item) {
+        var act = activities.find(function(a) { return a.id === item.activityId; });
+        var emoji = act ? renderEmoji(act.emoji) : '📅';
+        var name = act ? act.name : '(삭제된 일상)';
+        var color = act ? (act.color || '#ffde59') : '#ffde59';
+        var days = (item.weekdays || []).map(function(d) { return WEEKDAYS_KR[WEEKDAYS_EN.indexOf(d)] || d; }).join('·');
+        html += '<div class="sched-list-item">';
+        html += '<div class="sched-list-item-color" style="background:' + color + ';"></div>';
+        html += '<div class="sched-list-item-emoji">' + emoji + '</div>';
+        html += '<div class="sched-list-item-info"><div class="sched-list-item-name">' + name + '</div>';
+        html += '<div class="sched-list-item-meta">' + days + ' · ' + item.startTime + ' – ' + item.endTime + '</div></div>';
+        html += '<div class="sched-list-item-actions">';
+        html += '<button class="btn-icon" onclick="openScheduleItemForm(&apos;' + item.id + '&apos;)">수정</button>';
+        html += '<button class="btn-icon btn-danger" onclick="deleteScheduleItem(&apos;' + item.id + '&apos;)">삭제</button>';
+        html += '</div></div>';
+      });
+      html += '</div>';
+      c.innerHTML = html;
+    }
+
+    function openScheduleItemForm(itemId) {
+      editingScheduleItemId = itemId;
+      var modal = document.getElementById('scheduleItemModal');
+      if (!modal) return;
+      document.getElementById('siModalTitle').textContent = itemId ? '일정 수정' : '일정 추가';
+      var actSel = document.getElementById('siActivitySelect');
+      actSel.innerHTML = '<option value="">일상 종류 선택</option>';
+      activities.filter(function(a) { return a.active; }).forEach(function(a) {
+        var opt = document.createElement('option');
+        opt.value = a.id;
+        opt.textContent = emojiDisplayVal(a.emoji) + ' ' + a.name;
+        actSel.appendChild(opt);
+      });
+      modal.querySelectorAll('.si-day-check').forEach(function(cb) { cb.checked = false; });
+      document.getElementById('siStartTime').value = '';
+      document.getElementById('siEndTime').value = '';
+      if (itemId) {
+        var item = scheduleItems.find(function(i) { return i.id === itemId; });
+        if (item) {
+          actSel.value = item.activityId;
+          (item.weekdays || []).forEach(function(d) {
+            var cb = modal.querySelector('.si-day-check[value="' + d + '"]');
+            if (cb) cb.checked = true;
+          });
+          document.getElementById('siStartTime').value = item.startTime;
+          document.getElementById('siEndTime').value = item.endTime;
+        }
+      }
+      modal.style.display = 'flex';
+    }
+
+    function closeScheduleItemModal() {
+      var modal = document.getElementById('scheduleItemModal');
+      if (modal) modal.style.display = 'none';
+      editingScheduleItemId = null;
+    }
+
+    function saveScheduleItem() {
+      var modal = document.getElementById('scheduleItemModal');
+      var actId = document.getElementById('siActivitySelect').value;
+      var startTime = document.getElementById('siStartTime').value;
+      var endTime = document.getElementById('siEndTime').value;
+      var weekdays = [];
+      modal.querySelectorAll('.si-day-check:checked').forEach(function(cb) { weekdays.push(cb.value); });
+      if (!actId) { showAlert('입력 오류', '일상 종류를 선택해주세요.'); return; }
+      if (!weekdays.length) { showAlert('입력 오류', '요일을 하나 이상 선택해주세요.'); return; }
+      if (!startTime) { showAlert('입력 오류', '시작 시간을 입력해주세요.'); return; }
+      if (!endTime) { showAlert('입력 오류', '종료 시간을 입력해주세요.'); return; }
+      if (timeToMin(endTime) <= timeToMin(startTime)) { showAlert('입력 오류', '종료 시간은 시작 시간보다 늦어야 합니다.'); return; }
+      if (editingScheduleItemId) {
+        var ex = scheduleItems.find(function(i) { return i.id === editingScheduleItemId; });
+        if (ex) { ex.activityId = actId; ex.weekdays = weekdays; ex.startTime = startTime; ex.endTime = endTime; }
+      } else {
+        scheduleItems.push({ id: generateId(), scheduleId: currentDetailScheduleId, activityId: actId, weekdays: weekdays, startTime: startTime, endTime: endTime, createdAt: today() });
+      }
+      var sch = schedules.find(function(s) { return s.id === currentDetailScheduleId; });
+      if (sch) sch.updatedAt = today();
+      saveSchedules();
+      closeScheduleItemModal();
+      renderScheduleDetail();
+    }
+
+    function deleteScheduleItem(itemId) {
+      showConfirm('일정 삭제', '이 일정을 삭제하시겠습니까?', function(confirmed) {
+        if (!confirmed) return;
+        scheduleItems = scheduleItems.filter(function(i) { return i.id !== itemId; });
+        saveSchedules();
+        renderScheduleDetail();
+      });
     }
 
     function switchScheduleView(mode) {
