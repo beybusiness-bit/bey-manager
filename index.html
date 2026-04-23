@@ -4205,6 +4205,10 @@
       renderActivities();
       renderCategories();
       renderScheduleThumbnails();
+      const lastPage = sessionStorage.getItem('lastPage');
+      if (lastPage && document.getElementById(lastPage + 'Page')) {
+        navigateTo(lastPage);
+      }
       updateMobileTopTitle();
     }
 
@@ -4424,6 +4428,7 @@
     // ========================================
     function navigateTo(pageId) {
       currentPage = pageId;
+      sessionStorage.setItem('lastPage', pageId);
 
       document.querySelectorAll('.page').forEach(function(page) {
         page.classList.remove('active');
@@ -4682,11 +4687,7 @@
     }
 
     function blockIfInlineEditing() {
-      if (isInlineEditingInProgress()) {
-        showAlert('편집 중', '진행 중인 수정/추가를 먼저 저장하거나 취소해주세요.');
-        return true;
-      }
-      return false;
+      return isInlineEditingInProgress();
     }
 
     function addCategoryInline() {
