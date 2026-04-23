@@ -307,12 +307,119 @@
     }
 
     .emoji-picker-header {
-      margin-bottom: 16px;
+      margin-bottom: 8px;
     }
 
     .emoji-picker-header h3 {
       font-size: 18px;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
+    }
+
+    .emoji-picker-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 10px;
+    }
+
+    .emoji-picker-tab {
+      flex: 1;
+      padding: 7px 12px;
+      border: none;
+      background: none;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: all 0.15s;
+    }
+
+    .emoji-picker-tab.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--primary-yellow);
+      font-weight: 600;
+    }
+
+    .emoji-my-section {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .emoji-my-upload-area {
+      border: 2px dashed var(--border-color);
+      border-radius: var(--button-radius, 8px);
+      padding: 14px;
+      text-align: center;
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-size: 13px;
+      transition: all 0.15s;
+      line-height: 1.6;
+    }
+
+    .emoji-my-upload-area:hover {
+      border-color: var(--primary-yellow);
+      color: var(--text-primary);
+    }
+
+    .emoji-my-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+      gap: 6px;
+    }
+
+    .emoji-my-item {
+      position: relative;
+      cursor: pointer;
+      border-radius: 6px;
+      border: 2px solid var(--border-color);
+      transition: all 0.15s;
+      aspect-ratio: 1;
+      overflow: hidden;
+    }
+
+    .emoji-my-item:hover { border-color: var(--primary-yellow); }
+    .emoji-my-item.selected {
+      border-color: var(--primary-yellow);
+      box-shadow: 0 0 0 2px rgba(255,222,89,0.4);
+    }
+
+    .emoji-my-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .emoji-my-item-del {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 16px;
+      height: 16px;
+      background: rgba(0,0,0,0.55);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      font-size: 10px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      padding: 0;
+    }
+
+    .emoji-my-item:hover .emoji-my-item-del { display: flex; }
+
+    .emoji-my-empty {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 13px;
+      padding: 24px 0;
     }
 
     .emoji-search {
@@ -1684,6 +1791,9 @@
         font-size: 11px;
         margin-top: 2px;
       }
+      .schedule-list-table .no-tags {
+        display: none;
+      }
     }
 
     .pg-btn {
@@ -2246,11 +2356,27 @@
     <div class="emoji-picker-wrap">
       <div class="emoji-picker-header">
         <h3>이모지 선택</h3>
-        <input type="text" class="emoji-search" id="emojiSearch" placeholder="이모지 검색 (한글, 영어)">
+        <div class="emoji-picker-tabs">
+          <button class="emoji-picker-tab active" id="emojiTabStd" onclick="setEmojiPickerTab('standard')">이모지</button>
+          <button class="emoji-picker-tab" id="emojiTabMy" onclick="setEmojiPickerTab('my')">🖼️ My</button>
+        </div>
       </div>
-      <div class="emoji-cats" id="emojiCats"></div>
-      <div class="emoji-grid-wrap">
-        <div class="emoji-grid" id="emojiGrid"></div>
+      <!-- 표준 이모지 섹션 -->
+      <div id="emojiStdSection">
+        <input type="text" class="emoji-search" id="emojiSearch" placeholder="이모지 검색 (한글, 영어)" style="margin-bottom:10px;">
+        <div class="emoji-cats" id="emojiCats"></div>
+        <div class="emoji-grid-wrap">
+          <div class="emoji-grid" id="emojiGrid"></div>
+        </div>
+      </div>
+      <!-- My Emojies 섹션 -->
+      <div id="emojiMySection" class="emoji-my-section" style="display:none;">
+        <div class="emoji-my-upload-area" onclick="document.getElementById('myEmojiUploadInput').click()">
+          📁 클릭해서 이미지 업로드<br>
+          <span style="font-size:11px;">PNG·JPG·WebP, 정사각 128×128px 권장, 최대 200KB</span>
+        </div>
+        <input type="file" id="myEmojiUploadInput" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="handleMyEmojiUpload(this)">
+        <div class="emoji-my-grid" id="emojiMyGrid"></div>
       </div>
       <div class="emoji-picker-footer">
         <button class="btn-cancel" onclick="closeEmojiPicker(false)">취소</button>
@@ -3767,6 +3893,106 @@
     // ========================================
     // 이모지 피커 시스템
     // ========================================
+    // ========================================
+    // My Emojies
+    // ========================================
+    let myEmojis = [];
+
+    function loadMyEmojis() {
+      try { myEmojis = JSON.parse(localStorage.getItem('myEmojis') || '[]'); } catch(e) { myEmojis = []; }
+    }
+
+    function saveMyEmojis() {
+      localStorage.setItem('myEmojis', JSON.stringify(myEmojis));
+    }
+
+    function renderEmoji(val) {
+      if (!val) return '📅';
+      if (val.startsWith && val.startsWith('myimg:')) {
+        var id = val.slice(6);
+        var item = myEmojis.find(function(e) { return e.id === id; });
+        if (item) return '<img src="' + item.data + '" style="width:1.2em;height:1.2em;object-fit:cover;vertical-align:middle;border-radius:2px;">';
+        return '🖼️';
+      }
+      return val;
+    }
+
+    function emojiDisplayVal(val) {
+      if (!val) return '';
+      if (val.startsWith && val.startsWith('myimg:')) return '🖼️';
+      return val;
+    }
+
+    function setEmojiPickerTab(tab) {
+      var stdSection = document.getElementById('emojiStdSection');
+      var mySection = document.getElementById('emojiMySection');
+      var tabStd = document.getElementById('emojiTabStd');
+      var tabMy = document.getElementById('emojiTabMy');
+      if (tab === 'my') {
+        if (stdSection) stdSection.style.display = 'none';
+        if (mySection) mySection.style.display = 'flex';
+        if (tabStd) tabStd.classList.remove('active');
+        if (tabMy) tabMy.classList.add('active');
+        renderMyEmojisGrid();
+      } else {
+        if (stdSection) stdSection.style.display = 'block';
+        if (mySection) mySection.style.display = 'none';
+        if (tabStd) tabStd.classList.add('active');
+        if (tabMy) tabMy.classList.remove('active');
+      }
+    }
+
+    function renderMyEmojisGrid() {
+      var grid = document.getElementById('emojiMyGrid');
+      if (!grid) return;
+      if (myEmojis.length === 0) {
+        grid.innerHTML = '<div class="emoji-my-empty">아직 업로드된 이미지가 없습니다.</div>';
+        return;
+      }
+      var html = '';
+      myEmojis.forEach(function(item) {
+        var isSel = currentSelectedEmoji === 'myimg:' + item.id;
+        html += '<div class="emoji-my-item' + (isSel ? ' selected' : '') + '" data-id="' + item.id + '" onclick="selectMyEmoji(&apos;' + item.id + '&apos;)">';
+        html += '<img src="' + item.data + '" alt="my emoji">';
+        html += '<button class="emoji-my-item-del" onclick="event.stopPropagation(); deleteMyEmoji(&apos;' + item.id + '&apos;)" title="삭제">✕</button>';
+        html += '</div>';
+      });
+      grid.innerHTML = html;
+    }
+
+    function selectMyEmoji(id) {
+      currentSelectedEmoji = 'myimg:' + id;
+      document.querySelectorAll('.emoji-my-item').forEach(function(el) {
+        el.classList.toggle('selected', el.dataset.id === id);
+      });
+    }
+
+    function deleteMyEmoji(id) {
+      myEmojis = myEmojis.filter(function(e) { return e.id !== id; });
+      saveMyEmojis();
+      if (currentSelectedEmoji === 'myimg:' + id) currentSelectedEmoji = '';
+      renderMyEmojisGrid();
+    }
+
+    function handleMyEmojiUpload(input) {
+      var file = input.files && input.files[0];
+      if (!file) return;
+      if (file.size > 200 * 1024) {
+        showAlert('파일 크기 초과', '최대 200KB까지 업로드할 수 있습니다.');
+        input.value = '';
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        myEmojis.push({ id: id, data: e.target.result });
+        saveMyEmojis();
+        renderMyEmojisGrid();
+        input.value = '';
+      };
+      reader.readAsDataURL(file);
+    }
+
     function buildEmojiPicker() {
       const catsEl = document.getElementById('emojiCats');
       const gridEl = document.getElementById('emojiGrid');
@@ -3900,15 +4126,16 @@
     function openEmojiPicker(currentEmoji, callback) {
       currentSelectedEmoji = currentEmoji || '';
       currentEmojiCallback = callback;
-      
+
+      setEmojiPickerTab('standard');
       buildEmojiPicker();
-      
+
       const searchEl = document.getElementById('emojiSearch');
       if (searchEl) {
         searchEl.value = '';
         searchEl.oninput = filterEmoji;
       }
-      
+
       document.getElementById('emojiPickerOverlay').classList.add('show');
     }
 
@@ -3962,6 +4189,7 @@
       loadExpandedGroups();
       loadSidebarState();
       loadCategories();
+      loadMyEmojis();
       loadActivities();
       loadSchedules();
       loadProfile();
@@ -4570,13 +4798,13 @@
         
         if (isEditing) {
           html += '    <div class="category-card-emoji">';
-          html += '      <input type="text" value="' + category.emoji + '" readonly onclick="event.stopPropagation(); openEmojiPicker(&apos;' + category.emoji + '&apos;, function(emoji) { updateCategoryEmoji(&apos;' + category.id + '&apos;, emoji); document.querySelector(&apos;.category-card.editing .category-card-emoji input&apos;).value = emoji; })">';
+          html += '      <input type="text" value="' + emojiDisplayVal(category.emoji) + '" readonly onclick="event.stopPropagation(); openEmojiPicker(&apos;' + category.emoji + '&apos;, function(emoji) { updateCategoryEmoji(&apos;' + category.id + '&apos;, emoji); document.querySelector(&apos;.category-card.editing .category-card-emoji input&apos;).value = emojiDisplayVal(emoji); })">';
           html += '    </div>';
           html += '    <div class="category-card-name">';
           html += '      <input type="text" value="' + category.name + '" oninput="updateCategoryName(&apos;' + category.id + '&apos;, this.value)" onkeydown="if(event.key===&apos;Enter&apos;) saveCategoryInline(&apos;' + category.id + '&apos;); if(event.key===&apos;Escape&apos;) cancelCategoryInline(&apos;' + category.id + '&apos;)" placeholder="카테고리 이름">';
           html += '    </div>';
         } else {
-          html += '    <div class="category-card-emoji">' + category.emoji + '</div>';
+          html += '    <div class="category-card-emoji">' + renderEmoji(category.emoji) + '</div>';
           html += '    <div class="category-card-name">' + category.name + '</div>';
         }
         
@@ -4814,13 +5042,13 @@
 
         if (isEditing) {
           html += '  <div class="activity-card-emoji">';
-          html += '    <input type="text" value="' + activity.emoji + '" readonly onclick="event.stopPropagation(); openEmojiPicker(&apos;' + activity.emoji + '&apos;, function(emoji) { updateActivityEmoji(&apos;' + activity.id + '&apos;, emoji); document.querySelector(&apos;.activity-card.editing .activity-card-emoji input&apos;).value = emoji; })">';
+          html += '    <input type="text" value="' + emojiDisplayVal(activity.emoji) + '" readonly onclick="event.stopPropagation(); openEmojiPicker(&apos;' + activity.emoji + '&apos;, function(emoji) { updateActivityEmoji(&apos;' + activity.id + '&apos;, emoji); document.querySelector(&apos;.activity-card.editing .activity-card-emoji input&apos;).value = emojiDisplayVal(emoji); })">';
           html += '  </div>';
           html += '  <div class="activity-card-name">';
           html += '    <input type="text" value="' + activity.name + '" oninput="updateActivityName(&apos;' + activity.id + '&apos;, this.value)" onkeydown="if(event.key===&apos;Enter&apos;) saveActivityInline(&apos;' + activity.id + '&apos;); if(event.key===&apos;Escape&apos;) cancelActivityInline(&apos;' + activity.id + '&apos;)" placeholder="일상 이름">';
           html += '  </div>';
         } else {
-          html += '  <div class="activity-card-emoji">' + activity.emoji + '</div>';
+          html += '  <div class="activity-card-emoji">' + renderEmoji(activity.emoji) + '</div>';
           html += '  <div class="activity-card-name">' + activity.name + '</div>';
         }
 
@@ -5323,8 +5551,8 @@
         html += '<tr>';
         html += '<td><input type="checkbox" class="schedule-select-checkbox"' + (isSelected ? ' checked' : '') + ' onchange="toggleScheduleSelect(&apos;' + sch.id + '&apos;)"></td>';
         html += '<td><div class="schedule-list-row-name" onclick="openScheduleDetail(&apos;' + sch.id + '&apos;)">';
-        html += '<span>' + (sch.emoji || '📅') + '</span><span>' + escapeHtml(sch.title) + '</span></div></td>';
-        html += '<td><div class="schedule-list-tags">' + (tags || '<span style="color:var(--text-secondary);font-size:12px;">-</span>') + '</div></td>';
+        html += '<span>' + renderEmoji(sch.emoji) + '</span><span>' + escapeHtml(sch.title) + '</span></div></td>';
+        html += '<td class="schedule-list-tags-cell' + (tags ? '' : ' no-tags') + '"><div class="schedule-list-tags">' + (tags || '<span style="color:var(--text-secondary);font-size:12px;">-</span>') + '</div></td>';
         html += '<td class="schedule-list-date">' + date + '</td>';
         html += '<td style="text-align:center;"><button class="' + heartCls + '" onclick="toggleScheduleLike(&apos;' + sch.id + '&apos;)" title="' + (sch.isLiked ? '좋아요 해제' : '좋아요') + '">' + HEART_SVG + '</button></td>';
         html += '</tr>';
@@ -5375,7 +5603,7 @@
       }
       pagerHtml += '</div>';
 
-      return '<div class="schedule-pager-bar">' + perPageHtml + pagerHtml + '</div>';
+      return '<div class="schedule-pager-bar">' + pagerHtml + perPageHtml + '</div>';
     }
 
     function goScheduleListPage(page) {
@@ -5469,7 +5697,7 @@
         html += '  <label class="hero-checkbox-wrap" onclick="event.stopPropagation()"><input type="checkbox" class="schedule-select-checkbox"' + (isSelected ? ' checked' : '') + ' onchange="toggleScheduleSelect(&apos;' + sch.id + '&apos;)"></label>';
         html += '  <button class="heart-btn liked hero-heart-wrap" onclick="event.stopPropagation(); toggleScheduleLike(&apos;' + sch.id + '&apos;)" title="좋아요 해제">' + HEART_SVG + '</button>';
         html += '  <div class="hero-emoji-title">';
-        html += '    <span class="hero-emoji">' + (sch.emoji || '📅') + '</span>';
+        html += '    <span class="hero-emoji">' + renderEmoji(sch.emoji) + '</span>';
         html += '    <span class="hero-title-display">' + escapeHtml(sch.title) + '</span>';
         html += '  </div>';
         html += '  <div class="' + descClass + '">' + descText + '</div>';
@@ -5532,7 +5760,7 @@
         html += '<div class="schedule-mini-card" onclick="openScheduleDetail(&apos;' + sch.id + '&apos;)">';
         html += '  <label class="mini-checkbox-wrap" onclick="event.stopPropagation()"><input type="checkbox" class="schedule-select-checkbox"' + (isSelected ? ' checked' : '') + ' onchange="toggleScheduleSelect(&apos;' + sch.id + '&apos;)"></label>';
         html += '  <button class="heart-btn mini-heart-wrap" onclick="event.stopPropagation(); toggleScheduleLike(&apos;' + sch.id + '&apos;)" title="좋아요">' + HEART_SVG + '</button>';
-        html += '  <div class="schedule-mini-emoji">' + (sch.emoji || '📅') + '</div>';
+        html += '  <div class="schedule-mini-emoji">' + renderEmoji(sch.emoji) + '</div>';
         html += '  <div class="schedule-mini-title">' + escapeHtml(sch.title) + '</div>';
         html += '  <div class="schedule-mini-date">' + (sch.updatedAt || sch.createdAt) + '</div>';
         html += '</div>';
