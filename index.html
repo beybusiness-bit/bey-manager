@@ -2771,6 +2771,7 @@
       </nav>
 
       <div class="sidebar-footer">
+        <div id="sheetsStatusBadge" style="font-size:11px;text-align:center;padding:4px 0;opacity:0.7;"></div>
         <button class="btn-logout" onclick="handleLogout()">로그아웃</button>
       </div>
     </aside>
@@ -4233,6 +4234,16 @@
       sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
 
       showApp();
+
+      // Sheets 연동: access_token 별도 획득 → 탭 생성/로드
+      initSheetsAccess(function(ok) {
+        if (!ok) { updateSheetsStatus(false); return; }
+        sheetsLoadAll().then(function(loaded) {
+          if (loaded) {
+            renderCurrentScheduleView();
+          }
+        });
+      });
     }
 
     function showApp() {
@@ -5607,6 +5618,147 @@
     function saveSchedules() {
       localStorage.setItem('schedules', JSON.stringify(schedules));
       localStorage.setItem('scheduleItems', JSON.stringify(scheduleItems));
+      if (sheetsEnabled) sheetsSaveAll(); // 비동기 Sheets 동기화
+    }
+
+    // ========================================
+    // 16단계 — Google Sheets 연동
+    // ========================================
+    var sheetsToken = null;
+    var sheetsEnabled = false;
+    var SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets/' + AUTH.SHEET_ID;
+
+    // ① 로그인 후 Sheets API용 access_token 획득 (id_token과 별도)
+    function initSheetsAccess(callback) {
+      if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
+        console.warn('[Sheets] google.accounts.oauth2 없음 — Sheets 비활성화');
+        if (callback) callback(false);
+        return;
+      }
+      try {
+        var tc = google.accounts.oauth2.initTokenClient({
+          client_id: AUTH.GOOGLE_CLIENT_ID,
+          scope: 'https://www.googleapis.com/auth/spreadsheets',
+          callback: function(resp) {
+            if (resp.error) {
+              console.warn('[Sheets] 토큰 오류:', resp.error);
+              if (callback) callback(false);
+              return;
+            }
+            sheetsToken = resp.access_token;
+            sheetsEnabled = true;
+            console.log('[Sheets] ✅ access_token 획득');
+            if (callback) callback(true);
+          }
+        });
+        // prompt:'' = 기존 동의 있으면 팝업 없이 자동 처리
+        tc.requestAccessToken({ prompt: '' });
+      } catch (e) {
+        console.warn('[Sheets] initTokenClient 실패:', e);
+        if (callback) callback(false);
+      }
+    }
+
+    // ② Sheets API 공통 fetch 헬퍼
+    async function sheetsReq(method, path, body) {
+      if (!sheetsEnabled || !sheetsToken) return null;
+      try {
+        var opts = {
+          method: method,
+          headers: { 'Authorization': 'Bearer ' + sheetsToken, 'Content-Type': 'application/json' }
+        };
+        if (body !== undefined) opts.body = JSON.stringify(body);
+        var r = await fetch(SHEETS_BASE + path, opts);
+        if (r.status === 401) { sheetsEnabled = false; sheetsToken = null; console.warn('[Sheets] 토큰 만료'); return null; }
+        return await r.json();
+      } catch (e) { console.warn('[Sheets] 요청 실패:', e); return null; }
+    }
+
+    // ③ 시트 탭 존재 확인 + 없으면 자동 생성 + 헤더 입력
+    async function sheetsEnsureTabs() {
+      var meta = await sheetsReq('GET', '?fields=sheets.properties.title');
+      if (!meta || !meta.sheets) return false;
+      var existing = meta.sheets.map(function(s) { return s.properties.title; });
+
+      var toCreate = [];
+      if (existing.indexOf('시간표') < 0) toCreate.push({ addSheet: { properties: { title: '시간표' } } });
+      if (existing.indexOf('시간표_일정') < 0) toCreate.push({ addSheet: { properties: { title: '시간표_일정' } } });
+
+      if (toCreate.length > 0) {
+        console.log('[Sheets] 탭 생성:', toCreate.map(function(r) { return r.addSheet.properties.title; }));
+        await sheetsReq('POST', ':batchUpdate', { requests: toCreate });
+      }
+
+      // 헤더 기록 (기존 헤더 있어도 덮어써도 무방)
+      var schHead = [['id','emoji','title','description','tags','isLiked','createdAt','updatedAt']];
+      var itemHead = [['id','scheduleId','activityId','weekdays','startTime','endTime','createdAt']];
+      await sheetsReq('PUT', '/values/' + encodeURIComponent('시간표!A1:H1') + '?valueInputOption=RAW', { values: schHead });
+      await sheetsReq('PUT', '/values/' + encodeURIComponent('시간표_일정!A1:G1') + '?valueInputOption=RAW', { values: itemHead });
+      return true;
+    }
+
+    // ④ Sheets에서 데이터 로드 (로그인 직후 1회)
+    async function sheetsLoadAll() {
+      var ok = await sheetsEnsureTabs();
+      if (!ok) return false;
+
+      var schResp = await sheetsReq('GET', '/values/' + encodeURIComponent('시간표!A:H'));
+      var itemResp = await sheetsReq('GET', '/values/' + encodeURIComponent('시간표_일정!A:G'));
+
+      var schRows = ((schResp && schResp.values) || []).slice(1).filter(function(r) { return r && r[0]; });
+      var itemRows = ((itemResp && itemResp.values) || []).slice(1).filter(function(r) { return r && r[0]; });
+
+      if (schRows.length > 0) {
+        // Sheets에 데이터 있음 → Sheets 기준으로 덮어쓰기
+        schedules = schRows.map(function(r) {
+          return { id: r[0], emoji: r[1] || '📅', title: r[2] || '',
+            description: r[3] || '', tags: r[4] ? r[4].split(',').filter(Boolean) : [],
+            isLiked: r[5] === 'TRUE', createdAt: r[6] || today(), updatedAt: r[7] || today() };
+        });
+        scheduleItems = itemRows.map(function(r) {
+          return { id: r[0], scheduleId: r[1], activityId: r[2],
+            weekdays: r[3] ? r[3].split(',').filter(Boolean) : [],
+            startTime: r[4] || '09:00', endTime: r[5] || '10:00', createdAt: r[6] || today() };
+        });
+        localStorage.setItem('schedules', JSON.stringify(schedules));
+        localStorage.setItem('scheduleItems', JSON.stringify(scheduleItems));
+        console.log('[Sheets] ✅ 로드 완료 — 시간표 ' + schedules.length + '개, 일정 ' + scheduleItems.length + '개');
+      } else {
+        // Sheets 비어있음 → 로컬 데이터를 Sheets로 자동 이관
+        console.log('[Sheets] 시트 비어있음 — localStorage 데이터 이관 중...');
+        await sheetsSaveAll();
+        console.log('[Sheets] ✅ 이관 완료');
+      }
+      updateSheetsStatus(true);
+      return true;
+    }
+
+    // ⑤ 전체 덮어쓰기 저장 (localStorage 변경 시 항상 호출)
+    async function sheetsSaveAll() {
+      if (!sheetsEnabled) return;
+      var schRows = [['id','emoji','title','description','tags','isLiked','createdAt','updatedAt']];
+      schedules.forEach(function(s) {
+        schRows.push([s.id, s.emoji || '', s.title || '', s.description || '',
+          (s.tags || []).join(','), s.isLiked ? 'TRUE' : 'FALSE', s.createdAt || '', s.updatedAt || '']);
+      });
+      var itemRows = [['id','scheduleId','activityId','weekdays','startTime','endTime','createdAt']];
+      scheduleItems.forEach(function(i) {
+        itemRows.push([i.id, i.scheduleId, i.activityId,
+          (i.weekdays || []).join(','), i.startTime || '', i.endTime || '', i.createdAt || '']);
+      });
+      // 클리어 후 전체 재기록 (localStorage가 백업이므로 안전)
+      await sheetsReq('POST', '/values/' + encodeURIComponent('시간표') + ':clear', {});
+      await sheetsReq('POST', '/values/' + encodeURIComponent('시간표_일정') + ':clear', {});
+      await sheetsReq('PUT', '/values/' + encodeURIComponent('시간표!A1') + '?valueInputOption=RAW', { values: schRows });
+      await sheetsReq('PUT', '/values/' + encodeURIComponent('시간표_일정!A1') + '?valueInputOption=RAW', { values: itemRows });
+    }
+
+    // ⑥ 상태 표시 (앱 어딘가에 작은 뱃지 — 없으면 조용히 패스)
+    function updateSheetsStatus(ok) {
+      var el = document.getElementById('sheetsStatusBadge');
+      if (!el) return;
+      el.textContent = ok ? '☁️ 연결됨' : '⚠️ 로컬 전용';
+      el.style.color = ok ? '#2a9d2a' : '#c00';
     }
 
     function addSchedule() {
