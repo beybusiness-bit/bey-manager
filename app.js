@@ -2556,6 +2556,25 @@
 
       function _isConnected() { return !!_token && Date.now() < _tokenExpiry; }
 
+      function _silentReauth() {
+        return new Promise(function(resolve) {
+          if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) { resolve(false); return; }
+          if (!_tokenClient) {
+            _tokenClient = google.accounts.oauth2.initTokenClient({
+              client_id: AUTH.GOOGLE_CLIENT_ID,
+              scope: 'https://www.googleapis.com/auth/spreadsheets',
+              callback: function() {}
+            });
+          }
+          _tokenClient.callback = function(resp) {
+            if (resp.error) { resolve(false); return; }
+            _saveTokenCache(resp.access_token, resp.expires_in);
+            resolve(true);
+          };
+          _tokenClient.requestAccessToken({ prompt: '' });
+        });
+      }
+
       function _saveTokenCache(token, expiresIn) {
         _token = token;
         _tokenExpiry = Date.now() + ((expiresIn || 3600) - 60) * 1000;
@@ -2731,8 +2750,14 @@
 
         syncSheets: async function(names) {
           if (!_isConnected()) {
-            showToast('⚠️ Sheets 미연결 — 로컬에만 저장됩니다', 'warning');
-            return;
+            _updateUI('sync', '재연결 중...');
+            var reAuthed = await _silentReauth();
+            if (!reAuthed) {
+              _updateUI('err', '재연결 필요');
+              showToast('⚠️ Sheets 연결 만료 — 로컬에 저장됨. 사이드바 연결 버튼을 눌러주세요', 'warning');
+              return;
+            }
+            _updateUI('ok', '연결됨');
           }
           if (_syncing) return;
           _syncing = true;

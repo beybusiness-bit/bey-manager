@@ -182,7 +182,7 @@
       right: 0;
       bottom: 0;
       background: rgba(0, 0, 0, 0.5);
-      z-index: 1000;
+      z-index: 1500;
       align-items: center;
       justify-content: center;
       padding: 20px;
@@ -429,8 +429,12 @@
       display: flex;
       gap: 6px;
       margin-bottom: 12px;
-      flex-wrap: wrap;
+      overflow-x: auto;
+      flex-shrink: 0;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
     }
+    .emoji-cats::-webkit-scrollbar { display: none; }
 
     .emoji-cat-btn {
       background: var(--bg-hover);
