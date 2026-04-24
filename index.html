@@ -5804,8 +5804,9 @@
       }
 
       async function _loadAll() {
+        _updateUI('sync', '불러오는 중...');
         var ok = await _ensureTabs();
-        if (!ok) return false;
+        if (!ok) { _updateUI('err', '재연결 필요'); return false; }
 
         var results = {};
         for (var name in SHEETS_DEF) {
@@ -5884,46 +5885,63 @@
         },
 
         init: function(onDone) {
-          var self = this;
-          // tokenClient 항상 초기화 (재연결 버튼 클릭 시 필요)
-          var _initClient = function(cb) {
-            if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
-              _updateUI('err', 'Google 라이브러리 없음'); if (onDone) onDone(false); return;
-            }
-            _tokenClient = google.accounts.oauth2.initTokenClient({
-              client_id: AUTH.GOOGLE_CLIENT_ID,
-              scope: 'https://www.googleapis.com/auth/spreadsheets',
-              callback: cb
-            });
-          };
-
-          // 1. 캐시 토큰 유효 → 즉시 사용, tokenClient만 미리 준비
+          // 1. 캐시 토큰 유효 → 즉시 UI 업데이트 후 onDone 호출
           if (_loadTokenCache()) {
             console.log('[GS] ✅ 캐시 토큰 사용');
-            _initClient(function() {}); // tokenClient 준비 (reconnect용)
+            _updateUI('ok', 'Sheets 연결됨');
             if (onDone) onDone(true);
             return;
           }
 
-          // 2. 캐시 없음 → silent auth
-          _initClient(function(resp) {
-            if (resp.error) { _updateUI('err'); if (onDone) onDone(false); return; }
-            _saveTokenCache(resp.access_token, resp.expires_in);
-            console.log('[GS] ✅ 토큰 획득');
-            if (onDone) onDone(true);
+          // 2. 캐시 없음 → silent auth (팝업 없음)
+          if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
+            _updateUI('err', 'Google 라이브러리 없음'); if (onDone) onDone(false); return;
+          }
+          _tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: AUTH.GOOGLE_CLIENT_ID,
+            scope: 'https://www.googleapis.com/auth/spreadsheets',
+            callback: function(resp) {
+              if (resp.error) { _updateUI('err'); if (onDone) onDone(false); return; }
+              _saveTokenCache(resp.access_token, resp.expires_in);
+              _updateUI('ok', 'Sheets 연결됨');
+              console.log('[GS] ✅ 토큰 획득 (silent)');
+              if (onDone) onDone(true);
+            }
           });
           _tokenClient.requestAccessToken({ prompt: '' });
         },
 
         connect: function() {
-          if (!_tokenClient) { GS.init(function(ok) { if (ok) GS.loadAll(); }); return; }
+          // 연결 버튼 클릭 → silent 먼저 시도 (경고창 없음), 실패 시 consent로 재시도
           _updateUI('sync', '연결 중...');
-          _tokenClient.callback = function(resp) {
-            if (resp.error) { _updateUI('err'); showToast('Sheets 연결 실패: ' + resp.error, 'error'); return; }
-            _saveTokenCache(resp.access_token, resp.expires_in);
-            GS.loadAll().then(function() { showToast('☁️ Sheets 연결 완료'); });
+          if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
+            _updateUI('err'); return;
+          }
+          var _doConnect = function(prompt) {
+            if (!_tokenClient) {
+              _tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: AUTH.GOOGLE_CLIENT_ID,
+                scope: 'https://www.googleapis.com/auth/spreadsheets',
+                callback: function() {}
+              });
+            }
+            _tokenClient.callback = function(resp) {
+              if (resp.error) {
+                if (prompt === '' ) {
+                  // silent 실패 → consent로 재시도 (이미 동의한 경우에도 팝업 필요할 수 있음)
+                  _doConnect('consent');
+                } else {
+                  _updateUI('err'); showToast('Sheets 연결 실패: ' + resp.error, 'error');
+                }
+                return;
+              }
+              _saveTokenCache(resp.access_token, resp.expires_in);
+              _updateUI('ok', 'Sheets 연결됨');
+              GS.loadAll().then(function() { showToast('☁️ Sheets 연결됨'); });
+            };
+            _tokenClient.requestAccessToken({ prompt: prompt });
           };
-          _tokenClient.requestAccessToken({ prompt: 'consent' });
+          _doConnect('');
         },
 
         disconnect: function(silent) {
