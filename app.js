@@ -2562,10 +2562,12 @@
       function _silentReauth() {
         return new Promise(function(resolve) {
           if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) { resolve(false); return; }
+          var hint = (currentUser && currentUser.email) ? currentUser.email : '';
           if (!_tokenClient) {
             _tokenClient = google.accounts.oauth2.initTokenClient({
               client_id: AUTH.GOOGLE_CLIENT_ID,
               scope: 'https://www.googleapis.com/auth/spreadsheets',
+              hint: hint,
               callback: function() {}
             });
           }
@@ -2574,7 +2576,7 @@
             _saveTokenCache(resp.access_token, resp.expires_in);
             resolve(true);
           };
-          _tokenClient.requestAccessToken({ prompt: '' });
+          _tokenClient.requestAccessToken({ prompt: '', login_hint: hint });
         });
       }
 
@@ -2799,9 +2801,11 @@
           if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
             _updateUI('err', 'Google 라이브러리 없음'); if (onDone) onDone(false); return;
           }
+          var hint = (currentUser && currentUser.email) ? currentUser.email : '';
           _tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: AUTH.GOOGLE_CLIENT_ID,
             scope: 'https://www.googleapis.com/auth/spreadsheets',
+            hint: hint,
             callback: function(resp) {
               if (resp.error) { _updateUI('err'); if (onDone) onDone(false); return; }
               _saveTokenCache(resp.access_token, resp.expires_in);
@@ -2810,7 +2814,7 @@
               if (onDone) onDone(true);
             }
           });
-          _tokenClient.requestAccessToken({ prompt: '' });
+          _tokenClient.requestAccessToken({ prompt: '', login_hint: hint });
         },
 
         connect: function() {
@@ -2819,11 +2823,13 @@
           if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
             _updateUI('err'); return;
           }
+          var hint = (currentUser && currentUser.email) ? currentUser.email : '';
           var _doConnect = function(prompt) {
             if (!_tokenClient) {
               _tokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: AUTH.GOOGLE_CLIENT_ID,
                 scope: 'https://www.googleapis.com/auth/spreadsheets',
+                hint: hint,
                 callback: function() {}
               });
             }
@@ -2841,7 +2847,7 @@
               _updateUI('ok', 'Sheets 연결됨');
               GS.loadAll().then(function() { showToast('☁️ Sheets 연결됨'); });
             };
-            _tokenClient.requestAccessToken({ prompt: prompt });
+            _tokenClient.requestAccessToken({ prompt: prompt, login_hint: hint });
           };
           _doConnect('');
         },
