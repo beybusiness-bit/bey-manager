@@ -2911,11 +2911,10 @@
         </div>
       </div>
 
-      <!-- 시간표 상세 뷰 (dailyPage 안에서 탭 위에 오버레이) -->
-      <div id="scheduleDetailView" style="display:none;">
+      <!-- 시간표 상세 페이지 (독립 페이지로 전환) -->
+      <div id="scheduleDetailPage" class="page">
         <!-- 상세 헤더 -->
         <div class="sched-detail-header">
-          <button class="sched-detail-back" onclick="closeScheduleDetail()" aria-label="뒤로">←</button>
           <div class="sched-detail-title-wrap">
             <span class="sched-detail-emoji" id="detailScheduleEmoji"></span>
             <span class="sched-detail-title" id="detailScheduleTitle"></span>
@@ -2928,12 +2927,12 @@
 
         <!-- 탭 -->
         <div class="tab-nav" id="scheduleDetailTabNav">
-          <button class="tab-btn active" data-tab="grid" onclick="switchScheduleDetailTab('grid')">📅 주간</button>
+          <button class="tab-btn active" data-tab="grid" onclick="switchScheduleDetailTab('grid')">📅 주별</button>
           <button class="tab-btn" data-tab="day" onclick="switchScheduleDetailTab('day')">📆 요일별</button>
           <button class="tab-btn" data-tab="items" onclick="switchScheduleDetailTab('items')">☰ 목록</button>
         </div>
 
-        <!-- 주간 그리드 탭 -->
+        <!-- 주별 그리드 탭 -->
         <div class="sched-tab-content" data-tab="grid">
           <div id="schedDetailGridContent" style="margin-top:12px;"></div>
         </div>
@@ -4779,8 +4778,9 @@
     }
 
     function updateActiveMenu() {
+      var menuPage = currentPage === 'scheduleDetail' ? 'daily' : currentPage;
       document.querySelectorAll('.nav-item').forEach(function(item) {
-        item.classList.toggle('active', item.dataset.page === currentPage);
+        item.classList.toggle('active', item.dataset.page === menuPage);
       });
     }
 
@@ -4863,6 +4863,11 @@
     function updateMobileTopTitle() {
       const titleEl = document.getElementById('mobileTopTitle');
       if (!titleEl) return;
+      if (currentPage === 'scheduleDetail') {
+        var sch = schedules.find(function(s) { return s.id === currentDetailScheduleId; });
+        titleEl.textContent = sch ? sch.title : '시간표 상세';
+        return;
+      }
       const activePage = document.querySelector('.page.active .page-header h2');
       if (activePage) {
         titleEl.textContent = activePage.textContent.trim();
@@ -5961,11 +5966,13 @@
       scheduleDetailTab = 'grid';
       scheduleViewMode2 = 'detail';
       scheduleDraft = null;
-      document.querySelector('#dailyPage .tab-nav').style.display = 'none';
-      document.querySelectorAll('#dailyPage .tab-content').forEach(function(el) { el.style.display = 'none'; });
-      var dv = document.getElementById('scheduleDetailView');
-      if (dv) dv.style.display = 'block';
-      // 상단으로 스크롤
+      // 독립 페이지로 전환 (sessionStorage는 'daily'로 유지해 새로고침 시 목록으로 복귀)
+      currentPage = 'scheduleDetail';
+      document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+      var dp = document.getElementById('scheduleDetailPage');
+      if (dp) dp.classList.add('active');
+      updateActiveMenu();
+      updateMobileTopTitle();
       var mc = document.querySelector('.main-content');
       if (mc) mc.scrollTop = 0;
       renderScheduleDetail();
@@ -6094,10 +6101,7 @@
       currentDetailScheduleId = null;
       scheduleDraft = null;
       scheduleViewMode2 = 'detail';
-      var dv = document.getElementById('scheduleDetailView');
-      if (dv) dv.style.display = 'none';
-      document.querySelector('#dailyPage .tab-nav').style.display = '';
-      document.querySelectorAll('#dailyPage .tab-content').forEach(function(el) { el.style.display = ''; });
+      navigateTo('daily');
     }
 
     function renderScheduleDetail() {
@@ -6159,7 +6163,7 @@
       document.querySelectorAll('#scheduleDetailTabNav .tab-btn').forEach(function(btn) {
         btn.classList.toggle('active', btn.dataset.tab === scheduleDetailTab);
       });
-      document.querySelectorAll('#scheduleDetailView .sched-tab-content').forEach(function(el) {
+      document.querySelectorAll('#scheduleDetailPage .sched-tab-content').forEach(function(el) {
         el.style.display = (el.dataset.tab === scheduleDetailTab) ? 'block' : 'none';
       });
       if (scheduleDetailTab === 'grid') renderScheduleGrid();
@@ -6169,6 +6173,10 @@
 
     function switchScheduleDetailTab(tab) {
       scheduleDetailTab = tab;
+      if (tab === 'day') {
+        var dayMap = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+        scheduleDayViewDay = dayMap[new Date().getDay()];
+      }
       renderScheduleDetail();
     }
 
@@ -6292,23 +6300,16 @@
       var c = document.getElementById('schedDetailDayContent');
       if (!c) return;
 
-      // 요일 선택 탭
-      var html = '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;">';
-      WEEKDAYS_EN.forEach(function(en, i) {
-        var kr = WEEKDAYS_KR[i];
-        var isWeekend = i >= 5;
-        var isActive = (scheduleDayViewDay === en);
-        var hasItems = items.some(function(it) { return (it.weekdays || []).indexOf(en) >= 0; });
-        html += '<button onclick="selectDayViewDay(&apos;' + en + '&apos;)" style="' +
-          'padding:5px 12px;border:1px solid var(--border-color);border-radius:var(--button-radius,8px);' +
-          'font-family:inherit;font-size:13px;cursor:pointer;' +
-          'background:' + (isActive ? 'var(--primary-yellow)' : 'var(--bg-card)') + ';' +
-          'font-weight:' + (isActive ? '700' : '400') + ';' +
-          'color:' + (isWeekend ? '#e44' : (isActive ? '#333' : 'var(--text-secondary)')) + ';' +
-          'border-color:' + (isActive ? 'var(--primary-yellow)' : 'var(--border-color)') + ';' +
-          (hasItems ? '' : 'opacity:0.45;') +
-          '">' + kr + '</button>';
-      });
+      var curIdx = WEEKDAYS_EN.indexOf(scheduleDayViewDay);
+      var prevIdx = (curIdx - 1 + 7) % 7;
+      var nextIdx = (curIdx + 1) % 7;
+      var isWeekend = curIdx >= 5;
+
+      // ← 요일명 → 네비게이터
+      var html = '<div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:16px;">';
+      html += '<button onclick="selectDayViewDay(&apos;' + WEEKDAYS_EN[prevIdx] + '&apos;)" style="background:none;border:1px solid var(--border-color);border-radius:var(--button-radius,8px);width:36px;height:36px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">←</button>';
+      html += '<span style="font-size:20px;font-weight:700;min-width:60px;text-align:center;color:' + (isWeekend ? '#e44' : 'var(--text-primary)') + ';">' + WEEKDAYS_KR[curIdx] + '요일</span>';
+      html += '<button onclick="selectDayViewDay(&apos;' + WEEKDAYS_EN[nextIdx] + '&apos;)" style="background:none;border:1px solid var(--border-color);border-radius:var(--button-radius,8px);width:36px;height:36px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">→</button>';
       html += '</div>';
 
       // 선택된 요일의 아이템
@@ -6326,7 +6327,7 @@
       var nowMin = now.getHours() * 60 + now.getMinutes();
       var nowTop = (nowMin >= gridStart && nowMin <= gridEnd) ? (nowMin - gridStart) / 30 * SLOT_HEIGHT : -1;
 
-      // 단일 요일 그리드 (넓게)
+      // 단일 요일 그리드
       html += '<div class="sched-grid-outer"><div class="sched-grid-wrap">';
       html += '<div class="sched-body"><div class="sched-time-gutter">';
       for (var t = gridStart; t < gridEnd; t += 30) {
@@ -6334,20 +6335,16 @@
         html += '<div class="sched-time-slot-label' + (isH ? ' hour' : '') + '">' + (isH ? minToTimeStr(t) : '') + '</div>';
       }
       html += '</div>';
-      html += '<div style="flex:1;position:relative;height:' + totalHeight + 'px;">';
+      html += '<div id="schedDayGridContent" style="flex:1;position:relative;height:' + totalHeight + 'px;" data-gridstart="' + gridStart + '">';
       // 배경 슬롯
       html += '<div style="position:absolute;inset:0;">';
       for (var s = 0; s < totalSlots; s++) {
         var slotMin = gridStart + s * 30;
         var cellClass = 'sched-bg-slot' + ((slotMin % 60 === 0) ? ' hour' : '');
-        if (isEdit) {
-          html += '<div class="' + cellClass + ' sched-empty-cell" style="width:100%;" onclick="onGridCellClick(&apos;' + scheduleDayViewDay + '&apos;,' + slotMin + ')"></div>';
-        } else {
-          html += '<div class="' + cellClass + '" style="width:100%;"></div>';
-        }
+        html += '<div class="' + cellClass + '" style="width:100%;"></div>';
       }
       html += '</div>';
-      // 아이템 블록 (오버레이)
+      // 아이템 블록
       html += '<div style="position:absolute;inset:0;pointer-events:none;">';
       dayItems.forEach(function(item) {
         var act = activities.find(function(a) { return a.id === item.activityId; });
@@ -6367,20 +6364,80 @@
       });
       html += '</div>';
       if (nowTop >= 0) html += '<div class="sched-now-line" style="top:' + nowTop + 'px;"></div>';
+      // 드래그 오버레이 (편집 모드)
+      if (isEdit) {
+        html += '<div id="schedDayDragOverlay" style="position:absolute;inset:0;cursor:crosshair;z-index:5;"></div>';
+        html += '<div id="schedDayDragPreview" style="display:none;position:absolute;pointer-events:none;z-index:6;border-radius:4px;border-left:3px solid var(--primary-yellow);background:rgba(255,222,89,0.35);left:2px;right:2px;"></div>';
+      }
       html += '</div></div></div></div>';
 
-      if (dayItems.length === 0) {
-        html += '<div style="text-align:center;color:var(--text-tertiary);padding:24px 0;font-size:13px;">이 요일에 등록된 일정이 없습니다</div>';
-      }
       if (isEdit) {
         html += '<div style="margin-top:14px;text-align:center;"><button class="btn-add" onclick="onGridCellClick(&apos;' + scheduleDayViewDay + '&apos;,' + (8*60) + ')">+ 일정 추가</button></div>';
       }
       c.innerHTML = html;
+      if (isEdit) initDayGridDrag(gridStart);
     }
 
     function selectDayViewDay(en) {
       scheduleDayViewDay = en;
       renderScheduleDayView();
+    }
+
+    function initDayGridDrag(gridStart) {
+      var overlay = document.getElementById('schedDayDragOverlay');
+      var preview = document.getElementById('schedDayDragPreview');
+      var content = document.getElementById('schedDayGridContent');
+      if (!overlay || !preview || !content) return;
+
+      var dragging = false, dragStartMin = 0, dragEndMin = 0;
+
+      function yToMin(clientY) {
+        var rect = content.getBoundingClientRect();
+        var slotIdx = Math.max(0, Math.floor((clientY - rect.top) / SLOT_HEIGHT));
+        return gridStart + slotIdx * 30;
+      }
+
+      function updatePreview(startMin, endMin) {
+        var top = (startMin - gridStart) / 30 * SLOT_HEIGHT;
+        var h = Math.max(SLOT_HEIGHT, (endMin - startMin) / 30 * SLOT_HEIGHT);
+        preview.style.cssText = 'display:block;position:absolute;pointer-events:none;z-index:6;' +
+          'border-radius:4px;border-left:3px solid var(--primary-yellow);background:rgba(255,222,89,0.35);' +
+          'left:2px;right:2px;top:' + top + 'px;height:' + h + 'px;';
+        var existing = preview.querySelector('.grid-drag-tooltip');
+        var tip = existing || document.createElement('div');
+        tip.className = 'grid-drag-tooltip';
+        tip.textContent = minToTimeStr(startMin) + ' – ' + minToTimeStr(endMin);
+        if (!existing) preview.appendChild(tip);
+      }
+
+      overlay.addEventListener('mousedown', function(e) {
+        if (e.button !== 0) return;
+        dragging = true;
+        dragStartMin = yToMin(e.clientY);
+        dragEndMin = Math.min(24 * 60, dragStartMin + 30);
+        updatePreview(dragStartMin, dragEndMin);
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', function(e) {
+        if (!dragging) return;
+        dragEndMin = Math.min(24 * 60, Math.max(dragStartMin + 30, yToMin(e.clientY) + 30));
+        updatePreview(dragStartMin, dragEndMin);
+      }, { passive: true });
+
+      document.addEventListener('mouseup', function(e) {
+        if (!dragging) return;
+        dragging = false;
+        preview.style.display = 'none';
+        var start = dragStartMin, end = dragEndMin;
+        if (end <= start) end = start + 30;
+        addItemPrefill = {
+          weekday: scheduleDayViewDay,
+          startTime: minToTimeStr(start),
+          endTime: minToTimeStr(Math.min(24 * 60, end))
+        };
+        openScheduleItemForm(null);
+      });
     }
 
     function initGridDrag(gridStart) {
