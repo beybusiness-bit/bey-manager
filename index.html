@@ -790,6 +790,26 @@
       border-color: var(--text-secondary);
     }
 
+    /* Google Sheets 연동 패널 */
+    .gs-panel { padding: 10px 16px 0; border-top: 1px solid var(--border-color); }
+    .gs-status { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
+    .gs-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #ccc; transition: background .3s; }
+    .gs-dot.ok { background: #2a7a00; }
+    .gs-dot.err { background: #c00; }
+    .gs-dot.sync { background: #c8a800; animation: gsPulse .8s infinite; }
+    @keyframes gsPulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+    .gs-label { flex: 1; color: var(--text-secondary); font-size: 10px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gs-btn { width: 100%; padding: 5px 0; font-size: 11px; border-radius: 6px; cursor: pointer; border: 1px solid var(--border-color); background: transparent; margin-bottom: 4px; }
+    .gs-btn.connect { border-color: var(--primary-yellow); background: var(--primary-yellow); font-weight: 600; }
+    .gs-btn.connect:hover { opacity: .85; }
+    .gs-btn.disconnect { color: #999; }
+    .gs-btn.disconnect:hover { color: #c00; border-color: #c00; }
+    /* 토스트 알림 */
+    #gs-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(8px); background: #333; color: #fff; padding: 8px 18px; border-radius: 8px; font-size: 13px; z-index: 9999; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; white-space: nowrap; max-width: 90vw; text-overflow: ellipsis; overflow: hidden; }
+    #gs-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #gs-toast.warning { background: #a07800; }
+    #gs-toast.error { background: #c00; }
+
     /* 메인 콘텐츠 */
     .main-content {
       margin-left: var(--nav-width);
@@ -2770,11 +2790,27 @@
         <!-- 동적으로 생성 -->
       </nav>
 
+      <!-- Google Sheets 연동 패널 -->
+      <div class="gs-panel" id="gs-panel">
+        <div class="gs-status">
+          <div class="gs-dot" id="gs-dot"></div>
+          <div class="gs-label" id="gs-label">Sheets 미연결</div>
+        </div>
+        <div id="gs-setup">
+          <button class="gs-btn connect" onclick="GS.connect()">☁️ Sheets 연결</button>
+        </div>
+        <div id="gs-connected" style="display:none">
+          <button class="gs-btn disconnect" onclick="GS.disconnect()">연결 해제</button>
+        </div>
+      </div>
+
       <div class="sidebar-footer">
-        <div id="sheetsStatusBadge" style="font-size:11px;text-align:center;padding:4px 0;opacity:0.7;"></div>
         <button class="btn-logout" onclick="handleLogout()">로그아웃</button>
       </div>
     </aside>
+
+    <!-- 토스트 알림 -->
+    <div id="gs-toast"></div>
 
     <!-- 메인 콘텐츠 -->
     <main class="main-content">
@@ -4235,13 +4271,11 @@
 
       showApp();
 
-      // Sheets 연동: access_token 별도 획득 → 탭 생성/로드
-      initSheetsAccess(function(ok) {
-        if (!ok) { updateSheetsStatus(false); return; }
-        sheetsLoadAll().then(function(loaded) {
-          if (loaded) {
-            renderCurrentScheduleView();
-          }
+      // Sheets 연동: access_token 획득 → 탭 생성/전체 로드
+      GS.init(function(ok) {
+        if (!ok) { GS.updateUI('err'); return; }
+        GS.loadAll().then(function(loaded) {
+          if (loaded) renderCurrentScheduleView();
         });
       });
     }
@@ -4318,6 +4352,7 @@
 
     function saveMyEmojis() {
       localStorage.setItem('myEmojis', JSON.stringify(myEmojis));
+      GS.syncSheets(['사용자설정']);
     }
 
     function renderEmoji(val) {
@@ -4654,6 +4689,7 @@
 
     function saveMenus() {
       localStorage.setItem('menus', JSON.stringify(menus));
+      GS.syncSheets(['사용자설정']);
     }
 
     function loadFavorites() {
@@ -5109,6 +5145,7 @@
 
     function saveCategories() {
       localStorage.setItem('categories', JSON.stringify(categories));
+      GS.syncSheets(['카테고리']);
     }
 
     function generateId() {
@@ -5354,6 +5391,7 @@
 
     function saveActivities() {
       localStorage.setItem('activities', JSON.stringify(activities));
+      GS.syncSheets(['일상종류']);
     }
 
     function addActivityInline() {
@@ -5618,172 +5656,251 @@
     function saveSchedules() {
       localStorage.setItem('schedules', JSON.stringify(schedules));
       localStorage.setItem('scheduleItems', JSON.stringify(scheduleItems));
-      if (sheetsEnabled) sheetsSaveAll(); // 비동기 Sheets 동기화
+      GS.syncSheets(['시간표', '시간표_일정']);
     }
 
     // ========================================
     // 16단계 — Google Sheets 연동
     // ========================================
-    var sheetsToken = null;
-    var sheetsEnabled = false;
-    var sheetsTokenClient = null;
-    var SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets/' + AUTH.SHEET_ID;
+    // ── Google Sheets 연동 (GS 객체) ──
+    var GS = (function() {
+      var _token = null;
+      var _tokenExpiry = 0;
+      var _tokenClient = null;
+      var _syncing = false;
+      var BASE = 'https://sheets.googleapis.com/v4/spreadsheets/' + AUTH.SHEET_ID;
 
-    // ① 로그인 후 Sheets API용 access_token 획득 (id_token과 별도)
-    function initSheetsAccess(callback) {
-      if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
-        console.warn('[Sheets] google.accounts.oauth2 없음 — Sheets 비활성화');
-        if (callback) callback(false);
-        return;
-      }
-      try {
-        sheetsTokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: AUTH.GOOGLE_CLIENT_ID,
-          scope: 'https://www.googleapis.com/auth/spreadsheets',
-          callback: function(resp) {
-            if (resp.error) {
-              console.warn('[Sheets] 토큰 오류:', resp.error);
-              if (callback) callback(false);
-              return;
-            }
-            sheetsToken = resp.access_token;
-            sheetsEnabled = true;
-            console.log('[Sheets] ✅ access_token 획득');
-            if (callback) callback(true);
-          }
-        });
-        // prompt:'' = 기존 동의 있으면 팝업 없이 자동. 첫 사용 시엔 실패 → 버튼 표시
-        sheetsTokenClient.requestAccessToken({ prompt: '' });
-      } catch (e) {
-        console.warn('[Sheets] initTokenClient 실패:', e);
-        if (callback) callback(false);
-      }
-    }
-
-    // 사용자가 직접 클릭 → consent 팝업 허용
-    function connectSheets() {
-      if (!sheetsTokenClient) return;
-      sheetsTokenClient.callback = function(resp) {
-        if (resp.error) { console.warn('[Sheets] 연결 실패:', resp.error); return; }
-        sheetsToken = resp.access_token;
-        sheetsEnabled = true;
-        updateSheetsStatus(true);
-        sheetsLoadAll().then(function(loaded) {
-          if (loaded) renderCurrentScheduleView();
-        });
+      var SHEETS_DEF = {
+        '시간표':    ['id','emoji','title','description','tags','isLiked','createdAt','updatedAt'],
+        '시간표_일정': ['id','scheduleId','activityId','weekdays','startTime','endTime','createdAt'],
+        '카테고리':  ['id','emoji','name','active','createdAt'],
+        '일상종류':  ['id','categoryId','emoji','name','color','active','createdAt'],
+        '사용자설정': ['key','value']
       };
-      sheetsTokenClient.requestAccessToken({ prompt: 'consent' });
-    }
 
-    // ② Sheets API 공통 fetch 헬퍼
-    async function sheetsReq(method, path, body) {
-      if (!sheetsEnabled || !sheetsToken) return null;
-      try {
-        var opts = {
-          method: method,
-          headers: { 'Authorization': 'Bearer ' + sheetsToken, 'Content-Type': 'application/json' }
-        };
-        if (body !== undefined) opts.body = JSON.stringify(body);
-        var r = await fetch(SHEETS_BASE + path, opts);
-        if (r.status === 401) { sheetsEnabled = false; sheetsToken = null; console.warn('[Sheets] 토큰 만료'); return null; }
-        return await r.json();
-      } catch (e) { console.warn('[Sheets] 요청 실패:', e); return null; }
-    }
-
-    // ③ 시트 탭 존재 확인 + 없으면 자동 생성 + 헤더 입력
-    async function sheetsEnsureTabs() {
-      var meta = await sheetsReq('GET', '?fields=sheets.properties.title');
-      if (!meta || !meta.sheets) return false;
-      var existing = meta.sheets.map(function(s) { return s.properties.title; });
-
-      var toCreate = [];
-      if (existing.indexOf('시간표') < 0) toCreate.push({ addSheet: { properties: { title: '시간표' } } });
-      if (existing.indexOf('시간표_일정') < 0) toCreate.push({ addSheet: { properties: { title: '시간표_일정' } } });
-
-      if (toCreate.length > 0) {
-        console.log('[Sheets] 탭 생성:', toCreate.map(function(r) { return r.addSheet.properties.title; }));
-        await sheetsReq('POST', ':batchUpdate', { requests: toCreate });
+      function colLetter(n) {
+        var s = '';
+        while (n > 0) { var r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = Math.floor((n - 1) / 26); }
+        return s;
       }
 
-      // 헤더 기록 (기존 헤더 있어도 덮어써도 무방)
-      var schHead = [['id','emoji','title','description','tags','isLiked','createdAt','updatedAt']];
-      var itemHead = [['id','scheduleId','activityId','weekdays','startTime','endTime','createdAt']];
-      await sheetsReq('PUT', '/values/' + encodeURIComponent('시간표!A1:H1') + '?valueInputOption=RAW', { values: schHead });
-      await sheetsReq('PUT', '/values/' + encodeURIComponent('시간표_일정!A1:G1') + '?valueInputOption=RAW', { values: itemHead });
-      return true;
-    }
+      function _isConnected() { return !!_token && Date.now() < _tokenExpiry; }
 
-    // ④ Sheets에서 데이터 로드 (로그인 직후 1회)
-    async function sheetsLoadAll() {
-      var ok = await sheetsEnsureTabs();
-      if (!ok) return false;
-
-      var schResp = await sheetsReq('GET', '/values/' + encodeURIComponent('시간표!A:H'));
-      var itemResp = await sheetsReq('GET', '/values/' + encodeURIComponent('시간표_일정!A:G'));
-
-      var schRows = ((schResp && schResp.values) || []).slice(1).filter(function(r) { return r && r[0]; });
-      var itemRows = ((itemResp && itemResp.values) || []).slice(1).filter(function(r) { return r && r[0]; });
-
-      if (schRows.length > 0) {
-        // Sheets에 데이터 있음 → Sheets 기준으로 덮어쓰기
-        schedules = schRows.map(function(r) {
-          return { id: r[0], emoji: r[1] || '📅', title: r[2] || '',
-            description: r[3] || '', tags: r[4] ? r[4].split(',').filter(Boolean) : [],
-            isLiked: r[5] === 'TRUE', createdAt: r[6] || today(), updatedAt: r[7] || today() };
-        });
-        scheduleItems = itemRows.map(function(r) {
-          return { id: r[0], scheduleId: r[1], activityId: r[2],
-            weekdays: r[3] ? r[3].split(',').filter(Boolean) : [],
-            startTime: r[4] || '09:00', endTime: r[5] || '10:00', createdAt: r[6] || today() };
-        });
-        localStorage.setItem('schedules', JSON.stringify(schedules));
-        localStorage.setItem('scheduleItems', JSON.stringify(scheduleItems));
-        console.log('[Sheets] ✅ 로드 완료 — 시간표 ' + schedules.length + '개, 일정 ' + scheduleItems.length + '개');
-      } else {
-        // Sheets 비어있음 → 로컬 데이터를 Sheets로 자동 이관
-        console.log('[Sheets] 시트 비어있음 — localStorage 데이터 이관 중...');
-        await sheetsSaveAll();
-        console.log('[Sheets] ✅ 이관 완료');
+      function _updateUI(state, msg) {
+        var dot = document.getElementById('gs-dot');
+        var lbl = document.getElementById('gs-label');
+        var setup = document.getElementById('gs-setup');
+        var conn = document.getElementById('gs-connected');
+        if (!dot) return;
+        dot.className = 'gs-dot' + (state ? ' ' + state : '');
+        if (lbl) lbl.textContent = msg || (state === 'ok' ? '연결됨' : state === 'err' ? '연결 실패 — 재연결 필요' : state === 'sync' ? '동기화 중...' : 'Sheets 미연결');
+        if (state === 'ok') { if (setup) setup.style.display = 'none'; if (conn) conn.style.display = 'block'; }
+        else if (state === 'sync') { if (setup) setup.style.display = 'none'; if (conn) conn.style.display = 'none'; }
+        else { if (setup) setup.style.display = 'block'; if (conn) conn.style.display = 'none'; }
       }
-      updateSheetsStatus(true);
-      return true;
-    }
 
-    // ⑤ 전체 덮어쓰기 저장 (localStorage 변경 시 항상 호출)
-    async function sheetsSaveAll() {
-      if (!sheetsEnabled) return;
-      var schRows = [['id','emoji','title','description','tags','isLiked','createdAt','updatedAt']];
-      schedules.forEach(function(s) {
-        schRows.push([s.id, s.emoji || '', s.title || '', s.description || '',
-          (s.tags || []).join(','), s.isLiked ? 'TRUE' : 'FALSE', s.createdAt || '', s.updatedAt || '']);
-      });
-      var itemRows = [['id','scheduleId','activityId','weekdays','startTime','endTime','createdAt']];
-      scheduleItems.forEach(function(i) {
-        itemRows.push([i.id, i.scheduleId, i.activityId,
-          (i.weekdays || []).join(','), i.startTime || '', i.endTime || '', i.createdAt || '']);
-      });
-      // 클리어 후 전체 재기록 (localStorage가 백업이므로 안전)
-      await sheetsReq('POST', '/values/' + encodeURIComponent('시간표') + ':clear', {});
-      await sheetsReq('POST', '/values/' + encodeURIComponent('시간표_일정') + ':clear', {});
-      await sheetsReq('PUT', '/values/' + encodeURIComponent('시간표!A1') + '?valueInputOption=RAW', { values: schRows });
-      await sheetsReq('PUT', '/values/' + encodeURIComponent('시간표_일정!A1') + '?valueInputOption=RAW', { values: itemRows });
-    }
+      async function _api(method, path, body) {
+        if (!_token) return null;
+        try {
+          var opts = { method: method, headers: { 'Authorization': 'Bearer ' + _token, 'Content-Type': 'application/json' } };
+          if (body !== undefined) opts.body = JSON.stringify(body);
+          var r = await fetch(BASE + path, opts);
+          if (r.status === 401) {
+            _token = null; _tokenExpiry = 0;
+            _updateUI('err', '토큰 만료 — 재연결 필요');
+            showToast('Sheets 토큰 만료. 재연결해주세요', 'warning');
+            return null;
+          }
+          var json = await r.json();
+          if (json && json.error) { console.warn('[GS] API 오류:', json.error.message); }
+          return json;
+        } catch (e) { console.warn('[GS] 요청 실패:', e); return null; }
+      }
 
-    // ⑥ 상태 표시 (사이드바 하단 뱃지)
-    function updateSheetsStatus(ok) {
-      var el = document.getElementById('sheetsStatusBadge');
+      async function _ensureTabs() {
+        var meta = await _api('GET', '?fields=sheets.properties.title');
+        if (!meta || !meta.sheets) return false;
+        var existing = meta.sheets.map(function(s) { return s.properties.title; });
+        var toCreate = Object.keys(SHEETS_DEF).filter(function(n) { return existing.indexOf(n) < 0; });
+        if (toCreate.length > 0) {
+          await _api('POST', ':batchUpdate', { requests: toCreate.map(function(n) { return { addSheet: { properties: { title: n } } }; }) });
+        }
+        for (var name in SHEETS_DEF) {
+          var cols = SHEETS_DEF[name];
+          await _api('PUT', '/values/' + encodeURIComponent(name + '!A1:' + colLetter(cols.length) + '1') + '?valueInputOption=RAW', { values: [cols] });
+        }
+        return true;
+      }
+
+      function _getRows(name) {
+        switch (name) {
+          case '시간표':
+            return schedules.map(function(s) {
+              return [s.id, s.emoji||'', s.title||'', s.description||'', (s.tags||[]).join(','), s.isLiked?'TRUE':'FALSE', s.createdAt||'', s.updatedAt||''];
+            });
+          case '시간표_일정':
+            return scheduleItems.map(function(i) {
+              return [i.id, i.scheduleId, i.activityId, (i.weekdays||[]).join(','), i.startTime||'', i.endTime||'', i.createdAt||''];
+            });
+          case '카테고리':
+            return categories.map(function(c) {
+              return [c.id, c.emoji||'', c.name||'', c.active!==false?'TRUE':'FALSE', c.createdAt||''];
+            });
+          case '일상종류':
+            return activities.map(function(a) {
+              return [a.id, a.categoryId||'', a.emoji||'', a.name||'', a.color||'#ffde59', a.active!==false?'TRUE':'FALSE', a.createdAt||''];
+            });
+          case '사용자설정':
+            var pairs = [
+              ['profileQuote', profileQuote || ''],
+              ['designSettings', JSON.stringify(designSettings || {})],
+              ['myEmojis', JSON.stringify(myEmojis || [])],
+              ['menus', JSON.stringify(menus || [])]
+            ];
+            if (profilePhoto && profilePhoto.length < 45000) pairs.push(['profilePhoto', profilePhoto]);
+            return pairs;
+          default: return [];
+        }
+      }
+
+      async function _writeSheet(name) {
+        var cols = SHEETS_DEF[name];
+        var rows = [cols].concat(_getRows(name));
+        await _api('POST', '/values/' + encodeURIComponent(name) + ':clear', {});
+        await _api('PUT', '/values/' + encodeURIComponent(name + '!A1') + '?valueInputOption=RAW', { values: rows });
+      }
+
+      async function _loadAll() {
+        var ok = await _ensureTabs();
+        if (!ok) return false;
+
+        var results = {};
+        for (var name in SHEETS_DEF) {
+          var cols = SHEETS_DEF[name];
+          var resp = await _api('GET', '/values/' + encodeURIComponent(name + '!A:' + colLetter(cols.length)));
+          results[name] = ((resp && resp.values) || []).slice(1).filter(function(r) { return r && r[0]; });
+        }
+
+        // 시간표
+        if (results['시간표'].length > 0) {
+          schedules = results['시간표'].map(function(r) {
+            return { id:r[0], emoji:r[1]||'📅', title:r[2]||'', description:r[3]||'', tags:r[4]?r[4].split(',').filter(Boolean):[], isLiked:r[5]==='TRUE', createdAt:r[6]||today(), updatedAt:r[7]||today() };
+          });
+          scheduleItems = results['시간표_일정'].map(function(r) {
+            return { id:r[0], scheduleId:r[1], activityId:r[2], weekdays:r[3]?r[3].split(',').filter(Boolean):[], startTime:r[4]||'09:00', endTime:r[5]||'10:00', createdAt:r[6]||today() };
+          });
+          localStorage.setItem('schedules', JSON.stringify(schedules));
+          localStorage.setItem('scheduleItems', JSON.stringify(scheduleItems));
+        } else { await _writeSheet('시간표'); await _writeSheet('시간표_일정'); }
+
+        // 카테고리
+        if (results['카테고리'].length > 0) {
+          categories = results['카테고리'].map(function(r) {
+            return { id:r[0], emoji:r[1]||'', name:r[2]||'', active:r[3]!=='FALSE', createdAt:r[4]||today() };
+          });
+          localStorage.setItem('categories', JSON.stringify(categories));
+        } else { await _writeSheet('카테고리'); }
+
+        // 일상종류
+        if (results['일상종류'].length > 0) {
+          activities = results['일상종류'].map(function(r) {
+            return { id:r[0], categoryId:r[1]||'', emoji:r[2]||'', name:r[3]||'', color:r[4]||'#ffde59', active:r[5]!=='FALSE', createdAt:r[6]||today() };
+          });
+          localStorage.setItem('activities', JSON.stringify(activities));
+        } else { await _writeSheet('일상종류'); }
+
+        // 사용자설정
+        if (results['사용자설정'].length > 0) {
+          var sm = {};
+          results['사용자설정'].forEach(function(r) { sm[r[0]] = r[1] || ''; });
+          if (sm['profileQuote'] !== undefined) { profileQuote = sm['profileQuote']; localStorage.setItem('profileQuote', profileQuote); }
+          if (sm['designSettings']) {
+            try { designSettings = Object.assign({}, DESIGN_DEFAULTS, JSON.parse(sm['designSettings'])); localStorage.setItem('designSettings', JSON.stringify(designSettings)); applyDesignSettings(); } catch(e) {}
+          }
+          if (sm['myEmojis']) { try { myEmojis = JSON.parse(sm['myEmojis']); localStorage.setItem('myEmojis', JSON.stringify(myEmojis)); } catch(e) { myEmojis = []; } }
+          if (sm['menus']) { try { menus = JSON.parse(sm['menus']); localStorage.setItem('menus', JSON.stringify(menus)); renderSidebar(); } catch(e) {} }
+          if (sm['profilePhoto']) { profilePhoto = sm['profilePhoto']; localStorage.setItem('profilePhoto', profilePhoto); }
+        } else { await _writeSheet('사용자설정'); }
+
+        console.log('[GS] ✅ 전체 로드 완료');
+        _updateUI('ok', '연결됨');
+        return true;
+      }
+
+      // 공개 API
+      return {
+        isConnected: function() { return _isConnected(); },
+        updateUI: _updateUI,
+
+        syncSheets: async function(names) {
+          if (!_isConnected()) {
+            showToast('⚠️ Sheets 미연결 — 로컬에만 저장됩니다', 'warning');
+            return;
+          }
+          if (_syncing) return;
+          _syncing = true;
+          _updateUI('sync', '저장 중...');
+          try {
+            for (var i = 0; i < names.length; i++) { await _writeSheet(names[i]); }
+            _updateUI('ok', '연결됨');
+          } catch (e) {
+            console.error('[GS] sync 오류:', e);
+            showToast('Sheets 동기화 실패: ' + e.message, 'error');
+            _updateUI('ok', '연결됨 (동기화 오류)');
+          } finally { _syncing = false; }
+        },
+
+        init: function(onDone) {
+          if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
+            _updateUI('err', 'Google 라이브러리 없음'); return;
+          }
+          _tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: AUTH.GOOGLE_CLIENT_ID,
+            scope: 'https://www.googleapis.com/auth/spreadsheets',
+            callback: function(resp) {
+              if (resp.error) { _updateUI('err'); if (onDone) onDone(false); return; }
+              _token = resp.access_token;
+              _tokenExpiry = Date.now() + ((resp.expires_in || 3600) - 60) * 1000;
+              console.log('[GS] ✅ 토큰 획득');
+              if (onDone) onDone(true);
+            }
+          });
+          _tokenClient.requestAccessToken({ prompt: '' });
+        },
+
+        connect: function() {
+          if (!_tokenClient) { GS.init(function(ok) { if (ok) GS.loadAll(); }); return; }
+          _updateUI('sync', '연결 중...');
+          _tokenClient.callback = function(resp) {
+            if (resp.error) { _updateUI('err'); showToast('Sheets 연결 실패: ' + resp.error, 'error'); return; }
+            _token = resp.access_token;
+            _tokenExpiry = Date.now() + ((resp.expires_in || 3600) - 60) * 1000;
+            GS.loadAll().then(function() { showToast('☁️ Sheets 연결 완료'); });
+          };
+          _tokenClient.requestAccessToken({ prompt: 'consent' });
+        },
+
+        disconnect: function() {
+          if (!confirm('Sheets 연결을 해제할까요?\n(데이터는 로컬에 유지됩니다)')) return;
+          _token = null; _tokenExpiry = 0;
+          _updateUI('', 'Sheets 미연결');
+          showToast('Sheets 연결 해제됨', 'warning');
+        },
+
+        loadAll: function() { return _loadAll(); }
+      };
+    })();
+
+    // 경량 토스트 알림
+    var _toastTimer = null;
+    function showToast(msg, type) {
+      var el = document.getElementById('gs-toast');
       if (!el) return;
-      if (ok) {
-        el.innerHTML = '☁️ Sheets 연결됨';
-        el.style.color = '#2a9d2a';
-        el.style.cursor = 'default';
-        el.onclick = null;
-      } else {
-        el.innerHTML = '<button onclick="connectSheets()" style="background:none;border:1px solid #c00;border-radius:6px;color:#c00;font-size:11px;padding:2px 8px;cursor:pointer;">☁️ Sheets 연결</button>';
-        el.style.color = '';
-        el.style.cursor = '';
-        el.onclick = null;
-      }
+      if (_toastTimer) clearTimeout(_toastTimer);
+      el.textContent = msg;
+      el.className = type ? type : '';
+      el.classList.add('show');
+      _toastTimer = setTimeout(function() { el.classList.remove('show'); }, 3000);
     }
 
     function addSchedule() {
@@ -7487,7 +7604,7 @@
       
       localStorage.setItem('profilePhoto', profilePhoto);
       localStorage.setItem('profileQuote', profileQuote);
-      
+      GS.syncSheets(['사용자설정']);
       updateProfileDisplay();
       showAlert('저장 완료', '프로필이 저장되었습니다.');
     }
@@ -7568,6 +7685,7 @@
 
     function saveDesignSettings() {
       localStorage.setItem('designSettings', JSON.stringify(designSettings));
+      GS.syncSheets(['사용자설정']);
     }
 
     function applyDesignSettings() {
