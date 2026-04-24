@@ -383,7 +383,14 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
       - **태그 수정 UI** — 칩 방식 + 타이핑 자동완성 드롭다운 (Enter/클릭 추가, × 삭제)
       - **요일별 보기 탭** — 주간·요일별·목록 탭 3개로 확장, 요일 버튼 + 단일 컬럼 그리드
       - **드래그 일정 추가** — 주간 그리드 편집 모드에서 드래그로 시간 범위 선택 후 모달 열림
-- [ ] 16단계: Google Sheets 연동 — 시간표 데이터 실제 저장/불러오기 🔲 **(홈 대시보드보다 우선)**
+- [x] 16단계: Google Sheets 연동 — 전체 데이터 저장/불러오기 ✅
+  - GS 객체 (IIFE) + `_loadAll` / `_writeSheet` / `syncSheets` 구조
+  - 5개 시트: 시간표, 시간표_일정, 카테고리, 일상종류, 사용자설정
+  - 저장 시 localStorage + Sheets 동시 기록, 로드 시 Sheets 우선 → localStorage 폴백
+  - 사이드바 하단: 상태 dot(초록/빨강/노랑), 연결 이메일, ☁️연결/해제/로그아웃 버튼
+  - 새로고침 후 sessionStorage 토큰 캐시로 즉시 재연결 (팝업 없음)
+  - 프로필 사진 Canvas 자동 압축 (최대 200×200px, 40,000자 이하 JPEG)
+- [ ] 17단계: 홈 대시보드 위젯 🔲
 
 ### Phase 5 내 곁가지 개선 (15단계 진행 중 반영됨)
 - [x] 사이드바 접기 버튼을 사이드바 안쪽 우상단으로 이동 (position: fixed로 자동 스티키)
@@ -407,6 +414,12 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 - [x] **(2026-04-24 세션)** 태그 필터 바: 썸네일뷰·목록뷰 공통, 칩 클릭 다중선택(AND 조건), 개수 표시, 태그 없으면 숨김
 - [x] **(2026-04-24 세션)** 주간 그리드 블록 내부 중앙 정렬 (이모지·이름·시간 모두)
 - [x] **(2026-04-24 세션)** git 로컬 프록시 403 우회 — `~/.git-credentials`의 토큰으로 GitHub 직접 push 성공 (`git push https://TOKEN@github.com/...`)
+- [x] **(이번 세션)** 일상·카테고리 카드 일괄 선택/삭제 (전체선택·선택해제·선택삭제, btn-icon 스타일 통일)
+- [x] **(이번 세션)** 시간표 일정 추가 드롭다운에서 인라인 일상 추가 (이모지·카테고리·색상 모두 지정 가능)
+- [x] **(이번 세션)** 삭제 확인 모달에 의존성 목록 표시 (일상 삭제 → 사용 중인 시간표 / 카테고리 삭제 → 소속 일상)
+- [x] **(이번 세션)** 시간표 삭제 메시지에서 "포함된 일정도 함께 삭제됩니다" 제거
+- [x] **(이번 세션)** 이모지 피커 z-index 1400으로 상향 (scheduleItemModal 1200 위로)
+- [x] **(이번 세션)** 프로필 사진 Canvas 자동 압축 (최대 200×200px / JPEG / 40,000자 이하, 결과 크기 안내)
 
 ### Phase 6: 리팩토링 (후순위)
 - [ ] R1단계: `USER_EMAIL` → `ALLOWED_EMAILS` 배열로 리팩토링 🔲 (15단계 이후)
@@ -417,44 +430,31 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 
 ## 8. DB 구조 (Sheets 시트 구성)
 
-> 현재는 모두 localStorage에만 저장. 추후 Sheets로 이관 예정.
-> 아래 헤더는 localStorage 키와 Sheets 헤더를 동시에 설계한 것.
+> **현재 Sheets 연동 완료.** localStorage + Sheets 동시 저장, 로드 시 Sheets 우선.
 
 ### 시트1: 카테고리
 - 헤더: `id, emoji, name, active, createdAt`
 
 ### 시트2: 일상종류
-- 헤더: `id, categoryId, emoji, name, active, createdAt`
+- 헤더: `id, categoryId, emoji, name, color, active, createdAt`
+- `color`: 대표 색상 (기본 `#ffde59`)
 
 ### 시트3: 시간표
-- 헤더: `id, title, tags, isPrimary, createdAt, updatedAt`
+- 헤더: `id, emoji, title, description, tags, isLiked, createdAt, updatedAt`
 
 ### 시트4: 시간표_일정
 - 헤더: `id, scheduleId, activityId, weekdays, startTime, endTime, createdAt`
-- `weekdays`: "MON,TUE,WED" 같은 CSV 형태 (또는 JSON 배열 스트링)
+- `weekdays`: "MON,TUE,WED" CSV 형태
 - `startTime`, `endTime`: "HH:MM" 24시간 포맷
 
 ### 시트5: 사용자설정
 - 헤더: `key, value`
-- 초기 키 목록:
-  - `googleEmail` | (OAuth 로그인 시 저장)
-  - `googleName` | (OAuth 로그인 시 저장)
-  - `googlePicture` | (OAuth 프로필 사진 URL)
-  - `profilePhoto` | (사용자 업로드 사진 - base64)
-  - `profileQuote` | 오늘도 화이팅! ✨
-  - `primaryColor` | #ffde59
-  - `sidebarBg` | #fafafa
-  - `fontFamily` | 'Noto Sans KR', sans-serif
-  - `navWidth` | 220
-  - `buttonRadius` | 8
-
-### localStorage → Sheets 데이터 마이그레이션 전략 (향후)
-
-1. 먼저 Sheets API 헬퍼 함수 (`fetchSheetData`, `appendSheetData`) 완성
-2. 앱 로드 시 **Sheets 우선 → 실패 시 localStorage 폴백** 패턴
-3. 저장 시 **Sheets + localStorage 동시 기록** (이중화 기간)
-4. 안정화되면 localStorage는 캐시 용도로만 사용 (오프라인 지원)
-5. 기존 localStorage 데이터 일괄 업로드 마이그레이션 버튼 (설정 페이지에 임시로 만들고 이관 완료 후 제거)
+- 실제 저장되는 키:
+  - `profileQuote` | 한마디 문구
+  - `designSettings` | JSON 직렬화 (전체 디자인 설정 객체)
+  - `myEmojis` | JSON 배열 (My Emojis 업로드 목록)
+  - `menus` | JSON 배열 (메뉴 구성)
+  - `profilePhoto` | base64 JPEG (40,000자 초과 시 생략됨 — Sheets 셀 제한)
 
 ---
 
@@ -577,240 +577,52 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 
 ## 10. 다음 세션 시작점
 
-> **마지막 세션: 2026-04-24 세션 2 (피드백 반영 — Hero 높이·태그필터드롭다운·스크롤·태그자동완성·요일별보기·드래그추가 + 16단계 계획 변경)**
-
-### 🚨 세션 시작 직후 할 일
-
-배포 전이므로 사용자에게 패치 적용 방법을 안내해야 함 (push 미완료 상태). 새 세션 시작 시:
-
-> "지난 세션에서 아래 항목들을 구현했습니다. 패치를 적용하고 하드 리프레시(Cmd+Shift+R) 후 확인해주세요:
->
-> 1. Hero 카드가 더 길어졌는지 (680px, 모바일 560px)
-> 2. 시간표 컨트롤 바에 🏷️ 태그 버튼이 생겨 클릭 시 태그 필터 패널이 열리는지
-> 3. 시간표 상세 진입 시 항상 최상단으로 이동하는지
-> 4. 시간표 수정 화면에서 태그를 칩으로 보여주고, 타이핑 시 기존 태그 자동완성이 뜨는지
-> 5. 시간표 상세에 '요일별' 탭이 생겨 요일 선택 후 해당 요일 일정을 세로 그리드로 보는지
-> 6. 주간 그리드 편집 모드에서 빈 셀을 드래그해 시간 범위를 잡으면 일정 추가 모달이 열리는지
->
-> 피드백 주시거나 '다 좋다'고 해주시면 **16단계(Google Sheets 연동)**로 진행하겠습니다."
-
-### 🎯 다음 단계 (피드백 완료 후)
-
-- **16단계**: **Google Sheets 연동 — 시간표 데이터 실제 저장/불러오기** ← 계획 변경됨 (홈 대시보드보다 우선)
-  - Sheets API 헬퍼 함수 (`fetchSheetData`, `appendSheetData`, `updateSheetRow`, `deleteSheetRow`)
-  - 시간표·시간표_일정 두 시트부터 연동 (가장 먼저 실사용할 데이터)
-  - 앱 로드 시 Sheets 우선 → 실패 시 localStorage 폴백
-  - 저장 시 Sheets + localStorage 동시 기록 (이중화 기간)
-  - 설정 페이지에 "Sheets로 기존 데이터 이관" 버튼 (임시)
-- **17단계**: 홈 대시보드 위젯 (Sheets 연동 후)
-- **R1단계**: `USER_EMAIL` → `ALLOWED_EMAILS` 배열 리팩토링 (후순위)
-
-### 📌 이번 세션 설계 결정
-
-- **Hero 카드**: `min-height: 540px` (모바일 440px), `.hero-thumbnail-frame`은 `flex:1`로 미니 그리드가 남은 공간 채움
-- **Others 카드**: 미니 그리드 제거 — 이모지+제목+날짜만 (원래 디자인 복구)
-- **태그 필터 바** (`#scheduleTagFilter`): `scheduleFilterTags[]` 배열 상태, AND 조건, `renderScheduleTagFilter()` 함수가 `renderCurrentScheduleView()` 호출 때마다 갱신. 태그 없으면 숨김.
-- **상세보기 읽기 모드 메타**: `sched-detail-meta-plain` 클래스 (박스 없음), 설명·태그 없으면 `display:none`
-- **블록 중앙 정렬**: `.sched-item-block`에 `display:flex; flex-direction:column; align-items:center; justify-content:center`
+> **마지막 세션: 2026-04-25 (일상 일괄선택/삭제 + 인라인 일상 추가 + 삭제 의존성 안내 + 이모지피커 z-index + 프로필 사진 자동압축)**
 
 ### 🔄 현재 진행 상태
 
-- **마지막 커밋**: `5cecb8f feat: 썸네일뷰 Hero 세로 확장 + 태그 필터 + 상세뷰 정리 + 블록 중앙정렬`
+- **마지막 커밋**: `2d515de feat: 프로필 사진 자동 압축 (200px/30KB 이하) + 결과 크기 안내`
+- 직전 커밋들: `bfcc423` → `1c4ee60` → `755765e` → `25c22da` (Sheets/일상개선 시리즈)
 - **배포 상태**: main 브랜치, GitHub Pages 반영 완료
-- **파일 라인 수**: 7,116줄
+- **파일 라인 수**: 8,220줄
 
-### 🚨 Claude Code 환경 — push 방법 (업데이트)
+### 🎯 다음 단계 (우선순위 순)
 
-로컬 프록시(`127.0.0.1`) 403 우회 방법이 두 가지로 확인됨:
+1. **17단계: 홈 대시보드 위젯** — 오늘 일정 요약, 최근 활동, 좋아요 시간표 바로가기
+2. **R1단계**: `USER_EMAIL` → `ALLOWED_EMAILS` 배열 리팩토링 (후순위)
+3. **파일 분할 검토**: 8,220줄 → 분할 타이밍 재검토 필요 (기준 6,000줄 초과)
 
-1. **(이번 세션에서 발견, 권장)** `~/.git-credentials`에 GitHub 토큰이 저장돼 있음 → 직접 push 가능:
-   ```bash
-   git push https://$(cat ~/.git-credentials | sed 's|https://||' | sed 's|@github.com||')@github.com/beybusiness-bit/bey-manager.git main
-   ```
-2. **(이전 방법, 백업)** `git format-patch` → 패치 출력 → 베이님 터미널에서 `git am` + `git push`
+### 🚨 push 방법
+
+```bash
+sh /home/user/bey-manager/.git/push.sh origin main
+```
+- `push.sh`가 `.git/GITHUB_TOKEN` 읽어서 프록시 우회
+- 토큰 만료 시: `echo "NEW_TOKEN" > /home/user/bey-manager/.git/GITHUB_TOKEN`
+
+### 📌 이번 세션 설계 결정
+
+- **일괄 선택 바**: `#activityBulkActions` / `#categoryBulkActions` div — `selectedActivityIds`/`selectedCategoryIds` Set으로 관리. `display:none` ↔ `display:flex` 토글. btn-icon + btn-danger 스타일 통일.
+- **카드 체크박스**: `position:absolute` 제거 → 카드 상단 별도 행(block)으로 배치. 이모지와 겹침 없음.
+- **인라인 일상 추가 폼**: `.si-add-activity-form` 2행 구조 — 1행(이모지+이름+취소), 2행(카테고리+색상), 3행(추가버튼). `siNewActivityEmoji/Name/CategoryId/Color` 전역 상태.
+- **삭제 확인 모달**: `showConfirm(title, msg, cb, detailHtml)` 4번째 인자 추가. `confirmDetail` div가 의존성 목록 표시.
+- **프로필 사진 압축**: Canvas max 200×200 → JPEG 85%부터 40,000자 이하까지 품질 감소. 실패 시 업로드 거절.
+- **이모지 피커 z-index**: `1100 → 1400` (scheduleItemModal 1200 위)
+
+### 📌 설계 결정 (이전 세션 누적)
+
+- **시간표**: Hero 카드 680px(모바일 560px), 드래그 스크롤, 도트 인디케이터. Others 160px 카드. `attachDragScroll(el)` 헬퍼.
+- **일상 color 필드**: 기본 `#ffde59`. `getActivityCardStyle(color)` — 40% 알파 배경 + WCAG 휘도 자동 텍스트색.
+- **Sheets 연동**: 저장=localStorage+Sheets 동시, 로드=Sheets 우선→localStorage 폴백. `사용자설정` 시트에 profileQuote/designSettings/myEmojis/menus/profilePhoto 저장.
+- **디자인 CSS 변수**: `--primary-btn-bg/color`, `--mobile-topbar-bg/border/text` 추가됨.
+- **탭 UI 전역 통일**: `.tab-nav` + `.tab-btn` + `.tab-content`. 페이지별 스코프 필수(`#dailyPage .tab-btn` 등).
+- **사이드바 푸터 3행**: 상태dot+라벨 / 이메일 / 연결·해제·로그아웃 버튼
 
 ### ⚠️ 다음 세션 유의사항
 
 1. 세션 시작 시 `git log -5 --oneline` + `wc -l index.html` + CLAUDE.md §10 정독
-2. push는 위 1번 방법(토큰 직접) 먼저 시도
-3. 세션이 길어지면 스트림 타임아웃 발생 — 큰 작업은 세션 나눠서 진행
-4. **새 컴퓨터**: `git pull origin main` 먼저
-
-### 🚨 세션 시작 직후 가장 먼저 할 일
-
-**지난 세션(2026-04-22 세션 2)에 드래그 스크롤 3차 푸시와 Hero fade/탭 통일 4차 푸시 모두 배포 완료. 4차 푸시 내용은 사용자가 아직 실제 배포본으로 확인 못 한 상태로 세션 종료됨 (베이님이 자기 PC에서 터미널로 직접 `git am + git push`하셨고 배포 확인 전).**
-
-**세션 시작 시 사용자에게 먼저 이렇게 물어볼 것:**
-
-> "지난 세션까지 아래 4가지 푸시가 완료되었습니다. 모바일·데스크탑 모두 **하드 리프레시(Cmd+Shift+R)** 후 테스트해주세요:
->
-> 1. **1차** (커밋 `00e5f0f`): 첫 시간표 자동 좋아요 제거 / Hero 빈 상태 / 사이드바 프로필 재배치 / 데스크탑 접기 버튼 스타일
-> 2. **2차** (커밋 `36bb478` + 수정 `ce6413a`): 모바일 상단 스티키 바 (fixed 방식) / 접기 버튼 테두리 제거를 모바일까지 확장
-> 3. **3차** (커밋 `647775c`): Hero/Others 드래그 스크롤 + 디자인 설정에 '기본 버튼' 및 '모바일 상단 바' 항목 추가
-> 4. **4차** (커밋 `8b382ba`): Hero 섹션 양쪽 fade 힌트 제거 (Others는 fade 유지) + 설정 페이지 탭 UI를 일상 페이지와 동일한 언더라인 탭(.tab-nav/.tab-btn)으로 통일
->
-> 피드백 항목별로 주시거나 '다 마음에 든다'고 해주시면 다음 단계(15-C 목록뷰)로 진행하겠습니다."
-
-### 🧪 사용자가 아직 피드백 주지 않은 항목 (최우선)
-
-#### 4차 푸시 관련 (Hero fade 제거 + 설정 페이지 탭 통일) ← **이번 세션에 추가**
-
-**Hero fade 제거**
-- [ ] 시간표 탭 Hero 섹션 좌우에 **fade 그라디언트가 사라졌는지**
-- [ ] Others(전체 시간표) 섹션의 fade는 **그대로 유지**되는지
-- [ ] Hero 도트 인디케이터는 여전히 잘 작동하는지
-
-**설정 페이지 탭 통일**
-- [ ] 설정 페이지 상단이 **기존 3칸 카드 그리드 → 노란 언더라인 탭 3개**로 바뀌었는지 (👤 프로필 설정 / 📋 메뉴 관리 / 🎨 디자인 설정)
-- [ ] 일상 페이지의 탭(📅 시간표 / 🏷️ 일상 종류)과 **디자인·동작이 완전히 동일**한지 (언더라인, 호버, 활성 상태)
-- [ ] 탭 전환 시 해당 섹션만 표시되는지 (다른 섹션 숨겨짐)
-- [ ] 일상 페이지 탭 전환이 여전히 정상 동작하는지 (scope 제한 부작용 없음)
-
-#### 3차 푸시 관련 (드래그 스크롤 + 디자인 설정)
-
-**드래그 스크롤 — 모바일**
-- [ ] 시간표 탭 Hero 카드 좌우 **터치 스와이프** 자연스러움?
-- [ ] Others 섹션 좌우 터치 스와이프 자연스러움?
-- [ ] 스크롤 중 카드 탭 시 의도대로 상세 화면(stub) 열리는지
-- [ ] Hero 도트 인디케이터가 스와이프 위치 따라 자연스럽게 이동하는지
-
-**드래그 스크롤 — 데스크탑**
-- [ ] 마우스로 카드 **드래그해서 스크롤**되는지 (5px 이상 움직이면 클릭 억제)
-- [ ] 그냥 클릭 시 상세 화면 열리는지 (드래그로 오인 안 되고)
-- [ ] 트랙패드 좌우 스와이프도 동작하는지
-- [ ] 커서 모양 `grab` / `grabbing` 잘 바뀌는지
-
-**디자인 설정 2차 확장**
-- [ ] 설정 → 디자인에 **"🔘 기본 버튼"** 섹션이 있는지 (배경색·글자색 2개)
-- [ ] **"🔘 강조 버튼 (+ 새 시간표 / + 일상 추가 등)"** 섹션의 설명 문구가 달라졌는지 확인
-- [ ] **"📱 모바일 상단 바"** 섹션 있는지 (배경색·라인 색·글자색 3개)
-- [ ] 기본 버튼 배경을 빨강으로 바꿨을 때 저장·로그인 버튼만 빨강이 되는지 (+ 새 시간표 버튼은 영향 없음)
-- [ ] 모바일 상단 바 배경을 파랑으로 바꿨을 때 모바일 상단 바만 파랑이 되는지
-- [ ] 기본값으로 초기화 버튼으로 새 항목들도 모두 복원되는지
-
-#### 2차 푸시 관련 (모바일 상단 바)
-
-- [ ] 모바일에서 스크롤해도 **상단 바가 따라와서 고정**되어 있는지 (sticky → fixed 수정 후)
-- [ ] 바 아래 본문이 바에 가려지지 않는지 (`padding-top: 64px` 적용됨)
-
-#### 1차 푸시 관련 (이미 일부 피드백은 받음)
-
-- C-3 (일상 카드 어두운 색에서 텍스트 검정 유지) → **유지 결정 (2026-04-22 세션 1)**, 추가 조치 불필요
-- 그 외 1차 항목은 "따로 언급 없는 항목은 마음에 드는 것"이라고 하셔서 **암묵적 OK**로 처리
-
-#### 버튼 스타일 선택 방식 (2026-04-22 세션 2에서 확정)
-
-- 베이님 질문: "버튼이 기본/강조 중 어떤 스타일로 될지 선택은 어디서 해?"
-- **결정**: 현재 구조 유지 — HTML에 `.btn-primary` / `.btn-add` 클래스가 하드코딩되어 있고, 베이님은 색상만 커스터마이징. 새 버튼 추가 시 클로드와 상의하여 타입 결정.
-- 앞으로 새 버튼을 만들 때 클로드는 "이 버튼은 기본이 좋을까요, 강조가 좋을까요?" 한 번 물어볼 것.
-
-### 🎯 피드백 반영 완료 후 진행할 다음 단계 (우선순위 순)
-
-#### 15-C · 시간표 목록뷰 + 뷰 토글 + 페이저
-- 테이블 뷰: 체크박스(전체선택 포함) / 시간표 이름 / 태그 / 최종수정일 / 좋아요 버튼
-- 페이저: `~/projects/pongdang-manager/index.html`의 페이저 구조를 **구조만 차용**, 베이 관리자 디자인(노랑 키컬러, DM Mono, 현재 `--button-radius` 등)에 맞춰 리스타일
-- 정렬: 좋아요 / 가나다 / 최종수정일 각각 오름차순·내림차순 토글
-- 필터: 좋아요된 것만 / 좋아요 안된 것만 / 전체
-- 검색창(썸네일뷰와 공유 · 이미 `scheduleSearchQuery` 전역 상태 존재)
-- **뷰 토글 버튼**: ⊞(썸네일)과 ☰(목록) 두 아이콘 작게, 페이저 근처 배치. 썸네일이 디폴트.
-- 상태 변수 추가 제안: `scheduleViewMode: 'thumbnail' | 'list'`, `scheduleListPage`, `scheduleListPerPage`, `scheduleSortKey`, `scheduleSortDir`, `scheduleFilterLiked`
-- **주의**: `scheduleOthersPage`는 이번 세션에서 **제거됨** (드래그 스크롤로 바뀌어 페이지 개념 없음). 목록뷰 전용 페이지 상태는 별도 이름(`scheduleListPage`)으로 신설할 것.
-
-#### 15-D · 이모지 피커 "My Emojies" 업로드 탭
-- 이모지 피커(`openEmojiPicker`)에 새 탭 "🖼️ My Emojies" 추가
-- 이미지 업로드 → base64로 localStorage에 저장 (키: `myEmojis` 배열)
-- 업로드 화면 안내: "권장 128×128 정사각, 최대 200KB, PNG/JPG/WebP"
-- 업로드된 이미지는 이모지 자리에 `<img>`로 렌더 (이모지 문자열 대신 `data-img:<id>` 같은 마커 방식 고려, 또는 base64 URL을 그대로 저장)
-- 삭제 버튼 제공
-- 기존 이모지 피커는 이미 글로벌(`openEmojiPicker(current, callback)`) — 새 탭 하나만 추가하면 됨
-
-#### 15-E (만약 15-D 마치면) — 추가 피드백에 따라
-- 시간표 썸네일(주별 시간표 그리드 축소판)은 **16단계 이후 주간 그리드 실데이터가 생긴 뒤** hero 카드 썸네일 자리에 렌더링하도록 연결
-
-### 📌 설계 결정 기록 (다음 세션이 맥락 파악하도록)
-
-**시간표 관련 (2026-04-22 업데이트)**
-- 하트(좋아요)는 `isLiked` 필드, **카드당 1개 동작만** — 기존 "주요" 개념 폐기. 마이그레이션 로직이 `loadSchedules()`에 있음 (`isPrimary → isLiked`, 이후 isPrimary 삭제).
-- 새 시간표 생성 시 **이모지는 `EMOJI_DATA` 전체에서 랜덤**(`getRandomEmoji()`)
-- ~~첫 번째 시간표만 자동 좋아요~~ → **2026-04-22 세션에서 제거됨**. 이제 모든 새 시간표는 `isLiked: false`. Hero가 비면 "좋아하는 시간표가 아직 없습니다" 비활성 카드 표시.
-- Hero 카드는 **읽기 전용 + 전체 클릭 시 `openScheduleDetail`**. 체크박스·하트만 `event.stopPropagation()`. 이모지/제목/설명 모두 표시만.
-- Others 섹션 헤더 문구는 "**전체 시간표**" (이전 "기타 시간표"에서 변경됨 — 사용자 요청)
-- "전체 선택" 체크박스는 **현재 검색 필터 결과 기준 전체**(좋아요+안된 것 합산) 토글. `indeterminate` 상태 지원.
-- **(2026-04-22)** Hero·Others 모두 **드래그 스크롤**로 전환. `scroll-snap-type: x mandatory`. 구버전의 ◀▶ 버튼 / 페이지네이션은 **완전 제거**.
-    - Hero는 여전히 **한 번에 한 카드만 크게** 보임 (`flex: 0 0 100%`)
-    - Others는 카드 **160px(데스크탑) / 130px(모바일) 고정 너비**, 여러 개 가시
-    - 마우스 드래그: `attachDragScroll(el)` 헬퍼 — 5px 이상 움직이면 click capture 단계에서 `stopPropagation + preventDefault`
-    - fade 힌트: `.schedule-scroll-wrap::before/::after` + `data-scroll-start/end` 속성 기반 동적 토글
-    - Hero 도트 인디케이터: `scroll` 이벤트에서 `Math.round(scrollLeft / clientWidth)`로 활성 인덱스 계산
-
-**일상 종류**
-- 일상(`activity`)에 `color` 필드 추가. 기본 `#ffde59`. 편집 모드에 HTML `<input type="color">` 사용 (OS 네이티브 그라디언트 피커 제공).
-- 뷰 모드 카드 배경 = 선택 색상 **40% 알파** + 흰색 합성 결과의 휘도가 150 미만이면 텍스트 흰색, 아니면 `#333`. `getActivityCardStyle(color)` 헬퍼가 담당.
-- **(2026-04-22)** 아주 어두운 색 지정 시에도 텍스트가 검정으로 표시되는 경우 있음 (투명도 40%라 가독성엔 문제 없어 **현 상태 유지** 결정).
-
-**레이아웃 (2026-04-22 업데이트)**
-- 사이드바 토글 버튼 위치: 접힘 시 `left: 16px`, 펼침 시 `navWidth - 48px` (사이드바 안쪽 우상단). 4군데(loadSidebarState 2곳, toggleSidebar, applyDesignSettings)에서 모두 `navWidth - 48`로 통일.
-- 사이드바 **펼침 상태**의 토글 버튼은 `.expanded` 클래스로 테두리·배경 제거 (X 표시만). 데스크탑·모바일 공통. 3곳(loadSidebarState 두 분기 + toggleSidebar + 암묵적으로 렌더 초기값) 모두 `.expanded` 클래스 토글 필요.
-- `.page-header padding-left`: 펼침 28px / 접힘 48px (`.sidebar.collapsed ~ .main-content .page-header` 셀렉터).
-- **모바일 상단 바** (`.mobile-top-bar`):
-    - `position: fixed; top: 0; height: 52px; z-index: 90`
-    - 모바일에서만 노출 (`@media (max-width: 768px)` 블록 내 `display: flex`)
-    - **모바일에서는** `.sidebar-toggle-btn:not(.expanded)` 숨김 + `.page-header` 숨김
-    - `.main-content { padding-top: 64px; }` 필수 (바 높이 52 + 12 여백)
-    - 제목은 `navigateTo(pageId)` → `updateMobileTopTitle()`이 활성 페이지 `h2` 텍스트를 복사
-- 사이드바 프로필 영역 순서 (2026-04-22 변경): `.logo(앱이름) → .profile-section(사진 + 한마디)`. 이메일 라인(`sidebarUserEmail`, `.logo-sub`) 제거.
-
-**디자인 설정 (섹션 및 CSS 변수 총정리 — 2026-04-22 최신)**
-- 현재 사용 중인 CSS 변수 (모두 `:root`에 설정, `designSettings` 객체로 관리):
-    - `--primary-yellow` ← `primaryColor` ("키 컬러")
-    - `--bg-side` ← `sidebarBg`
-    - `--nav-width` ← `navWidth` (숫자)
-    - `--button-radius` ← `buttonRadius` (숫자)
-    - `--primary-green` ← `accentBtnBg` ("강조 버튼 배경")
-    - `--accent-btn-color` ← `accentBtnColor` ("강조 버튼 글자")
-    - `--base-font-size` ← `baseFontSize` (숫자)
-    - `--border-color` ← `borderColor`
-    - `--bg-card` ← `cardBg`
-    - `--primary-btn-bg` ← `primaryBtnBg` **(신설 2026-04-22)**
-    - `--primary-btn-color` ← `primaryBtnColor` **(신설 2026-04-22)**
-    - `--mobile-topbar-bg` ← `mobileTopbarBg` **(신설 2026-04-22)**
-    - `--mobile-topbar-border` ← `mobileTopbarBorder` **(신설 2026-04-22)**
-    - `--mobile-topbar-text` ← `mobileTopbarText` **(신설 2026-04-22)**
-- 폰트는 CSS 변수 대신 `document.body.style.fontFamily/fontSize`로 직접 적용
-- 더 추가 요청 있으면 `DESIGN_DEFAULTS` + `applyDesignSettings` + `renderDesignSettings` + UI HTML(설정 페이지) + `updateDesign` 모두 갱신해야 함.
-- **버튼 2종 구분 규칙**:
-    - 기본 버튼 = `btn-primary` (저장/확인/로그인) → `--primary-btn-bg/color` 사용
-    - 강조 버튼 = `btn-add` (+ 새 시간표 / + 일상 추가 등) → `--primary-green`(bg) + `--accent-btn-color` 사용
-
-### 🔄 현재 진행 상태 (마지막 커밋 기준)
-- **마지막 커밋**: `8b382ba feat: Hero fade 힌트 제거 + 설정 페이지 탭 디자인 통일`
-- 이전 커밋 순서:
-    - `79699e8 docs: 2026-04-22 세션 1 마무리 — 다른 기기 이어받기용 핸드오프 노트`
-    - `647775c feat: Hero/Others 드래그 스크롤 + 디자인 설정 확장 (기본 버튼·모바일 상단 바)`
-    - `ce6413a fix: 모바일 상단 바 스크롤 시 사라지는 현상 (sticky → fixed)`
-    - `36bb478 feat: 모바일 상단 스티키 바 + 접기 버튼 모바일에도 적용`
-    - `00e5f0f feat: 시간표 Hero 빈 상태 + 사이드바 프로필 재배치 + 접기 버튼 스타일`
-- **배포 상태 = 위 5개 코드 커밋 + 1개 docs 커밋 전부 배포 완료** (GitHub Pages, main 브랜치)
-- **파일 라인 수**: 5,330줄 (2026-04-22 세션 2 기준 / 탭 통일로 46줄 감소)
-
-### 🚨 Claude Code 환경 주의 (2026-04-22 세션 2에서 발견)
-
-**이 저장소에 대해 Claude Code(웹)가 `git push` 시 403 권한 오류가 남.**
-
-- 원인: Claude GitHub App이 이 저장소에 설치되지 않음. `github.com/settings/applications`의 **Installed GitHub Apps** 탭에 Claude 없음 (Authorized GitHub Apps에만 있음 = OAuth 인증만 존재, 쓰기 권한 없음).
-- claude.ai/code 설정 → 커넥터의 GitHub은 읽기 전용 연결이라 UI로 쓰기 권한 부여 불가 (구조적 제약).
-- **우회 플로우** (세션 2에서 성공): 클로드가 코드 수정 → `git format-patch -1 <SHA> --stdout`로 패치 생성 → 채팅에 ```patch 블록 출력 → 베이님 PC 터미널에서 `pbpaste > ~/Downloads/fix.patch` → `git am ~/Downloads/fix.patch` → `git push origin main`
-- 권한 이슈가 해결되지 않는 동안 모든 세션은 이 패치 플로우를 사용해야 함.
-- 권한 이슈 해결 방법은 §11 교훈에 상세 기록.
-
-### ⚠️ 다음 세션에 유의
-1. **자동 배포 플로우**가 CLAUDE.md §4에 있음. 기본은 "수정 → 문법검증 → 자동 commit+push → 하드리프레시 안내". 단, 현재는 push 권한 없음 → **수정 → 문법검증 → commit → 패치 출력 → 베이님 터미널에서 적용+푸시** 순서로 진행.
-2. 세션 시작 시 `git log -5 --oneline`, `wc -l index.html`, CLAUDE.md 전체 스캔.
-3. 위 "🧪 사용자가 아직 피드백 주지 않은 항목" 리스트를 **축약하지 말고** 그대로 사용자에게 제시할 것. 여러 날이 지났을 수도 있으니, 사용자가 "다 마음에 든다"라고 해도 항목별로 명시적으로 확인 받는 편이 안전.
-4. **새 컴퓨터에서 시작**: `git pull origin main`으로 최신 CLAUDE.md와 index.html 동기화 먼저. 그리고 `git log -5 --oneline`로 위에 기록된 커밋 SHA들(`8b382ba, 79699e8, 647775c, ce6413a, 36bb478, 00e5f0f`)이 이미 로컬에 있는지 확인.
-5. 피드백 반영 없이 15-C로 그냥 진행하지 말 것.
-6. 샌드박스 내 `claude/*` 브랜치는 원격에 push 안 되므로 **신규 브랜치 생성하지 말고 main 브랜치에서 직접 작업** 권장 (베이님은 단일 개발자 + 직접 main 사용 방식).
-
+2. 새 컴퓨터: `git pull origin main` 먼저
+3. 세션 컨텍스트 길어지면 스트림 타임아웃 → CLAUDE.md 편집은 Python 스크립트로(작은 Edit 여러 번 or python3 replace)
 ---
 
 ## 11. 교훈
