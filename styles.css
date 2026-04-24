@@ -2163,7 +2163,7 @@
       background: var(--bg-card);
       border: 1px solid var(--border-color);
       border-radius: 8px;
-      padding: 16px;
+      padding: 14px 16px;
       cursor: pointer;
       transition: all 0.2s;
       position: relative;
@@ -2178,6 +2178,42 @@
     .activity-card.editing {
       border-color: var(--primary-yellow);
       box-shadow: var(--shadow-md);
+    }
+
+    /* 비편집 상태: 가로 레이아웃 — [이모지] [이름 / 카테고리] */
+    .activity-card-main {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .activity-card-main .activity-card-emoji {
+      font-size: 28px;
+      margin-bottom: 0;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .activity-card-main .activity-card-emoji img {
+      width: 32px; height: 32px; object-fit: cover; border-radius: 4px;
+    }
+    .activity-card-text {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .activity-card-main .activity-card-name {
+      margin-bottom: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .activity-card-main .activity-card-category {
+      margin-bottom: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .activity-card-emoji {
@@ -2296,9 +2332,11 @@
     .bulk-actions { display: flex; gap: 8px; align-items: center; margin-left: 4px; }
     .bulk-actions .bulk-count { font-size: 13px; color: var(--text-secondary); }
 
-    /* 카드 체크박스 — 카드 상단에 별도 행으로 배치 */
-    .card-cb { display: block; margin-bottom: 6px; }
+    /* 카드 체크박스 — 카드 우상단 고정 */
+    .card-cb { position: absolute; top: 8px; right: 8px; display: flex; align-items: center; z-index: 2; }
     .card-cb input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary-yellow); cursor: pointer; }
+    /* 체크박스 자리 확보 (일상/카테고리 카드 비편집 상태 공통) */
+    .activity-card:not(.editing) .activity-card-main { padding-right: 24px; }
 
     /* 드롭다운 인라인 일상 추가 */
     .si-add-divider { height: 1px; background: var(--border-color); margin: 2px 0; }

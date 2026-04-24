@@ -2406,8 +2406,13 @@
           html += '    <input type="text" value="' + activity.name + '" oninput="updateActivityName(&apos;' + activity.id + '&apos;, this.value)" onkeydown="if(event.key===&apos;Enter&apos;) saveActivityInline(&apos;' + activity.id + '&apos;); if(event.key===&apos;Escape&apos;) cancelActivityInline(&apos;' + activity.id + '&apos;)" placeholder="일상 이름">';
           html += '  </div>';
         } else {
-          html += '  <div class="activity-card-emoji">' + renderEmoji(activity.emoji) + '</div>';
-          html += '  <div class="activity-card-name">' + activity.name + '</div>';
+          html += '  <div class="activity-card-main">';
+          html += '    <div class="activity-card-emoji">' + renderEmoji(activity.emoji) + '</div>';
+          html += '    <div class="activity-card-text">';
+          html += '      <div class="activity-card-name">' + activity.name + '</div>';
+          html += '      <div class="activity-card-category">' + categoryLabel + '</div>';
+          html += '    </div>';
+          html += '  </div>';
         }
 
         if (isEditing) {
@@ -2424,8 +2429,6 @@
           html += '    <label>대표 색상</label>';
           html += '    <input type="color" value="' + (activity.color || '#ffde59') + '" onclick="event.stopPropagation()" oninput="updateActivityColor(&apos;' + activity.id + '&apos;, this.value)">';
           html += '  </div>';
-        } else {
-          html += '  <div class="activity-card-category">' + categoryLabel + '</div>';
         }
         
         if (!isEditing) {
@@ -2541,7 +2544,7 @@
       var BASE = 'https://sheets.googleapis.com/v4/spreadsheets/' + AUTH.SHEET_ID;
 
       var SHEETS_DEF = {
-        '시간표':    ['id','emoji','title','description','tags','isLiked','createdAt','updatedAt'],
+        '시간표':    ['id','emoji','title','description','tags','isLiked','gridStartHour','createdAt','updatedAt'],
         '시간표_일정': ['id','scheduleId','activityId','weekdays','startTime','endTime','createdAt'],
         '카테고리':  ['id','emoji','name','active','createdAt'],
         '일상종류':  ['id','categoryId','emoji','name','color','active','createdAt'],
@@ -2651,7 +2654,7 @@
         switch (name) {
           case '시간표':
             return schedules.map(function(s) {
-              return [s.id, s.emoji||'', s.title||'', s.description||'', (s.tags||[]).join(','), s.isLiked?'TRUE':'FALSE', s.createdAt||'', s.updatedAt||''];
+              return [s.id, s.emoji||'', s.title||'', s.description||'', (s.tags||[]).join(','), s.isLiked?'TRUE':'FALSE', String(getScheduleGridStartHour(s)), s.createdAt||'', s.updatedAt||''];
             });
           case '시간표_일정':
             return scheduleItems.map(function(i) {
@@ -2700,7 +2703,18 @@
         // 시간표
         if (results['시간표'].length > 0) {
           schedules = results['시간표'].map(function(r) {
-            return { id:r[0], emoji:r[1]||'📅', title:r[2]||'', description:r[3]||'', tags:r[4]?r[4].split(',').filter(Boolean):[], isLiked:r[5]==='TRUE', createdAt:r[6]||today(), updatedAt:r[7]||today() };
+            var gshRaw = parseInt(r[6], 10);
+            var gsh = (isNaN(gshRaw) || gshRaw < 0 || gshRaw > 23) ? 6 : gshRaw;
+            // 기존 시트(컬럼 8개) 하위 호환 — r[6]이 숫자가 아니면 createdAt로 간주하고 gsh=6
+            var createdAt, updatedAt;
+            if (isNaN(gshRaw)) {
+              createdAt = r[6] || today();
+              updatedAt = r[7] || today();
+            } else {
+              createdAt = r[7] || today();
+              updatedAt = r[8] || today();
+            }
+            return { id:r[0], emoji:r[1]||'📅', title:r[2]||'', description:r[3]||'', tags:r[4]?r[4].split(',').filter(Boolean):[], isLiked:r[5]==='TRUE', gridStartHour:gsh, createdAt:createdAt, updatedAt:updatedAt };
           });
           scheduleItems = results['시간표_일정'].map(function(r) {
             return { id:r[0], scheduleId:r[1], activityId:r[2], weekdays:r[3]?r[3].split(',').filter(Boolean):[], startTime:r[4]||'09:00', endTime:r[5]||'10:00', createdAt:r[6]||today() };
@@ -2863,6 +2877,7 @@
         description: '',
         tags: [],
         isLiked: false,
+        gridStartHour: 6,
         createdAt: today(),
         updatedAt: today()
       };
@@ -3206,8 +3221,22 @@
       return parseInt(p[0]) * 60 + parseInt(p[1]);
     }
     function minToTimeStr(min) {
-      var h = Math.floor(min / 60), m = min % 60;
+      // 24시간 이상도 허용 (그리드 랩어라운드 라벨용) — 표시는 0~23시로 모듈러
+      var total = ((min % 1440) + 1440) % 1440;
+      var h = Math.floor(total / 60), m = total % 60;
       return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+    }
+
+    // 시간표별 그리드 시작 시각(0-23), 기본 6
+    function getScheduleGridStartHour(schedule) {
+      if (!schedule) return 6;
+      var h = parseInt(schedule.gridStartHour, 10);
+      if (isNaN(h) || h < 0 || h > 23) return 6;
+      return h;
+    }
+    // 절대분(0-1439) → 가상분(gridStart 이상, gridStart+1439 이하)
+    function toVirtualMin(absMin, gridStart) {
+      return absMin < gridStart ? absMin + 1440 : absMin;
     }
 
     function openScheduleDetail(scheduleId) {
@@ -3235,7 +3264,8 @@
         title: schedule.title,
         emoji: schedule.emoji,
         description: schedule.description || '',
-        tags: (schedule.tags || []).slice()
+        tags: (schedule.tags || []).slice(),
+        gridStartHour: getScheduleGridStartHour(schedule)
       };
       renderScheduleDetail();
     }
@@ -3248,6 +3278,7 @@
       schedule.emoji = scheduleDraft.emoji;
       schedule.description = scheduleDraft.description || '';
       schedule.tags = scheduleDraft.tags || [];
+      schedule.gridStartHour = getScheduleGridStartHour(scheduleDraft);
       schedule.updatedAt = today();
       saveSchedules();
       scheduleViewMode2 = 'detail';
@@ -3279,6 +3310,15 @@
 
     function updateDraftTitle(v) { if (scheduleDraft) scheduleDraft.title = v; }
     function updateDraftDesc(v) { if (scheduleDraft) scheduleDraft.description = v; }
+    function updateDraftGridStartHour(v) {
+      if (!scheduleDraft) return;
+      var h = parseInt(v, 10);
+      if (isNaN(h) || h < 0 || h > 23) h = 6;
+      scheduleDraft.gridStartHour = h;
+      // 그리드 탭에 있을 때만 즉시 렌더 갱신
+      if (scheduleDetailTab === 'grid') renderScheduleGrid();
+      else if (scheduleDetailTab === 'day') renderScheduleDayView();
+    }
 
     function getAllScheduleTags() {
       var tagSet = {};
@@ -3390,6 +3430,15 @@
         mh += '<input type="text" id="draftTagInput" placeholder="태그 입력 후 Enter..." autocomplete="off" oninput="onDraftTagInput(this.value)" onkeyup="onDraftTagKeydown(event)">';
         mh += '<div id="tagSuggestions" class="tag-suggestions" style="display:none;"></div>';
         mh += '</div>';
+        mh += '<div class="sched-meta-label" style="margin-top:10px;">그리드 시작 시각</div>';
+        var curStartHour = getScheduleGridStartHour(data);
+        mh += '<select onchange="updateDraftGridStartHour(this.value)" style="width:auto;min-width:120px;">';
+        for (var sh = 0; sh < 24; sh++) {
+          var shLabel = (sh < 10 ? '0' : '') + sh + ':00';
+          mh += '<option value="' + sh + '"' + (sh === curStartHour ? ' selected' : '') + '>' + shLabel + '</option>';
+        }
+        mh += '</select>';
+        mh += '<div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">선택한 시각부터 24시간 그리드가 시작됩니다.</div>';
         metaEl.className = 'sched-meta-card';
         metaEl.innerHTML = mh;
         metaEl.style.display = 'block';
@@ -3460,19 +3509,19 @@
 
     function renderScheduleGrid() {
       var items = scheduleItems.filter(function(i) { return i.scheduleId === currentDetailScheduleId; });
+      var schedule = schedules.find(function(s) { return s.id === currentDetailScheduleId; });
       var isEdit = (scheduleViewMode2 === 'edit');
-      var gridStart = 6 * 60, gridEnd = 22 * 60;
-      if (items.length > 0) {
-        var maxE = items.reduce(function(m, i) { return Math.max(m, timeToMin(i.endTime)); }, 0);
-        if (maxE > gridEnd) gridEnd = Math.min(24 * 60, Math.ceil((maxE + 30) / 30) * 30);
-      }
+      var startHour = getScheduleGridStartHour(isEdit && scheduleDraft ? scheduleDraft : schedule);
+      var gridStart = startHour * 60;
+      var gridEnd = gridStart + 24 * 60; // 항상 24시간
       var totalSlots = (gridEnd - gridStart) / 30;
       var totalHeight = totalSlots * SLOT_HEIGHT;
 
-      // Current time line
+      // Current time line (랩어라운드 대응)
       var now = new Date();
       var nowMin = now.getHours() * 60 + now.getMinutes();
-      var nowTop = (nowMin >= gridStart && nowMin <= gridEnd) ? (nowMin - gridStart) / 30 * SLOT_HEIGHT : -1;
+      var nowVirtual = toVirtualMin(nowMin, gridStart);
+      var nowTop = (nowVirtual - gridStart) / 30 * SLOT_HEIGHT;
 
       // Merged blocks
       var blocks = buildMergedBlocks(items);
@@ -3510,8 +3559,10 @@
         var name = act ? act.name : '(삭제된 일상)';
         var color = act ? (act.color || '#ffde59') : '#ffde59';
         var sMin = timeToMin(b.startTime), eMin = timeToMin(b.endTime);
-        var top = (sMin - gridStart) / 30 * SLOT_HEIGHT;
-        var height = Math.max(SLOT_HEIGHT, (eMin - sMin) / 30 * SLOT_HEIGHT);
+        var sVirtual = toVirtualMin(sMin, gridStart);
+        var eVirtual = sVirtual + (eMin >= sMin ? (eMin - sMin) : (eMin + 1440 - sMin));
+        var top = (sVirtual - gridStart) / 30 * SLOT_HEIGHT;
+        var height = Math.max(SLOT_HEIGHT, (eVirtual - sVirtual) / 30 * SLOT_HEIGHT);
         var leftPct = b.colStart / 7 * 100;
         var widthPct = b.colSpan / 7 * 100;
         var ptrStyle = isEdit ? 'pointer-events:auto; cursor:pointer;' : '';
@@ -3566,16 +3617,16 @@
       var dayItems = items.filter(function(it) { return (it.weekdays || []).indexOf(scheduleDayViewDay) >= 0; });
       dayItems.sort(function(a, b) { return timeToMin(a.startTime) - timeToMin(b.startTime); });
 
-      var gridStart = 6 * 60, gridEnd = 22 * 60;
-      if (dayItems.length > 0) {
-        var maxE = dayItems.reduce(function(m, i) { return Math.max(m, timeToMin(i.endTime)); }, 0);
-        if (maxE > gridEnd) gridEnd = Math.min(24 * 60, Math.ceil((maxE + 30) / 30) * 30);
-      }
+      var dayViewSchedule = schedules.find(function(s) { return s.id === currentDetailScheduleId; });
+      var dayStartHour = getScheduleGridStartHour(isEdit && scheduleDraft ? scheduleDraft : dayViewSchedule);
+      var gridStart = dayStartHour * 60;
+      var gridEnd = gridStart + 24 * 60;
       var totalSlots = (gridEnd - gridStart) / 30;
       var totalHeight = totalSlots * SLOT_HEIGHT;
       var now = new Date();
       var nowMin = now.getHours() * 60 + now.getMinutes();
-      var nowTop = (nowMin >= gridStart && nowMin <= gridEnd) ? (nowMin - gridStart) / 30 * SLOT_HEIGHT : -1;
+      var nowVirtual = toVirtualMin(nowMin, gridStart);
+      var nowTop = (nowVirtual - gridStart) / 30 * SLOT_HEIGHT;
 
       // 단일 요일 그리드
       html += '<div class="sched-grid-outer"><div class="sched-grid-wrap">';
@@ -3602,8 +3653,10 @@
         var name = act ? act.name : '(삭제된 일상)';
         var color = act ? (act.color || '#ffde59') : '#ffde59';
         var sMin = timeToMin(item.startTime), eMin = timeToMin(item.endTime);
-        var top = (sMin - gridStart) / 30 * SLOT_HEIGHT;
-        var height = Math.max(SLOT_HEIGHT, (eMin - sMin) / 30 * SLOT_HEIGHT);
+        var sVirtual = toVirtualMin(sMin, gridStart);
+        var eVirtual = sVirtual + (eMin >= sMin ? (eMin - sMin) : (eMin + 1440 - sMin));
+        var top = (sVirtual - gridStart) / 30 * SLOT_HEIGHT;
+        var height = Math.max(SLOT_HEIGHT, (eVirtual - sVirtual) / 30 * SLOT_HEIGHT);
         var ptrStyle = isEdit ? 'pointer-events:auto;cursor:pointer;' : '';
         var clickAttr = isEdit ? ('onclick="openScheduleItemForm(&apos;' + item.id + '&apos;)"') : '';
         html += '<div class="sched-item-block" style="position:absolute;' + ptrStyle + 'top:' + top + 'px;height:' + height + 'px;left:2px;right:2px;background:' + color + '30;border-left-color:' + color + ';" ' + clickAttr + '>';
@@ -3660,18 +3713,19 @@
         if (!existing) preview.appendChild(tip);
       }
 
+      var gridMax = gridStart + 24 * 60;
       overlay.addEventListener('mousedown', function(e) {
         if (e.button !== 0) return;
         dragging = true;
         dragStartMin = yToMin(e.clientY);
-        dragEndMin = Math.min(24 * 60, dragStartMin + 30);
+        dragEndMin = Math.min(gridMax, dragStartMin + 30);
         updatePreview(dragStartMin, dragEndMin);
         e.preventDefault();
       });
 
       document.addEventListener('mousemove', function(e) {
         if (!dragging) return;
-        dragEndMin = Math.min(24 * 60, Math.max(dragStartMin + 30, yToMin(e.clientY) + 30));
+        dragEndMin = Math.min(gridMax, Math.max(dragStartMin + 30, yToMin(e.clientY) + 30));
         updatePreview(dragStartMin, dragEndMin);
       }, { passive: true });
 
@@ -3684,7 +3738,7 @@
         addItemPrefill = {
           weekday: scheduleDayViewDay,
           startTime: minToTimeStr(start),
-          endTime: minToTimeStr(Math.min(24 * 60, end))
+          endTime: minToTimeStr(Math.min(gridMax, end))
         };
         openScheduleItemForm(null);
       });
@@ -3725,13 +3779,14 @@
         if (!existing) preview.appendChild(tip);
       }
 
+      var gridMax = gridStart + 24 * 60;
       overlay.addEventListener('mousedown', function(e) {
         if (e.button !== 0) return;
         var coords = posToGridCoords(e.clientX, e.clientY);
         dragging = true;
         dragDay = coords.day;
         dragStartMin = coords.min;
-        dragEndMin = Math.min(24 * 60, coords.min + 30);
+        dragEndMin = Math.min(gridMax, coords.min + 30);
         updatePreview(dragStartMin, dragEndMin, coords.colIdx);
         e.preventDefault();
       });
@@ -3740,7 +3795,7 @@
         if (!dragging) return;
         var coords = posToGridCoords(e.clientX, e.clientY);
         // 요일이 바뀌면 시작 요일로 고정
-        var endMin = Math.min(24 * 60, Math.max(dragStartMin + 30, coords.min + 30));
+        var endMin = Math.min(gridMax, Math.max(dragStartMin + 30, coords.min + 30));
         dragEndMin = endMin;
         var colIdx = WEEKDAYS_EN.indexOf(dragDay);
         updatePreview(dragStartMin, dragEndMin, colIdx);
@@ -3755,35 +3810,34 @@
         addItemPrefill = {
           weekday: dragDay,
           startTime: minToTimeStr(start),
-          endTime: minToTimeStr(Math.min(24 * 60, end))
+          endTime: minToTimeStr(Math.min(gridMax, end))
         };
         openScheduleItemForm(null);
       });
     }
 
     function onGridCellClick(day, startMin) {
-      var endMin = Math.min(24 * 60, startMin + 60);
       addItemPrefill = {
         weekday: day,
         startTime: minToTimeStr(startMin),
-        endTime: minToTimeStr(endMin)
+        endTime: minToTimeStr(startMin + 60)
       };
       openScheduleItemForm(null);
     }
 
     function renderScheduleMiniGrid(scheduleId) {
       var items = scheduleItems.filter(function(i) { return i.scheduleId === scheduleId; });
-      var gStart = 6 * 60, gEnd = 22 * 60;
-      if (items.length > 0) {
-        var maxE = items.reduce(function(m, i) { return Math.max(m, timeToMin(i.endTime)); }, 0);
-        if (maxE > gEnd) gEnd = Math.min(24 * 60, Math.ceil((maxE + 30) / 30) * 30);
-      }
+      var miniSchedule = schedules.find(function(s) { return s.id === scheduleId; });
+      var miniStartHour = getScheduleGridStartHour(miniSchedule);
+      var gStart = miniStartHour * 60;
+      var gEnd = gStart + 24 * 60;
       var range = gEnd - gStart;
 
-      // Current time
+      // Current time (랩어라운드 대응)
       var now = new Date();
       var nowMin = now.getHours() * 60 + now.getMinutes();
-      var nowPct = (nowMin >= gStart && nowMin <= gEnd) ? (nowMin - gStart) / range * 100 : -1;
+      var nowVirtual = toVirtualMin(nowMin, gStart);
+      var nowPct = (nowVirtual - gStart) / range * 100;
 
       // Merged blocks
       var blocks = items.length > 0 ? buildMergedBlocks(items) : [];
@@ -3817,8 +3871,10 @@
           var color = act ? (act.color || '#ffde59') : '#ffde59';
           var emoji = act ? renderEmoji(act.emoji) : '';
           var sMin = timeToMin(b.startTime), eMin = timeToMin(b.endTime);
-          var topPct = (sMin - gStart) / range * 100;
-          var heightPct = Math.max(0.5, (eMin - sMin) / range * 100);
+          var sVirtual = toVirtualMin(sMin, gStart);
+          var dur = eMin >= sMin ? (eMin - sMin) : (eMin + 1440 - sMin);
+          var topPct = (sVirtual - gStart) / range * 100;
+          var heightPct = Math.max(0.5, dur / range * 100);
           var leftPct = b.colStart / 7 * 100;
           var widthPct = b.colSpan / 7 * 100;
           html += '<div class="sched-mini-block" style="top:' + topPct + '%;height:' + heightPct + '%;left:calc(' + leftPct + '% + 1px);width:calc(' + widthPct + '% - 2px);background:' + color + ';">' + emoji + '</div>';
