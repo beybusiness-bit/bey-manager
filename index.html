@@ -1811,6 +1811,24 @@
     .sched-detail-title { font-size: 18px; font-weight: 700; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sched-detail-desc { font-size: 13px; color: #888; margin: 0 0 12px 0; }
     .sched-detail-actions { display: flex; gap: 6px; margin-left: auto; flex-shrink: 0; }
+    .sched-detail-actions button {
+      padding: 8px 16px; border-radius: var(--button-radius, 8px);
+      font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit;
+      transition: all 0.2s; line-height: 1.2;
+    }
+    .sched-detail-actions .btn-cancel { background: transparent; border: 1px solid var(--border-color); color: inherit; }
+    .sched-detail-actions .btn-cancel:hover { background: var(--bg-hover); }
+    .sched-detail-actions .btn-confirm { background: var(--primary-yellow); border: 1px solid var(--primary-yellow); color: inherit; }
+    .sched-detail-actions .btn-confirm:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+    /* 지금 시간 표시 라인 */
+    .sched-now-line {
+      position: absolute; left: 0; right: 0; height: 0; pointer-events: none;
+      border-top: 2px solid var(--primary-pink, #ffaade); z-index: 10;
+    }
+    .sched-now-line::before {
+      content: ''; position: absolute; left: -4px; top: -5px;
+      width: 8px; height: 8px; background: var(--primary-pink, #ffaade); border-radius: 50%;
+    }
 
     /* 주간 그리드 */
     .sched-grid-outer { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -4px; }
@@ -1885,6 +1903,34 @@
       width: 100%; padding: 8px 10px; border: 1px solid var(--border-color);
       border-radius: 6px; font-size: 14px; box-sizing: border-box; background: var(--bg-card);
     }
+    /* 커스텀 드롭다운 (이미지 이모지 지원) */
+    .custom-select { position: relative; width: 100%; }
+    .custom-select-btn {
+      width: 100%; padding: 8px 10px; border: 1px solid var(--border-color);
+      border-radius: 6px; font-size: 14px; box-sizing: border-box; background: var(--bg-card);
+      cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;
+      font-family: inherit; color: inherit;
+    }
+    .custom-select-btn:hover { border-color: #bbb; }
+    .custom-select-display { flex: 1; display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .custom-select-display img { width: 20px; height: 20px; object-fit: cover; border-radius: 2px; vertical-align: middle; }
+    .custom-select-arrow { font-size: 10px; color: #888; flex-shrink: 0; }
+    .custom-select-dropdown {
+      display: none; position: absolute; top: calc(100% + 2px); left: 0; right: 0;
+      max-height: 240px; overflow-y: auto; background: var(--bg-card);
+      border: 1px solid var(--border-color); border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08); z-index: 10;
+    }
+    .custom-select.open .custom-select-dropdown { display: block; }
+    .custom-select-option {
+      padding: 8px 10px; cursor: pointer; display: flex; align-items: center; gap: 8px;
+      font-size: 14px; border-bottom: 1px solid #f3f3f3;
+    }
+    .custom-select-option:last-child { border-bottom: none; }
+    .custom-select-option:hover { background: var(--bg-hover); }
+    .custom-select-option.selected { background: rgba(255,222,89,0.18); font-weight: 600; }
+    .custom-select-option img { width: 20px; height: 20px; object-fit: cover; border-radius: 2px; }
+    .custom-select-placeholder { color: #aaa; }
     .si-weekday-group { display: flex; gap: 6px; flex-wrap: wrap; }
     .si-weekday-label {
       display: inline-block; text-align: center;
@@ -2443,7 +2489,13 @@
       <h3 id="siModalTitle">일정 추가</h3>
       <div class="si-form-row">
         <label>일상 종류</label>
-        <select id="siActivitySelect"></select>
+        <div class="custom-select" id="siActivitySelectWrap">
+          <button type="button" class="custom-select-btn" onclick="toggleSiActivityDropdown(event)">
+            <span class="custom-select-display" id="siActivityDisplay"><span class="custom-select-placeholder">일상 종류 선택</span></span>
+            <span class="custom-select-arrow">▾</span>
+          </button>
+          <div class="custom-select-dropdown" id="siActivityDropdown"></div>
+        </div>
       </div>
       <div class="si-form-row">
         <label>요일</label>
@@ -2458,8 +2510,8 @@
         </div>
       </div>
       <div class="si-form-row">
-        <label style="display:inline-flex; align-items:center; gap:6px; font-weight:500; font-size:13px; cursor:pointer; white-space:nowrap; margin-bottom:0;">
-          <input type="checkbox" id="siSameTime" checked onchange="renderScheduleItemTimeInputs()"> 요일별 시간 동일
+        <label style="display:inline-flex; align-items:center; gap:8px; font-weight:500; font-size:13px; cursor:pointer; white-space:nowrap; margin-bottom:0; line-height:1;">
+          <input type="checkbox" id="siSameTime" checked onchange="renderScheduleItemTimeInputs()" style="margin:0; width:16px; height:16px; flex-shrink:0; cursor:pointer;"> <span style="line-height:1;">요일별 시간 동일</span>
         </label>
       </div>
       <div class="si-form-row">
@@ -6018,19 +6070,63 @@
       }
     }
 
+    var siSelectedActivityId = '';
+
+    function renderSiActivityDropdown() {
+      var list = document.getElementById('siActivityDropdown');
+      if (!list) return;
+      var html = '';
+      activities.filter(function(a) { return a.active; }).forEach(function(a) {
+        var sel = (a.id === siSelectedActivityId) ? ' selected' : '';
+        html += '<div class="custom-select-option' + sel + '" data-id="' + a.id + '" onclick="selectSiActivity(&apos;' + a.id + '&apos;)">';
+        html += '<span>' + renderEmoji(a.emoji) + '</span><span>' + escapeHtml(a.name) + '</span>';
+        html += '</div>';
+      });
+      if (!html) html = '<div class="custom-select-option" style="color:#aaa;cursor:default;">사용 가능한 일상이 없습니다</div>';
+      list.innerHTML = html;
+      updateSiActivityDisplay();
+    }
+
+    function updateSiActivityDisplay() {
+      var disp = document.getElementById('siActivityDisplay');
+      if (!disp) return;
+      var a = activities.find(function(x) { return x.id === siSelectedActivityId; });
+      if (a) disp.innerHTML = '<span>' + renderEmoji(a.emoji) + '</span><span>' + escapeHtml(a.name) + '</span>';
+      else disp.innerHTML = '<span class="custom-select-placeholder">일상 종류 선택</span>';
+    }
+
+    function toggleSiActivityDropdown(e) {
+      if (e) e.stopPropagation();
+      var wrap = document.getElementById('siActivitySelectWrap');
+      if (!wrap) return;
+      wrap.classList.toggle('open');
+    }
+
+    function selectSiActivity(id) {
+      siSelectedActivityId = id;
+      updateSiActivityDisplay();
+      var wrap = document.getElementById('siActivitySelectWrap');
+      if (wrap) wrap.classList.remove('open');
+      var list = document.getElementById('siActivityDropdown');
+      if (list) list.querySelectorAll('.custom-select-option').forEach(function(el) {
+        el.classList.toggle('selected', el.dataset.id === id);
+      });
+    }
+
+    document.addEventListener('click', function(e) {
+      var wrap = document.getElementById('siActivitySelectWrap');
+      if (wrap && wrap.classList.contains('open') && !wrap.contains(e.target)) {
+        wrap.classList.remove('open');
+      }
+    });
+
     function openScheduleItemForm(itemId) {
       editingScheduleItemId = itemId;
       var modal = document.getElementById('scheduleItemModal');
       if (!modal) return;
       document.getElementById('siModalTitle').textContent = itemId ? '일정 수정' : '일정 추가';
-      var actSel = document.getElementById('siActivitySelect');
-      actSel.innerHTML = '<option value="">일상 종류 선택</option>';
-      activities.filter(function(a) { return a.active; }).forEach(function(a) {
-        var opt = document.createElement('option');
-        opt.value = a.id;
-        opt.textContent = emojiDisplayVal(a.emoji) + ' ' + a.name;
-        actSel.appendChild(opt);
-      });
+      siSelectedActivityId = '';
+      renderSiActivityDropdown();
       modal.querySelectorAll('.si-day-check').forEach(function(cb) { cb.checked = false; });
       document.getElementById('siSameTime').checked = true;
       document.getElementById('siTimeContainer').innerHTML = '';
@@ -6040,7 +6136,9 @@
       if (itemId) {
         var item = scheduleItems.find(function(i) { return i.id === itemId; });
         if (item) {
-          actSel.value = item.activityId;
+          siSelectedActivityId = item.activityId;
+          updateSiActivityDisplay();
+          renderSiActivityDropdown();
           (item.weekdays || []).forEach(function(d) {
             var cb = modal.querySelector('.si-day-check[value="' + d + '"]');
             if (cb) cb.checked = true;
@@ -6081,7 +6179,7 @@
 
     function saveScheduleItem() {
       var modal = document.getElementById('scheduleItemModal');
-      var actId = document.getElementById('siActivitySelect').value;
+      var actId = siSelectedActivityId;
       var sameTime = document.getElementById('siSameTime').checked;
       var weekdays = [];
       modal.querySelectorAll('.si-day-check:checked').forEach(function(cb) { weekdays.push(cb.value); });
