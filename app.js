@@ -1100,6 +1100,10 @@
     let scheduleViewMode = 'thumbnail';
     let scheduleListPage = 1;
     let scheduleListPerPage = 10;
+    let activityListPage = 1;
+    let activityListPerPage = 20;
+    let categoryListPage = 1;
+    let categoryListPerPage = 20;
     let scheduleSortKey = 'updatedAt';
     let scheduleSortDir = 'desc';
     let scheduleFilterLiked = 'all';
@@ -2295,14 +2299,42 @@
     function renderCategories() {
       const container = document.getElementById('categoryGrid');
       if (!container) return;
+      const topPager = document.getElementById('categoryPagerTop');
+      const bottomPager = document.getElementById('categoryPagerBottom');
 
       if (categories.length === 0) {
         container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px; grid-column: 1 / -1;">카테고리가 없습니다. 카테고리를 추가해주세요.</p>';
+        if (topPager) topPager.innerHTML = '';
+        if (bottomPager) bottomPager.innerHTML = '';
         return;
       }
 
+      var total = categories.length;
+      var totalPages = Math.max(1, Math.ceil(total / categoryListPerPage));
+      if (categoryListPage > totalPages) categoryListPage = totalPages;
+      var editingIdx = -1;
+      if (editingCategoryId) {
+        editingIdx = categories.findIndex(function(c) { return c.id === editingCategoryId; });
+      }
+      var start = (categoryListPage - 1) * categoryListPerPage;
+      var pageItems = categories.slice(start, start + categoryListPerPage);
+      if (editingIdx >= 0 && (editingIdx < start || editingIdx >= start + categoryListPerPage)) {
+        pageItems = [categories[editingIdx]].concat(pageItems);
+      }
+
+      var pagerHtml = buildGenericPagerBar({
+        total: total,
+        page: categoryListPage,
+        perPage: categoryListPerPage,
+        perPageOpts: [10, 20, 50, 100],
+        goFn: 'goCategoryPage',
+        setPerPageFn: 'setCategoryPerPage'
+      });
+      if (topPager) topPager.innerHTML = pagerHtml;
+      if (bottomPager) bottomPager.innerHTML = pagerHtml;
+
       let html = '';
-      categories.forEach(function(category) {
+      pageItems.forEach(function(category) {
         const activityCount = activities.filter(function(a) { return a.categoryId === category.id; }).length;
         const isEditing = (editingCategoryId === category.id);
         const isSelected = (selectedCategoryFilter === category.id);
@@ -2374,6 +2406,7 @@
       if (!select) return;
       
       selectedCategoryFilter = select.value;
+      activityListPage = 1;
       renderActivities();
     }
 
@@ -2383,6 +2416,7 @@
       } else {
         selectedCategoryFilter = categoryId;
       }
+      activityListPage = 1;
       
       const select = document.getElementById('activityCategoryFilter');
       if (select) {
@@ -2612,9 +2646,11 @@
     function renderActivities() {
       const container = document.getElementById('activityGrid');
       if (!container) return;
+      const topPager = document.getElementById('activityPagerTop');
+      const bottomPager = document.getElementById('activityPagerBottom');
 
       let filteredActivities = activities;
-      
+
       if (selectedCategoryFilter === 'unassigned') {
         filteredActivities = activities.filter(function(a) { return !a.categoryId; });
       } else if (selectedCategoryFilter) {
@@ -2623,11 +2659,38 @@
 
       if (filteredActivities.length === 0) {
         container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px; grid-column: 1 / -1;">일상 종류가 없습니다. 일상을 추가해주세요.</p>';
+        if (topPager) topPager.innerHTML = '';
+        if (bottomPager) bottomPager.innerHTML = '';
         return;
       }
 
+      // 편집 중 일상은 현재 페이지와 관계없이 항상 포함
+      var total = filteredActivities.length;
+      var totalPages = Math.max(1, Math.ceil(total / activityListPerPage));
+      if (activityListPage > totalPages) activityListPage = totalPages;
+      var editingIdx = -1;
+      if (editingActivityId) {
+        editingIdx = filteredActivities.findIndex(function(a) { return a.id === editingActivityId; });
+      }
+      var start = (activityListPage - 1) * activityListPerPage;
+      var pageItems = filteredActivities.slice(start, start + activityListPerPage);
+      if (editingIdx >= 0 && (editingIdx < start || editingIdx >= start + activityListPerPage)) {
+        pageItems = [filteredActivities[editingIdx]].concat(pageItems);
+      }
+
+      var pagerHtml = buildGenericPagerBar({
+        total: total,
+        page: activityListPage,
+        perPage: activityListPerPage,
+        perPageOpts: [10, 20, 50, 100],
+        goFn: 'goActivityPage',
+        setPerPageFn: 'setActivityPerPage'
+      });
+      if (topPager) topPager.innerHTML = pagerHtml;
+      if (bottomPager) bottomPager.innerHTML = pagerHtml;
+
       let html = '';
-      filteredActivities.forEach(function(activity) {
+      pageItems.forEach(function(activity) {
         const category = categories.find(function(c) { return c.id === activity.categoryId; });
         const categoryLabel = category ? (category.emoji + ' ' + category.name) : '미지정';
         const isEditing = (editingActivityId === activity.id);
@@ -4672,6 +4735,74 @@
         listSelectAll.checked = checkedCount === allIds.length && allIds.length > 0;
         listSelectAll.indeterminate = checkedCount > 0 && checkedCount < allIds.length;
       }
+    }
+
+    // 공통 페이저 빌더 (일상·카테고리용)
+    // opts: {total, page, perPage, perPageOpts, goFn(name), setPerPageFn(name)}
+    function buildGenericPagerBar(opts) {
+      var totalPages = Math.max(1, Math.ceil(opts.total / opts.perPage));
+      var perPageHtml = '<div class="schedule-per-page"><span>페이지당</span><select onchange="' + opts.setPerPageFn + '(this.value)">';
+      opts.perPageOpts.forEach(function(n) {
+        perPageHtml += '<option value="' + n + '"' + (n === opts.perPage ? ' selected' : '') + '>' + n + '개</option>';
+      });
+      perPageHtml += '</select></div>';
+
+      var pagerHtml = '<div class="schedule-pager">';
+      if (totalPages > 1) {
+        pagerHtml += '<button class="pg-btn" onclick="' + opts.goFn + '(' + (opts.page - 1) + ')"' + (opts.page <= 1 ? ' disabled' : '') + '>‹</button>';
+        var maxBtns = 7;
+        var s = Math.max(1, opts.page - 3);
+        var e = Math.min(totalPages, s + maxBtns - 1);
+        if (e - s < maxBtns - 1) s = Math.max(1, e - maxBtns + 1);
+        if (s > 1) {
+          pagerHtml += '<button class="pg-btn" onclick="' + opts.goFn + '(1)">1</button>';
+          if (s > 2) pagerHtml += '<span style="padding:0 4px;color:var(--text-secondary)">…</span>';
+        }
+        for (var i = s; i <= e; i++) {
+          pagerHtml += '<button class="pg-btn' + (i === opts.page ? ' active' : '') + '" onclick="' + opts.goFn + '(' + i + ')">' + i + '</button>';
+        }
+        if (e < totalPages) {
+          if (e < totalPages - 1) pagerHtml += '<span style="padding:0 4px;color:var(--text-secondary)">…</span>';
+          pagerHtml += '<button class="pg-btn" onclick="' + opts.goFn + '(' + totalPages + ')">' + totalPages + '</button>';
+        }
+        pagerHtml += '<button class="pg-btn" onclick="' + opts.goFn + '(' + (opts.page + 1) + ')"' + (opts.page >= totalPages ? ' disabled' : '') + '>›</button>';
+      }
+      pagerHtml += '</div>';
+
+      return '<div class="schedule-pager-bar">' + pagerHtml + perPageHtml + '</div>';
+    }
+
+    function goActivityPage(page) {
+      var total = getFilteredActivityCount();
+      var totalPages = Math.max(1, Math.ceil(total / activityListPerPage));
+      page = parseInt(page, 10);
+      if (isNaN(page) || page < 1 || page > totalPages) return;
+      activityListPage = page;
+      renderActivities();
+    }
+    function setActivityPerPage(val) {
+      activityListPerPage = parseInt(val, 10) || 20;
+      activityListPage = 1;
+      renderActivities();
+    }
+    function getFilteredActivityCount() {
+      if (selectedCategoryFilter === 'unassigned') return activities.filter(function(a) { return !a.categoryId; }).length;
+      if (selectedCategoryFilter) return activities.filter(function(a) { return a.categoryId === selectedCategoryFilter; }).length;
+      return activities.length;
+    }
+
+    function goCategoryPage(page) {
+      var total = categories.length;
+      var totalPages = Math.max(1, Math.ceil(total / categoryListPerPage));
+      page = parseInt(page, 10);
+      if (isNaN(page) || page < 1 || page > totalPages) return;
+      categoryListPage = page;
+      renderCategories();
+    }
+    function setCategoryPerPage(val) {
+      categoryListPerPage = parseInt(val, 10) || 20;
+      categoryListPage = 1;
+      renderCategories();
     }
 
     function buildPagerBar(total) {
