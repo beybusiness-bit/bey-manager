@@ -464,7 +464,7 @@
     .emoji-grid-wrap {
       flex: 1;
       overflow-y: auto;
-      margin-bottom: 12px;
+      min-height: 0;
     }
 
     .emoji-grid {
@@ -495,9 +495,19 @@
       background: #fff9e6;
     }
 
+    /* 이모지 피커 내부 스크롤 구조 */
+    #emojiStdSection {
+      flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;
+    }
+    .emoji-grid-wrap {
+      flex: 1; overflow-y: auto; min-height: 0; margin-bottom: 0;
+    }
+
     .emoji-picker-footer {
+      flex-shrink: 0;
       display: flex;
       gap: 10px;
+      padding-top: 12px;
     }
 
     .emoji-picker-footer button {
@@ -775,11 +785,11 @@
       border-top: 1px solid var(--border-color);
     }
     .sidebar-footer-row {
-      display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+      display: flex; align-items: center; gap: 6px;
     }
     .btn-logout {
       flex-shrink: 0;
-      padding: 3px 10px;
+      padding: 3px 8px;
       font-size: 11px;
       border: 1px solid var(--border-color);
       border-radius: 6px;
@@ -791,19 +801,19 @@
     }
     .btn-logout:hover { color: #c00; border-color: #c00; }
 
-    /* Google Sheets 연동 패널 */
-    .gs-status { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; }
+    /* Google Sheets 연동 */
+    .gs-status { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
     .gs-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #ccc; transition: background .3s; }
     .gs-dot.ok { background: #2a7a00; }
     .gs-dot.err { background: #c00; }
     .gs-dot.sync { background: #c8a800; animation: gsPulse .8s infinite; }
     @keyframes gsPulse { 0%,100%{opacity:1} 50%{opacity:.35} }
-    .gs-label { flex: 1; color: var(--text-secondary); font-size: 10px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .gs-btn { width: 100%; padding: 5px 0; font-size: 11px; border-radius: 6px; cursor: pointer; border: 1px solid var(--border-color); background: transparent; }
-    .gs-btn.connect { border-color: var(--primary-yellow); background: var(--primary-yellow); font-weight: 600; }
-    .gs-btn.connect:hover { opacity: .85; }
-    .gs-btn.disconnect { color: #999; font-size: 10px; }
-    .gs-btn.disconnect:hover { color: #c00; border-color: #c00; }
+    .gs-label { flex: 1; color: var(--text-secondary); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gs-action-btn { flex-shrink: 0; padding: 3px 8px; font-size: 11px; border-radius: 6px; cursor: pointer; border: 1px solid var(--border-color); background: transparent; white-space: nowrap; transition: all .15s; }
+    .gs-action-btn.connect { border-color: var(--primary-yellow); background: var(--primary-yellow); font-weight: 600; }
+    .gs-action-btn.connect:hover { opacity: .85; }
+    .gs-action-btn.disconnect { color: #999; }
+    .gs-action-btn.disconnect:hover { color: #c00; border-color: #c00; }
     /* 토스트 알림 */
     #gs-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(8px); background: #333; color: #fff; padding: 8px 18px; border-radius: 8px; font-size: 13px; z-index: 9999; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; white-space: nowrap; max-width: 90vw; text-overflow: ellipsis; overflow: hidden; }
     #gs-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -2796,13 +2806,9 @@
             <div class="gs-dot" id="gs-dot"></div>
             <div class="gs-label" id="gs-label">Sheets 미연결</div>
           </div>
+          <button class="gs-action-btn connect" id="gs-action-connect" onclick="GS.connect()">☁️ 연결</button>
+          <button class="gs-action-btn disconnect" id="gs-action-disconnect" onclick="GS.disconnect()" style="display:none">해제</button>
           <button class="btn-logout" onclick="handleLogout()">로그아웃</button>
-        </div>
-        <div id="gs-setup">
-          <button class="gs-btn connect" onclick="GS.connect()">☁️ Sheets 연결</button>
-        </div>
-        <div id="gs-connected" style="display:none">
-          <button class="gs-btn disconnect" onclick="GS.disconnect()">연결 해제</button>
         </div>
       </div>
     </aside>
@@ -5684,17 +5690,43 @@
 
       function _isConnected() { return !!_token && Date.now() < _tokenExpiry; }
 
+      function _saveTokenCache(token, expiresIn) {
+        _token = token;
+        _tokenExpiry = Date.now() + ((expiresIn || 3600) - 60) * 1000;
+        try { sessionStorage.setItem('_gs_tok', JSON.stringify({t: _token, e: _tokenExpiry})); } catch(e) {}
+      }
+
+      function _loadTokenCache() {
+        try {
+          var c = JSON.parse(sessionStorage.getItem('_gs_tok') || 'null');
+          if (c && c.t && c.e && Date.now() < c.e) { _token = c.t; _tokenExpiry = c.e; return true; }
+        } catch(e) {}
+        return false;
+      }
+
+      function _clearTokenCache() {
+        _token = null; _tokenExpiry = 0;
+        try { sessionStorage.removeItem('_gs_tok'); } catch(e) {}
+      }
+
       function _updateUI(state, msg) {
         var dot = document.getElementById('gs-dot');
         var lbl = document.getElementById('gs-label');
-        var setup = document.getElementById('gs-setup');
-        var conn = document.getElementById('gs-connected');
+        var btnConnect = document.getElementById('gs-action-connect');
+        var btnDisconn = document.getElementById('gs-action-disconnect');
         if (!dot) return;
         dot.className = 'gs-dot' + (state ? ' ' + state : '');
-        if (lbl) lbl.textContent = msg || (state === 'ok' ? '연결됨' : state === 'err' ? '연결 실패 — 재연결 필요' : state === 'sync' ? '동기화 중...' : 'Sheets 미연결');
-        if (state === 'ok') { if (setup) setup.style.display = 'none'; if (conn) conn.style.display = 'block'; }
-        else if (state === 'sync') { if (setup) setup.style.display = 'none'; if (conn) conn.style.display = 'none'; }
-        else { if (setup) setup.style.display = 'block'; if (conn) conn.style.display = 'none'; }
+        if (lbl) lbl.textContent = msg || (state === 'ok' ? '연결됨' : state === 'err' ? '재연결 필요' : state === 'sync' ? '저장 중...' : '미연결');
+        if (state === 'ok') {
+          if (btnConnect) btnConnect.style.display = 'none';
+          if (btnDisconn) btnDisconn.style.display = '';
+        } else if (state === 'sync') {
+          if (btnConnect) btnConnect.style.display = 'none';
+          if (btnDisconn) btnDisconn.style.display = 'none';
+        } else {
+          if (btnConnect) btnConnect.style.display = '';
+          if (btnDisconn) btnDisconn.style.display = 'none';
+        }
       }
 
       async function _api(method, path, body) {
@@ -5704,8 +5736,8 @@
           if (body !== undefined) opts.body = JSON.stringify(body);
           var r = await fetch(BASE + path, opts);
           if (r.status === 401) {
-            _token = null; _tokenExpiry = 0;
-            _updateUI('err', '토큰 만료 — 재연결 필요');
+            _clearTokenCache();
+            _updateUI('err', '재연결 필요');
             showToast('Sheets 토큰 만료. 재연결해주세요', 'warning');
             return null;
           }
@@ -5849,6 +5881,12 @@
         },
 
         init: function(onDone) {
+          // 캐시된 토큰이 유효하면 즉시 사용 (새로고침 후에도 연결 유지)
+          if (_loadTokenCache()) {
+            console.log('[GS] ✅ 캐시 토큰 사용');
+            if (onDone) onDone(true);
+            return;
+          }
           if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
             _updateUI('err', 'Google 라이브러리 없음'); return;
           }
@@ -5857,8 +5895,7 @@
             scope: 'https://www.googleapis.com/auth/spreadsheets',
             callback: function(resp) {
               if (resp.error) { _updateUI('err'); if (onDone) onDone(false); return; }
-              _token = resp.access_token;
-              _tokenExpiry = Date.now() + ((resp.expires_in || 3600) - 60) * 1000;
+              _saveTokenCache(resp.access_token, resp.expires_in);
               console.log('[GS] ✅ 토큰 획득');
               if (onDone) onDone(true);
             }
@@ -5871,8 +5908,7 @@
           _updateUI('sync', '연결 중...');
           _tokenClient.callback = function(resp) {
             if (resp.error) { _updateUI('err'); showToast('Sheets 연결 실패: ' + resp.error, 'error'); return; }
-            _token = resp.access_token;
-            _tokenExpiry = Date.now() + ((resp.expires_in || 3600) - 60) * 1000;
+            _saveTokenCache(resp.access_token, resp.expires_in);
             GS.loadAll().then(function() { showToast('☁️ Sheets 연결 완료'); });
           };
           _tokenClient.requestAccessToken({ prompt: 'consent' });
@@ -5880,8 +5916,8 @@
 
         disconnect: function() {
           if (!confirm('Sheets 연결을 해제할까요?\n(데이터는 로컬에 유지됩니다)')) return;
-          _token = null; _tokenExpiry = 0;
-          _updateUI('', 'Sheets 미연결');
+          _clearTokenCache();
+          _updateUI('', '미연결');
           showToast('Sheets 연결 해제됨', 'warning');
         },
 
