@@ -667,6 +667,62 @@ sh /home/user/bey-manager/.git/push.sh origin claude/review-session-notes-nb8G8
   - 각 탭 전환 시(`#dailyPage .tab-btn`) 페이지 상태 초기화 여부는 판단 필요 (기본은 유지)
 - **모바일 최적화**: 시간표 목록뷰와 마찬가지로 모바일에서 페이저가 잘 보이고 눌리기 쉬운 크기
 
+#### ⑥ 모달 위의 모달 z-index 자동 관리 (스마트 스태킹)
+- **증상**: 이모지 피커 모달 → My Emojies 탭 → 업로드 이미지 삭제 버튼을 누르면, 확인 모달(`confirmModal`)이 이모지 피커 **뒤에** 뜸. 그래서 확인/취소 버튼을 누를 수 없음.
+- **원인 추정**: 현재 각 모달 z-index가 고정값으로 코드에 박혀 있음 (이모지 피커 1400, confirmModal 1000~1300 어딘가). 이모지 피커가 나중에 올라감.
+- **단순 fix**: confirmModal z-index를 이모지 피커보다 높게(예: 1500) 올리면 이번 건은 해결. 단 다른 모달 조합에서 비슷한 문제 반복 우려.
+- **스마트 해결 방향** (근본 대책):
+  1. **모달 스택 관리자(MM)** — `openModal(id)` / `closeModal(id)`로 래핑하고, 열릴 때마다 z-index를 `baseZ + stackDepth * 10`으로 동적 배정
+  2. 예: 첫 모달 1000, 두 번째 모달 1010, 세 번째 1020 … 닫을 때 스택에서 pop
+  3. 혹은 **더 단순한 패턴**: 열리는 순간 현재 DOM에서 가장 큰 z-index를 계산 → +10으로 자기 자신에 부여. 이 방식이면 순서와 무관하게 항상 최상단.
+- **구현 대상**:
+  - `showConfirm()`, `showAlert()`, `openEmojiPicker()`, `openScheduleItemModal()` 등 모든 모달 표시 함수
+  - 공통 헬퍼 `bringToFront(modalEl)` 하나 만들어서 각 open 함수에서 호출
+- **CSS 변수로 추출**: 모달 z-index를 하드코드 말고 `--modal-z-base: 1000` 정의 후 JS가 동적으로 늘리는 방식
+
+#### ⑦ 이모지 종류 대폭 확장 (사람·과일·채소·취미)
+- **현재 상황**: `EMOJI_KEYWORDS` 상수에 약 450개 이모지 + 한글/영어 키워드 수동 매핑. 베이님이 이모지를 추가하고 싶을 때 코드 수정 필요 → 노동 집약적.
+- **즉시 조치 (수동 확장)**:
+  - **사람/표정/직업**: 👶👧🧒👦👩👨🧑 + 직업 이모지(👨‍💼👩‍💻👩‍🏫👨‍🍳👩‍🔬 등) + 제스처(🙆🙅🤷 등) 추가
+  - **과일**: 🍎🍐🍊🍋🍌🍉🍇🍓🫐🍈🍒🍑🥭🍍🥥🥝🍅🫒 등 전체
+  - **채소**: 🥑🥦🥬🥒🌶️🫑🌽🥕🫒🧄🧅🥔🍠🫘 등
+  - **취미**: 🎨🎭🎪🎬🎤🎧🎼🎹🥁🎷🎺🎸🪕🎻🎲♟️🧩🪀🪁🧸🪆🏓🎣🎳🎯🎮🕹️📚 등
+  - 각 이모지에 **한글·영어 키워드 3~5개씩** (AND 검색과 호환되도록 다양하게)
+- **장기 조치 (R5단계 — Unicode CLDR 연동)**:
+  - `unicode-emoji-json` CDN 로드 (jsdelivr 경로: `https://cdn.jsdelivr.net/npm/unicode-emoji-json@...`)
+  - 한국어 annotation: `cldr-annotations-full/annotations/ko/annotations.json`
+  - 약 4,000개 이모지 + 한국어 키워드 자동 확보 (200~500KB)
+  - 기존 베이님 커스텀 카테고리("취미", "학습" 등)와 매핑 테이블 별도 작성 필요 (Unicode 공식 카테고리: face, people, animal, food, travel, activity, object, symbol, flag)
+  - 기존 수동 추가분은 **우선순위**로 유지 (검색 시 베이님 커스텀이 상단, CLDR이 하단)
+  - 로드 타이밍: 최초 이모지 피커 open 시 lazy load (앱 시작 시점엔 로드하지 않음)
+
+#### ⑧ 이모지 피커 카테고리 내 스크롤 불가 버그
+- **증상**: 이모지 분류군(카테고리)을 클릭해서 해당 이모지 목록이 뜨면, 위쪽 몇 줄만 보이고 **아래쪽 이모지는 스크롤로도 볼 수 없고 선택도 불가**
+- **원인 추정**:
+  1. 이모지 리스트 컨테이너에 `overflow-y: auto` 또는 `overflow-y: scroll`이 안 걸려 있거나
+  2. 컨테이너의 `max-height`가 없어서 자식 요소들이 viewport 바깥으로 나가고 모달 자체가 확장 안 됨
+  3. 모달 전체엔 scroll이 있지만 카테고리 리스트는 flexbox 자식이라 flex shrink로 잘림
+- **해결 방향**:
+  - 이모지 그리드 컨테이너에 `max-height: 60vh` + `overflow-y: auto`
+  - 또는 모달 body 전체에 `overflow-y: auto`를 걸고, 고정 영역(탭, 검색바, 저장 버튼)과 분리
+  - 모바일에서 viewport 작을 때도 잘 작동하는지 확인
+- **회귀 체크**: 이모지 피커의 다른 탭(전체·My Emojies·검색결과)에서도 스크롤 되는지 확인
+- **현재**: 일상 종류, 카테고리 모두 페이저 없이 전체 목록 표시. 수가 많아지면 스크롤 길어짐.
+- **목표**: 시간표 목록뷰(`scheduleListPage`, `scheduleListPerPage`)와 **완전히 동일한 규격·디자인·작동방식** 페이저 적용
+- **시간표 목록뷰 페이저 참조**:
+  - 상하단 둘 다 배치 (`.pagination` 위아래)
+  - per-page 선택 드롭다운 (10/20/50/100)
+  - 페이지 번호 버튼 `.pg-btn` (mono 폰트, flex + gap:6px)
+  - 이전/다음/처음/마지막 버튼
+  - 현재 페이지 강조, 호버 효과
+- **구현 포인트**:
+  - 일상 상태: `activityListPage`, `activityListPerPage` 전역 변수 추가
+  - 카테고리 상태: `categoryListPage`, `categoryListPerPage` 전역 변수 추가
+  - 필터(카테고리별/미지정/전체), 검색 후 결과에 대해 페이징 적용
+  - 드래그 순서 변경(피드백 ④)과 함께 작동해야 함 → 페이지 내에서 드래그는 전체 배열 인덱스로 변환 필요
+  - 각 탭 전환 시(`#dailyPage .tab-btn`) 페이지 상태 초기화 여부는 판단 필요 (기본은 유지)
+- **모바일 최적화**: 시간표 목록뷰와 마찬가지로 모바일에서 페이저가 잘 보이고 눌리기 쉬운 크기
+
 ### 📌 설계 결정 (이번 세션)
 
 - **태그 Enter 이중 추가 버그**: `onkeydown` → `onkeyup`으로 변경. 한국어 IME에서 `keydown`은 조합 완료 전에 발화(isComposing=true)될 수 있어 이중 추가 발생. `keyup` 시점엔 IME 조합 완료 후라 단 한 번만 처리됨.
