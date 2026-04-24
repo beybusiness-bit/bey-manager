@@ -2344,19 +2344,80 @@
     .si-add-divider { height: 1px; background: var(--border-color); margin: 2px 0; }
     .si-add-activity-trigger { display: flex; align-items: center; gap: 6px; padding: 9px 12px; font-size: 13px; color: var(--primary-yellow); font-weight: 600; cursor: pointer; }
     .si-add-activity-trigger:hover { background: var(--bg-main); }
-    .si-add-activity-form { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
-    .si-add-row1 { display: flex; align-items: center; gap: 6px; }
-    .si-add-row2 { display: flex; align-items: center; gap: 8px; }
-    .si-add-emoji-btn { font-size: 20px; cursor: pointer; border: 1px solid var(--border-color); border-radius: 6px; padding: 2px 6px; background: var(--bg-card); flex-shrink: 0; line-height: 1.3; }
-    .si-add-emoji-btn:hover { background: var(--bg-main); }
-    .si-add-name-input { flex: 1; min-width: 0; padding: 5px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; }
-    .si-add-save-btn { padding: 5px 10px; font-size: 12px; border-radius: 6px; background: var(--primary-yellow); border: none; cursor: pointer; font-weight: 600; flex-shrink: 0; }
+    /* 인라인 일상 추가 폼 — 카드 스타일 통일 */
+    .si-add-activity-form {
+      position: relative;
+      padding: 14px 14px 12px;
+      background: var(--bg-main);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .si-add-close-btn {
+      position: absolute; top: 8px; right: 8px;
+      width: 22px; height: 22px; padding: 0;
+      border: none; background: transparent;
+      cursor: pointer; color: #888; font-size: 13px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 4px; line-height: 1;
+    }
+    .si-add-close-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .si-add-field { display: flex; flex-direction: column; gap: 4px; }
+    .si-add-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+    .si-add-inline { display: flex; align-items: center; gap: 8px; }
+    .si-add-emoji-btn {
+      width: 36px; height: 36px; padding: 0;
+      font-size: 20px; cursor: pointer;
+      border: 1px solid var(--border-color); border-radius: var(--button-radius,6px);
+      background: var(--bg-card); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .si-add-emoji-btn:hover { border-color: var(--primary-yellow); }
+    .si-add-emoji-btn img { width: 24px; height: 24px; object-fit: cover; border-radius: 3px; }
+    .si-add-name-input,
+    .si-add-cat-select {
+      flex: 1; min-width: 0;
+      padding: 8px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--button-radius,6px);
+      font-size: 13px;
+      font-family: inherit;
+      background: var(--bg-card);
+      box-sizing: border-box;
+      height: 36px;
+    }
+    .si-add-name-input:focus,
+    .si-add-cat-select:focus { outline: none; border-color: var(--primary-yellow); }
+    .si-add-cat-select { cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%23888' d='M0 0l5 6 5-6z'/></svg>"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+    .si-add-color-swatch {
+      display: inline-block;
+      width: 28px; height: 28px;
+      border: 1px solid var(--border-color);
+      border-radius: 50%;
+      cursor: pointer;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .si-add-color-swatch input[type="color"] {
+      position: absolute; inset: 0;
+      opacity: 0; cursor: pointer;
+      width: 100%; height: 100%;
+      border: none; padding: 0;
+    }
+    .si-add-color-hex { font-size: 12px; color: var(--text-secondary); font-family: 'DM Mono', monospace; }
+    .si-add-save-btn {
+      width: 100%;
+      padding: 10px;
+      font-size: 13px; font-weight: 600;
+      border-radius: var(--button-radius,6px);
+      background: var(--primary-btn-bg, var(--primary-yellow));
+      color: var(--primary-btn-color, #000);
+      border: none; cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.15s;
+    }
     .si-add-save-btn:hover { opacity: 0.85; }
-    .si-add-cancel-btn { padding: 5px 8px; font-size: 13px; border-radius: 6px; border: 1px solid var(--border-color); background: transparent; cursor: pointer; color: #888; flex-shrink: 0; line-height: 1; }
-    .si-add-cat-select { flex: 1; min-width: 0; padding: 5px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; }
-    .si-add-color-wrap { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
-    .si-add-color-label { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
-    .si-add-color-input { width: 30px; height: 26px; border: 1px solid var(--border-color); border-radius: 5px; padding: 1px; cursor: pointer; background: none; }
 
     /* 카테고리 카드 레이아웃 */
     .category-grid {

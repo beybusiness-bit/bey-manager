@@ -70,15 +70,18 @@
 
     // 이모지 데이터
     const EMOJI_DATA = {
-      '😊 표정': ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐'],
+      '😊 표정': ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐','🤡','👻','💀','☠️','👽','👾','🤖','😺','😸','😹','😻','😼','😽','🙀','😿','😾'],
       '❤️ 마음': ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟'],
-      '👋 손': ['👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳'],
+      '👋 손': ['👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁️','👅','👄'],
+      '🧑 사람': ['👶','🧒','👦','👧','🧑','👱','👨','🧔','👩','🧓','👴','👵','👨‍🦱','👩‍🦱','👨‍🦰','👩‍🦰','👨‍🦳','👩‍🦳','👨‍🦲','👩‍🦲','👮','🕵️','💂','🥷','👷','🤴','👸','👳','👲','🧕','🤵','👰','🤰','🤱','👼','🎅','🤶','🦸','🦹','🧙','🧚','🧛','🧜','🧝','🧞','🧟','💆','💇','🚶','🧍','🧎','🏃','💃','🕺','👯','🧖','🧘','🛀','🛌','🧑‍⚕️','👨‍⚕️','👩‍⚕️','🧑‍🎓','👨‍🎓','👩‍🎓','🧑‍🏫','👨‍🏫','👩‍🏫','🧑‍⚖️','👨‍⚖️','👩‍⚖️','🧑‍🌾','👨‍🌾','👩‍🌾','🧑‍🍳','👨‍🍳','👩‍🍳','🧑‍🔧','👨‍🔧','👩‍🔧','🧑‍🏭','👨‍🏭','👩‍🏭','🧑‍💼','👨‍💼','👩‍💼','🧑‍🔬','👨‍🔬','👩‍🔬','🧑‍💻','👨‍💻','👩‍💻','🧑‍🎤','👨‍🎤','👩‍🎤','🧑‍🎨','👨‍🎨','👩‍🎨','🧑‍✈️','👨‍✈️','👩‍✈️','🧑‍🚀','👨‍🚀','👩‍🚀','🧑‍🚒','👨‍🚒','👩‍🚒','👪','👨‍👩‍👦','👨‍👩‍👧','👨‍👨‍👦','👩‍👩‍👦','👫','👬','👭','💑','💏','🙋','🙆','🙅','🙇','🤦','🤷','🤝','🫂'],
       '💼 업무': ['💼','📁','📂','🗂️','📅','📆','🗓️','📇','📈','📉','📊','📋','📌','📍','📎','🖇️','📏','📐','✂️','🗃️','🗄️','🗑️','🔒','🔓','🔐','🔑','🗝️','🔨','🪛','🔧','🪚','⚙️','🗜️','⚖️','🔗','⛓️','🧰','🧲'],
       '🏠 생활': ['🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏩','🏪','🏫','🏬','🏭','🏯','🏰','💒','🗼','🗽','⛪','🕌','🛕','🕍','⛩️','🕋','⛲','⛺','🌁','🌃','🏙️','🌄','🌅','🌆','🌇','🌉','♨️','🎠','🎡','🎢','💈','🎪'],
       '🐶 동물': ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐽','🐸','🐵','🙈','🙉','🙊','🐒','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🪱','🐛','🦋','🐌','🐞','🐜','🪰','🪲','🪳','🦟','🦗','🕷️','🕸️','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🦧','🐘','🦛','🦏','🐪','🐫','🦒','🦘','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐈','🐓','🦃','🦚','🦜','🦢','🦩','🕊️','🐇','🦝','🦨','🦡','🦦','🦥','🐁','🐀','🐿️','🦔','🐾'],
-      '🍔 음식': ['🍔','🍟','🍕','🌭','🥪','🌮','🌯','🥙','🧆','🥚','🍳','🥘','🍲','🥣','🥗','🍿','🧈','🧂','🥫','🍱','🍘','🍙','🍚','🍛','🍜','🍝','🍠','🍢','🍣','🍤','🍥','🥮','🍡','🥟','🥠','🥡','🦀','🦞','🦐','🦑','🦪','🍦','🍧','🍨','🍩','🍪','🎂','🍰','🧁','🥧','🍫','🍬','🍭','🍮','🍯'],
-      '⚽ 운동': ['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🏑','🥍','🏏','🪃','🥅','⛳','🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸️','🥌','🎿','⛷️','🏂','🪂','🏋️','🤸','🤺','🤾','🏌️','🏇','🧘','🏄','🏊','🤽','🚣','🧗','🚴','🚵','🤹'],
-      '🎨 취미': ['🎨','🖼️','🎭','🎪','🎬','🎤','🎧','🎼','🎹','🥁','🪘','🎷','🎺','🪗','🎸','🪕','🎻','🎲','♟️','🎯','🎳','🎮','🎰','🧩','🪀','🪁','🎏','🎎','🎐','🧵','🪢','🧶','🪡','🎀','🎁'],
+      '🍎 과일': ['🍎','🍏','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🫒','🥑'],
+      '🥦 채소': ['🥦','🥬','🥒','🌶️','🫑','🌽','🥕','🧄','🧅','🥔','🍠','🫘','🫛','🍄','🌰','🫚','🫜','🥜'],
+      '🍔 음식': ['🍔','🍟','🍕','🌭','🥪','🌮','🌯','🥙','🧆','🥚','🍳','🥘','🍲','🥣','🥗','🍿','🧈','🧂','🥫','🍱','🍘','🍙','🍚','🍛','🍜','🍝','🍠','🍢','🍣','🍤','🍥','🥮','🍡','🥟','🥠','🥡','🦀','🦞','🦐','🦑','🦪','🍦','🍧','🍨','🍩','🍪','🎂','🍰','🧁','🥧','🍫','🍬','🍭','🍮','🍯','🍞','🥐','🥖','🫓','🥨','🥯','🥞','🧇','🧀','🍖','🍗','🥩','🥓','🍺','🍻','🥂','🍷','🥃','🍸','🍹','🍶','🧃','☕','🍵','🥤','🧋','🧊'],
+      '⚽ 운동': ['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🏑','🥍','🏏','🪃','🥅','⛳','🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸️','🥌','🎿','⛷️','🏂','🪂','🏋️','🤸','🤺','🤾','🏌️','🏇','🧘','🏄','🏊','🤽','🚣','🧗','🚴','🚵','🤹','🏅','🥇','🥈','🥉','🏆','🎖️','🏵️','🎗️','🎫','🎟️'],
+      '🎨 취미': ['🎨','🖼️','🖌️','🖍️','✏️','🖊️','🖋️','🎭','🎪','🎬','🎥','📷','📸','📹','🎞️','📽️','🎤','🎧','🎼','🎵','🎶','🎹','🥁','🪘','🎷','🎺','🪗','🎸','🪕','🎻','🎲','♟️','🎯','🎳','🎮','🕹️','🎰','🧩','🪀','🪁','🎏','🎎','🎐','🧵','🪢','🧶','🪡','🎀','🎁','📚','📖','📕','📗','📘','📙','📓','📔','📒','📝','📑','🔖','🎒','🧸','🪆','🪁','🎨','🪅','🪩','🎊','🎉','🎈','🕯️','🪔','💡','🔦','🏮','🪙','🧪','🧫','🧬','🔬','🔭','📡','🛠️','🪛','🧰','🎸','🎻','🧶','🧵','🎼','📯','🎙️','🎚️','🎛️'],
       '📚 학습': ['📚','📖','📕','📗','📘','📙','📓','📔','📒','📃','📜','📄','📰','🗞️','📑','🔖','🏷️','💰','🪙','💴','💵','💶','💷','💸','💳','🧾','✉️','📧','📨','📩','📤','📥','📦','📫','📪','📬','📭','📮'],
       '🌳 자연': ['🌳','🌲','🌱','🌿','☘️','🍀','🎍','🎋','🍃','🍂','🍁','🍄','🌾','💐','🌷','🌹','🥀','🌺','🌸','🌼','🌻','🌞','🌝','🌛','🌜','🌚','🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔','🌙','🌎','🌍','🌏','🪐','💫','⭐','🌟','✨','⚡','☄️','💥','🔥','🌈','☀️','🌤️','⛅','🌥️','☁️','🌦️','🌧️','⛈️','🌩️','🌨️','❄️','☃️','⛄'],
       '🚗 교통': ['🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🦯','🦽','🦼','🛴','🚲','🛵','🏍️','🛺','🚨','🚔','🚍','🚘','🚖','🚡','🚠','🚟','🚃','🚋','🚞','🚝','🚄','🚅','🚈','🚂','🚆','🚇','🚊','🚉','✈️','🛫','🛬','🛩️','💺','🛰️','🚀','🛸','🚁','🛶','⛵','🚤','🛥️','🛳️','⛴️','🚢','⚓','⛽','🚧','🚦','🚥','🗺️','🗿','🗽'],
@@ -842,7 +845,222 @@
       '♠️': ['스페이드','spade','suit','card'],
       '♣️': ['클로버','club','suit','card'],
       '♥️': ['하트','heart','suit','card'],
-      '♦️': ['다이아','diamond','suit','card']
+      '♦️': ['다이아','diamond','suit','card'],
+
+      // 🧑 사람
+      '👶': ['아기','baby','infant'],
+      '🧒': ['아이','child','kid'],
+      '👦': ['남자아이','boy','kid'],
+      '👧': ['여자아이','girl','kid'],
+      '🧑': ['사람','person','adult'],
+      '👱': ['금발','blonde','hair','person'],
+      '👨': ['남자','man','adult'],
+      '🧔': ['수염','beard','man','bearded'],
+      '👩': ['여자','woman','adult'],
+      '🧓': ['노인','older','adult','elder'],
+      '👴': ['할아버지','grandpa','old','man','elder'],
+      '👵': ['할머니','grandma','old','woman','elder'],
+      '👮': ['경찰','police','officer','cop'],
+      '🕵️': ['탐정','detective','spy','investigator'],
+      '💂': ['근위병','guard','soldier'],
+      '🥷': ['닌자','ninja'],
+      '👷': ['작업자','construction','worker','건설'],
+      '🤴': ['왕자','prince','royal'],
+      '👸': ['공주','princess','royal'],
+      '👳': ['터번','turban','person'],
+      '👲': ['모자','cap','person','skull'],
+      '🧕': ['히잡','headscarf','hijab','woman'],
+      '🤵': ['턱시도','tuxedo','suit','groom','formal'],
+      '👰': ['신부','bride','veil','wedding'],
+      '🤰': ['임신','pregnant','woman','baby'],
+      '🤱': ['수유','breastfeeding','baby','feeding'],
+      '👼': ['천사','angel','baby','cherub'],
+      '🎅': ['산타','santa','christmas','claus'],
+      '🤶': ['산타부인','mrs','claus','christmas'],
+      '🦸': ['히어로','superhero','hero','super'],
+      '🦹': ['빌런','villain','supervillain','bad'],
+      '🧙': ['마법사','mage','wizard','magician'],
+      '🧚': ['요정','fairy','magical'],
+      '🧛': ['뱀파이어','vampire'],
+      '🧜': ['인어','merperson','mermaid'],
+      '🧝': ['엘프','elf'],
+      '🧞': ['지니','genie'],
+      '🧟': ['좀비','zombie'],
+      '💆': ['마사지','massage','spa','relax'],
+      '💇': ['이발','haircut','salon','hair'],
+      '🚶': ['걷기','walk','walking','pedestrian'],
+      '🧍': ['서있기','stand','standing'],
+      '🧎': ['무릎','kneel','kneeling'],
+      '🏃': ['달리기','run','running','jog'],
+      '💃': ['춤','dance','dancer','woman'],
+      '🕺': ['춤','dance','dancer','man'],
+      '👯': ['쌍둥이','twins','bunny','people'],
+      '🧖': ['사우나','sauna','steam','spa'],
+      '🛀': ['목욕','bath','bathtub'],
+      '🛌': ['잠','sleep','bed','hotel'],
+      '👪': ['가족','family'],
+      '👫': ['커플','couple','holding','hands'],
+      '👬': ['남자커플','men','couple'],
+      '👭': ['여자커플','women','couple'],
+      '💑': ['커플','couple','love','romance'],
+      '💏': ['키스','kiss','couple'],
+      '🙋': ['손들기','raising','hand','question'],
+      '🙆': ['오케이','ok','gesture','good'],
+      '🙅': ['안돼','no','gesture','refuse'],
+      '🙇': ['인사','bow','bowing','apology','죄송'],
+      '🤦': ['이마짚기','facepalm','frustrated'],
+      '🤷': ['몰라','shrug','dunno'],
+      '🫂': ['포옹','hug','embrace','comfort'],
+
+      // 👋 손 추가
+      '💪': ['근육','muscle','strong','arm','power'],
+      '🦾': ['기계팔','mechanical','arm','prosthesis'],
+      '🦿': ['기계다리','mechanical','leg','prosthesis'],
+      '🦵': ['다리','leg'],
+      '🦶': ['발','foot'],
+      '👂': ['귀','ear'],
+      '🦻': ['보청기','ear','hearing','aid'],
+      '👃': ['코','nose'],
+      '🧠': ['뇌','brain','mind'],
+      '🫀': ['심장','heart','organ'],
+      '🫁': ['폐','lungs','organ'],
+      '🦷': ['이빨','tooth','teeth'],
+      '🦴': ['뼈','bone'],
+      '👀': ['눈','eyes','look','see'],
+      '👁️': ['눈','eye','see'],
+      '👅': ['혀','tongue'],
+      '👄': ['입술','mouth','lips','kiss'],
+
+      // 😊 표정 추가 (귀신·유령·고양이)
+      '🤡': ['광대','clown'],
+      '👻': ['유령','ghost','halloween','spooky'],
+      '💀': ['해골','skull','dead'],
+      '☠️': ['해골','skull','crossbones','danger','poison'],
+      '👽': ['외계인','alien','ufo'],
+      '👾': ['외계인','alien','invader','monster','space'],
+      '🤖': ['로봇','robot','ai'],
+      '😺': ['고양이','cat','smile','happy'],
+      '😸': ['고양이','cat','grin'],
+      '😹': ['고양이','cat','laugh','tears'],
+      '😻': ['고양이','cat','heart','love'],
+      '😼': ['고양이','cat','smirk'],
+      '😽': ['고양이','cat','kiss'],
+      '🙀': ['고양이','cat','weary','shock'],
+      '😿': ['고양이','cat','cry','tears','sad'],
+      '😾': ['고양이','cat','pout','angry'],
+
+      // 🍎 과일
+      '🍎': ['빨간사과','apple','red','fruit'],
+      '🍏': ['초록사과','apple','green','fruit'],
+      '🍐': ['배','pear','fruit'],
+      '🍊': ['귤','오렌지','orange','tangerine','fruit'],
+      '🍋': ['레몬','lemon','fruit','sour'],
+      '🍌': ['바나나','banana','fruit'],
+      '🍉': ['수박','watermelon','fruit'],
+      '🍇': ['포도','grapes','fruit'],
+      '🍓': ['딸기','strawberry','fruit','berry'],
+      '🫐': ['블루베리','blueberries','berry','fruit'],
+      '🍈': ['멜론','melon','fruit'],
+      '🍒': ['체리','cherries','fruit'],
+      '🍑': ['복숭아','peach','fruit'],
+      '🥭': ['망고','mango','fruit','tropical'],
+      '🍍': ['파인애플','pineapple','fruit','tropical'],
+      '🥥': ['코코넛','coconut','fruit','tropical'],
+      '🥝': ['키위','kiwi','fruit'],
+      '🍅': ['토마토','tomato','fruit','vegetable'],
+      '🫒': ['올리브','olive','fruit'],
+      '🥑': ['아보카도','avocado','fruit'],
+
+      // 🥦 채소
+      '🥦': ['브로콜리','broccoli','vegetable','green'],
+      '🥬': ['청경채','leafy','green','vegetable','lettuce'],
+      '🥒': ['오이','cucumber','vegetable'],
+      '🌶️': ['고추','chili','pepper','spicy','hot'],
+      '🫑': ['피망','bell','pepper','vegetable'],
+      '🌽': ['옥수수','corn','vegetable'],
+      '🥕': ['당근','carrot','vegetable','orange'],
+      '🧄': ['마늘','garlic','bulb'],
+      '🧅': ['양파','onion','bulb'],
+      '🥔': ['감자','potato','vegetable'],
+      '🍠': ['고구마','sweet','potato','yam'],
+      '🫘': ['콩','beans','legume'],
+      '🫛': ['완두콩','pea','pod','peas'],
+      '🍄': ['버섯','mushroom','fungus'],
+      '🌰': ['밤','chestnut','nut'],
+      '🥜': ['땅콩','peanut','nut'],
+
+      // 🍔 음식 추가
+      '🍞': ['빵','bread','loaf'],
+      '🥐': ['크루아상','croissant','pastry','breakfast'],
+      '🥖': ['바게트','baguette','bread','french'],
+      '🫓': ['플랫브레드','flatbread','naan'],
+      '🥨': ['프레첼','pretzel','snack'],
+      '🥯': ['베이글','bagel','bread'],
+      '🥞': ['팬케이크','pancakes','breakfast','syrup'],
+      '🧇': ['와플','waffle','breakfast'],
+      '🧀': ['치즈','cheese','dairy'],
+      '🍖': ['고기','meat','bone'],
+      '🍗': ['닭다리','chicken','leg','poultry','drumstick'],
+      '🥩': ['스테이크','steak','meat','beef'],
+      '🥓': ['베이컨','bacon','meat','pork'],
+      '🍺': ['맥주','beer','drink','alcohol'],
+      '🍻': ['건배','cheers','beer','drink','toast'],
+      '🥂': ['샴페인','champagne','toast','cheers','drink'],
+      '🍷': ['와인','wine','drink','glass','alcohol'],
+      '🥃': ['위스키','whiskey','drink','glass','tumbler'],
+      '🍸': ['칵테일','cocktail','drink','martini'],
+      '🍹': ['칵테일','cocktail','tropical','drink'],
+      '🍶': ['사케','sake','japanese','drink'],
+      '🧃': ['주스','juice','drink','box'],
+      '☕': ['커피','coffee','drink','hot'],
+      '🍵': ['차','tea','drink','hot','matcha'],
+      '🥤': ['음료','drink','cup','straw','soda'],
+      '🧋': ['버블티','bubble','tea','boba'],
+      '🧊': ['얼음','ice','cube','cold'],
+
+      // ⚽ 운동 추가
+      '🏅': ['메달','medal','sports','award'],
+      '🥇': ['금메달','gold','medal','first','1st'],
+      '🥈': ['은메달','silver','medal','second','2nd'],
+      '🥉': ['동메달','bronze','medal','third','3rd'],
+      '🏆': ['트로피','trophy','award','winner','우승'],
+      '🎖️': ['훈장','military','medal','honor'],
+      '🏵️': ['장미장식','rosette','award'],
+      '🎗️': ['리본','reminder','ribbon','awareness'],
+      '🎫': ['티켓','ticket','admission'],
+      '🎟️': ['티켓','tickets','admission','admission'],
+
+      // 🎨 취미 추가
+      '🖌️': ['붓','paintbrush','paint','art'],
+      '🖍️': ['크레용','crayon','draw','art'],
+      '✏️': ['연필','pencil','write','draw'],
+      '🖊️': ['볼펜','pen','write'],
+      '🖋️': ['만년필','fountain','pen','ink'],
+      '🎥': ['카메라','movie','camera','film'],
+      '📷': ['카메라','camera','photo','picture'],
+      '📸': ['카메라플래시','camera','flash','photo'],
+      '📹': ['캠코더','video','camera'],
+      '🎞️': ['필름','film','frames','cinema'],
+      '📽️': ['영사기','film','projector','cinema'],
+      '🕹️': ['조이스틱','joystick','game','arcade'],
+      '📚': ['책','books','library','learn'],
+      '📖': ['책','open','book','read'],
+      '📝': ['메모','memo','note','write'],
+      '🎒': ['가방','backpack','school','bag'],
+      '🧸': ['곰인형','teddy','bear','toy'],
+      '🪆': ['마트료시카','nesting','dolls','russian'],
+      '🪅': ['피냐타','pinata','party'],
+      '🪩': ['미러볼','mirror','ball','disco','party'],
+      '🎊': ['폭죽','confetti','ball','party','celebrate'],
+      '🎉': ['축하','party','popper','celebrate','celebration'],
+      '🎈': ['풍선','balloon','party'],
+      '🕯️': ['초','candle','light','flame'],
+      '🪔': ['디와','diya','lamp','oil'],
+      '💡': ['전구','light','bulb','idea'],
+      '🔦': ['손전등','flashlight','torch','light'],
+      '🏮': ['등불','lantern','red','japanese'],
+      '🪙': ['동전','coin','money','gold'],
+      '📯': ['나팔','postal','horn','music']
     };
 
     // 상태 변수
@@ -1011,6 +1229,25 @@
     // ========================================
     // 공통 모달 시스템
     // ========================================
+    // 열린 모든 모달 중 최상단보다 한 층 위로 이 모달을 올림 (스마트 스태킹)
+    // 모달이 겹치는 순서(삭제확인 → 이모지 피커 위)와 상관없이 항상 최상단 보장
+    function bringModalToFront(el) {
+      if (!el) return;
+      var BASE_Z = 1200;
+      var maxZ = BASE_Z - 10;
+      var candidates = document.querySelectorAll('.modal-overlay, .emoji-picker-overlay');
+      candidates.forEach(function(m) {
+        if (m === el) return;
+        var isVisible = m.classList.contains('show') ||
+          (m.style && m.style.display && m.style.display !== 'none');
+        if (!isVisible) return;
+        var cs = window.getComputedStyle(m);
+        var z = parseInt(cs.zIndex, 10);
+        if (!isNaN(z) && z > maxZ) maxZ = z;
+      });
+      el.style.zIndex = String(maxZ + 10);
+    }
+
     function showConfirm(title, message, callback, detailHtml) {
       const modal = document.getElementById('confirmModal');
       const titleEl = document.getElementById('confirmTitle');
@@ -1025,6 +1262,7 @@
       }
       confirmModalCallback = callback;
       modal.classList.add('show');
+      bringModalToFront(modal);
     }
 
     function closeConfirmModal(result) {
@@ -1043,10 +1281,11 @@
       const modal = document.getElementById('alertModal');
       const titleEl = document.getElementById('alertTitle');
       const messageEl = document.getElementById('alertMessage');
-      
+
       titleEl.textContent = title;
       messageEl.textContent = message;
       modal.classList.add('show');
+      bringModalToFront(modal);
     }
 
     function closeAlertModal() {
@@ -1307,7 +1546,9 @@
         searchEl.oninput = filterEmoji;
       }
 
-      document.getElementById('emojiPickerOverlay').classList.add('show');
+      var emojiOverlay = document.getElementById('emojiPickerOverlay');
+      emojiOverlay.classList.add('show');
+      bringModalToFront(emojiOverlay);
     }
 
     function closeEmojiPicker(confirmed) {
@@ -4045,24 +4286,32 @@
       html += '<div class="si-add-divider"></div>';
       if (siAddingActivity) {
         html += '<div class="si-add-activity-form" onclick="event.stopPropagation()">';
-        html += '<div class="si-add-row1">';
-        html += '<button type="button" class="si-add-emoji-btn" id="siAddEmojiBtn" onclick="event.stopPropagation();openSiAddEmojiPicker()">' + renderEmoji(siNewActivityEmoji) + '</button>';
-        html += '<input id="siAddNameInput" class="si-add-name-input" type="text" placeholder="일상 이름" value="' + escapeHtml(siNewActivityName) + '" oninput="siNewActivityName=this.value" onkeydown="if(event.key===&apos;Enter&apos;){event.preventDefault();saveSiNewActivity();}if(event.key===&apos;Escape&apos;){event.stopPropagation();cancelSiAddActivity();}">';
-        html += '<button type="button" class="si-add-cancel-btn" onclick="event.stopPropagation();cancelSiAddActivity()">✕</button>';
-        html += '</div>';
-        html += '<div class="si-add-row2">';
-        html += '<select class="si-add-cat-select" onchange="siNewActivityCategoryId=this.value" onclick="event.stopPropagation()">';
-        html += '<option value="">카테고리 없음</option>';
+        html += '  <button type="button" class="si-add-close-btn" onclick="event.stopPropagation();cancelSiAddActivity()" title="닫기">✕</button>';
+        html += '  <div class="si-add-field">';
+        html += '    <div class="si-add-label">이모지 / 이름</div>';
+        html += '    <div class="si-add-inline">';
+        html += '      <button type="button" class="si-add-emoji-btn" id="siAddEmojiBtn" onclick="event.stopPropagation();openSiAddEmojiPicker()">' + renderEmoji(siNewActivityEmoji) + '</button>';
+        html += '      <input id="siAddNameInput" class="si-add-name-input" type="text" placeholder="일상 이름" value="' + escapeHtml(siNewActivityName) + '" oninput="siNewActivityName=this.value" onkeydown="if(event.key===&apos;Enter&apos;){event.preventDefault();saveSiNewActivity();}if(event.key===&apos;Escape&apos;){event.stopPropagation();cancelSiAddActivity();}">';
+        html += '    </div>';
+        html += '  </div>';
+        html += '  <div class="si-add-field">';
+        html += '    <div class="si-add-label">카테고리</div>';
+        html += '    <select class="si-add-cat-select" onchange="siNewActivityCategoryId=this.value" onclick="event.stopPropagation()">';
+        html += '      <option value="">카테고리 없음</option>';
         categories.forEach(function(cat) {
           var sel2 = (cat.id === siNewActivityCategoryId) ? ' selected' : '';
-          html += '<option value="' + cat.id + '"' + sel2 + '>' + cat.emoji + ' ' + cat.name + '</option>';
+          html += '      <option value="' + cat.id + '"' + sel2 + '>' + cat.emoji + ' ' + cat.name + '</option>';
         });
-        html += '</select>';
-        html += '<span class="si-add-color-wrap"><label class="si-add-color-label">색상</label><input type="color" class="si-add-color-input" value="' + siNewActivityColor + '" oninput="siNewActivityColor=this.value" onclick="event.stopPropagation()"></span>';
-        html += '</div>';
-        html += '<div class="si-add-row1" style="justify-content:flex-end">';
-        html += '<button type="button" class="si-add-save-btn" onclick="event.stopPropagation();saveSiNewActivity()">일상 추가</button>';
-        html += '</div>';
+        html += '    </select>';
+        html += '  </div>';
+        html += '  <div class="si-add-field">';
+        html += '    <div class="si-add-label">대표 색상</div>';
+        html += '    <div class="si-add-inline">';
+        html += '      <label class="si-add-color-swatch" style="background:' + siNewActivityColor + '"><input type="color" class="si-add-color-input" value="' + siNewActivityColor + '" oninput="siNewActivityColor=this.value;this.parentNode.style.background=this.value;var h=this.parentNode.parentNode.querySelector(&apos;.si-add-color-hex&apos;);if(h)h.textContent=this.value;" onclick="event.stopPropagation()"></label>';
+        html += '      <span class="si-add-color-hex">' + siNewActivityColor + '</span>';
+        html += '    </div>';
+        html += '  </div>';
+        html += '  <button type="button" class="si-add-save-btn" onclick="event.stopPropagation();saveSiNewActivity()">+ 일상 추가</button>';
         html += '</div>';
       } else {
         html += '<div class="si-add-activity-trigger" onclick="event.stopPropagation();showSiAddActivityForm()">+ 새 일상 추가</div>';
@@ -4211,6 +4460,7 @@
       });
 
       modal.style.display = 'flex';
+      bringModalToFront(modal);
     }
 
     function closeScheduleItemModal() {
