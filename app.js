@@ -1,0 +1,4881 @@
+    // ========================================
+    // 상수 및 설정
+    // ========================================
+    const AUTH = {
+      // Google Cloud Console에서 발급받은 OAuth 2.0 클라이언트 ID로 교체
+      GOOGLE_CLIENT_ID: '27055656717-5e6n898lk22dhjf5mn82hk7q1q25u8vm.apps.googleusercontent.com',
+      SHEET_ID: '1cMy2OVO69IfAqIahlyrJNCQUZDuqo1e_3ZM9BomkOXI',
+      USER_EMAIL: 'baekeun0@gmail.com',
+    };
+
+    // 현재 로그인 사용자 정보
+    let currentUser = null;
+
+    // 로컬 날짜 함수 (UTC 사용 금지)
+    const today = () => {
+      const d = new Date();
+      return d.getFullYear() + '-'
+        + String(d.getMonth() + 1).padStart(2, '0') + '-'
+        + String(d.getDate()).padStart(2, '0');
+    };
+
+    // 기본 메뉴 구조
+    const DEFAULT_MENUS = [
+      { id: 'home', type: 'page', icon: '🏠', name: '홈 대시보드', slug: 'home', order: 0 },
+      { 
+        id: 'group-daily', 
+        type: 'group', 
+        icon: '📋', 
+        name: '일상 관리', 
+        order: 1,
+        children: [
+          { id: 'daily', type: 'page', icon: '📅', name: '시간표', slug: 'daily', order: 0 },
+        ]
+      },
+      {
+        id: 'group-work',
+        type: 'group',
+        icon: '💼',
+        name: '업무',
+        order: 2,
+        children: [
+          { id: 'work', type: 'page', icon: '💼', name: '업무', slug: 'work', order: 0 },
+        ]
+      },
+      {
+        id: 'group-life',
+        type: 'group',
+        icon: '🌱',
+        name: '생활',
+        order: 3,
+        children: [
+          { id: 'habit', type: 'page', icon: '✅', name: '습관', slug: 'habit', order: 0 },
+          { id: 'recipe', type: 'page', icon: '🍳', name: '레시피', slug: 'recipe', order: 1 },
+          { id: 'money', type: 'page', icon: '💰', name: '금전', slug: 'money', order: 2 },
+        ]
+      },
+      {
+        id: 'group-misc',
+        type: 'group',
+        icon: '📝',
+        name: '기타',
+        order: 4,
+        children: [
+          { id: 'idea', type: 'page', icon: '💡', name: '아이디어', slug: 'idea', order: 0 },
+          { id: 'todo', type: 'page', icon: '📝', name: '할일', slug: 'todo', order: 1 },
+        ]
+      },
+      { id: 'settings', type: 'page', icon: '⚙️', name: '설정', slug: 'settings', order: 5 },
+    ];
+
+    // 이모지 데이터
+    const EMOJI_DATA = {
+      '😊 표정': ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐'],
+      '❤️ 마음': ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟'],
+      '👋 손': ['👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳'],
+      '💼 업무': ['💼','📁','📂','🗂️','📅','📆','🗓️','📇','📈','📉','📊','📋','📌','📍','📎','🖇️','📏','📐','✂️','🗃️','🗄️','🗑️','🔒','🔓','🔐','🔑','🗝️','🔨','🪛','🔧','🪚','⚙️','🗜️','⚖️','🔗','⛓️','🧰','🧲'],
+      '🏠 생활': ['🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏩','🏪','🏫','🏬','🏭','🏯','🏰','💒','🗼','🗽','⛪','🕌','🛕','🕍','⛩️','🕋','⛲','⛺','🌁','🌃','🏙️','🌄','🌅','🌆','🌇','🌉','♨️','🎠','🎡','🎢','💈','🎪'],
+      '🐶 동물': ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐽','🐸','🐵','🙈','🙉','🙊','🐒','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🪱','🐛','🦋','🐌','🐞','🐜','🪰','🪲','🪳','🦟','🦗','🕷️','🕸️','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🦧','🐘','🦛','🦏','🐪','🐫','🦒','🦘','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐈','🐓','🦃','🦚','🦜','🦢','🦩','🕊️','🐇','🦝','🦨','🦡','🦦','🦥','🐁','🐀','🐿️','🦔','🐾'],
+      '🍔 음식': ['🍔','🍟','🍕','🌭','🥪','🌮','🌯','🥙','🧆','🥚','🍳','🥘','🍲','🥣','🥗','🍿','🧈','🧂','🥫','🍱','🍘','🍙','🍚','🍛','🍜','🍝','🍠','🍢','🍣','🍤','🍥','🥮','🍡','🥟','🥠','🥡','🦀','🦞','🦐','🦑','🦪','🍦','🍧','🍨','🍩','🍪','🎂','🍰','🧁','🥧','🍫','🍬','🍭','🍮','🍯'],
+      '⚽ 운동': ['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🏑','🥍','🏏','🪃','🥅','⛳','🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸️','🥌','🎿','⛷️','🏂','🪂','🏋️','🤸','🤺','🤾','🏌️','🏇','🧘','🏄','🏊','🤽','🚣','🧗','🚴','🚵','🤹'],
+      '🎨 취미': ['🎨','🖼️','🎭','🎪','🎬','🎤','🎧','🎼','🎹','🥁','🪘','🎷','🎺','🪗','🎸','🪕','🎻','🎲','♟️','🎯','🎳','🎮','🎰','🧩','🪀','🪁','🎏','🎎','🎐','🧵','🪢','🧶','🪡','🎀','🎁'],
+      '📚 학습': ['📚','📖','📕','📗','📘','📙','📓','📔','📒','📃','📜','📄','📰','🗞️','📑','🔖','🏷️','💰','🪙','💴','💵','💶','💷','💸','💳','🧾','✉️','📧','📨','📩','📤','📥','📦','📫','📪','📬','📭','📮'],
+      '🌳 자연': ['🌳','🌲','🌱','🌿','☘️','🍀','🎍','🎋','🍃','🍂','🍁','🍄','🌾','💐','🌷','🌹','🥀','🌺','🌸','🌼','🌻','🌞','🌝','🌛','🌜','🌚','🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔','🌙','🌎','🌍','🌏','🪐','💫','⭐','🌟','✨','⚡','☄️','💥','🔥','🌈','☀️','🌤️','⛅','🌥️','☁️','🌦️','🌧️','⛈️','🌩️','🌨️','❄️','☃️','⛄'],
+      '🚗 교통': ['🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🦯','🦽','🦼','🛴','🚲','🛵','🏍️','🛺','🚨','🚔','🚍','🚘','🚖','🚡','🚠','🚟','🚃','🚋','🚞','🚝','🚄','🚅','🚈','🚂','🚆','🚇','🚊','🚉','✈️','🛫','🛬','🛩️','💺','🛰️','🚀','🛸','🚁','🛶','⛵','🚤','🛥️','🛳️','⛴️','🚢','⚓','⛽','🚧','🚦','🚥','🗺️','🗿','🗽'],
+      '⏰ 시간': ['⏰','⏱️','⏲️','⌚','🕰️','🌅','🌄','🌠','🎆','🎇','🌇','🌆','🏙️','🌃','🌌','🌉','🌁'],
+      '🎮 엔터': ['🎮','🕹️','🎰','🎲','🎯','🎳','🎴','🃏','🀄','🎭','🎨','🧵','🧶','🎼','🎵','🎶','🎤','🎧','📻','🎷','🪗','🎸','🎹','🎺','🎻','🪕','🥁','🪘','📱','📲','☎️','📞','📟','📠','🔋','🔌','💻','🖥️','🖨️','⌨️','🖱️','🖲️','💽','💾','💿','📀'],
+      '🔧 도구': ['🔧','🔨','⚒️','🛠️','⛏️','🪓','🪚','🔩','⚙️','🗜️','⚖️','🦯','🔗','⛓️','🪝','🧰','🧲','🪜','🧪','🧫','🧬','🔬','🔭','📡','💉','🩸','💊','🩹','🩺','🚪','🛗','🪞','🪟','🛏️','🛋️','🪑','🚽','🪠','🚿','🛁','🪤','🪒','🧴','🧷','🧹','🧺','🧻','🪣','🧼','🪥','🧽','🧯','🛒'],
+      '⚠️ 기호': ['⚠️','🚸','⛔','🚫','🚳','🚭','🚯','🚱','🚷','📵','🔞','☢️','☣️','⬆️','↗️','➡️','↘️','⬇️','↙️','⬅️','↖️','↕️','↔️','↩️','↪️','⤴️','⤵️','🔃','🔄','🔙','🔚','🔛','🔜','🔝','🛐','⚛️','🕉️','✡️','☸️','☯️','✝️','☦️','☪️','☮️','🕎','🔯','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','⛎','▶️','⏸️','⏯️','⏹️','⏺️','⏭️','⏮️','⏩','⏪','⏫','⏬','◀️','🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️','↖️','↕️','↔️','↪️','↩️','⤴️','⤵️','🔀','🔁','🔂','🔄','🔃','🎵','🎶','➕','➖','➗','✖️','♾️','💲','💱','™️','©️','®️','〰️','➰','➿','🔚','🔙','🔛','🔝','🔜','✔️','☑️','🔘','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔺','🔻','🔸','🔹','🔶','🔷','🔳','🔲','▪️','▫️','◾','◽','◼️','◻️','🟥','🟧','🟨','🟩','🟦','🟪','⬛','⬜','🟫','🔈','🔇','🔉','🔊','🔔','🔕','📣','📢','💬','💭','🗯️','♠️','♣️','♥️','♦️','🃏','🎴','🀄','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚','🕛']
+    };
+
+    // ========================================
+    // 이모지 키워드 (검색용) - 전역 상수
+    // 한글/영어 키워드로 이모지 검색 지원
+    // ========================================
+    const EMOJI_KEYWORDS = {
+      // 😊 표정
+      '😀': ['웃음','미소','smile','happy','grin','face'],
+      '😃': ['웃음','미소','smile','happy','smiley','face'],
+      '😄': ['웃음','미소','smile','happy','laugh','face'],
+      '😁': ['웃음','미소','grin','happy','teeth','beam'],
+      '😆': ['웃음','laugh','satisfied','squint'],
+      '😅': ['웃음','sweat','laugh','relief','땀'],
+      '🤣': ['웃음','laugh','rofl','rolling','박장대소'],
+      '😂': ['웃음','laugh','tears','joy','눈물','폭소'],
+      '🙂': ['미소','smile','slight','은은','살짝'],
+      '🙃': ['거꾸로','upside','down','반전'],
+      '😉': ['윙크','wink','flirt'],
+      '😊': ['미소','blush','smile','happy','홍조','수줍'],
+      '😇': ['천사','angel','halo','innocent','순수'],
+      '🥰': ['사랑','love','hearts','smile','반함'],
+      '😍': ['하트눈','love','heart','eyes','반함','좋아'],
+      '🤩': ['별눈','star','struck','excited','감동','신남'],
+      '😘': ['뽀뽀','kiss','blow','키스'],
+      '😗': ['뽀뽀','kiss','whistle','휘파람'],
+      '😚': ['뽀뽀','kiss','closed','eyes'],
+      '😙': ['뽀뽀','kiss','smile'],
+      '🥲': ['감동','tear','smile','눈물'],
+      '😋': ['맛있','yum','food','tasty','delicious'],
+      '😛': ['메롱','tongue','혀','놀림'],
+      '😜': ['메롱','tongue','wink','윙크','장난'],
+      '🤪': ['미친','zany','crazy','goofy','엉뚱'],
+      '😝': ['메롱','tongue','squint','장난'],
+      '🤑': ['돈','money','mouth','rich','부자'],
+      '🤗': ['포옹','hug','hugging','따뜻'],
+      '🤭': ['웃음참기','giggle','shush','입가림'],
+      '🤫': ['쉿','shush','quiet','조용'],
+      '🤔': ['생각','think','thinking','궁금','의문'],
+      '🤐': ['입다물','zipper','mouth','비밀'],
+      '🤨': ['의심','raised','eyebrow','수상'],
+      '😐': ['무표정','neutral','face','담담'],
+      '😑': ['무표정','expressionless','blank'],
+      '😶': ['무표정','no','mouth','침묵'],
+      '😏': ['음흉','smirk','sly','음험'],
+      '😒': ['언짢','unamused','시큰둥','불만'],
+      '🙄': ['눈굴림','roll','eyes','한심'],
+      '😬': ['민망','grimace','awkward','어색'],
+      '🤥': ['거짓말','lying','lie','nose','pinocchio'],
+      '😌': ['평온','relieved','content','안도'],
+      '😔': ['시무룩','pensive','sad','우울'],
+      '😪': ['졸림','sleepy','tired','피곤'],
+      '🤤': ['침흘림','drool','drooling','탐냄'],
+      '😴': ['잠','sleep','sleeping','zzz','꿈'],
+      '😷': ['마스크','mask','sick','medical','아픔'],
+      '🤒': ['아픔','sick','fever','thermometer','열'],
+      '🤕': ['부상','hurt','bandage','injury','다침'],
+      '🤢': ['구역질','nauseous','sick','역겨움'],
+      '🤮': ['토','vomit','puke','구토'],
+      '🤧': ['재채기','sneeze','cold','감기'],
+      '🥵': ['더움','hot','sweat','heat','땀'],
+      '🥶': ['추움','cold','freeze','blue'],
+      '😵': ['어지러움','dizzy','knocked','out'],
+      '🤯': ['폭발','mind','blown','shocked','충격'],
+      '🤠': ['카우보이','cowboy','hat','서부'],
+      '🥳': ['축하','party','celebrate','파티','생일'],
+      '🥸': ['변장','disguise','fake','위장'],
+      '😎': ['멋짐','cool','sunglasses','선글라스'],
+      '🤓': ['너드','nerd','geek','glasses','공부'],
+      '🧐': ['외눈안경','monocle','curious','탐구'],
+
+      // ❤️ 마음
+      '❤️': ['하트','heart','love','red','사랑','빨강'],
+      '🧡': ['하트','heart','orange','love','주황'],
+      '💛': ['하트','heart','yellow','love','노랑'],
+      '💚': ['하트','heart','green','love','초록'],
+      '💙': ['하트','heart','blue','love','파랑'],
+      '💜': ['하트','heart','purple','love','보라'],
+      '🖤': ['하트','heart','black','love','검정'],
+      '🤍': ['하트','heart','white','love','흰색'],
+      '🤎': ['하트','heart','brown','love','갈색'],
+      '💔': ['하트','heart','broken','break','상심','이별'],
+      '❣️': ['하트','heart','exclamation','느낌표'],
+      '💕': ['하트','heart','love','two','두개'],
+      '💞': ['하트','heart','revolving','회전'],
+      '💓': ['하트','heart','beating','두근'],
+      '💗': ['하트','heart','growing','커짐'],
+      '💖': ['하트','heart','sparkling','반짝'],
+      '💘': ['하트','heart','arrow','cupid','화살','큐피드'],
+      '💝': ['하트','heart','gift','box','선물'],
+      '💟': ['하트','heart','decoration','장식'],
+
+      // 👋 손
+      '👋': ['손','hand','wave','hi','hello','bye','안녕','인사'],
+      '🤚': ['손','hand','raised','back','뒷면'],
+      '🖐️': ['손','hand','fingers','splayed','펼침'],
+      '✋': ['손','hand','stop','high','five','멈춤','하이파이브'],
+      '🖖': ['손','hand','vulcan','spock','스팍'],
+      '👌': ['손','hand','ok','okay','good','좋음'],
+      '🤌': ['손','hand','pinched','fingers','이탈리아'],
+      '🤏': ['손','hand','pinch','small','조금'],
+      '✌️': ['손','hand','peace','victory','브이','승리'],
+      '🤞': ['손','hand','fingers','crossed','luck','행운'],
+      '🤟': ['손','hand','love','you','사랑해'],
+      '🤘': ['손','hand','rock','horns','록','헤비메탈'],
+      '🤙': ['손','hand','call','me','전화'],
+      '👈': ['손','hand','left','왼쪽','가리킴'],
+      '👉': ['손','hand','right','오른쪽','가리킴'],
+      '👆': ['손','hand','up','위','가리킴'],
+      '🖕': ['손','hand','middle','finger','중지','욕'],
+      '👇': ['손','hand','down','아래','가리킴'],
+      '☝️': ['손','hand','up','index','검지','위'],
+      '👍': ['손','hand','thumbs','up','good','like','yes','좋음','엄지','따봉'],
+      '👎': ['손','hand','thumbs','down','bad','dislike','no','싫음','엄지'],
+      '✊': ['손','hand','fist','punch','주먹'],
+      '👊': ['손','hand','fist','bump','punch','주먹'],
+      '🤛': ['손','hand','fist','left','왼주먹'],
+      '🤜': ['손','hand','fist','right','오른주먹'],
+      '👏': ['손','hand','clap','applause','박수'],
+      '🙌': ['손','hand','raising','celebration','만세'],
+      '👐': ['손','hand','open','hands','열린손'],
+      '🤲': ['손','hand','palms','together','두손'],
+      '🤝': ['손','hand','shake','handshake','악수'],
+      '🙏': ['손','hand','pray','thank','please','기도','감사','부탁'],
+      '✍️': ['손','hand','writing','write','쓰기'],
+      '💅': ['손톱','nail','polish','manicure','매니큐어'],
+      '🤳': ['셀카','selfie','self','portrait'],
+
+      // 💼 업무
+      '💼': ['업무','work','briefcase','business','office','가방'],
+      '📁': ['폴더','folder','file','directory'],
+      '📂': ['폴더','folder','open','file','열림'],
+      '🗂️': ['파일','file','divider','분류'],
+      '📅': ['달력','calendar','date','schedule','일정'],
+      '📆': ['달력','calendar','date','tear','날짜'],
+      '🗓️': ['달력','calendar','spiral','스케줄'],
+      '📇': ['명함','card','index','rolodex'],
+      '📈': ['그래프','chart','increase','up','상승','trend'],
+      '📉': ['그래프','chart','decrease','down','하락'],
+      '📊': ['차트','chart','bar','graph','막대'],
+      '📋': ['클립보드','clipboard','list','memo','목록'],
+      '📌': ['핀','pin','pushpin','tack','압정'],
+      '📍': ['핀','pin','location','map','위치'],
+      '📎': ['클립','clip','paperclip','종이'],
+      '🖇️': ['클립','clip','linked','paperclips'],
+      '📏': ['자','ruler','straight','measure'],
+      '📐': ['자','ruler','triangular','삼각자'],
+      '✂️': ['가위','scissors','cut','자르기'],
+      '🗃️': ['파일박스','file','box','card'],
+      '🗄️': ['파일캐비닛','file','cabinet','드로어'],
+      '🗑️': ['쓰레기','trash','wastebasket','delete','휴지통'],
+      '🔒': ['잠금','lock','secure','closed','자물쇠'],
+      '🔓': ['잠금해제','unlock','open','열림'],
+      '🔐': ['잠금','lock','key','보안'],
+      '🔑': ['열쇠','key','unlock'],
+      '🗝️': ['열쇠','key','old','옛날'],
+      '🔨': ['망치','hammer','tool','도구'],
+      '🪛': ['드라이버','screwdriver','tool'],
+      '🔧': ['렌치','wrench','tool','도구','수리'],
+      '🪚': ['톱','saw','tool','carpentry','목공'],
+      '⚙️': ['톱니','gear','setting','config','설정'],
+      '⚖️': ['저울','scales','balance','justice','공정'],
+      '🔗': ['링크','link','chain','연결'],
+      '⛓️': ['사슬','chains','chain'],
+      '🧰': ['공구','toolbox','tools','공구함'],
+      '🧲': ['자석','magnet','attract'],
+
+      // 🏠 생활
+      '🏠': ['집','home','house'],
+      '🏡': ['집','home','house','garden','정원'],
+      '🏢': ['건물','building','office','work','회사'],
+      '🏣': ['우체국','post','office','japanese'],
+      '🏤': ['우체국','post','office','european'],
+      '🏥': ['병원','hospital','medical','doctor','의료'],
+      '🏦': ['은행','bank','money','금융'],
+      '🏨': ['호텔','hotel','숙박'],
+      '🏩': ['러브호텔','love','hotel'],
+      '🏪': ['편의점','store','shop','convenience','가게'],
+      '🏫': ['학교','school','education','공부'],
+      '🏬': ['백화점','department','store','쇼핑'],
+      '🏭': ['공장','factory','industry','산업'],
+      '🏯': ['성','castle','japanese','일본'],
+      '🏰': ['성','castle','european','동화'],
+      '💒': ['교회','wedding','chapel','결혼식'],
+      '🗼': ['탑','tower','tokyo','도쿄'],
+      '🗽': ['자유의여신상','statue','liberty','뉴욕'],
+      '⛪': ['교회','church','종교'],
+      '🕌': ['모스크','mosque','이슬람'],
+      '🕍': ['시너고그','synagogue','유대교'],
+      '⛩️': ['신사','shrine','shinto','일본'],
+      '⛲': ['분수','fountain'],
+      '⛺': ['텐트','tent','camping','캠핑'],
+      '🌁': ['안개','foggy','fog'],
+      '🌃': ['밤','night','stars','별'],
+      '🏙️': ['도시','cityscape','city','스카이라인'],
+      '🌄': ['일출','sunrise','mountain','산'],
+      '🌅': ['일출','sunrise'],
+      '🌆': ['도시','city','dusk','저녁'],
+      '🌇': ['석양','sunset','buildings'],
+      '🌉': ['다리','bridge','night','밤'],
+      '♨️': ['온천','hot','springs'],
+      '🎠': ['회전목마','carousel','horse'],
+      '🎡': ['대관람차','ferris','wheel'],
+      '🎢': ['롤러코스터','roller','coaster'],
+      '🎪': ['서커스','circus','tent','텐트'],
+
+      // 🐶 동물
+      '🐶': ['동물','animal','dog','puppy','강아지','개','멍멍'],
+      '🐱': ['동물','animal','cat','kitten','고양이','냥','야옹'],
+      '🐭': ['동물','animal','mouse','쥐','생쥐'],
+      '🐹': ['동물','animal','hamster','햄스터'],
+      '🐰': ['동물','animal','rabbit','bunny','토끼'],
+      '🦊': ['동물','animal','fox','여우'],
+      '🐻': ['동물','animal','bear','곰'],
+      '🐼': ['동물','animal','panda','판다'],
+      '🐨': ['동물','animal','koala','코알라'],
+      '🐯': ['동물','animal','tiger','호랑이','타이거'],
+      '🦁': ['동물','animal','lion','사자'],
+      '🐮': ['동물','animal','cow','소','젖소'],
+      '🐷': ['동물','animal','pig','돼지'],
+      '🐽': ['동물','animal','pig','nose','돼지코'],
+      '🐸': ['동물','animal','frog','개구리'],
+      '🐵': ['동물','animal','monkey','원숭이'],
+      '🙈': ['동물','animal','monkey','see','no','evil','원숭이','눈가림'],
+      '🙉': ['동물','animal','monkey','hear','no','evil','원숭이','귀막음'],
+      '🙊': ['동물','animal','monkey','speak','no','evil','원숭이','입막음'],
+      '🐒': ['동물','animal','monkey','원숭이'],
+      '🐔': ['동물','animal','chicken','닭'],
+      '🐧': ['동물','animal','penguin','펭귄'],
+      '🐦': ['동물','animal','bird','새'],
+      '🐤': ['동물','animal','baby','chick','병아리'],
+      '🐣': ['동물','animal','hatching','chick','병아리','부화'],
+      '🐥': ['동물','animal','chick','front','병아리'],
+      '🦆': ['동물','animal','duck','오리'],
+      '🦅': ['동물','animal','eagle','독수리'],
+      '🦉': ['동물','animal','owl','부엉이','올빼미'],
+      '🦇': ['동물','animal','bat','박쥐'],
+      '🐺': ['동물','animal','wolf','늑대'],
+      '🐗': ['동물','animal','boar','멧돼지'],
+      '🐴': ['동물','animal','horse','face','말'],
+      '🦄': ['동물','animal','unicorn','유니콘'],
+      '🐝': ['동물','animal','bee','honeybee','꿀벌','벌'],
+      '🪱': ['동물','animal','worm','지렁이','벌레'],
+      '🐛': ['동물','animal','bug','caterpillar','애벌레','벌레'],
+      '🦋': ['동물','animal','butterfly','나비'],
+      '🐌': ['동물','animal','snail','달팽이'],
+      '🐞': ['동물','animal','ladybug','무당벌레'],
+      '🐜': ['동물','animal','ant','개미'],
+      '🪰': ['동물','animal','fly','파리'],
+      '🪲': ['동물','animal','beetle','딱정벌레'],
+      '🪳': ['동물','animal','cockroach','바퀴벌레'],
+      '🦟': ['동물','animal','mosquito','모기'],
+      '🦗': ['동물','animal','cricket','귀뚜라미'],
+      '🕷️': ['동물','animal','spider','거미'],
+      '🕸️': ['동물','animal','spider','web','거미줄'],
+      '🦂': ['동물','animal','scorpion','전갈'],
+      '🐢': ['동물','animal','turtle','거북이'],
+      '🐍': ['동물','animal','snake','뱀'],
+      '🦎': ['동물','animal','lizard','도마뱀'],
+      '🦖': ['동물','animal','dinosaur','t-rex','공룡','티라노'],
+      '🦕': ['동물','animal','dinosaur','sauropod','공룡'],
+      '🐙': ['동물','animal','octopus','문어'],
+      '🐡': ['동물','animal','blowfish','pufferfish','복어'],
+      '🐠': ['동물','animal','tropical','fish','열대어'],
+      '🐟': ['동물','animal','fish','물고기'],
+      '🐬': ['동물','animal','dolphin','돌고래'],
+      '🐳': ['동물','animal','whale','고래'],
+      '🐋': ['동물','animal','whale','고래'],
+      '🦈': ['동물','animal','shark','상어'],
+      '🐊': ['동물','animal','crocodile','악어'],
+      '🐅': ['동물','animal','tiger','호랑이'],
+      '🐆': ['동물','animal','leopard','표범'],
+      '🦓': ['동물','animal','zebra','얼룩말'],
+      '🦍': ['동물','animal','gorilla','고릴라'],
+      '🦧': ['동물','animal','orangutan','오랑우탄'],
+      '🐘': ['동물','animal','elephant','코끼리'],
+      '🦛': ['동물','animal','hippopotamus','hippo','하마'],
+      '🦏': ['동물','animal','rhinoceros','rhino','코뿔소'],
+      '🐪': ['동물','animal','camel','낙타'],
+      '🐫': ['동물','animal','camel','two','hump','쌍봉낙타'],
+      '🦒': ['동물','animal','giraffe','기린'],
+      '🦘': ['동물','animal','kangaroo','캥거루'],
+      '🐃': ['동물','animal','water','buffalo','물소'],
+      '🐂': ['동물','animal','ox','황소'],
+      '🐄': ['동물','animal','cow','소','젖소'],
+      '🐎': ['동물','animal','horse','말'],
+      '🐖': ['동물','animal','pig','돼지'],
+      '🐏': ['동물','animal','ram','숫양'],
+      '🐑': ['동물','animal','sheep','양'],
+      '🦙': ['동물','animal','llama','라마'],
+      '🐐': ['동물','animal','goat','염소'],
+      '🦌': ['동물','animal','deer','사슴'],
+      '🐕': ['동물','animal','dog','개','강아지'],
+      '🐩': ['동물','animal','poodle','푸들'],
+      '🦮': ['동물','animal','guide','dog','안내견'],
+      '🐈': ['동물','animal','cat','고양이'],
+      '🐓': ['동물','animal','rooster','수탉'],
+      '🦃': ['동물','animal','turkey','칠면조'],
+      '🦚': ['동물','animal','peacock','공작'],
+      '🦜': ['동물','animal','parrot','앵무새'],
+      '🦢': ['동물','animal','swan','백조'],
+      '🦩': ['동물','animal','flamingo','플라밍고','홍학'],
+      '🕊️': ['동물','animal','dove','비둘기','평화'],
+      '🐇': ['동물','animal','rabbit','토끼'],
+      '🦝': ['동물','animal','raccoon','너구리'],
+      '🦨': ['동물','animal','skunk','스컹크'],
+      '🦡': ['동물','animal','badger','오소리'],
+      '🦦': ['동물','animal','otter','수달'],
+      '🦥': ['동물','animal','sloth','나무늘보'],
+      '🐁': ['동물','animal','mouse','쥐'],
+      '🐀': ['동물','animal','rat','쥐'],
+      '🐿️': ['동물','animal','chipmunk','다람쥐'],
+      '🦔': ['동물','animal','hedgehog','고슴도치'],
+      '🐾': ['동물','animal','paw','prints','발자국'],
+
+      // 🍔 음식
+      '🍔': ['음식','food','burger','hamburger','햄버거'],
+      '🍟': ['음식','food','fries','french','감자튀김'],
+      '🍕': ['음식','food','pizza','피자'],
+      '🌭': ['음식','food','hotdog','핫도그'],
+      '🥪': ['음식','food','sandwich','샌드위치'],
+      '🌮': ['음식','food','taco','타코'],
+      '🌯': ['음식','food','burrito','부리또'],
+      '🥙': ['음식','food','stuffed','flatbread'],
+      '🧆': ['음식','food','falafel'],
+      '🥚': ['음식','food','egg','계란'],
+      '🍳': ['음식','food','egg','cook','fry','계란프라이','요리'],
+      '🥘': ['음식','food','pan','shallow','팬요리'],
+      '🍲': ['음식','food','pot','stew','찌개','전골'],
+      '🥣': ['음식','food','bowl','spoon','그릇'],
+      '🥗': ['음식','food','salad','샐러드'],
+      '🍿': ['음식','food','popcorn','팝콘'],
+      '🧈': ['음식','food','butter','버터'],
+      '🧂': ['음식','food','salt','소금'],
+      '🥫': ['음식','food','canned','통조림'],
+      '🍱': ['음식','food','bento','box','lunch','도시락'],
+      '🍘': ['음식','food','rice','cracker','센베이'],
+      '🍙': ['음식','food','rice','ball','삼각김밥','주먹밥'],
+      '🍚': ['음식','food','rice','cooked','밥','쌀밥'],
+      '🍛': ['음식','food','curry','rice','카레'],
+      '🍜': ['음식','food','ramen','noodle','라면','면'],
+      '🍝': ['음식','food','spaghetti','pasta','파스타','스파게티'],
+      '🍠': ['음식','food','sweet','potato','고구마'],
+      '🍢': ['음식','food','oden','꼬치','어묵'],
+      '🍣': ['음식','food','sushi','초밥'],
+      '🍤': ['음식','food','shrimp','fried','새우튀김'],
+      '🍥': ['음식','food','fish','cake','나루토'],
+      '🥮': ['음식','food','moon','cake','월병'],
+      '🍡': ['음식','food','dango','경단'],
+      '🥟': ['음식','food','dumpling','만두'],
+      '🦀': ['음식','food','crab','게'],
+      '🦞': ['음식','food','lobster','랍스터','바닷가재'],
+      '🦐': ['음식','food','shrimp','새우'],
+      '🦑': ['음식','food','squid','오징어'],
+      '🦪': ['음식','food','oyster','굴'],
+      '🍦': ['음식','food','ice','cream','soft','아이스크림'],
+      '🍧': ['음식','food','ice','shaved','빙수','팥빙수'],
+      '🍨': ['음식','food','ice','cream','아이스크림'],
+      '🍩': ['음식','food','donut','doughnut','도넛'],
+      '🍪': ['음식','food','cookie','쿠키'],
+      '🎂': ['음식','food','cake','birthday','생일','케이크'],
+      '🍰': ['음식','food','cake','dessert','케이크','조각'],
+      '🧁': ['음식','food','cupcake','컵케이크'],
+      '🥧': ['음식','food','pie','파이'],
+      '🍫': ['음식','food','chocolate','초콜릿'],
+      '🍬': ['음식','food','candy','사탕'],
+      '🍭': ['음식','food','lollipop','막대사탕'],
+      '🍮': ['음식','food','pudding','푸딩','커스터드'],
+      '🍯': ['음식','food','honey','꿀'],
+
+      // ⚽ 운동
+      '⚽': ['운동','sport','soccer','football','ball','축구'],
+      '🏀': ['운동','sport','basketball','ball','농구'],
+      '🏈': ['운동','sport','football','american','미식축구'],
+      '⚾': ['운동','sport','baseball','ball','야구'],
+      '🥎': ['운동','sport','softball','소프트볼'],
+      '🎾': ['운동','sport','tennis','ball','테니스'],
+      '🏐': ['운동','sport','volleyball','ball','배구'],
+      '🏉': ['운동','sport','rugby','ball','럭비'],
+      '🥏': ['운동','sport','frisbee','프리스비'],
+      '🎱': ['운동','sport','billiards','pool','당구'],
+      '🪀': ['요요','yo-yo'],
+      '🏓': ['운동','sport','ping','pong','table','tennis','탁구'],
+      '🏸': ['운동','sport','badminton','배드민턴'],
+      '🏒': ['운동','sport','hockey','ice','하키'],
+      '🏑': ['운동','sport','hockey','field','필드하키'],
+      '🥍': ['운동','sport','lacrosse','라크로스'],
+      '🏏': ['운동','sport','cricket','크리켓'],
+      '🪃': ['부메랑','boomerang'],
+      '🥅': ['운동','sport','goal','골대'],
+      '⛳': ['운동','sport','golf','flag','골프','홀'],
+      '🪁': ['연','kite'],
+      '🏹': ['운동','sport','bow','arrow','활','양궁'],
+      '🎣': ['낚시','fishing','pole','fish','물고기'],
+      '🤿': ['운동','sport','diving','mask','다이빙'],
+      '🥊': ['운동','sport','boxing','glove','복싱','권투'],
+      '🥋': ['운동','sport','martial','arts','uniform','태권도','유도'],
+      '🎽': ['운동','sport','running','shirt','러닝'],
+      '🛹': ['운동','sport','skateboard','스케이트보드'],
+      '🛼': ['운동','sport','roller','skate','롤러스케이트'],
+      '🛷': ['운동','sport','sled','썰매'],
+      '⛸️': ['운동','sport','ice','skate','스케이트'],
+      '🥌': ['운동','sport','curling','stone','컬링'],
+      '🎿': ['운동','sport','ski','skis','스키'],
+      '⛷️': ['운동','sport','ski','skiing','snow','스키'],
+      '🏂': ['운동','sport','snowboarder','스노보드'],
+      '🪂': ['운동','sport','parachute','낙하산'],
+      '🏋️': ['운동','sport','weight','lifting','gym','역도','헬스'],
+      '🤸': ['운동','sport','cartwheel','체조'],
+      '🤺': ['운동','sport','fencing','펜싱'],
+      '🤾': ['운동','sport','handball','핸드볼'],
+      '🏌️': ['운동','sport','golf','골프'],
+      '🏇': ['운동','sport','horse','racing','경마'],
+      '🧘': ['운동','sport','yoga','meditation','요가','명상'],
+      '🏄': ['운동','sport','surfing','서핑'],
+      '🏊': ['운동','sport','swim','swimming','pool','수영'],
+      '🤽': ['운동','sport','water','polo','수구'],
+      '🚣': ['운동','sport','rowing','boat','조정','보트'],
+      '🧗': ['운동','sport','climbing','등산','클라이밍'],
+      '🚴': ['운동','sport','bike','bicycle','cycling','자전거'],
+      '🚵': ['운동','sport','mountain','bike','산악자전거'],
+      '🤹': ['운동','sport','juggling','저글링'],
+
+      // 🎨 취미
+      '🎨': ['취미','hobby','art','paint','palette','미술','그림'],
+      '🖼️': ['그림','picture','frame','액자'],
+      '🎭': ['연극','theater','drama','mask','가면'],
+      '🎬': ['영화','movie','film','cinema','clapper'],
+      '🎤': ['마이크','mic','microphone','sing','노래'],
+      '🎧': ['헤드폰','headphone','listen','music','음악'],
+      '🎼': ['악보','music','score','sheet'],
+      '🎹': ['피아노','piano','keyboard','키보드'],
+      '🥁': ['드럼','drum','음악'],
+      '🎷': ['색소폰','saxophone','jazz'],
+      '🎺': ['트럼펫','trumpet'],
+      '🪗': ['아코디언','accordion'],
+      '🎸': ['기타','guitar','음악'],
+      '🪕': ['밴조','banjo'],
+      '🎻': ['바이올린','violin'],
+      '🎲': ['주사위','dice','play','게임'],
+      '♟️': ['체스','chess','pawn'],
+      '🎯': ['다트','dart','target','bullseye','과녁'],
+      '🎳': ['볼링','bowling','게임'],
+      '🎮': ['게임','game','play','video','controller','비디오게임','플레이스테이션'],
+      '🎰': ['슬롯머신','slot','machine','casino','도박'],
+      '🧩': ['퍼즐','puzzle','jigsaw'],
+      '🎏': ['잉어','carp','streamer','코이노보리'],
+      '🎎': ['일본인형','japanese','dolls'],
+      '🎐': ['풍경','wind','chime','후린'],
+      '🧵': ['실','thread','sewing','바느질'],
+      '🪢': ['매듭','knot'],
+      '🧶': ['털실','yarn','knit','뜨개질'],
+      '🪡': ['바늘','sewing','needle'],
+      '🎀': ['리본','ribbon','bow'],
+      '🎁': ['선물','gift','present','box','상자'],
+
+      // 📚 학습
+      '📚': ['학습','study','book','books','library','read','책','도서관'],
+      '📖': ['학습','study','book','open','read','책','독서'],
+      '📕': ['학습','study','book','red','빨간책'],
+      '📗': ['학습','study','book','green','초록책'],
+      '📘': ['학습','study','book','blue','파란책'],
+      '📙': ['학습','study','book','orange','주황책'],
+      '📓': ['학습','study','notebook','공책'],
+      '📔': ['학습','study','notebook','decorative','노트'],
+      '📒': ['학습','study','ledger','장부'],
+      '📃': ['종이','page','curl','문서'],
+      '📜': ['두루마리','scroll','paper'],
+      '📄': ['종이','page','document','문서'],
+      '📰': ['신문','newspaper','news'],
+      '🗞️': ['신문','newspaper','rolled'],
+      '📑': ['책갈피','bookmark','tabs'],
+      '🔖': ['책갈피','bookmark'],
+      '🏷️': ['태그','label','tag'],
+      '💰': ['돈','money','bag','가방','부자'],
+      '🪙': ['동전','coin','money'],
+      '💴': ['엔화','yen','money','일본'],
+      '💵': ['달러','dollar','money','미국'],
+      '💶': ['유로','euro','money','유럽'],
+      '💷': ['파운드','pound','money','영국'],
+      '💸': ['돈날아감','money','wings','지출'],
+      '💳': ['카드','credit','card','결제'],
+      '🧾': ['영수증','receipt','계산서'],
+      '✏️': ['연필','pencil','write','쓰기'],
+      '✒️': ['펜','pen','nib','만년필'],
+      '🖊️': ['펜','pen','ballpoint','볼펜'],
+      '🖋️': ['만년필','pen','fountain'],
+      '✉️': ['편지','envelope','mail','메일'],
+      '📧': ['이메일','email','mail','메일'],
+      '📨': ['받은메일','incoming','envelope'],
+      '📩': ['메일','envelope','arrow'],
+      '📤': ['보낸메일','outbox','tray'],
+      '📥': ['받은메일','inbox','tray'],
+      '📦': ['택배','package','box','상자'],
+      '📫': ['우편함','mailbox','closed','flag'],
+      '📪': ['우편함','mailbox','closed','lowered'],
+      '📬': ['우편함','mailbox','open','flag'],
+      '📭': ['우편함','mailbox','open','lowered'],
+      '📮': ['우체통','postbox'],
+
+      // 🌳 자연
+      '🌳': ['자연','nature','tree','plant','나무'],
+      '🌲': ['자연','nature','tree','evergreen','침엽수'],
+      '🌱': ['자연','nature','plant','seedling','sprout','새싹','성장'],
+      '🌿': ['자연','nature','plant','herb','leaf','잎','허브'],
+      '☘️': ['자연','nature','shamrock','클로버'],
+      '🍀': ['자연','nature','plant','clover','four','leaf','luck','네잎클로버','행운'],
+      '🎍': ['자연','nature','bamboo','대나무'],
+      '🎋': ['자연','nature','tanabata','tree'],
+      '🍃': ['자연','nature','leaves','falling','나뭇잎'],
+      '🍂': ['자연','nature','leaf','fallen','낙엽'],
+      '🍁': ['자연','nature','maple','leaf','단풍'],
+      '🍄': ['자연','nature','mushroom','버섯'],
+      '🌾': ['자연','nature','rice','sheaf','벼'],
+      '💐': ['자연','nature','flower','bouquet','꽃다발'],
+      '🌷': ['자연','nature','flower','tulip','튤립'],
+      '🌹': ['자연','nature','flower','rose','장미'],
+      '🥀': ['자연','nature','wilted','flower','시든꽃'],
+      '🌺': ['자연','nature','flower','hibiscus','히비스커스'],
+      '🌸': ['자연','nature','flower','cherry','blossom','벚꽃'],
+      '🌼': ['자연','nature','flower','blossom','데이지'],
+      '🌻': ['자연','nature','flower','sunflower','해바라기'],
+      '🌞': ['자연','nature','sun','face','sunny','태양'],
+      '🌝': ['자연','nature','moon','face','full','보름달'],
+      '🌛': ['자연','nature','moon','first','quarter'],
+      '🌜': ['자연','nature','moon','last','quarter'],
+      '🌚': ['자연','nature','moon','new','그믐'],
+      '🌕': ['자연','nature','moon','full','보름'],
+      '🌖': ['자연','nature','moon','waning','gibbous'],
+      '🌗': ['자연','nature','moon','last','quarter'],
+      '🌘': ['자연','nature','moon','waning','crescent'],
+      '🌑': ['자연','nature','moon','new'],
+      '🌒': ['자연','nature','moon','waxing','crescent'],
+      '🌓': ['자연','nature','moon','first','quarter'],
+      '🌔': ['자연','nature','moon','waxing','gibbous'],
+      '🌙': ['자연','nature','moon','crescent','초승달'],
+      '🌎': ['자연','nature','earth','americas','지구'],
+      '🌍': ['자연','nature','earth','africa','europe','지구'],
+      '🌏': ['자연','nature','earth','asia','australia','지구'],
+      '🪐': ['자연','nature','ringed','planet','토성'],
+      '💫': ['자연','nature','dizzy','star','어지러움'],
+      '⭐': ['자연','nature','star','별'],
+      '🌟': ['자연','nature','star','glowing','반짝이는별'],
+      '✨': ['자연','nature','sparkle','star','반짝'],
+      '⚡': ['자연','nature','lightning','bolt','zap','번개'],
+      '☄️': ['자연','nature','comet','혜성'],
+      '💥': ['자연','nature','collision','boom','폭발'],
+      '🔥': ['자연','nature','fire','flame','hot','불','뜨거움'],
+      '🌈': ['자연','nature','rainbow','무지개'],
+      '☀️': ['자연','nature','sun','sunny','weather','해','맑음'],
+      '🌤️': ['자연','nature','sun','cloud','weather'],
+      '⛅': ['자연','nature','cloud','sun','weather','구름해'],
+      '🌥️': ['자연','nature','cloud','sun','weather'],
+      '☁️': ['자연','nature','cloud','weather','구름'],
+      '🌦️': ['자연','nature','cloud','rain','weather'],
+      '🌧️': ['자연','nature','rain','weather','비'],
+      '⛈️': ['자연','nature','storm','thunder','weather','폭풍'],
+      '🌩️': ['자연','nature','lightning','cloud','번개'],
+      '🌨️': ['자연','nature','snow','cloud','눈'],
+      '❄️': ['자연','nature','snow','cold','winter','눈','겨울'],
+      '☃️': ['자연','nature','snowman','눈사람'],
+      '⛄': ['자연','nature','snowman','without','snow','눈사람'],
+
+      // 🚗 교통
+      '🚗': ['교통','car','transport','vehicle','auto','자동차'],
+      '🚕': ['교통','car','taxi','transport','택시'],
+      '🚙': ['교통','car','suv','transport','SUV'],
+      '🚌': ['교통','bus','transport','public','버스'],
+      '🚎': ['교통','bus','trolley','transport','트롤리'],
+      '🏎️': ['교통','racing','car','레이싱'],
+      '🚓': ['교통','car','police','경찰차'],
+      '🚑': ['교통','ambulance','구급차'],
+      '🚒': ['교통','fire','engine','소방차'],
+      '🚐': ['교통','van','minibus','transport','승합차'],
+      '🛻': ['교통','pickup','truck','픽업트럭'],
+      '🚚': ['교통','truck','delivery','transport','트럭'],
+      '🚛': ['교통','truck','articulated','대형트럭'],
+      '🚜': ['교통','tractor','트랙터'],
+      '🛴': ['교통','scooter','kick','킥보드'],
+      '🚲': ['교통','bike','bicycle','cycle','자전거'],
+      '🛵': ['교통','scooter','motor','스쿠터'],
+      '🏍️': ['교통','motorcycle','bike','오토바이'],
+      '🛺': ['교통','auto','rickshaw','툭툭'],
+      '🚨': ['경광등','police','light','siren'],
+      '🚔': ['교통','police','car','oncoming'],
+      '🚍': ['교통','bus','oncoming'],
+      '🚘': ['교통','car','oncoming'],
+      '🚖': ['교통','taxi','oncoming'],
+      '🚡': ['교통','aerial','tramway'],
+      '🚠': ['교통','mountain','cableway'],
+      '🚟': ['교통','suspension','railway'],
+      '🚃': ['교통','railway','car'],
+      '🚋': ['교통','tram','car'],
+      '🚞': ['교통','mountain','railway'],
+      '🚝': ['교통','monorail'],
+      '🚄': ['교통','train','bullet','speed','고속열차'],
+      '🚅': ['교통','train','bullet','speed','KTX'],
+      '🚈': ['교통','light','rail','경전철'],
+      '🚂': ['교통','train','locomotive','기관차'],
+      '🚆': ['교통','train','railway','기차'],
+      '🚇': ['교통','subway','metro','train','지하철'],
+      '🚊': ['교통','tram'],
+      '🚉': ['교통','station','역'],
+      '✈️': ['교통','airplane','plane','flight','fly','비행기'],
+      '🛫': ['교통','airplane','departure','이륙'],
+      '🛬': ['교통','airplane','arrival','착륙'],
+      '🛩️': ['교통','small','airplane','경비행기'],
+      '💺': ['교통','seat','좌석'],
+      '🛰️': ['교통','satellite','위성'],
+      '🚀': ['교통','rocket','space','launch','로켓','우주'],
+      '🛸': ['교통','flying','saucer','UFO'],
+      '🚁': ['교통','helicopter','fly','헬리콥터'],
+      '🛶': ['교통','canoe','카누'],
+      '⛵': ['교통','sailboat','boat','요트'],
+      '🚤': ['교통','speedboat','보트'],
+      '🛥️': ['교통','motor','boat','모터보트'],
+      '🛳️': ['교통','passenger','ship','여객선'],
+      '⛴️': ['교통','ferry','페리'],
+      '🚢': ['교통','ship','배'],
+      '⚓': ['교통','anchor','닻'],
+      '⛽': ['교통','fuel','pump','주유소'],
+      '🚧': ['교통','construction','공사'],
+      '🚦': ['교통','traffic','light','vertical','신호등'],
+      '🚥': ['교통','traffic','light','horizontal','신호등'],
+      '🗺️': ['지도','map','world','세계'],
+      '🗿': ['모아이','moai','statue'],
+
+      // ⏰ 시간
+      '⏰': ['시간','time','clock','alarm','알람시계'],
+      '⏱️': ['시간','time','stopwatch','timer','스톱워치'],
+      '⏲️': ['시간','time','timer','clock','타이머'],
+      '⌚': ['시간','time','watch','clock','손목시계'],
+      '🕰️': ['시간','time','mantelpiece','clock','벽시계'],
+      '🕐': ['시간','time','clock','1시'],
+      '🕑': ['시간','time','clock','2시'],
+      '🕒': ['시간','time','clock','3시'],
+      '🕓': ['시간','time','clock','4시'],
+      '🕔': ['시간','time','clock','5시'],
+      '🕕': ['시간','time','clock','6시'],
+      '🕖': ['시간','time','clock','7시'],
+      '🕗': ['시간','time','clock','8시'],
+      '🕘': ['시간','time','clock','9시'],
+      '🕙': ['시간','time','clock','10시'],
+      '🕚': ['시간','time','clock','11시'],
+      '🕛': ['시간','time','clock','12시'],
+
+      // 🎮 엔터
+      '🕹️': ['게임','joystick','조이스틱'],
+      '🎴': ['화투','flower','playing','cards'],
+      '🃏': ['조커','joker','card'],
+      '🀄': ['마작','mahjong','tile'],
+      '🎵': ['음표','music','note','멜로디'],
+      '🎶': ['음표','music','notes'],
+      '📻': ['라디오','radio'],
+      '📱': ['휴대폰','mobile','phone','smartphone','스마트폰'],
+      '📲': ['휴대폰','mobile','phone','call','전화'],
+      '☎️': ['전화','telephone','phone'],
+      '📞': ['전화','phone','receiver','수화기'],
+      '📟': ['삐삐','pager','beeper'],
+      '📠': ['팩스','fax','machine'],
+      '🔋': ['배터리','battery','전지'],
+      '🔌': ['플러그','plug','electric','콘센트'],
+      '💻': ['노트북','laptop','computer','컴퓨터'],
+      '🖥️': ['데스크탑','desktop','computer','모니터'],
+      '🖨️': ['프린터','printer','프린트'],
+      '⌨️': ['키보드','keyboard'],
+      '🖱️': ['마우스','mouse','computer'],
+      '🖲️': ['트랙볼','trackball'],
+      '💽': ['디스크','minidisc','computer'],
+      '💾': ['저장','floppy','disk','save','디스켓'],
+      '💿': ['CD','optical','disk'],
+      '📀': ['DVD','disk'],
+
+      // ⚠️ 기호
+      '⚠️': ['경고','warning','caution','alert','주의'],
+      '🚸': ['경고','warning','children','crossing','어린이'],
+      '⛔': ['금지','no','entry','stop','진입금지'],
+      '🚫': ['금지','prohibited','no','ban','금지됨'],
+      '🚳': ['자전거금지','no','bicycles'],
+      '🚭': ['금연','no','smoking'],
+      '🚯': ['쓰레기금지','no','littering'],
+      '🚱': ['음용금지','non-potable','water'],
+      '🚷': ['보행자금지','no','pedestrians'],
+      '📵': ['휴대폰금지','no','mobile','phones'],
+      '🔞': ['19금','no','one','under','eighteen','성인'],
+      '☢️': ['방사능','radioactive','radiation'],
+      '☣️': ['생물학적위험','biohazard'],
+      '🛐': ['예배소','place','worship'],
+      '⚛️': ['원자','atom','science','과학'],
+      '🕉️': ['옴','om','hindu'],
+      '✡️': ['다윗의별','star','david','유대'],
+      '☸️': ['법륜','wheel','dharma'],
+      '☯️': ['음양','yin','yang'],
+      '✝️': ['십자가','cross','christian'],
+      '☦️': ['정교회','orthodox','cross'],
+      '☪️': ['초승달별','star','crescent','islam'],
+      '☮️': ['평화','peace','symbol'],
+      '🕎': ['메노라','menorah'],
+      '🔯': ['별','six','pointed','star'],
+      '♈': ['양자리','aries','zodiac'],
+      '♉': ['황소자리','taurus','zodiac'],
+      '♊': ['쌍둥이자리','gemini','zodiac'],
+      '♋': ['게자리','cancer','zodiac'],
+      '♌': ['사자자리','leo','zodiac'],
+      '♍': ['처녀자리','virgo','zodiac'],
+      '♎': ['천칭자리','libra','zodiac'],
+      '♏': ['전갈자리','scorpio','zodiac'],
+      '♐': ['사수자리','sagittarius','zodiac'],
+      '♑': ['염소자리','capricorn','zodiac'],
+      '♒': ['물병자리','aquarius','zodiac'],
+      '♓': ['물고기자리','pisces','zodiac'],
+      '⛎': ['뱀주인자리','ophiuchus','zodiac'],
+      '▶️': ['재생','play','button'],
+      '⏸️': ['일시정지','pause','button'],
+      '⏯️': ['재생일시정지','play','pause'],
+      '⏹️': ['정지','stop','button'],
+      '⏺️': ['녹화','record','button'],
+      '⏭️': ['다음','next','track'],
+      '⏮️': ['이전','previous','track'],
+      '⏩': ['빨리감기','fast','forward'],
+      '⏪': ['되감기','rewind'],
+      '⏫': ['위로','fast','up'],
+      '⏬': ['아래로','fast','down'],
+      '🔼': ['위','up','button'],
+      '🔽': ['아래','down','button'],
+      '➕': ['더하기','plus','add'],
+      '➖': ['빼기','minus','subtract'],
+      '➗': ['나누기','divide','division'],
+      '✖️': ['곱하기','multiply','x'],
+      '♾️': ['무한','infinity'],
+      '💲': ['달러','dollar','sign','money'],
+      '💱': ['환전','currency','exchange'],
+      '✔️': ['체크','check','mark','yes'],
+      '☑️': ['체크','check','box','선택'],
+      '❌': ['엑스','cross','no','wrong','틀림'],
+      '✅': ['확인','check','yes','correct','done','완료'],
+      '🔘': ['라디오버튼','radio','button'],
+      '🔴': ['빨강','red','circle','원'],
+      '🟠': ['주황','orange','circle'],
+      '🟡': ['노랑','yellow','circle'],
+      '🟢': ['초록','green','circle'],
+      '🔵': ['파랑','blue','circle'],
+      '🟣': ['보라','purple','circle'],
+      '⚫': ['검정','black','circle'],
+      '⚪': ['흰색','white','circle'],
+      '🟤': ['갈색','brown','circle'],
+      '🔔': ['벨','bell','ring','알림'],
+      '🔕': ['벨','bell','mute','무음'],
+      '📣': ['확성기','megaphone','announce'],
+      '📢': ['확성기','loudspeaker','public'],
+      '💬': ['말풍선','speech','balloon','대화'],
+      '💭': ['생각','thought','balloon'],
+      '🗯️': ['말풍선','angry','speech','bubble'],
+      '♠️': ['스페이드','spade','suit','card'],
+      '♣️': ['클로버','club','suit','card'],
+      '♥️': ['하트','heart','suit','card'],
+      '♦️': ['다이아','diamond','suit','card']
+    };
+
+    // 상태 변수
+    let menus = [];
+    let favoritePages = [];
+    let expandedGroups = [];
+    let currentPage = 'home';
+    let isSidebarCollapsed = false;
+
+    // 일상 관리 상태 변수
+    let categories = [];
+    let activities = [];
+    let selectedCategoryFilter = '';
+    let editingActivityId = null;
+    let editingCategoryId = null;
+    var selectedActivityIds = new Set();
+    var selectedCategoryIds = new Set();
+    let currentEmojiCallback = null;
+    let currentSelectedEmoji = '';
+
+    // 시간표 상태 변수
+    let schedules = [];
+    let scheduleItems = [];
+    let currentDetailScheduleId = null;
+    let editingScheduleItemId = null;
+    let scheduleDetailTab = 'grid';
+    let scheduleViewMode2 = 'detail'; // 'detail' | 'edit'
+    let scheduleDraft = null; // 수정 모드 draft
+    let addItemPrefill = null; // {weekday, startTime, endTime}
+    var siTimeCache = {start: '', end: ''}; // 요일별 시간 동일 토글 시 시간 보존용
+    var SLOT_HEIGHT = 28;
+    var WEEKDAYS_EN = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+    var WEEKDAYS_KR = ['월','화','수','목','금','토','일'];
+    let scheduleHeroIndex = 0;
+    let scheduleSearchQuery = '';
+    let selectedScheduleIds = [];
+    let scheduleViewMode = 'thumbnail';
+    let scheduleListPage = 1;
+    let scheduleListPerPage = 10;
+    let scheduleSortKey = 'updatedAt';
+    let scheduleSortDir = 'desc';
+    let scheduleFilterLiked = 'all';
+    let scheduleFilterTags = []; // 선택된 태그 (AND 조건)
+
+    // 모달 콜백
+    let confirmModalCallback = null;
+
+    // ========================================
+    // Google OAuth 로그인 관리
+    // ========================================
+
+    // JWT 토큰 디코딩 (Google id_token에서 사용자 정보 추출)
+    function decodeJwtPayload(token) {
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split('')
+            .map(function(c) {
+              return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            })
+            .join('')
+        );
+        return JSON.parse(jsonPayload);
+      } catch (e) {
+        console.error('JWT 디코딩 실패:', e);
+        return null;
+      }
+    }
+
+    // Google Sign-In 초기화
+    function initGoogleSignIn() {
+      if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
+        // GSI 스크립트 로드 대기 후 재시도
+        setTimeout(initGoogleSignIn, 200);
+        return;
+      }
+
+      google.accounts.id.initialize({
+        client_id: AUTH.GOOGLE_CLIENT_ID,
+        callback: handleGoogleCredentialResponse,
+        auto_select: false,
+        cancel_on_tap_outside: true
+      });
+
+      const btnContainer = document.getElementById('googleSignInButton');
+      if (btnContainer) {
+        google.accounts.id.renderButton(btnContainer, {
+          theme: 'outline',
+          size: 'large',
+          text: 'signin_with',
+          shape: 'rectangular',
+          logo_alignment: 'left',
+          width: 320
+        });
+      }
+    }
+
+    // Google 로그인 성공 시 호출되는 콜백
+    function handleGoogleCredentialResponse(response) {
+      if (!response || !response.credential) {
+        console.error('Google 로그인 응답 없음');
+        return;
+      }
+
+      const payload = decodeJwtPayload(response.credential);
+      if (!payload) {
+        showAlert('로그인 실패', '로그인 정보를 확인할 수 없습니다.');
+        return;
+      }
+
+      // 베이님 본인 계정만 허용 (단일 사용자 앱)
+      if (payload.email !== AUTH.USER_EMAIL) {
+        showAlert('접근 불가', '이 앱은 ' + AUTH.USER_EMAIL + ' 계정 전용입니다.\n\n로그인된 계정: ' + payload.email);
+        if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+          google.accounts.id.disableAutoSelect();
+        }
+        return;
+      }
+
+      currentUser = {
+        email: payload.email,
+        name: payload.name || '',
+        picture: payload.picture || '',
+        sub: payload.sub || ''
+      };
+
+      sessionStorage.setItem('isLoggedIn', 'true');
+      sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+      showApp();
+
+      // Sheets 연동: access_token 획득 → 탭 생성/전체 로드
+      GS.init(function(ok) {
+        if (!ok) { GS.updateUI('err'); return; }
+        GS.loadAll().then(function(loaded) {
+          if (loaded) renderCurrentScheduleView();
+        });
+      });
+    }
+
+    function showApp() {
+      document.getElementById('loginContainer').style.display = 'none';
+      document.getElementById('appContainer').classList.add('active');
+      initializeApp();
+      // 사이드바 하단 이메일 표시
+      var emailEl = document.getElementById('sf-email');
+      if (emailEl && currentUser) emailEl.textContent = currentUser.email || '';
+    }
+
+    function handleLogout() {
+      showConfirm('로그아웃', '로그아웃하시겠습니까?', function(confirmed) {
+        if (confirmed) {
+          if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+            google.accounts.id.disableAutoSelect();
+          }
+          GS.disconnect && GS.disconnect(true); // 캐시 클리어 (confirm 없이)
+          sessionStorage.clear();
+          currentUser = null;
+          window.location.href = window.location.href.split('#')[0];
+        }
+      });
+    }
+
+    // ========================================
+    // 공통 모달 시스템
+    // ========================================
+    function showConfirm(title, message, callback, detailHtml) {
+      const modal = document.getElementById('confirmModal');
+      const titleEl = document.getElementById('confirmTitle');
+      const messageEl = document.getElementById('confirmMessage');
+      const detailEl = document.getElementById('confirmDetail');
+
+      titleEl.textContent = title;
+      messageEl.textContent = message;
+      if (detailEl) {
+        if (detailHtml) { detailEl.innerHTML = detailHtml; detailEl.style.display = ''; }
+        else { detailEl.innerHTML = ''; detailEl.style.display = 'none'; }
+      }
+      confirmModalCallback = callback;
+      modal.classList.add('show');
+    }
+
+    function closeConfirmModal(result) {
+      const modal = document.getElementById('confirmModal');
+      modal.classList.remove('show');
+      var detailEl = document.getElementById('confirmDetail');
+      if (detailEl) { detailEl.innerHTML = ''; detailEl.style.display = 'none'; }
+
+      if (confirmModalCallback) {
+        confirmModalCallback(result);
+        confirmModalCallback = null;
+      }
+    }
+
+    function showAlert(title, message) {
+      const modal = document.getElementById('alertModal');
+      const titleEl = document.getElementById('alertTitle');
+      const messageEl = document.getElementById('alertMessage');
+      
+      titleEl.textContent = title;
+      messageEl.textContent = message;
+      modal.classList.add('show');
+    }
+
+    function closeAlertModal() {
+      const modal = document.getElementById('alertModal');
+      modal.classList.remove('show');
+    }
+
+    // ========================================
+    // 이모지 피커 시스템
+    // ========================================
+    // ========================================
+    // My Emojies
+    // ========================================
+    let myEmojis = [];
+
+    function loadMyEmojis() {
+      try { myEmojis = JSON.parse(localStorage.getItem('myEmojis') || '[]'); } catch(e) { myEmojis = []; }
+    }
+
+    function saveMyEmojis() {
+      localStorage.setItem('myEmojis', JSON.stringify(myEmojis));
+      GS.syncSheets(['사용자설정']);
+    }
+
+    function renderEmoji(val) {
+      if (!val) return '📅';
+      if (val.startsWith && val.startsWith('myimg:')) {
+        var id = val.slice(6);
+        var item = myEmojis.find(function(e) { return e.id === id; });
+        if (item) return '<img src="' + item.data + '" style="width:1.2em;height:1.2em;object-fit:cover;vertical-align:middle;border-radius:2px;">';
+        return '🖼️';
+      }
+      return val;
+    }
+
+    function emojiDisplayVal(val) {
+      if (!val) return '';
+      if (val.startsWith && val.startsWith('myimg:')) return '🖼️';
+      return val;
+    }
+
+    function setEmojiPickerTab(tab) {
+      var stdSection = document.getElementById('emojiStdSection');
+      var mySection = document.getElementById('emojiMySection');
+      var tabStd = document.getElementById('emojiTabStd');
+      var tabMy = document.getElementById('emojiTabMy');
+      if (tab === 'my') {
+        if (stdSection) stdSection.style.display = 'none';
+        if (mySection) mySection.style.display = 'flex';
+        if (tabStd) tabStd.classList.remove('active');
+        if (tabMy) tabMy.classList.add('active');
+        renderMyEmojisGrid();
+      } else {
+        if (stdSection) stdSection.style.display = 'block';
+        if (mySection) mySection.style.display = 'none';
+        if (tabStd) tabStd.classList.add('active');
+        if (tabMy) tabMy.classList.remove('active');
+      }
+    }
+
+    function renderMyEmojisGrid() {
+      var grid = document.getElementById('emojiMyGrid');
+      if (!grid) return;
+      if (myEmojis.length === 0) {
+        grid.innerHTML = '<div class="emoji-my-empty">아직 업로드된 이미지가 없습니다.</div>';
+        return;
+      }
+      var html = '';
+      myEmojis.forEach(function(item) {
+        var isSel = currentSelectedEmoji === 'myimg:' + item.id;
+        html += '<div class="emoji-my-item' + (isSel ? ' selected' : '') + '" data-id="' + item.id + '" onclick="selectMyEmoji(&apos;' + item.id + '&apos;)">';
+        html += '<img src="' + item.data + '" alt="my emoji">';
+        html += '<button class="emoji-my-item-del" onclick="event.stopPropagation(); deleteMyEmoji(&apos;' + item.id + '&apos;)" title="삭제">✕</button>';
+        html += '</div>';
+      });
+      grid.innerHTML = html;
+    }
+
+    function selectMyEmoji(id) {
+      currentSelectedEmoji = 'myimg:' + id;
+      document.querySelectorAll('.emoji-my-item').forEach(function(el) {
+        el.classList.toggle('selected', el.dataset.id === id);
+      });
+    }
+
+    function deleteMyEmoji(id) {
+      showConfirm('이미지 삭제', '이 이미지를 삭제하시겠습니까?', function(confirmed) {
+        if (!confirmed) return;
+        myEmojis = myEmojis.filter(function(e) { return e.id !== id; });
+        saveMyEmojis();
+        if (currentSelectedEmoji === 'myimg:' + id) currentSelectedEmoji = '';
+        renderMyEmojisGrid();
+      });
+    }
+
+    function handleMyEmojiUpload(input) {
+      var file = input.files && input.files[0];
+      var errEl = document.getElementById('myEmojiUploadError');
+      if (!file) return;
+      if (file.size > 200 * 1024) {
+        var kb = Math.round(file.size / 1024);
+        if (errEl) { errEl.textContent = '❌ 파일이 너무 큽니다 (' + kb + 'KB). 최대 200KB까지 가능합니다.'; errEl.style.display = 'block'; }
+        input.value = '';
+        return;
+      }
+      if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        myEmojis.push({ id: id, data: e.target.result });
+        saveMyEmojis();
+        renderMyEmojisGrid();
+        input.value = '';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function buildEmojiPicker() {
+      const catsEl = document.getElementById('emojiCats');
+      const gridEl = document.getElementById('emojiGrid');
+      
+      if (!catsEl || !gridEl) return;
+      
+      let catsHtml = '';
+      const catKeys = Object.keys(EMOJI_DATA);
+      catKeys.forEach(function(cat, idx) {
+        const icon = cat.split(' ')[0];
+        catsHtml += '<button class="emoji-cat-btn' + (idx === 0 ? ' active' : '') + '" onclick="setEmojiCat(\'' + cat + '\')">' + icon + '</button>';
+      });
+      catsEl.innerHTML = catsHtml;
+      
+      setEmojiCat(catKeys[0]);
+    }
+
+    function setEmojiCat(catName) {
+      const btns = document.querySelectorAll('.emoji-cat-btn');
+      btns.forEach(function(btn) {
+        btn.classList.remove('active');
+      });
+      
+      const catKeys = Object.keys(EMOJI_DATA);
+      const idx = catKeys.indexOf(catName);
+      if (idx >= 0 && btns[idx]) {
+        btns[idx].classList.add('active');
+      }
+      
+      renderEmojiGrid(EMOJI_DATA[catName] || []);
+    }
+
+    function renderEmojiGrid(emojis) {
+      const gridEl = document.getElementById('emojiGrid');
+      if (!gridEl) return;
+      
+      let html = '';
+      emojis.forEach(function(emoji) {
+        const isSelected = (emoji === currentSelectedEmoji);
+        html += '<button class="emoji-btn' + (isSelected ? ' selected' : '') + '" onclick="selectEmoji(\'' + emoji + '\')">' + emoji + '</button>';
+      });
+      gridEl.innerHTML = html;
+    }
+
+    function selectEmoji(emoji) {
+      currentSelectedEmoji = emoji;
+      
+      const btns = document.querySelectorAll('.emoji-btn');
+      btns.forEach(function(btn) {
+        btn.classList.remove('selected');
+        if (btn.textContent === emoji) {
+          btn.classList.add('selected');
+        }
+      });
+    }
+
+    function filterEmoji() {
+      const searchEl = document.getElementById('emojiSearch');
+      if (!searchEl) return;
+
+      const rawQuery = searchEl.value.trim();
+
+      // 검색어가 비어있으면 현재 활성 카테고리로 복귀
+      if (!rawQuery) {
+        const catKeys = Object.keys(EMOJI_DATA);
+        const activeCat = document.querySelector('.emoji-cat-btn.active');
+        if (activeCat) {
+          const idx = Array.from(document.querySelectorAll('.emoji-cat-btn')).indexOf(activeCat);
+          if (idx >= 0 && catKeys[idx]) {
+            setEmojiCat(catKeys[idx]);
+          }
+        }
+        return;
+      }
+
+      // 공백 구분 AND 검색 지원: "웃음 happy" → 둘 다 매칭돼야 결과
+      const tokens = rawQuery.toLowerCase().split(/\s+/).filter(function(t) { return t.length > 0; });
+      if (tokens.length === 0) return;
+
+      let matched = [];
+
+      Object.keys(EMOJI_DATA).forEach(function(cat) {
+        // 카테고리명도 검색 대상에 포함 (폴백 매칭)
+        const catNameLower = cat.toLowerCase();
+
+        EMOJI_DATA[cat].forEach(function(emoji) {
+          if (matched.indexOf(emoji) >= 0) return;
+
+          // 1) 이모지 문자 자체 매칭 (사용자가 이모지를 붙여넣어 검색하는 경우)
+          if (tokens.some(function(t) { return emoji.indexOf(t) >= 0; })) {
+            matched.push(emoji);
+            return;
+          }
+
+          // 2) 키워드 매칭 (모든 토큰이 최소 1개 키워드에 부분 일치해야 함 = AND)
+          const keywords = EMOJI_KEYWORDS[emoji] || [];
+          const keywordsLower = keywords.map(function(kw) { return kw.toLowerCase(); });
+
+          const allTokensMatch = tokens.every(function(token) {
+            // 각 토큰이 키워드 중 하나에라도 부분 일치
+            if (keywordsLower.some(function(kw) { return kw.indexOf(token) >= 0; })) {
+              return true;
+            }
+            // 카테고리명에 부분 일치 (폴백)
+            if (catNameLower.indexOf(token) >= 0) {
+              return true;
+            }
+            return false;
+          });
+
+          if (allTokensMatch && keywordsLower.length > 0) {
+            matched.push(emoji);
+            return;
+          }
+
+          // 3) 키워드가 없는 이모지라도 카테고리명 매칭이면 포함 (폴백)
+          if (keywordsLower.length === 0) {
+            const allMatchCat = tokens.every(function(token) {
+              return catNameLower.indexOf(token) >= 0;
+            });
+            if (allMatchCat) {
+              matched.push(emoji);
+            }
+          }
+        });
+      });
+
+      renderEmojiGrid(matched);
+    }
+
+    function openEmojiPicker(currentEmoji, callback) {
+      currentSelectedEmoji = currentEmoji || '';
+      currentEmojiCallback = callback;
+
+      setEmojiPickerTab('standard');
+      buildEmojiPicker();
+
+      const searchEl = document.getElementById('emojiSearch');
+      if (searchEl) {
+        searchEl.value = '';
+        searchEl.oninput = filterEmoji;
+      }
+
+      document.getElementById('emojiPickerOverlay').classList.add('show');
+    }
+
+    function closeEmojiPicker(confirmed) {
+      document.getElementById('emojiPickerOverlay').classList.remove('show');
+      
+      if (confirmed && currentEmojiCallback && currentSelectedEmoji) {
+        currentEmojiCallback(currentSelectedEmoji);
+      }
+      
+      currentEmojiCallback = null;
+      currentSelectedEmoji = '';
+    }
+
+    // DOMContentLoaded 이벤트 리스너
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initLogin);
+    } else {
+      initLogin();
+    }
+
+    function initLogin() {
+      // 기존 세션 확인
+      if (sessionStorage.getItem('isLoggedIn') === 'true') {
+        const savedUser = sessionStorage.getItem('currentUser');
+        if (savedUser) {
+          try {
+            currentUser = JSON.parse(savedUser);
+          } catch (e) {
+            currentUser = null;
+          }
+        }
+        if (currentUser && currentUser.email === AUTH.USER_EMAIL) {
+          showApp();
+          // 세션 복원 시 Sheets 재연결 (새로고침 후에도 연결 유지)
+          GS.init(function(ok) {
+            if (!ok) { GS.updateUI('err'); return; }
+            GS.loadAll().then(function(loaded) {
+              if (loaded) renderCurrentScheduleView();
+            });
+          });
+          return;
+        } else {
+          sessionStorage.clear();
+        }
+      }
+
+      // Google Sign-In 초기화
+      initGoogleSignIn();
+    }
+
+    // ========================================
+    // 앱 초기화
+    // ========================================
+    function initializeApp() {
+      loadMenus();
+      loadFavorites();
+      loadExpandedGroups();
+      loadSidebarState();
+      loadCategories();
+      loadMyEmojis();
+      loadActivities();
+      loadSchedules();
+      loadProfile();
+      loadDesignSettings();
+      renderSidebar();
+      renderMenuManager();
+      updateActiveMenu();
+      renderCategoryFilter();
+      renderActivities();
+      renderCategories();
+      renderScheduleTagFilter();
+      renderScheduleThumbnails();
+      const lastPage = sessionStorage.getItem('lastPage');
+      if (lastPage && document.getElementById(lastPage + 'Page')) {
+        navigateTo(lastPage);
+      }
+      updateMobileTopTitle();
+    }
+
+    function loadMenus() {
+      const saved = localStorage.getItem('menus');
+      if (saved) {
+        try {
+          menus = JSON.parse(saved);
+        } catch (e) {
+          menus = JSON.parse(JSON.stringify(DEFAULT_MENUS));
+        }
+      } else {
+        menus = JSON.parse(JSON.stringify(DEFAULT_MENUS));
+      }
+      // 마이그레이션: '일상' 메뉴명 → '시간표'
+      var migrated = false;
+      function walkRename(list) {
+        list.forEach(function(m) {
+          if (m.slug === 'daily' && m.name === '일상') { m.name = '시간표'; migrated = true; }
+          if (m.children) walkRename(m.children);
+        });
+      }
+      walkRename(menus);
+      if (migrated) saveMenus();
+    }
+
+    function saveMenus() {
+      localStorage.setItem('menus', JSON.stringify(menus));
+      GS.syncSheets(['사용자설정']);
+    }
+
+    function loadFavorites() {
+      const saved = localStorage.getItem('favoritePages');
+      if (saved) {
+        try {
+          favoritePages = JSON.parse(saved);
+        } catch (e) {
+          favoritePages = [];
+        }
+      }
+    }
+
+    function loadExpandedGroups() {
+      const saved = localStorage.getItem('expandedGroups');
+      if (saved) {
+        try {
+          expandedGroups = JSON.parse(saved);
+        } catch (e) {
+          expandedGroups = [];
+        }
+      }
+    }
+
+    function loadSidebarState() {
+      const saved = localStorage.getItem('isSidebarCollapsed');
+      if (saved) {
+        try {
+          isSidebarCollapsed = JSON.parse(saved);
+          if (isSidebarCollapsed) {
+            document.getElementById('sidebar').classList.add('collapsed');
+            document.getElementById('sidebarToggleBtn').classList.remove('expanded');
+            document.getElementById('sidebarToggleIcon').textContent = '☰';
+            document.getElementById('sidebarToggleBtn').style.left = '16px';
+          } else {
+            document.getElementById('sidebarToggleBtn').classList.add('expanded');
+            document.getElementById('sidebarToggleIcon').textContent = '✕';
+            document.getElementById('sidebarToggleBtn').style.left = (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-width')) - 48) + "px";
+          }
+        } catch (e) {
+          // 기본값 유지
+        }
+      } else {
+        const navWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-width'));
+        document.getElementById('sidebarToggleBtn').style.left = (navWidth - 48) + "px";
+        document.getElementById('sidebarToggleBtn').classList.add('expanded');
+      }
+    }
+
+    // ========================================
+    // 사이드바 렌더링
+    // ========================================
+    function renderSidebar() {
+      const nav = document.getElementById('sidebarNav');
+      if (!nav) return;
+      
+      let html = '';
+      
+      if (favoritePages.length > 0) {
+        html += '<div style="margin-bottom: 24px;">';
+        html += '  <div class="nav-section-title">⭐ 즐겨찾기</div>';
+        
+        const allPages = [];
+        menus.forEach(function(menu) {
+          if (menu.type === 'page') {
+            allPages.push(menu);
+          } else if (menu.type === 'group' && menu.children) {
+            menu.children.forEach(function(child) {
+              if (child.type === 'page') {
+                allPages.push(child);
+              }
+            });
+          }
+        });
+        
+        favoritePages.forEach(function(pageId) {
+          const page = allPages.find(function(p) { return p.id === pageId; });
+          if (!page) return;
+          
+          html += '<div class="nav-item" data-page="' + page.id + '" onclick="navigateTo(\'' + page.id + '\')">';
+          html += '  <span class="nav-icon">' + page.icon + '</span>';
+          html += '  <span>' + page.name + '</span>';
+          html += '  <span class="favorite-star active" onclick="event.stopPropagation(); toggleFavorite(\'' + page.id + '\')">★</span>';
+          html += '</div>';
+        });
+        
+        html += '</div>';
+      }
+      
+      const sortedMenus = menus.slice().sort(function(a, b) { return a.order - b.order; });
+      
+      sortedMenus.forEach(function(menu) {
+        if (menu.type === 'page') {
+          const isFavorite = favoritePages.indexOf(menu.id) >= 0;
+          
+          html += '<div class="nav-item" data-page="' + menu.id + '" onclick="navigateTo(\'' + menu.id + '\')">';
+          html += '  <span class="nav-icon">' + menu.icon + '</span>';
+          html += '  <span>' + menu.name + '</span>';
+          html += '  <span class="favorite-star ' + (isFavorite ? 'active' : '') + '" onclick="event.stopPropagation(); toggleFavorite(\'' + menu.id + '\')">' + (isFavorite ? '★' : '☆') + '</span>';
+          html += '</div>';
+          
+        } else if (menu.type === 'group') {
+          const isExpanded = expandedGroups.indexOf(menu.id) >= 0;
+          
+          html += '<div class="nav-group">';
+          html += '  <div class="nav-group-header" onclick="toggleGroup(\'' + menu.id + '\')">';
+          html += '    <div style="display: flex; align-items: center; gap: 8px;">';
+          html += '      <span class="nav-icon">' + menu.icon + '</span>';
+          html += '      <span>' + menu.name + '</span>';
+          html += '    </div>';
+          html += '    <span class="nav-group-toggle">' + (isExpanded ? '▼' : '▶') + '</span>';
+          html += '  </div>';
+          
+          if (isExpanded && menu.children) {
+            html += '  <div class="nav-group-children">';
+            const sortedChildren = menu.children.slice().sort(function(a, b) { return a.order - b.order; });
+            sortedChildren.forEach(function(child) {
+              if (child.type === 'page') {
+                const isFavorite = favoritePages.indexOf(child.id) >= 0;
+                
+                html += '    <div class="nav-item nav-item-child" data-page="' + child.id + '" onclick="navigateTo(\'' + child.id + '\')">';
+                html += '      <span class="nav-icon">' + child.icon + '</span>';
+                html += '      <span>' + child.name + '</span>';
+                html += '      <span class="favorite-star ' + (isFavorite ? 'active' : '') + '" onclick="event.stopPropagation(); toggleFavorite(\'' + child.id + '\')">' + (isFavorite ? '★' : '☆') + '</span>';
+                html += '    </div>';
+              }
+            });
+            html += '  </div>';
+          }
+          
+          html += '</div>';
+        }
+      });
+      
+      nav.innerHTML = html;
+      updateActiveMenu();
+    }
+
+    function updateActiveMenu() {
+      var menuPage = currentPage === 'scheduleDetail' ? 'daily' : currentPage;
+      document.querySelectorAll('.nav-item').forEach(function(item) {
+        item.classList.toggle('active', item.dataset.page === menuPage);
+      });
+    }
+
+    function toggleGroup(groupId) {
+      if (expandedGroups.indexOf(groupId) >= 0) {
+        expandedGroups = expandedGroups.filter(function(id) { return id !== groupId; });
+      } else {
+        expandedGroups.push(groupId);
+      }
+      localStorage.setItem('expandedGroups', JSON.stringify(expandedGroups));
+      renderSidebar();
+    }
+
+    function toggleFavorite(pageId) {
+      if (favoritePages.indexOf(pageId) >= 0) {
+        favoritePages = favoritePages.filter(function(id) { return id !== pageId; });
+      } else {
+        favoritePages.push(pageId);
+      }
+      localStorage.setItem('favoritePages', JSON.stringify(favoritePages));
+      renderSidebar();
+    }
+
+    function toggleSidebar() {
+      isSidebarCollapsed = !isSidebarCollapsed;
+      localStorage.setItem('isSidebarCollapsed', JSON.stringify(isSidebarCollapsed));
+
+      const sidebar = document.getElementById('sidebar');
+      const toggleBtn = document.getElementById('sidebarToggleBtn');
+      const toggleIcon = document.getElementById('sidebarToggleIcon');
+
+      if (isSidebarCollapsed) {
+        sidebar.classList.add('collapsed');
+        toggleBtn.classList.remove('expanded');
+        toggleIcon.textContent = '☰';
+        toggleBtn.style.left = '16px';
+      } else {
+        sidebar.classList.remove('collapsed');
+        toggleBtn.classList.add('expanded');
+        toggleIcon.textContent = '✕';
+        const navWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-width'));
+        toggleBtn.style.left = (navWidth - 48) + "px";
+      }
+    }
+
+    // 사이드바 펼친 상태에서 외부 클릭/터치 시 접기
+    document.addEventListener('click', function(e) {
+      if (isSidebarCollapsed) return;
+      const sidebar = document.getElementById('sidebar');
+      if (!sidebar) return;
+      if (sidebar.contains(e.target)) return;
+      if (e.target.closest && (e.target.closest('.sidebar-toggle-btn') || e.target.closest('.mobile-top-bar'))) return;
+      toggleSidebar();
+    });
+
+    // ========================================
+    // 네비게이션
+    // ========================================
+    function navigateTo(pageId) {
+      currentPage = pageId;
+      sessionStorage.setItem('lastPage', pageId);
+
+      document.querySelectorAll('.page').forEach(function(page) {
+        page.classList.remove('active');
+      });
+
+      const targetPage = document.getElementById(pageId + 'Page');
+      if (targetPage) {
+        targetPage.classList.add('active');
+      }
+
+      updateActiveMenu();
+      updateMobileTopTitle();
+
+      if (window.innerWidth <= 768) {
+        toggleSidebar();
+      }
+    }
+
+    function updateMobileTopTitle() {
+      const titleEl = document.getElementById('mobileTopTitle');
+      if (!titleEl) return;
+      if (currentPage === 'scheduleDetail') {
+        var sch = schedules.find(function(s) { return s.id === currentDetailScheduleId; });
+        titleEl.textContent = sch ? sch.title : '시간표 상세';
+        return;
+      }
+      const activePage = document.querySelector('.page.active .page-header h2');
+      if (activePage) {
+        titleEl.textContent = activePage.textContent.trim();
+      } else {
+        titleEl.textContent = '베이 관리자';
+      }
+    }
+
+    // ========================================
+    // 메뉴 관리
+    // ========================================
+    function renderMenuManager() {
+      const container = document.getElementById('menuManager');
+      if (!container) return;
+      
+      let html = '';
+      
+      const sortedMenus = menus.slice().sort(function(a, b) { return a.order - b.order; });
+      
+      sortedMenus.forEach(function(menu, index) {
+        if (menu.type === 'page') {
+          html += '<div class="menu-item-edit">';
+          html += '  <div class="menu-item-header">';
+          html += '    <input type="text" value="' + menu.icon + '" onchange="updateMenuIcon(\'' + menu.id + '\', this.value)" placeholder="이모지" style="width: 60px;">';
+          html += '    <input type="text" value="' + menu.name + '" onchange="updateMenuName(\'' + menu.id + '\', this.value)" placeholder="메뉴명">';
+          html += '    <input type="text" value="' + menu.slug + '" onchange="updateMenuSlug(\'' + menu.id + '\', this.value)" placeholder="slug" style="width: 120px;">';
+          html += '    <button class="btn-icon" onclick="moveMenuUp(' + index + ')" ' + (index === 0 ? 'disabled' : '') + '>↑</button>';
+          html += '    <button class="btn-icon" onclick="moveMenuDown(' + index + ')" ' + (index === sortedMenus.length - 1 ? 'disabled' : '') + '>↓</button>';
+          html += '  </div>';
+          html += '</div>';
+        } else if (menu.type === 'group') {
+          html += '<div class="menu-item-edit">';
+          html += '  <div class="menu-item-header">';
+          html += '    <input type="text" value="' + menu.icon + '" onchange="updateMenuIcon(\'' + menu.id + '\', this.value)" placeholder="이모지" style="width: 60px;">';
+          html += '    <input type="text" value="' + menu.name + '" onchange="updateMenuName(\'' + menu.id + '\', this.value)" placeholder="대분류명">';
+          html += '    <button class="btn-icon" onclick="moveMenuUp(' + index + ')" ' + (index === 0 ? 'disabled' : '') + '>↑</button>';
+          html += '    <button class="btn-icon" onclick="moveMenuDown(' + index + ')" ' + (index === sortedMenus.length - 1 ? 'disabled' : '') + '>↓</button>';
+          html += '  </div>';
+          
+          if (menu.children && menu.children.length > 0) {
+            html += '  <div class="menu-children">';
+            const sortedChildren = menu.children.slice().sort(function(a, b) { return a.order - b.order; });
+            sortedChildren.forEach(function(child, childIndex) {
+              html += '    <div class="child-menu-item">';
+              html += '      <input type="text" value="' + child.icon + '" onchange="updateChildIcon(\'' + menu.id + '\', ' + childIndex + ', this.value)" placeholder="이모지" style="width: 50px;">';
+              html += '      <input type="text" value="' + child.name + '" onchange="updateChildName(\'' + menu.id + '\', ' + childIndex + ', this.value)" placeholder="메뉴명">';
+              html += '      <input type="text" value="' + child.slug + '" onchange="updateChildSlug(\'' + menu.id + '\', ' + childIndex + ', this.value)" placeholder="slug" style="width: 100px;">';
+              html += '      <button class="btn-icon" onclick="moveChildUp(\'' + menu.id + '\', ' + childIndex + ')" ' + (childIndex === 0 ? 'disabled' : '') + '>↑</button>';
+              html += '      <button class="btn-icon" onclick="moveChildDown(\'' + menu.id + '\', ' + childIndex + ')" ' + (childIndex === sortedChildren.length - 1 ? 'disabled' : '') + '>↓</button>';
+              html += '    </div>';
+            });
+            html += '  </div>';
+          }
+          
+          html += '</div>';
+        }
+      });
+      
+      container.innerHTML = html;
+    }
+
+    function updateMenuIcon(menuId, icon) {
+      const menu = menus.find(function(m) { return m.id === menuId; });
+      if (menu) {
+        menu.icon = icon;
+        saveMenus();
+        renderSidebar();
+        renderMenuManager();
+      }
+    }
+
+    function updateMenuName(menuId, name) {
+      const menu = menus.find(function(m) { return m.id === menuId; });
+      if (menu) {
+        menu.name = name;
+        saveMenus();
+        renderSidebar();
+        renderMenuManager();
+      }
+    }
+
+    function updateMenuSlug(menuId, slug) {
+      const menu = menus.find(function(m) { return m.id === menuId; });
+      if (menu) {
+        menu.slug = slug;
+        saveMenus();
+        renderMenuManager();
+      }
+    }
+
+    function moveMenuUp(index) {
+      const sortedMenus = menus.slice().sort(function(a, b) { return a.order - b.order; });
+      if (index > 0) {
+        const temp = sortedMenus[index].order;
+        sortedMenus[index].order = sortedMenus[index - 1].order;
+        sortedMenus[index - 1].order = temp;
+        saveMenus();
+        renderSidebar();
+        renderMenuManager();
+      }
+    }
+
+    function moveMenuDown(index) {
+      const sortedMenus = menus.slice().sort(function(a, b) { return a.order - b.order; });
+      if (index < sortedMenus.length - 1) {
+        const temp = sortedMenus[index].order;
+        sortedMenus[index].order = sortedMenus[index + 1].order;
+        sortedMenus[index + 1].order = temp;
+        saveMenus();
+        renderSidebar();
+        renderMenuManager();
+      }
+    }
+
+    function updateChildIcon(groupId, childIndex, icon) {
+      const group = menus.find(function(m) { return m.id === groupId; });
+      if (group && group.children) {
+        const sortedChildren = group.children.slice().sort(function(a, b) { return a.order - b.order; });
+        if (sortedChildren[childIndex]) {
+          sortedChildren[childIndex].icon = icon;
+          saveMenus();
+          renderSidebar();
+          renderMenuManager();
+        }
+      }
+    }
+
+    function updateChildName(groupId, childIndex, name) {
+      const group = menus.find(function(m) { return m.id === groupId; });
+      if (group && group.children) {
+        const sortedChildren = group.children.slice().sort(function(a, b) { return a.order - b.order; });
+        if (sortedChildren[childIndex]) {
+          sortedChildren[childIndex].name = name;
+          saveMenus();
+          renderSidebar();
+          renderMenuManager();
+        }
+      }
+    }
+
+    function updateChildSlug(groupId, childIndex, slug) {
+      const group = menus.find(function(m) { return m.id === groupId; });
+      if (group && group.children) {
+        const sortedChildren = group.children.slice().sort(function(a, b) { return a.order - b.order; });
+        if (sortedChildren[childIndex]) {
+          sortedChildren[childIndex].slug = slug;
+          saveMenus();
+          renderMenuManager();
+        }
+      }
+    }
+
+    function moveChildUp(groupId, childIndex) {
+      const group = menus.find(function(m) { return m.id === groupId; });
+      if (group && group.children) {
+        const sortedChildren = group.children.slice().sort(function(a, b) { return a.order - b.order; });
+        if (childIndex > 0) {
+          const temp = sortedChildren[childIndex].order;
+          sortedChildren[childIndex].order = sortedChildren[childIndex - 1].order;
+          sortedChildren[childIndex - 1].order = temp;
+          saveMenus();
+          renderSidebar();
+          renderMenuManager();
+        }
+      }
+    }
+
+    function moveChildDown(groupId, childIndex) {
+      const group = menus.find(function(m) { return m.id === groupId; });
+      if (group && group.children) {
+        const sortedChildren = group.children.slice().sort(function(a, b) { return a.order - b.order; });
+        if (childIndex < sortedChildren.length - 1) {
+          const temp = sortedChildren[childIndex].order;
+          sortedChildren[childIndex].order = sortedChildren[childIndex + 1].order;
+          sortedChildren[childIndex + 1].order = temp;
+          saveMenus();
+          renderSidebar();
+          renderMenuManager();
+        }
+      }
+    }
+
+    // ========================================
+    // 탭 관리
+    // ========================================
+    function switchDailyTab(tabName) {
+      // 일상 페이지 내부의 탭만 제어 (설정 페이지 탭과 충돌 방지)
+      document.querySelectorAll('#dailyPage .tab-btn').forEach(function(btn) {
+        btn.classList.remove('active');
+      });
+
+      document.querySelectorAll('#dailyPage .tab-content').forEach(function(content) {
+        content.classList.remove('active');
+      });
+
+      const tabBtns = document.querySelectorAll('#dailyPage .tab-btn');
+      if (tabName === 'schedule' && tabBtns[0]) {
+        tabBtns[0].classList.add('active');
+        document.getElementById('dailyScheduleTab').classList.add('active');
+      } else if (tabName === 'activities' && tabBtns[1]) {
+        tabBtns[1].classList.add('active');
+        document.getElementById('dailyActivitiesTab').classList.add('active');
+        renderCategoryFilter();
+        renderActivities();
+        renderCategories();
+      }
+    }
+
+    // ========================================
+    // 카테고리 관리
+    // ========================================
+    function loadCategories() {
+      const saved = localStorage.getItem('categories');
+      if (saved) {
+        try {
+          categories = JSON.parse(saved);
+        } catch (e) {
+          categories = [];
+        }
+      } else {
+        categories = [];
+      }
+    }
+
+    function saveCategories() {
+      localStorage.setItem('categories', JSON.stringify(categories));
+      GS.syncSheets(['카테고리']);
+    }
+
+    function generateId() {
+      return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    function isInlineEditingInProgress() {
+      return editingActivityId !== null || editingCategoryId !== null;
+    }
+
+    function blockIfInlineEditing() {
+      return isInlineEditingInProgress();
+    }
+
+    function addCategoryInline() {
+      if (blockIfInlineEditing()) return;
+      const newCategory = {
+        id: generateId(),
+        emoji: getRandomEmoji(),
+        name: '',
+        active: true,
+        createdAt: today(),
+        isNew: true
+      };
+
+      categories.unshift(newCategory);
+      editingCategoryId = newCategory.id;
+      renderCategories();
+      
+      setTimeout(function() {
+        const emojiInput = document.querySelector('.category-card.editing .category-card-emoji input');
+        if (emojiInput) {
+          emojiInput.focus();
+        }
+      }, 100);
+    }
+
+    function saveCategoryInline(categoryId) {
+      const category = categories.find(function(c) { return c.id === categoryId; });
+      if (!category) return;
+      
+      if (!category.emoji || !category.name) {
+        showAlert('입력 오류', '이모지와 카테고리 이름을 모두 입력해주세요.');
+        return;
+      }
+      
+      delete category.isNew;
+      editingCategoryId = null;
+      saveCategories();
+      renderCategories();
+      renderCategoryFilter();
+      renderActivities();
+    }
+
+    function cancelCategoryInline(categoryId) {
+      const category = categories.find(function(c) { return c.id === categoryId; });
+      if (category && category.isNew) {
+        categories = categories.filter(function(c) { return c.id !== categoryId; });
+      }
+      editingCategoryId = null;
+      renderCategories();
+    }
+
+    function editCategory(categoryId) {
+      if (editingCategoryId === categoryId) return;
+      if (blockIfInlineEditing()) return;
+      editingCategoryId = categoryId;
+      renderCategories();
+
+      setTimeout(function() {
+        const nameInput = document.querySelector('.category-card.editing .category-card-name input');
+        if (nameInput) nameInput.focus();
+      }, 100);
+    }
+
+    function updateCategoryEmoji(categoryId, emoji) {
+      const category = categories.find(function(c) { return c.id === categoryId; });
+      if (category) {
+        category.emoji = emoji;
+      }
+    }
+
+    function updateCategoryName(categoryId, name) {
+      const category = categories.find(function(c) { return c.id === categoryId; });
+      if (category) {
+        category.name = name;
+      }
+    }
+
+    function toggleCategoryActive(categoryId) {
+      const category = categories.find(function(c) { return c.id === categoryId; });
+      if (category) {
+        category.active = !category.active;
+        saveCategories();
+        renderCategories();
+        renderCategoryFilter();
+        renderActivities();
+      }
+    }
+
+    function deleteCategory(categoryId) {
+      var cat = categories.find(function(c) { return c.id === categoryId; });
+      var memberActivities = activities.filter(function(a) { return a.categoryId === categoryId; });
+      var detailHtml = '';
+      var msg = '이 카테고리를 삭제하시겠습니까?';
+      if (memberActivities.length > 0) {
+        msg = '이 카테고리를 삭제하시겠습니까?\n소속 일상은 미지정 상태로 변경됩니다.';
+        detailHtml = '<b>소속 일상 (' + memberActivities.length + '개):</b><br>' +
+          memberActivities.map(function(a) { return renderEmoji(a.emoji) + ' ' + escapeHtml(a.name); }).join('<br>');
+      }
+      showConfirm('카테고리 삭제', msg, function(confirmed) {
+        if (confirmed) {
+          categories = categories.filter(function(c) { return c.id !== categoryId; });
+          activities.forEach(function(a) { if (a.categoryId === categoryId) a.categoryId = null; });
+          saveCategories();
+          saveActivities();
+          renderCategories();
+          renderCategoryFilter();
+          renderActivities();
+        }
+      }, detailHtml);
+    }
+
+    function toggleCategorySelect(id, checked) {
+      if (checked) selectedCategoryIds.add(id);
+      else selectedCategoryIds.delete(id);
+      updateCategoryBulkBar();
+    }
+
+    function toggleSelectAllCategories(checked) {
+      var visibleIds = categories.filter(function(c) { return c.active !== false; }).map(function(c) { return c.id; });
+      if (checked) visibleIds.forEach(function(id) { selectedCategoryIds.add(id); });
+      else selectedCategoryIds.clear();
+      updateCategoryBulkBar();
+      renderCategories();
+    }
+
+    function updateCategoryBulkBar() {
+      var count = selectedCategoryIds.size;
+      var countEl = document.getElementById('categoryBulkCount');
+      var actions = document.getElementById('categoryBulkActions');
+      var selectAll = document.getElementById('categorySelectAll');
+      if (countEl) countEl.textContent = count + '개 선택됨';
+      if (actions) actions.style.display = count > 0 ? '' : 'none';
+      if (selectAll) {
+        var total = categories.length;
+        selectAll.checked = count > 0 && count === total;
+        selectAll.indeterminate = count > 0 && count < total;
+      }
+    }
+
+    function clearCategorySelection() {
+      selectedCategoryIds.clear();
+      updateCategoryBulkBar();
+      renderCategories();
+    }
+
+    function deleteSelectedCategories() {
+      var ids = Array.from(selectedCategoryIds);
+      if (!ids.length) return;
+      var memberActivities = activities.filter(function(a) { return selectedCategoryIds.has(a.categoryId); });
+      var msg = ids.length + '개의 카테고리를 삭제하시겠습니까?';
+      var detailHtml = '';
+      if (memberActivities.length > 0) {
+        msg = ids.length + '개의 카테고리를 삭제하시겠습니까?\n소속 일상은 미지정 상태로 변경됩니다.';
+        detailHtml = '<b>미지정으로 변경될 일상 (' + memberActivities.length + '개):</b><br>' +
+          memberActivities.map(function(a) { return renderEmoji(a.emoji) + ' ' + escapeHtml(a.name); }).join('<br>');
+      }
+      showConfirm('카테고리 삭제', msg, function(confirmed) {
+        if (!confirmed) return;
+        categories = categories.filter(function(c) { return !selectedCategoryIds.has(c.id); });
+        activities.forEach(function(a) { if (selectedCategoryIds.has(a.categoryId)) a.categoryId = null; });
+        selectedCategoryIds.clear();
+        saveCategories();
+        saveActivities();
+        updateCategoryBulkBar();
+        renderCategories();
+        renderCategoryFilter();
+        renderActivities();
+      }, detailHtml);
+    }
+
+    function renderCategories() {
+      const container = document.getElementById('categoryGrid');
+      if (!container) return;
+
+      if (categories.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px; grid-column: 1 / -1;">카테고리가 없습니다. 카테고리를 추가해주세요.</p>';
+        return;
+      }
+
+      let html = '';
+      categories.forEach(function(category) {
+        const activityCount = activities.filter(function(a) { return a.categoryId === category.id; }).length;
+        const isEditing = (editingCategoryId === category.id);
+        const isSelected = (selectedCategoryFilter === category.id);
+        
+        const isCatChecked = selectedCategoryIds.has(category.id);
+        html += '<div class="category-card' + (isEditing ? ' editing' : '') + (isSelected ? ' selected' : '') + '" onclick="' + (isEditing ? '' : 'editCategory(\'' + category.id + '\')') + '">';
+        if (!isEditing) {
+          html += '<label class="card-cb" onclick="event.stopPropagation()"><input type="checkbox" ' + (isCatChecked ? 'checked' : '') + ' onchange="toggleCategorySelect(&apos;' + category.id + '&apos;,this.checked)"></label>';
+        }
+        html += '  <div class="category-card-header">';
+        
+        if (isEditing) {
+          html += '    <div class="category-card-emoji">';
+          html += '      <div class="emoji-edit-btn" onclick="event.stopPropagation(); openEmojiPicker(&apos;' + category.emoji + '&apos;, function(emoji) { updateCategoryEmoji(&apos;' + category.id + '&apos;, emoji); var btn=document.querySelector(&apos;.category-card.editing .emoji-edit-btn&apos;); if(btn) btn.innerHTML=renderEmoji(emoji); })">' + renderEmoji(category.emoji) + '</div>';
+          html += '    </div>';
+          html += '    <div class="category-card-name">';
+          html += '      <input type="text" value="' + category.name + '" oninput="updateCategoryName(&apos;' + category.id + '&apos;, this.value)" onkeydown="if(event.key===&apos;Enter&apos;) saveCategoryInline(&apos;' + category.id + '&apos;); if(event.key===&apos;Escape&apos;) cancelCategoryInline(&apos;' + category.id + '&apos;)" placeholder="카테고리 이름">';
+          html += '    </div>';
+        } else {
+          html += '    <div class="category-card-emoji">' + renderEmoji(category.emoji) + '</div>';
+          html += '    <div class="category-card-name">' + category.name + '</div>';
+        }
+        
+        html += '  </div>';
+        
+        if (!isEditing) {
+          html += '  <div class="category-card-count">' + activityCount + '개 일상</div>';
+          html += '  <div class="category-card-badges">';
+          if (!category.active) {
+            html += '    <span class="category-badge inactive">비활성</span>';
+          }
+          html += '  </div>';
+        }
+        
+        html += '  <div class="category-card-actions">';
+        if (isEditing) {
+          html += '    <button class="btn-confirm" onclick="event.stopPropagation(); saveCategoryInline(\'' + category.id + '\')">저장</button>';
+          html += '    <button class="btn-cancel" onclick="event.stopPropagation(); cancelCategoryInline(\'' + category.id + '\')">취소</button>';
+        } else {
+          html += '    <button class="btn-icon" onclick="event.stopPropagation(); editCategory(\'' + category.id + '\')">수정</button>';
+          html += '    <button class="btn-icon" onclick="event.stopPropagation(); toggleCategoryActive(\'' + category.id + '\')">' + (category.active ? '비활성' : '활성') + '</button>';
+          html += '    <button class="btn-icon btn-danger" onclick="event.stopPropagation(); deleteCategory(\'' + category.id + '\')">삭제</button>';
+        }
+        html += '  </div>';
+        
+        html += '</div>';
+      });
+
+      container.innerHTML = html;
+    }
+
+    function renderCategoryFilter() {
+      const select = document.getElementById('activityCategoryFilter');
+      if (!select) return;
+
+      let html = '<option value="">전체</option>';
+      html += '<option value="unassigned">미지정</option>';
+      
+      categories.filter(function(c) { return c.active; }).forEach(function(category) {
+        html += '<option value="' + category.id + '">' + category.emoji + ' ' + category.name + '</option>';
+      });
+
+      select.innerHTML = html;
+      select.value = selectedCategoryFilter;
+    }
+
+    function filterActivitiesByCategory() {
+      const select = document.getElementById('activityCategoryFilter');
+      if (!select) return;
+      
+      selectedCategoryFilter = select.value;
+      renderActivities();
+    }
+
+    function selectCategoryFilter(categoryId) {
+      if (selectedCategoryFilter === categoryId) {
+        selectedCategoryFilter = '';
+      } else {
+        selectedCategoryFilter = categoryId;
+      }
+      
+      const select = document.getElementById('activityCategoryFilter');
+      if (select) {
+        select.value = selectedCategoryFilter;
+      }
+      
+      renderActivities();
+      renderCategories();
+    }
+
+    // ========================================
+    // 일상 종류 관리
+    // ========================================
+    function loadActivities() {
+      const saved = localStorage.getItem('activities');
+      if (saved) {
+        try {
+          activities = JSON.parse(saved);
+        } catch (e) {
+          activities = [];
+        }
+      } else {
+        activities = [];
+      }
+
+      // 마이그레이션: 누락된 color 필드 기본값 지정
+      let needsSave = false;
+      activities.forEach(function(a) {
+        if (!a.color) {
+          a.color = '#ffde59';
+          needsSave = true;
+        }
+      });
+      if (needsSave) saveActivities();
+    }
+
+    function saveActivities() {
+      localStorage.setItem('activities', JSON.stringify(activities));
+      GS.syncSheets(['일상종류']);
+    }
+
+    function addActivityInline() {
+      if (blockIfInlineEditing()) return;
+      const newActivity = {
+        id: generateId(),
+        categoryId: selectedCategoryFilter === 'unassigned' ? null : (selectedCategoryFilter || null),
+        emoji: getRandomEmoji(),
+        name: '',
+        color: '#ffde59',
+        active: true,
+        createdAt: today(),
+        isNew: true
+      };
+
+      activities.unshift(newActivity);
+      editingActivityId = newActivity.id;
+      renderActivities();
+      
+      setTimeout(function() {
+        const nameInput = document.querySelector('.activity-card.editing .activity-card-name input');
+        if (nameInput) nameInput.focus();
+      }, 100);
+    }
+
+    function saveActivityInline(activityId) {
+      const activity = activities.find(function(a) { return a.id === activityId; });
+      if (!activity) return;
+      
+      if (!activity.emoji || !activity.name) {
+        showAlert('입력 오류', '이모지와 일상 이름을 모두 입력해주세요.');
+        return;
+      }
+      
+      delete activity.isNew;
+      editingActivityId = null;
+      saveActivities();
+      renderActivities();
+      renderCategories();
+    }
+
+    function cancelActivityInline(activityId) {
+      const activity = activities.find(function(a) { return a.id === activityId; });
+      if (activity && activity.isNew) {
+        activities = activities.filter(function(a) { return a.id !== activityId; });
+      }
+      editingActivityId = null;
+      renderActivities();
+    }
+
+    function editActivity(activityId) {
+      if (editingActivityId === activityId) return;
+      if (blockIfInlineEditing()) return;
+      editingActivityId = activityId;
+      renderActivities();
+
+      setTimeout(function() {
+        const nameInput = document.querySelector('.activity-card.editing .activity-card-name input');
+        if (nameInput) nameInput.focus();
+      }, 100);
+    }
+
+    function updateActivityEmoji(activityId, emoji) {
+      const activity = activities.find(function(a) { return a.id === activityId; });
+      if (activity) {
+        activity.emoji = emoji;
+      }
+    }
+
+    function updateActivityName(activityId, name) {
+      const activity = activities.find(function(a) { return a.id === activityId; });
+      if (activity) {
+        activity.name = name;
+      }
+    }
+
+    function updateActivityCategory(activityId, categoryId) {
+      const activity = activities.find(function(a) { return a.id === activityId; });
+      if (activity) {
+        activity.categoryId = categoryId || null;
+      }
+    }
+
+    function updateActivityColor(activityId, color) {
+      const activity = activities.find(function(a) { return a.id === activityId; });
+      if (activity) {
+        activity.color = color;
+      }
+    }
+
+    function toggleActivityActive(activityId) {
+      const activity = activities.find(function(a) { return a.id === activityId; });
+      if (activity) {
+        activity.active = !activity.active;
+        saveActivities();
+        renderActivities();
+      }
+    }
+
+    function deleteActivity(activityId) {
+      var usedItems = scheduleItems.filter(function(i) { return i.activityId === activityId; });
+      var usedScheduleIds = usedItems.map(function(i) { return i.scheduleId; });
+      var usedSchedules = schedules.filter(function(s) { return usedScheduleIds.indexOf(s.id) >= 0; });
+      var msg = '이 일상 종류를 삭제하시겠습니까?';
+      var detailHtml = '';
+      if (usedSchedules.length > 0) {
+        msg = '이 일상 종류를 삭제하시겠습니까?\n아래 시간표에서 사용 중입니다.';
+        detailHtml = '<b>사용 중인 시간표 (' + usedSchedules.length + '개):</b><br>' +
+          usedSchedules.map(function(s) { return renderEmoji(s.emoji) + ' ' + escapeHtml(s.title); }).join('<br>');
+      }
+      showConfirm('일상 종류 삭제', msg, function(confirmed) {
+        if (confirmed) {
+          activities = activities.filter(function(a) { return a.id !== activityId; });
+          saveActivities();
+          renderActivities();
+          renderCategories();
+        }
+      }, detailHtml);
+    }
+
+    function toggleActivitySelect(id, checked) {
+      if (checked) selectedActivityIds.add(id);
+      else selectedActivityIds.delete(id);
+      updateActivityBulkBar();
+    }
+
+    function toggleSelectAllActivities(checked) {
+      var visibleIds = getFilteredActivities().map(function(a) { return a.id; });
+      if (checked) visibleIds.forEach(function(id) { selectedActivityIds.add(id); });
+      else selectedActivityIds.clear();
+      updateActivityBulkBar();
+      renderActivities();
+    }
+
+    function updateActivityBulkBar() {
+      var count = selectedActivityIds.size;
+      var countEl = document.getElementById('activityBulkCount');
+      var actions = document.getElementById('activityBulkActions');
+      var selectAll = document.getElementById('activitySelectAll');
+      if (countEl) countEl.textContent = count + '개 선택됨';
+      if (actions) actions.style.display = count > 0 ? '' : 'none';
+      if (selectAll) {
+        var total = getFilteredActivities().length;
+        selectAll.checked = count > 0 && count === total;
+        selectAll.indeterminate = count > 0 && count < total;
+      }
+    }
+
+    function clearActivitySelection() {
+      selectedActivityIds.clear();
+      updateActivityBulkBar();
+      renderActivities();
+    }
+
+    function deleteSelectedActivities() {
+      var ids = Array.from(selectedActivityIds);
+      if (!ids.length) return;
+      var usedItems = scheduleItems.filter(function(i) { return selectedActivityIds.has(i.activityId); });
+      var usedScheduleIds = usedItems.map(function(i) { return i.scheduleId; }).filter(function(v, i, a) { return a.indexOf(v) === i; });
+      var usedSchedules = schedules.filter(function(s) { return usedScheduleIds.indexOf(s.id) >= 0; });
+      var msg = ids.length + '개의 일상 종류를 삭제하시겠습니까?';
+      var detailHtml = '';
+      if (usedSchedules.length > 0) {
+        msg = ids.length + '개의 일상 종류를 삭제하시겠습니까?\n일부는 아래 시간표에서 사용 중입니다.';
+        detailHtml = '<b>사용 중인 시간표 (' + usedSchedules.length + '개):</b><br>' +
+          usedSchedules.map(function(s) { return renderEmoji(s.emoji) + ' ' + escapeHtml(s.title); }).join('<br>');
+      }
+      showConfirm('일상 종류 삭제', msg, function(confirmed) {
+        if (!confirmed) return;
+        activities = activities.filter(function(a) { return !selectedActivityIds.has(a.id); });
+        selectedActivityIds.clear();
+        saveActivities();
+        updateActivityBulkBar();
+        renderActivities();
+        renderCategories();
+      }, detailHtml);
+    }
+
+    function getFilteredActivities() {
+      var filtered = activities.slice();
+      if (typeof selectedCategoryFilter !== 'undefined' && selectedCategoryFilter) {
+        if (selectedCategoryFilter === 'unassigned') filtered = filtered.filter(function(a) { return !a.categoryId; });
+        else filtered = filtered.filter(function(a) { return a.categoryId === selectedCategoryFilter; });
+      }
+      return filtered;
+    }
+
+    function renderActivities() {
+      const container = document.getElementById('activityGrid');
+      if (!container) return;
+
+      let filteredActivities = activities;
+      
+      if (selectedCategoryFilter === 'unassigned') {
+        filteredActivities = activities.filter(function(a) { return !a.categoryId; });
+      } else if (selectedCategoryFilter) {
+        filteredActivities = activities.filter(function(a) { return a.categoryId === selectedCategoryFilter; });
+      }
+
+      if (filteredActivities.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px; grid-column: 1 / -1;">일상 종류가 없습니다. 일상을 추가해주세요.</p>';
+        return;
+      }
+
+      let html = '';
+      filteredActivities.forEach(function(activity) {
+        const category = categories.find(function(c) { return c.id === activity.categoryId; });
+        const categoryLabel = category ? (category.emoji + ' ' + category.name) : '미지정';
+        const isEditing = (editingActivityId === activity.id);
+        
+        const isChecked = selectedActivityIds.has(activity.id);
+        const cardStyle = isEditing ? '' : ' style="' + getActivityCardStyle(activity.color) + '"';
+        html += '<div class="activity-card' + (isEditing ? ' editing' : ' colored') + '"' + cardStyle + ' onclick="' + (isEditing ? '' : 'editActivity(\'' + activity.id + '\')') + '">';
+        if (!isEditing) {
+          html += '<label class="card-cb" onclick="event.stopPropagation()"><input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onchange="toggleActivitySelect(&apos;' + activity.id + '&apos;,this.checked)"></label>';
+        }
+
+        if (isEditing) {
+          html += '  <div class="activity-card-emoji">';
+          html += '    <div class="emoji-edit-btn" onclick="event.stopPropagation(); openEmojiPicker(&apos;' + activity.emoji + '&apos;, function(emoji) { updateActivityEmoji(&apos;' + activity.id + '&apos;, emoji); var btn=document.querySelector(&apos;.activity-card.editing .emoji-edit-btn&apos;); if(btn) btn.innerHTML=renderEmoji(emoji); })">' + renderEmoji(activity.emoji) + '</div>';
+          html += '  </div>';
+          html += '  <div class="activity-card-name">';
+          html += '    <input type="text" value="' + activity.name + '" oninput="updateActivityName(&apos;' + activity.id + '&apos;, this.value)" onkeydown="if(event.key===&apos;Enter&apos;) saveActivityInline(&apos;' + activity.id + '&apos;); if(event.key===&apos;Escape&apos;) cancelActivityInline(&apos;' + activity.id + '&apos;)" placeholder="일상 이름">';
+          html += '  </div>';
+        } else {
+          html += '  <div class="activity-card-emoji">' + renderEmoji(activity.emoji) + '</div>';
+          html += '  <div class="activity-card-name">' + activity.name + '</div>';
+        }
+
+        if (isEditing) {
+          html += '  <div class="activity-card-category">';
+          html += '    <select onclick="event.stopPropagation()" onchange="updateActivityCategory(&apos;' + activity.id + '&apos;, this.value)">';
+          html += '      <option value=""' + (!activity.categoryId ? ' selected' : '') + '>미지정</option>';
+          categories.forEach(function(cat) {
+            const selected = (activity.categoryId === cat.id) ? ' selected' : '';
+            html += '      <option value="' + cat.id + '"' + selected + '>' + cat.emoji + ' ' + cat.name + '</option>';
+          });
+          html += '    </select>';
+          html += '  </div>';
+          html += '  <div class="activity-card-color">';
+          html += '    <label>대표 색상</label>';
+          html += '    <input type="color" value="' + (activity.color || '#ffde59') + '" onclick="event.stopPropagation()" oninput="updateActivityColor(&apos;' + activity.id + '&apos;, this.value)">';
+          html += '  </div>';
+        } else {
+          html += '  <div class="activity-card-category">' + categoryLabel + '</div>';
+        }
+        
+        if (!isEditing) {
+          html += '  <div class="activity-card-badges">';
+          if (!activity.active) {
+            html += '    <span class="activity-badge inactive">비활성</span>';
+          }
+          html += '  </div>';
+        }
+        
+        html += '  <div class="activity-card-actions">';
+        if (isEditing) {
+          html += '    <button class="btn-confirm" onclick="event.stopPropagation(); saveActivityInline(\'' + activity.id + '\')">저장</button>';
+          html += '    <button class="btn-cancel" onclick="event.stopPropagation(); cancelActivityInline(\'' + activity.id + '\')">취소</button>';
+        } else {
+          html += '    <button class="btn-icon" onclick="event.stopPropagation(); toggleActivityActive(\'' + activity.id + '\')">' + (activity.active ? '비활성' : '활성') + '</button>';
+          html += '    <button class="btn-icon btn-danger" onclick="event.stopPropagation(); deleteActivity(\'' + activity.id + '\')">삭제</button>';
+        }
+        html += '  </div>';
+        
+        html += '</div>';
+      });
+
+      container.innerHTML = html;
+    }
+
+    // ========================================
+    // 시간표 관리
+    // ========================================
+    function getRandomEmoji() {
+      const allEmojis = [];
+      Object.keys(EMOJI_DATA).forEach(function(cat) {
+        EMOJI_DATA[cat].forEach(function(e) { allEmojis.push(e); });
+      });
+      return allEmojis[Math.floor(Math.random() * allEmojis.length)];
+    }
+
+    // 배경색 → 대비되는 텍스트 색 자동 계산
+    function hexToRgb(hex) {
+      if (!hex) return { r: 255, g: 222, b: 89 };
+      let h = hex.replace('#', '');
+      if (h.length === 3) h = h.split('').map(function(c){ return c + c; }).join('');
+      const num = parseInt(h, 16);
+      return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+    }
+
+    function getActivityCardStyle(color) {
+      const rgb = hexToRgb(color || '#ffde59');
+      const alpha = 0.4;
+      // 흰 배경에 alpha만큼 합성된 색상의 밝기 계산
+      const blendedR = alpha * rgb.r + (1 - alpha) * 255;
+      const blendedG = alpha * rgb.g + (1 - alpha) * 255;
+      const blendedB = alpha * rgb.b + (1 - alpha) * 255;
+      const brightness = (blendedR * 299 + blendedG * 587 + blendedB * 114) / 1000;
+      const textColor = brightness < 150 ? '#ffffff' : '#333333';
+      const bg = 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + alpha + ')';
+      return 'background: ' + bg + '; color: ' + textColor + ';';
+    }
+
+    function loadSchedules() {
+      const saved = localStorage.getItem('schedules');
+      if (saved) {
+        try { schedules = JSON.parse(saved); } catch (e) { schedules = []; }
+      } else {
+        schedules = [];
+      }
+
+      const savedItems = localStorage.getItem('scheduleItems');
+      if (savedItems) {
+        try { scheduleItems = JSON.parse(savedItems); } catch (e) { scheduleItems = []; }
+      } else {
+        scheduleItems = [];
+      }
+
+      // 마이그레이션: isPrimary → isLiked, 누락된 필드 채우기
+      let needsSave = false;
+      schedules.forEach(function(s) {
+        if (typeof s.isLiked === 'undefined') {
+          s.isLiked = !!s.isPrimary;
+          needsSave = true;
+        }
+        if (typeof s.isPrimary !== 'undefined') {
+          delete s.isPrimary;
+          needsSave = true;
+        }
+        if (!s.emoji) {
+          s.emoji = getRandomEmoji();
+          needsSave = true;
+        }
+        if (typeof s.description === 'undefined') {
+          s.description = '';
+          needsSave = true;
+        }
+      });
+      if (needsSave) saveSchedules();
+    }
+
+    function saveSchedules() {
+      localStorage.setItem('schedules', JSON.stringify(schedules));
+      localStorage.setItem('scheduleItems', JSON.stringify(scheduleItems));
+      GS.syncSheets(['시간표', '시간표_일정']);
+    }
+
+    // ========================================
+    // 16단계 — Google Sheets 연동
+    // ========================================
+    // ── Google Sheets 연동 (GS 객체) ──
+    var GS = (function() {
+      var _token = null;
+      var _tokenExpiry = 0;
+      var _tokenClient = null;
+      var _syncing = false;
+      var BASE = 'https://sheets.googleapis.com/v4/spreadsheets/' + AUTH.SHEET_ID;
+
+      var SHEETS_DEF = {
+        '시간표':    ['id','emoji','title','description','tags','isLiked','createdAt','updatedAt'],
+        '시간표_일정': ['id','scheduleId','activityId','weekdays','startTime','endTime','createdAt'],
+        '카테고리':  ['id','emoji','name','active','createdAt'],
+        '일상종류':  ['id','categoryId','emoji','name','color','active','createdAt'],
+        '사용자설정': ['key','value']
+      };
+
+      function colLetter(n) {
+        var s = '';
+        while (n > 0) { var r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = Math.floor((n - 1) / 26); }
+        return s;
+      }
+
+      function _isConnected() { return !!_token && Date.now() < _tokenExpiry; }
+
+      function _saveTokenCache(token, expiresIn) {
+        _token = token;
+        _tokenExpiry = Date.now() + ((expiresIn || 3600) - 60) * 1000;
+        try { sessionStorage.setItem('_gs_tok', JSON.stringify({t: _token, e: _tokenExpiry})); } catch(e) {}
+      }
+
+      function _loadTokenCache() {
+        try {
+          var c = JSON.parse(sessionStorage.getItem('_gs_tok') || 'null');
+          if (c && c.t && c.e && Date.now() < c.e) { _token = c.t; _tokenExpiry = c.e; return true; }
+        } catch(e) {}
+        return false;
+      }
+
+      function _clearTokenCache() {
+        _token = null; _tokenExpiry = 0;
+        try { sessionStorage.removeItem('_gs_tok'); } catch(e) {}
+      }
+
+      function _updateUI(state, msg) {
+        var dot = document.getElementById('gs-dot');
+        var lbl = document.getElementById('gs-label');
+        var btnConn = document.getElementById('gs-action-connect');
+        var btnDisc = document.getElementById('gs-action-disconnect');
+        if (!dot) return;
+        dot.className = 'gs-dot' + (state ? ' ' + state : '');
+        if (lbl) lbl.textContent = msg || ({ ok: 'Sheets 연결됨', err: '재연결 필요', sync: '저장 중...' }[state] || 'Sheets 미연결');
+        if (state === 'ok') {
+          if (btnConn) btnConn.style.display = 'none';
+          if (btnDisc) btnDisc.style.display = '';
+        } else if (state === 'sync') {
+          if (btnConn) btnConn.style.display = 'none';
+          if (btnDisc) btnDisc.style.display = 'none';
+        } else {
+          if (btnConn) btnConn.style.display = '';
+          if (btnDisc) btnDisc.style.display = 'none';
+        }
+      }
+
+      async function _api(method, path, body) {
+        if (!_token) return null;
+        try {
+          var opts = { method: method, headers: { 'Authorization': 'Bearer ' + _token, 'Content-Type': 'application/json' } };
+          if (body !== undefined) opts.body = JSON.stringify(body);
+          var r = await fetch(BASE + path, opts);
+          if (r.status === 401) {
+            _clearTokenCache();
+            _updateUI('err', '재연결 필요');
+            showToast('Sheets 토큰 만료. 재연결해주세요', 'warning');
+            return null;
+          }
+          var json = await r.json();
+          if (json && json.error) { console.warn('[GS] API 오류:', json.error.message); }
+          return json;
+        } catch (e) { console.warn('[GS] 요청 실패:', e); return null; }
+      }
+
+      async function _ensureTabs() {
+        var meta = await _api('GET', '?fields=sheets.properties.title');
+        if (!meta || !meta.sheets) return false;
+        var existing = meta.sheets.map(function(s) { return s.properties.title; });
+        var toCreate = Object.keys(SHEETS_DEF).filter(function(n) { return existing.indexOf(n) < 0; });
+        if (toCreate.length > 0) {
+          await _api('POST', ':batchUpdate', { requests: toCreate.map(function(n) { return { addSheet: { properties: { title: n } } }; }) });
+        }
+        for (var name in SHEETS_DEF) {
+          var cols = SHEETS_DEF[name];
+          await _api('PUT', '/values/' + encodeURIComponent(name + '!A1:' + colLetter(cols.length) + '1') + '?valueInputOption=RAW', { values: [cols] });
+        }
+        return true;
+      }
+
+      function _getRows(name) {
+        switch (name) {
+          case '시간표':
+            return schedules.map(function(s) {
+              return [s.id, s.emoji||'', s.title||'', s.description||'', (s.tags||[]).join(','), s.isLiked?'TRUE':'FALSE', s.createdAt||'', s.updatedAt||''];
+            });
+          case '시간표_일정':
+            return scheduleItems.map(function(i) {
+              return [i.id, i.scheduleId, i.activityId, (i.weekdays||[]).join(','), i.startTime||'', i.endTime||'', i.createdAt||''];
+            });
+          case '카테고리':
+            return categories.map(function(c) {
+              return [c.id, c.emoji||'', c.name||'', c.active!==false?'TRUE':'FALSE', c.createdAt||''];
+            });
+          case '일상종류':
+            return activities.map(function(a) {
+              return [a.id, a.categoryId||'', a.emoji||'', a.name||'', a.color||'#ffde59', a.active!==false?'TRUE':'FALSE', a.createdAt||''];
+            });
+          case '사용자설정':
+            var pairs = [
+              ['profileQuote', profileQuote || ''],
+              ['designSettings', JSON.stringify(designSettings || {})],
+              ['myEmojis', JSON.stringify(myEmojis || [])],
+              ['menus', JSON.stringify(menus || [])]
+            ];
+            if (profilePhoto && profilePhoto.length < 45000) pairs.push(['profilePhoto', profilePhoto]);
+            return pairs;
+          default: return [];
+        }
+      }
+
+      async function _writeSheet(name) {
+        var cols = SHEETS_DEF[name];
+        var rows = [cols].concat(_getRows(name));
+        await _api('POST', '/values/' + encodeURIComponent(name) + ':clear', {});
+        await _api('PUT', '/values/' + encodeURIComponent(name + '!A1') + '?valueInputOption=RAW', { values: rows });
+      }
+
+      async function _loadAll() {
+        _updateUI('sync', '불러오는 중...');
+        var ok = await _ensureTabs();
+        if (!ok) { _updateUI('err', '재연결 필요'); return false; }
+
+        var results = {};
+        for (var name in SHEETS_DEF) {
+          var cols = SHEETS_DEF[name];
+          var resp = await _api('GET', '/values/' + encodeURIComponent(name + '!A:' + colLetter(cols.length)));
+          results[name] = ((resp && resp.values) || []).slice(1).filter(function(r) { return r && r[0]; });
+        }
+
+        // 시간표
+        if (results['시간표'].length > 0) {
+          schedules = results['시간표'].map(function(r) {
+            return { id:r[0], emoji:r[1]||'📅', title:r[2]||'', description:r[3]||'', tags:r[4]?r[4].split(',').filter(Boolean):[], isLiked:r[5]==='TRUE', createdAt:r[6]||today(), updatedAt:r[7]||today() };
+          });
+          scheduleItems = results['시간표_일정'].map(function(r) {
+            return { id:r[0], scheduleId:r[1], activityId:r[2], weekdays:r[3]?r[3].split(',').filter(Boolean):[], startTime:r[4]||'09:00', endTime:r[5]||'10:00', createdAt:r[6]||today() };
+          });
+          localStorage.setItem('schedules', JSON.stringify(schedules));
+          localStorage.setItem('scheduleItems', JSON.stringify(scheduleItems));
+        } else { await _writeSheet('시간표'); await _writeSheet('시간표_일정'); }
+
+        // 카테고리
+        if (results['카테고리'].length > 0) {
+          categories = results['카테고리'].map(function(r) {
+            return { id:r[0], emoji:r[1]||'', name:r[2]||'', active:r[3]!=='FALSE', createdAt:r[4]||today() };
+          });
+          localStorage.setItem('categories', JSON.stringify(categories));
+        } else { await _writeSheet('카테고리'); }
+
+        // 일상종류
+        if (results['일상종류'].length > 0) {
+          activities = results['일상종류'].map(function(r) {
+            return { id:r[0], categoryId:r[1]||'', emoji:r[2]||'', name:r[3]||'', color:r[4]||'#ffde59', active:r[5]!=='FALSE', createdAt:r[6]||today() };
+          });
+          localStorage.setItem('activities', JSON.stringify(activities));
+        } else { await _writeSheet('일상종류'); }
+
+        // 사용자설정
+        if (results['사용자설정'].length > 0) {
+          var sm = {};
+          results['사용자설정'].forEach(function(r) { sm[r[0]] = r[1] || ''; });
+          if (sm['profileQuote'] !== undefined) { profileQuote = sm['profileQuote']; localStorage.setItem('profileQuote', profileQuote); }
+          if (sm['designSettings']) {
+            try { designSettings = Object.assign({}, DESIGN_DEFAULTS, JSON.parse(sm['designSettings'])); localStorage.setItem('designSettings', JSON.stringify(designSettings)); applyDesignSettings(); } catch(e) {}
+          }
+          if (sm['myEmojis']) { try { myEmojis = JSON.parse(sm['myEmojis']); localStorage.setItem('myEmojis', JSON.stringify(myEmojis)); } catch(e) { myEmojis = []; } }
+          if (sm['menus']) { try { menus = JSON.parse(sm['menus']); localStorage.setItem('menus', JSON.stringify(menus)); renderSidebar(); } catch(e) {} }
+          if (sm['profilePhoto']) { profilePhoto = sm['profilePhoto']; localStorage.setItem('profilePhoto', profilePhoto); }
+        } else { await _writeSheet('사용자설정'); }
+
+        console.log('[GS] ✅ 전체 로드 완료');
+        _updateUI('ok', '연결됨');
+        return true;
+      }
+
+      // 공개 API
+      return {
+        isConnected: function() { return _isConnected(); },
+        updateUI: _updateUI,
+
+        syncSheets: async function(names) {
+          if (!_isConnected()) {
+            showToast('⚠️ Sheets 미연결 — 로컬에만 저장됩니다', 'warning');
+            return;
+          }
+          if (_syncing) return;
+          _syncing = true;
+          _updateUI('sync', '저장 중...');
+          try {
+            for (var i = 0; i < names.length; i++) { await _writeSheet(names[i]); }
+            _updateUI('ok', '연결됨');
+          } catch (e) {
+            console.error('[GS] sync 오류:', e);
+            showToast('Sheets 동기화 실패: ' + e.message, 'error');
+            _updateUI('ok', '연결됨 (동기화 오류)');
+          } finally { _syncing = false; }
+        },
+
+        init: function(onDone) {
+          // 1. 캐시 토큰 유효 → 즉시 UI 업데이트 후 onDone 호출
+          if (_loadTokenCache()) {
+            console.log('[GS] ✅ 캐시 토큰 사용');
+            _updateUI('ok', 'Sheets 연결됨');
+            if (onDone) onDone(true);
+            return;
+          }
+
+          // 2. 캐시 없음 → silent auth (팝업 없음)
+          if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
+            _updateUI('err', 'Google 라이브러리 없음'); if (onDone) onDone(false); return;
+          }
+          _tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: AUTH.GOOGLE_CLIENT_ID,
+            scope: 'https://www.googleapis.com/auth/spreadsheets',
+            callback: function(resp) {
+              if (resp.error) { _updateUI('err'); if (onDone) onDone(false); return; }
+              _saveTokenCache(resp.access_token, resp.expires_in);
+              _updateUI('ok', 'Sheets 연결됨');
+              console.log('[GS] ✅ 토큰 획득 (silent)');
+              if (onDone) onDone(true);
+            }
+          });
+          _tokenClient.requestAccessToken({ prompt: '' });
+        },
+
+        connect: function() {
+          // 연결 버튼 클릭 → silent 먼저 시도 (경고창 없음), 실패 시 consent로 재시도
+          _updateUI('sync', '연결 중...');
+          if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
+            _updateUI('err'); return;
+          }
+          var _doConnect = function(prompt) {
+            if (!_tokenClient) {
+              _tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: AUTH.GOOGLE_CLIENT_ID,
+                scope: 'https://www.googleapis.com/auth/spreadsheets',
+                callback: function() {}
+              });
+            }
+            _tokenClient.callback = function(resp) {
+              if (resp.error) {
+                if (prompt === '' ) {
+                  // silent 실패 → consent로 재시도 (이미 동의한 경우에도 팝업 필요할 수 있음)
+                  _doConnect('consent');
+                } else {
+                  _updateUI('err'); showToast('Sheets 연결 실패: ' + resp.error, 'error');
+                }
+                return;
+              }
+              _saveTokenCache(resp.access_token, resp.expires_in);
+              _updateUI('ok', 'Sheets 연결됨');
+              GS.loadAll().then(function() { showToast('☁️ Sheets 연결됨'); });
+            };
+            _tokenClient.requestAccessToken({ prompt: prompt });
+          };
+          _doConnect('');
+        },
+
+        disconnect: function(silent) {
+          if (!silent && !confirm('Sheets 연결을 해제할까요?\n(데이터는 로컬에 유지됩니다)')) return;
+          _clearTokenCache();
+          if (!silent) { _updateUI('', '미연결'); showToast('Sheets 연결 해제됨', 'warning'); }
+        },
+
+        loadAll: function() { return _loadAll(); }
+      };
+    })();
+
+    // 경량 토스트 알림
+    var _toastTimer = null;
+    function showToast(msg, type) {
+      var el = document.getElementById('gs-toast');
+      if (!el) return;
+      if (_toastTimer) clearTimeout(_toastTimer);
+      el.textContent = msg;
+      el.className = type ? type : '';
+      el.classList.add('show');
+      _toastTimer = setTimeout(function() { el.classList.remove('show'); }, 3000);
+    }
+
+    function addSchedule() {
+      const nextNumber = schedules.length + 1;
+      const newSchedule = {
+        id: generateId(),
+        title: '새 시간표 ' + nextNumber,
+        emoji: getRandomEmoji(),
+        description: '',
+        tags: [],
+        isLiked: false,
+        createdAt: today(),
+        updatedAt: today()
+      };
+      schedules.push(newSchedule);
+      saveSchedules();
+      renderCurrentScheduleView();
+    }
+
+    function updateScheduleTitle(scheduleId, title) {
+      const s = schedules.find(function(x) { return x.id === scheduleId; });
+      if (s) {
+        s.title = title;
+        s.updatedAt = today();
+        saveSchedules();
+      }
+    }
+
+    function updateScheduleDescription(scheduleId, desc) {
+      const s = schedules.find(function(x) { return x.id === scheduleId; });
+      if (s) {
+        s.description = desc;
+        s.updatedAt = today();
+        saveSchedules();
+      }
+    }
+
+    function updateScheduleEmoji(scheduleId, emoji) {
+      const s = schedules.find(function(x) { return x.id === scheduleId; });
+      if (s) {
+        s.emoji = emoji;
+        s.updatedAt = today();
+        saveSchedules();
+        renderCurrentScheduleView();
+      }
+    }
+
+    function getSortedFilteredSchedules() {
+      let result = schedules.slice();
+
+      // 검색 필터
+      if (scheduleSearchQuery) {
+        const q = scheduleSearchQuery.toLowerCase();
+        result = result.filter(function(s) {
+          const title = (s.title || '').toLowerCase();
+          const desc = (s.description || '').toLowerCase();
+          const tagMatch = (s.tags || []).some(function(t) { return t.toLowerCase().indexOf(q) >= 0; });
+          return title.indexOf(q) >= 0 || desc.indexOf(q) >= 0 || tagMatch;
+        });
+      }
+
+      // 좋아요 필터
+      if (scheduleFilterLiked === 'liked') {
+        result = result.filter(function(s) { return s.isLiked; });
+      } else if (scheduleFilterLiked === 'unliked') {
+        result = result.filter(function(s) { return !s.isLiked; });
+      }
+
+      // 태그 필터 (모든 선택 태그를 포함해야 통과 = AND)
+      if (scheduleFilterTags.length > 0) {
+        result = result.filter(function(s) {
+          var schTags = s.tags || [];
+          return scheduleFilterTags.every(function(t) { return schTags.indexOf(t) >= 0; });
+        });
+      }
+
+      // 정렬
+      result.sort(function(a, b) {
+        var va, vb;
+        if (scheduleSortKey === 'title') {
+          va = (a.title || '').toLowerCase();
+          vb = (b.title || '').toLowerCase();
+        } else if (scheduleSortKey === 'isLiked') {
+          va = a.isLiked ? 1 : 0;
+          vb = b.isLiked ? 1 : 0;
+        } else {
+          va = a.updatedAt || a.createdAt || '';
+          vb = b.updatedAt || b.createdAt || '';
+        }
+        if (va < vb) return scheduleSortDir === 'asc' ? -1 : 1;
+        if (va > vb) return scheduleSortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      return result;
+    }
+
+    function handleScheduleSearch(query) {
+      scheduleSearchQuery = query || '';
+      scheduleHeroIndex = 0;
+      scheduleListPage = 1;
+      renderCurrentScheduleView();
+    }
+
+    function renderScheduleTagFilter() {
+      var el = document.getElementById('scheduleTagFilter');
+      var toggleBtn = document.getElementById('scheduleTagFilterBtn');
+      var countEl = document.getElementById('scheduleTagFilterCount');
+      if (!el) return;
+      var tagSet = {};
+      schedules.forEach(function(s) {
+        (s.tags || []).forEach(function(t) {
+          if (t) tagSet[t] = (tagSet[t] || 0) + 1;
+        });
+      });
+      var allTags = Object.keys(tagSet).sort(function(a, b) { return a.localeCompare(b, 'ko'); });
+      // 선택돼 있지만 존재하지 않는 태그 정리
+      scheduleFilterTags = scheduleFilterTags.filter(function(t) { return allTags.indexOf(t) >= 0; });
+
+      // 토글 버튼 표시/숨김
+      if (toggleBtn) {
+        toggleBtn.style.display = allTags.length > 0 ? '' : 'none';
+        toggleBtn.classList.toggle('has-active', scheduleFilterTags.length > 0);
+        if (countEl) {
+          if (scheduleFilterTags.length > 0) {
+            countEl.textContent = scheduleFilterTags.length;
+            countEl.style.display = '';
+          } else {
+            countEl.style.display = 'none';
+          }
+        }
+      }
+
+      if (allTags.length === 0) {
+        el.classList.remove('open');
+        el.innerHTML = '';
+        return;
+      }
+
+      // 패널 내용 렌더
+      var html = '';
+      allTags.forEach(function(t) {
+        var active = scheduleFilterTags.indexOf(t) >= 0;
+        html += '<button class="schedule-tag-filter-chip' + (active ? ' active' : '') + '" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + ' <span style="opacity:0.55;">(' + tagSet[t] + ')</span></button>';
+      });
+      if (scheduleFilterTags.length > 0) {
+        html += '<button class="schedule-tag-filter-clear" onclick="clearScheduleTagFilter()">전체 해제</button>';
+      }
+      el.innerHTML = html;
+      // 클릭 위임
+      el.querySelectorAll('.schedule-tag-filter-chip').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          toggleScheduleTagFilter(btn.getAttribute('data-tag'));
+        });
+      });
+    }
+
+    function toggleScheduleTagPanel() {
+      var el = document.getElementById('scheduleTagFilter');
+      if (!el) return;
+      el.classList.toggle('open');
+    }
+
+    function toggleScheduleTagFilter(tag) {
+      if (!tag) return;
+      var idx = scheduleFilterTags.indexOf(tag);
+      if (idx >= 0) scheduleFilterTags.splice(idx, 1);
+      else scheduleFilterTags.push(tag);
+      scheduleListPage = 1;
+      scheduleHeroIndex = 0;
+      renderCurrentScheduleView();
+    }
+
+    function clearScheduleTagFilter() {
+      scheduleFilterTags = [];
+      scheduleListPage = 1;
+      scheduleHeroIndex = 0;
+      renderCurrentScheduleView();
+    }
+
+    function renderCurrentScheduleView() {
+      renderScheduleTagFilter();
+      if (scheduleViewMode === 'list') {
+        renderScheduleList();
+      } else {
+        renderScheduleThumbnails();
+      }
+    }
+
+    function scrollHeroTo(i) {
+      const el = document.getElementById('scheduleHeroScroll');
+      if (!el) return;
+      const target = el.children[i];
+      if (!target) return;
+      el.scrollTo({ left: target.offsetLeft, behavior: 'smooth' });
+    }
+
+    function updateHeroIndicators() {
+      const indicators = document.querySelectorAll('.hero-indicator');
+      indicators.forEach(function(ind, i) {
+        ind.classList.toggle('active', i === scheduleHeroIndex);
+      });
+    }
+
+    // 드래그 스크롤 + fade 힌트 동기화
+    function attachDragScroll(el) {
+      if (!el || el._dragAttached) return;
+      el._dragAttached = true;
+
+      let isDown = false, startX = 0, scrollStart = 0, moved = false;
+
+      const onDown = function(e) {
+        isDown = true;
+        moved = false;
+        startX = e.pageX;
+        scrollStart = el.scrollLeft;
+        el.classList.add('dragging');
+      };
+      const onMove = function(e) {
+        if (!isDown) return;
+        const dx = e.pageX - startX;
+        if (Math.abs(dx) > 5) moved = true;
+        if (moved) {
+          e.preventDefault();
+          el.scrollLeft = scrollStart - dx;
+        }
+      };
+      const onUp = function() {
+        if (!isDown) return;
+        isDown = false;
+        el.classList.remove('dragging');
+      };
+
+      el.addEventListener('mousedown', onDown);
+      el.addEventListener('mousemove', onMove);
+      el.addEventListener('mouseup', onUp);
+      el.addEventListener('mouseleave', onUp);
+      // 드래그 직후 click 이벤트(카드 클릭) 억제
+      el.addEventListener('click', function(e) {
+        if (moved) {
+          e.stopPropagation();
+          e.preventDefault();
+          moved = false;
+        }
+      }, true);
+    }
+
+    function updateScrollHintState(scrollEl) {
+      const wrap = scrollEl.closest('.schedule-scroll-wrap');
+      if (!wrap) return;
+      const atStart = scrollEl.scrollLeft <= 2;
+      const atEnd = scrollEl.scrollLeft + scrollEl.clientWidth >= scrollEl.scrollWidth - 2;
+      wrap.dataset.scrollStart = atStart ? 'true' : 'false';
+      wrap.dataset.scrollEnd = atEnd ? 'true' : 'false';
+    }
+
+    function toggleScheduleSelect(scheduleId) {
+      const idx = selectedScheduleIds.indexOf(scheduleId);
+      if (idx >= 0) selectedScheduleIds.splice(idx, 1);
+      else selectedScheduleIds.push(scheduleId);
+      updateScheduleBulkBar();
+    }
+
+    function clearScheduleSelection() {
+      selectedScheduleIds = [];
+      renderCurrentScheduleView();
+    }
+
+    function toggleSelectAllSchedules(checked) {
+      if (checked) {
+        const filtered = getSortedFilteredSchedules();
+        selectedScheduleIds = filtered.map(function(s) { return s.id; });
+      } else {
+        selectedScheduleIds = [];
+      }
+      renderCurrentScheduleView();
+    }
+
+    function syncSelectAllCheckbox() {
+      const chk = document.getElementById('scheduleSelectAll');
+      if (!chk) return;
+      const filtered = getSortedFilteredSchedules();
+      if (filtered.length === 0) {
+        chk.checked = false;
+        chk.indeterminate = false;
+        return;
+      }
+      const allSelected = filtered.every(function(s) { return selectedScheduleIds.indexOf(s.id) >= 0; });
+      const anySelected = filtered.some(function(s) { return selectedScheduleIds.indexOf(s.id) >= 0; });
+      chk.checked = allSelected;
+      chk.indeterminate = anySelected && !allSelected;
+    }
+
+    function bulkDeleteSchedules() {
+      if (selectedScheduleIds.length === 0) return;
+      const count = selectedScheduleIds.length;
+      showConfirm('시간표 삭제', count + '개 시간표를 삭제하시겠습니까?', function(confirmed) {
+        if (!confirmed) return;
+        schedules = schedules.filter(function(s) { return selectedScheduleIds.indexOf(s.id) < 0; });
+        scheduleItems = scheduleItems.filter(function(i) { return selectedScheduleIds.indexOf(i.scheduleId) < 0; });
+        selectedScheduleIds = [];
+        saveSchedules();
+        renderCurrentScheduleView();
+      });
+    }
+
+    function updateScheduleBulkBar() {
+      const bar = document.getElementById('scheduleBulkActions');
+      const countEl = document.getElementById('scheduleBulkCount');
+      if (bar && countEl) {
+        if (selectedScheduleIds.length > 0) {
+          bar.style.display = 'flex';
+          countEl.textContent = selectedScheduleIds.length + '개 선택됨';
+        } else {
+          bar.style.display = 'none';
+        }
+      }
+      syncSelectAllCheckbox();
+    }
+
+    window.addEventListener('resize', function() {
+      if (document.getElementById('scheduleHeroSection')) {
+        clearTimeout(window._scheduleResizeTimer);
+        window._scheduleResizeTimer = setTimeout(function() {
+          renderCurrentScheduleView();
+        }, 150);
+      }
+    });
+
+    function toggleScheduleLike(scheduleId) {
+      const sch = schedules.find(function(s) { return s.id === scheduleId; });
+      if (!sch) return;
+      sch.isLiked = !sch.isLiked;
+      sch.updatedAt = today();
+      saveSchedules();
+      renderCurrentScheduleView();
+    }
+
+    function deleteSchedule(scheduleId) {
+      showConfirm('시간표 삭제', '이 시간표를 삭제하시겠습니까?', function(confirmed) {
+        if (!confirmed) return;
+        schedules = schedules.filter(function(s) { return s.id !== scheduleId; });
+        scheduleItems = scheduleItems.filter(function(i) { return i.scheduleId !== scheduleId; });
+        saveSchedules();
+        renderCurrentScheduleView();
+      });
+    }
+
+    function timeToMin(hhmm) {
+      if (!hhmm) return 0;
+      var p = hhmm.split(':');
+      return parseInt(p[0]) * 60 + parseInt(p[1]);
+    }
+    function minToTimeStr(min) {
+      var h = Math.floor(min / 60), m = min % 60;
+      return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+    }
+
+    function openScheduleDetail(scheduleId) {
+      currentDetailScheduleId = scheduleId;
+      scheduleDetailTab = 'grid';
+      scheduleViewMode2 = 'detail';
+      scheduleDraft = null;
+      // 독립 페이지로 전환 (sessionStorage는 'daily'로 유지해 새로고침 시 목록으로 복귀)
+      currentPage = 'scheduleDetail';
+      document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+      var dp = document.getElementById('scheduleDetailPage');
+      if (dp) dp.classList.add('active');
+      updateActiveMenu();
+      updateMobileTopTitle();
+      var mc = document.querySelector('.main-content');
+      if (mc) mc.scrollTop = 0;
+      renderScheduleDetail();
+    }
+
+    function enterScheduleEditMode() {
+      var schedule = schedules.find(function(s) { return s.id === currentDetailScheduleId; });
+      if (!schedule) return;
+      scheduleViewMode2 = 'edit';
+      scheduleDraft = {
+        title: schedule.title,
+        emoji: schedule.emoji,
+        description: schedule.description || '',
+        tags: (schedule.tags || []).slice()
+      };
+      renderScheduleDetail();
+    }
+
+    function saveScheduleEdit() {
+      if (!scheduleDraft) return;
+      var schedule = schedules.find(function(s) { return s.id === currentDetailScheduleId; });
+      if (!schedule) return;
+      schedule.title = (scheduleDraft.title || '').trim() || schedule.title;
+      schedule.emoji = scheduleDraft.emoji;
+      schedule.description = scheduleDraft.description || '';
+      schedule.tags = scheduleDraft.tags || [];
+      schedule.updatedAt = today();
+      saveSchedules();
+      scheduleViewMode2 = 'detail';
+      scheduleDraft = null;
+      renderScheduleDetail();
+      renderCurrentScheduleView();
+    }
+
+    function cancelScheduleEdit() {
+      scheduleViewMode2 = 'detail';
+      scheduleDraft = null;
+      renderScheduleDetail();
+    }
+
+    function deleteCurrentSchedule() {
+      var schedule = schedules.find(function(s) { return s.id === currentDetailScheduleId; });
+      if (!schedule) return;
+      showConfirm('시간표 삭제', '이 시간표와 포함된 모든 일정을 삭제하시겠습니까?', function(confirmed) {
+        if (!confirmed) return;
+        var sid = schedule.id;
+        schedules = schedules.filter(function(s) { return s.id !== sid; });
+        scheduleItems = scheduleItems.filter(function(i) { return i.scheduleId !== sid; });
+        selectedScheduleIds = selectedScheduleIds.filter(function(id) { return id !== sid; });
+        saveSchedules();
+        closeScheduleDetail();
+        renderCurrentScheduleView();
+      });
+    }
+
+    function updateDraftTitle(v) { if (scheduleDraft) scheduleDraft.title = v; }
+    function updateDraftDesc(v) { if (scheduleDraft) scheduleDraft.description = v; }
+
+    function getAllScheduleTags() {
+      var tagSet = {};
+      schedules.forEach(function(s) {
+        (s.tags || []).forEach(function(t) { if (t) tagSet[t] = true; });
+      });
+      return Object.keys(tagSet).sort(function(a, b) { return a.localeCompare(b, 'ko'); });
+    }
+
+    function renderDraftTagChips() {
+      var container = document.getElementById('draftTagsContainer');
+      if (!container || !scheduleDraft) return;
+      var html = '';
+      (scheduleDraft.tags || []).forEach(function(t, i) {
+        html += '<span class="draft-tag-chip">' + escapeHtml(t) +
+          '<button class="draft-tag-chip-remove" onclick="removeDraftTag(' + i + ')" title="삭제">×</button></span>';
+      });
+      container.innerHTML = html;
+    }
+
+    function addDraftTag(tag) {
+      if (!scheduleDraft || !tag) return;
+      tag = tag.trim();
+      if (!tag || (scheduleDraft.tags || []).indexOf(tag) >= 0) return;
+      if (!scheduleDraft.tags) scheduleDraft.tags = [];
+      scheduleDraft.tags.push(tag);
+      var input = document.getElementById('draftTagInput');
+      if (input) input.value = '';
+      var sugg = document.getElementById('tagSuggestions');
+      if (sugg) sugg.style.display = 'none';
+      renderDraftTagChips();
+    }
+
+    function removeDraftTag(idx) {
+      if (!scheduleDraft) return;
+      scheduleDraft.tags.splice(idx, 1);
+      renderDraftTagChips();
+    }
+
+    function onDraftTagInput(val) {
+      val = (val || '').trim();
+      var sugg = document.getElementById('tagSuggestions');
+      if (!sugg) return;
+      if (!val) { sugg.style.display = 'none'; return; }
+      var existing = getAllScheduleTags();
+      var current = scheduleDraft ? (scheduleDraft.tags || []) : [];
+      var filtered = existing.filter(function(t) {
+        return t.toLowerCase().indexOf(val.toLowerCase()) >= 0 && current.indexOf(t) < 0;
+      });
+      if (filtered.length === 0) { sugg.style.display = 'none'; return; }
+      sugg.innerHTML = filtered.map(function(t) {
+        return '<div class="tag-suggestion-item" onclick="addDraftTag(&apos;' + escapeHtml(t) + '&apos;)">' + escapeHtml(t) + '</div>';
+      }).join('');
+      sugg.style.display = 'block';
+    }
+
+    function onDraftTagKeydown(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        var input = document.getElementById('draftTagInput');
+        if (input && input.value.trim()) addDraftTag(input.value);
+      } else if (e.key === 'Escape') {
+        var sugg = document.getElementById('tagSuggestions');
+        if (sugg) sugg.style.display = 'none';
+      }
+    }
+
+    function closeScheduleDetail() {
+      currentDetailScheduleId = null;
+      scheduleDraft = null;
+      scheduleViewMode2 = 'detail';
+      navigateTo('daily');
+    }
+
+    function renderScheduleDetail() {
+      var schedule = schedules.find(function(s) { return s.id === currentDetailScheduleId; });
+      if (!schedule) return;
+      var isEdit = (scheduleViewMode2 === 'edit');
+      var data = isEdit && scheduleDraft ? scheduleDraft : schedule;
+
+      document.getElementById('detailScheduleEmoji').innerHTML = renderEmoji(data.emoji);
+      document.getElementById('detailScheduleTitle').textContent = isEdit ? '시간표 수정' : data.title;
+
+      // 액션 버튼
+      var actionsEl = document.getElementById('detailActionButtons');
+      if (isEdit) {
+        actionsEl.innerHTML =
+          '<button class="btn-cancel" onclick="cancelScheduleEdit()">취소</button>' +
+          '<button class="btn-confirm" onclick="saveScheduleEdit()">저장</button>';
+      } else {
+        actionsEl.innerHTML =
+          '<button class="btn-icon" onclick="closeScheduleDetail()">목록</button>' +
+          '<button class="btn-icon" onclick="enterScheduleEditMode()">수정</button>' +
+          '<button class="btn-icon btn-danger" onclick="deleteCurrentSchedule()">삭제</button>';
+      }
+
+      // 메타 영역 (이름/설명/태그) — 읽기 모드는 박스 없이, 내용 있을 때만 표시
+      var metaEl = document.getElementById('detailMetaCard');
+      if (isEdit) {
+        var tagsStr = (data.tags || []).join(', ');
+        var mh = '';
+        mh += '<div class="sched-meta-label">이름</div>';
+        mh += '<input type="text" value="' + (data.title || '').replace(/"/g,'&quot;') + '" placeholder="시간표 이름" oninput="updateDraftTitle(this.value)" style="margin-bottom:10px;">';
+        mh += '<div class="sched-meta-label">상세 설명</div>';
+        mh += '<textarea placeholder="상세 설명 (선택)" oninput="updateDraftDesc(this.value)" style="margin-bottom:10px;">' + (data.description || '') + '</textarea>';
+        mh += '<div class="sched-meta-label">태그</div>';
+        mh += '<div id="draftTagsContainer" class="draft-tags-container"></div>';
+        mh += '<div class="tag-input-wrap">';
+        mh += '<input type="text" id="draftTagInput" placeholder="태그 입력 후 Enter..." autocomplete="off" oninput="onDraftTagInput(this.value)" onkeyup="onDraftTagKeydown(event)">';
+        mh += '<div id="tagSuggestions" class="tag-suggestions" style="display:none;"></div>';
+        mh += '</div>';
+        metaEl.className = 'sched-meta-card';
+        metaEl.innerHTML = mh;
+        metaEl.style.display = 'block';
+        renderDraftTagChips();
+      } else {
+        var mh = '';
+        if (data.description) {
+          mh += '<div class="sched-detail-desc-text">' + escapeHtml(data.description) + '</div>';
+        }
+        if (data.tags && data.tags.length) {
+          mh += '<div class="sched-detail-tags-row">';
+          data.tags.forEach(function(t) { mh += '<span class="sched-tag-chip">' + escapeHtml(t) + '</span>'; });
+          mh += '</div>';
+        }
+        metaEl.className = 'sched-detail-meta-plain';
+        metaEl.innerHTML = mh;
+        metaEl.style.display = mh ? 'block' : 'none';
+      }
+
+      // 탭
+      document.querySelectorAll('#scheduleDetailTabNav .tab-btn').forEach(function(btn) {
+        btn.classList.toggle('active', btn.dataset.tab === scheduleDetailTab);
+      });
+      document.querySelectorAll('#scheduleDetailPage .sched-tab-content').forEach(function(el) {
+        el.style.display = (el.dataset.tab === scheduleDetailTab) ? 'block' : 'none';
+      });
+      if (scheduleDetailTab === 'grid') renderScheduleGrid();
+      else if (scheduleDetailTab === 'day') renderScheduleDayView();
+      else renderScheduleDetailItemList();
+    }
+
+    function switchScheduleDetailTab(tab) {
+      scheduleDetailTab = tab;
+      if (tab === 'day') {
+        var dayMap = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+        scheduleDayViewDay = dayMap[new Date().getDay()];
+      }
+      renderScheduleDetail();
+    }
+
+    function buildMergedBlocks(items) {
+      var dayOrd = { MON:0, TUE:1, WED:2, THU:3, FRI:4, SAT:5, SUN:6 };
+      var groups = {};
+      items.forEach(function(item) {
+        var key = item.activityId + '|' + item.startTime + '|' + item.endTime;
+        if (!groups[key]) groups[key] = { activityId: item.activityId, startTime: item.startTime, endTime: item.endTime, firstItemId: item.id, allDays: [] };
+        (item.weekdays || []).forEach(function(d) {
+          if (groups[key].allDays.indexOf(d) < 0) groups[key].allDays.push(d);
+        });
+      });
+      var blocks = [];
+      Object.keys(groups).forEach(function(key) {
+        var g = groups[key];
+        var idxs = g.allDays.map(function(d) { return dayOrd[d]; }).filter(function(x) { return x !== undefined; }).sort(function(a, b) { return a - b; });
+        var curRun = [];
+        idxs.forEach(function(idx) {
+          if (curRun.length === 0 || idx === curRun[curRun.length - 1] + 1) {
+            curRun.push(idx);
+          } else {
+            blocks.push({ activityId: g.activityId, startTime: g.startTime, endTime: g.endTime, firstItemId: g.firstItemId, colStart: curRun[0], colSpan: curRun.length });
+            curRun = [idx];
+          }
+        });
+        if (curRun.length) blocks.push({ activityId: g.activityId, startTime: g.startTime, endTime: g.endTime, firstItemId: g.firstItemId, colStart: curRun[0], colSpan: curRun.length });
+      });
+      return blocks;
+    }
+
+    function renderScheduleGrid() {
+      var items = scheduleItems.filter(function(i) { return i.scheduleId === currentDetailScheduleId; });
+      var isEdit = (scheduleViewMode2 === 'edit');
+      var gridStart = 6 * 60, gridEnd = 22 * 60;
+      if (items.length > 0) {
+        var maxE = items.reduce(function(m, i) { return Math.max(m, timeToMin(i.endTime)); }, 0);
+        if (maxE > gridEnd) gridEnd = Math.min(24 * 60, Math.ceil((maxE + 30) / 30) * 30);
+      }
+      var totalSlots = (gridEnd - gridStart) / 30;
+      var totalHeight = totalSlots * SLOT_HEIGHT;
+
+      // Current time line
+      var now = new Date();
+      var nowMin = now.getHours() * 60 + now.getMinutes();
+      var nowTop = (nowMin >= gridStart && nowMin <= gridEnd) ? (nowMin - gridStart) / 30 * SLOT_HEIGHT : -1;
+
+      // Merged blocks
+      var blocks = buildMergedBlocks(items);
+
+      var html = '<div class="sched-grid-outer"><div class="sched-grid-wrap">';
+      html += '<div class="sched-header-row"><div class="sched-time-gutter-h"></div>';
+      WEEKDAYS_KR.forEach(function(d, i) {
+        html += '<div class="sched-day-header' + (i >= 5 ? ' weekend' : '') + '">' + d + '</div>';
+      });
+      html += '</div><div class="sched-body"><div class="sched-time-gutter">';
+      for (var t = gridStart; t < gridEnd; t += 30) {
+        var isH = (t % 60 === 0);
+        html += '<div class="sched-time-slot-label' + (isH ? ' hour' : '') + '">' + (isH ? minToTimeStr(t) : '') + '</div>';
+      }
+      html += '</div>';
+      // Grid content: background cols + items overlay
+      html += '<div id="schedGridContent" style="flex:1; position:relative; height:' + totalHeight + 'px;" data-gridstart="' + gridStart + '">';
+      // Background columns (grid lines)
+      html += '<div style="position:absolute; inset:0; display:flex;">';
+      WEEKDAYS_EN.forEach(function(day) {
+        html += '<div class="sched-day-col" style="flex:1; height:100%;">';
+        for (var s = 0; s < totalSlots; s++) {
+          var slotMin = gridStart + s * 30;
+          var cellClass = 'sched-bg-slot' + ((slotMin % 60 === 0) ? ' hour' : '');
+          html += '<div class="' + cellClass + '"></div>';
+        }
+        html += '</div>';
+      });
+      html += '</div>';
+      // Items overlay (pointer-events on items only in edit mode)
+      html += '<div style="position:absolute; inset:0; pointer-events:none;">';
+      blocks.forEach(function(b) {
+        var act = activities.find(function(a) { return a.id === b.activityId; });
+        var emoji = act ? renderEmoji(act.emoji) : '📅';
+        var name = act ? act.name : '(삭제된 일상)';
+        var color = act ? (act.color || '#ffde59') : '#ffde59';
+        var sMin = timeToMin(b.startTime), eMin = timeToMin(b.endTime);
+        var top = (sMin - gridStart) / 30 * SLOT_HEIGHT;
+        var height = Math.max(SLOT_HEIGHT, (eMin - sMin) / 30 * SLOT_HEIGHT);
+        var leftPct = b.colStart / 7 * 100;
+        var widthPct = b.colSpan / 7 * 100;
+        var ptrStyle = isEdit ? 'pointer-events:auto; cursor:pointer;' : '';
+        var clickAttr = isEdit ? ('onclick="openScheduleItemForm(&apos;' + b.firstItemId + '&apos;)"') : '';
+        html += '<div class="sched-item-block" style="position:absolute;' + ptrStyle + 'top:' + top + 'px;height:' + height + 'px;left:calc(' + leftPct + '% + 2px);width:calc(' + widthPct + '% - 4px);background:' + color + '30;border-left-color:' + color + ';" ' + clickAttr + '>';
+        if (height >= 28) html += '<div class="sched-item-emoji">' + emoji + '</div>';
+        if (height >= 42) html += '<div class="sched-item-name">' + name + '</div>';
+        if (height >= 60) html += '<div class="sched-item-time">' + b.startTime + '–' + b.endTime + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+      // Current time line
+      if (nowTop >= 0) html += '<div class="sched-now-line" style="top:' + nowTop + 'px;"></div>';
+      // Drag overlay (edit mode only) + preview block
+      if (isEdit) {
+        html += '<div id="schedGridDragOverlay" style="position:absolute;inset:0;cursor:crosshair;z-index:5;"></div>';
+        html += '<div id="schedGridDragPreview" style="display:none;position:absolute;pointer-events:none;z-index:6;border-radius:4px;border-left:3px solid var(--primary-yellow);background:rgba(255,222,89,0.35);"></div>';
+      }
+      html += '</div>'; // grid content
+      html += '</div></div></div>'; // sched-body, sched-grid-wrap, sched-grid-outer
+      if (isEdit) {
+        html += '<div style="margin-top:14px; text-align:center;"><button class="btn-add" onclick="openScheduleItemForm(null)">+ 일정 추가</button></div>';
+      }
+      var c = document.getElementById('schedDetailGridContent');
+      if (c) {
+        c.innerHTML = html;
+        if (isEdit) initGridDrag(gridStart);
+      }
+    }
+
+    var scheduleDayViewDay = 'MON'; // 요일별 뷰에서 선택된 요일
+
+    function renderScheduleDayView() {
+      var items = scheduleItems.filter(function(i) { return i.scheduleId === currentDetailScheduleId; });
+      var isEdit = (scheduleViewMode2 === 'edit');
+      var c = document.getElementById('schedDetailDayContent');
+      if (!c) return;
+
+      var curIdx = WEEKDAYS_EN.indexOf(scheduleDayViewDay);
+      var prevIdx = (curIdx - 1 + 7) % 7;
+      var nextIdx = (curIdx + 1) % 7;
+      var isWeekend = curIdx >= 5;
+
+      // ← 요일명 → 네비게이터
+      var html = '<div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:16px;">';
+      html += '<button onclick="selectDayViewDay(&apos;' + WEEKDAYS_EN[prevIdx] + '&apos;)" style="background:none;border:1px solid var(--border-color);border-radius:var(--button-radius,8px);width:36px;height:36px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">←</button>';
+      html += '<span style="font-size:20px;font-weight:700;min-width:60px;text-align:center;color:' + (isWeekend ? '#e44' : 'var(--text-primary)') + ';">' + WEEKDAYS_KR[curIdx] + '요일</span>';
+      html += '<button onclick="selectDayViewDay(&apos;' + WEEKDAYS_EN[nextIdx] + '&apos;)" style="background:none;border:1px solid var(--border-color);border-radius:var(--button-radius,8px);width:36px;height:36px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">→</button>';
+      html += '</div>';
+
+      // 선택된 요일의 아이템
+      var dayItems = items.filter(function(it) { return (it.weekdays || []).indexOf(scheduleDayViewDay) >= 0; });
+      dayItems.sort(function(a, b) { return timeToMin(a.startTime) - timeToMin(b.startTime); });
+
+      var gridStart = 6 * 60, gridEnd = 22 * 60;
+      if (dayItems.length > 0) {
+        var maxE = dayItems.reduce(function(m, i) { return Math.max(m, timeToMin(i.endTime)); }, 0);
+        if (maxE > gridEnd) gridEnd = Math.min(24 * 60, Math.ceil((maxE + 30) / 30) * 30);
+      }
+      var totalSlots = (gridEnd - gridStart) / 30;
+      var totalHeight = totalSlots * SLOT_HEIGHT;
+      var now = new Date();
+      var nowMin = now.getHours() * 60 + now.getMinutes();
+      var nowTop = (nowMin >= gridStart && nowMin <= gridEnd) ? (nowMin - gridStart) / 30 * SLOT_HEIGHT : -1;
+
+      // 단일 요일 그리드
+      html += '<div class="sched-grid-outer"><div class="sched-grid-wrap">';
+      html += '<div class="sched-body"><div class="sched-time-gutter">';
+      for (var t = gridStart; t < gridEnd; t += 30) {
+        var isH = (t % 60 === 0);
+        html += '<div class="sched-time-slot-label' + (isH ? ' hour' : '') + '">' + (isH ? minToTimeStr(t) : '') + '</div>';
+      }
+      html += '</div>';
+      html += '<div id="schedDayGridContent" style="flex:1;position:relative;height:' + totalHeight + 'px;" data-gridstart="' + gridStart + '">';
+      // 배경 슬롯
+      html += '<div style="position:absolute;inset:0;">';
+      for (var s = 0; s < totalSlots; s++) {
+        var slotMin = gridStart + s * 30;
+        var cellClass = 'sched-bg-slot' + ((slotMin % 60 === 0) ? ' hour' : '');
+        html += '<div class="' + cellClass + '" style="width:100%;"></div>';
+      }
+      html += '</div>';
+      // 아이템 블록
+      html += '<div style="position:absolute;inset:0;pointer-events:none;">';
+      dayItems.forEach(function(item) {
+        var act = activities.find(function(a) { return a.id === item.activityId; });
+        var emoji = act ? renderEmoji(act.emoji) : '📅';
+        var name = act ? act.name : '(삭제된 일상)';
+        var color = act ? (act.color || '#ffde59') : '#ffde59';
+        var sMin = timeToMin(item.startTime), eMin = timeToMin(item.endTime);
+        var top = (sMin - gridStart) / 30 * SLOT_HEIGHT;
+        var height = Math.max(SLOT_HEIGHT, (eMin - sMin) / 30 * SLOT_HEIGHT);
+        var ptrStyle = isEdit ? 'pointer-events:auto;cursor:pointer;' : '';
+        var clickAttr = isEdit ? ('onclick="openScheduleItemForm(&apos;' + item.id + '&apos;)"') : '';
+        html += '<div class="sched-item-block" style="position:absolute;' + ptrStyle + 'top:' + top + 'px;height:' + height + 'px;left:2px;right:2px;background:' + color + '30;border-left-color:' + color + ';" ' + clickAttr + '>';
+        if (height >= 28) html += '<div class="sched-item-emoji">' + emoji + '</div>';
+        if (height >= 42) html += '<div class="sched-item-name">' + name + '</div>';
+        if (height >= 60) html += '<div class="sched-item-time">' + item.startTime + '–' + item.endTime + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+      if (nowTop >= 0) html += '<div class="sched-now-line" style="top:' + nowTop + 'px;"></div>';
+      // 드래그 오버레이 (편집 모드)
+      if (isEdit) {
+        html += '<div id="schedDayDragOverlay" style="position:absolute;inset:0;cursor:crosshair;z-index:5;"></div>';
+        html += '<div id="schedDayDragPreview" style="display:none;position:absolute;pointer-events:none;z-index:6;border-radius:4px;border-left:3px solid var(--primary-yellow);background:rgba(255,222,89,0.35);left:2px;right:2px;"></div>';
+      }
+      html += '</div></div></div></div>';
+
+      if (isEdit) {
+        html += '<div style="margin-top:14px;text-align:center;"><button class="btn-add" onclick="onGridCellClick(&apos;' + scheduleDayViewDay + '&apos;,' + (8*60) + ')">+ 일정 추가</button></div>';
+      }
+      c.innerHTML = html;
+      if (isEdit) initDayGridDrag(gridStart);
+    }
+
+    function selectDayViewDay(en) {
+      scheduleDayViewDay = en;
+      renderScheduleDayView();
+    }
+
+    function initDayGridDrag(gridStart) {
+      var overlay = document.getElementById('schedDayDragOverlay');
+      var preview = document.getElementById('schedDayDragPreview');
+      var content = document.getElementById('schedDayGridContent');
+      if (!overlay || !preview || !content) return;
+
+      var dragging = false, dragStartMin = 0, dragEndMin = 0;
+
+      function yToMin(clientY) {
+        var rect = content.getBoundingClientRect();
+        var slotIdx = Math.max(0, Math.floor((clientY - rect.top) / SLOT_HEIGHT));
+        return gridStart + slotIdx * 30;
+      }
+
+      function updatePreview(startMin, endMin) {
+        var top = (startMin - gridStart) / 30 * SLOT_HEIGHT;
+        var h = Math.max(SLOT_HEIGHT, (endMin - startMin) / 30 * SLOT_HEIGHT);
+        preview.style.cssText = 'display:block;position:absolute;pointer-events:none;z-index:6;' +
+          'border-radius:4px;border-left:3px solid var(--primary-yellow);background:rgba(255,222,89,0.35);' +
+          'left:2px;right:2px;top:' + top + 'px;height:' + h + 'px;';
+        var existing = preview.querySelector('.grid-drag-tooltip');
+        var tip = existing || document.createElement('div');
+        tip.className = 'grid-drag-tooltip';
+        tip.textContent = minToTimeStr(startMin) + ' – ' + minToTimeStr(endMin);
+        if (!existing) preview.appendChild(tip);
+      }
+
+      overlay.addEventListener('mousedown', function(e) {
+        if (e.button !== 0) return;
+        dragging = true;
+        dragStartMin = yToMin(e.clientY);
+        dragEndMin = Math.min(24 * 60, dragStartMin + 30);
+        updatePreview(dragStartMin, dragEndMin);
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', function(e) {
+        if (!dragging) return;
+        dragEndMin = Math.min(24 * 60, Math.max(dragStartMin + 30, yToMin(e.clientY) + 30));
+        updatePreview(dragStartMin, dragEndMin);
+      }, { passive: true });
+
+      document.addEventListener('mouseup', function(e) {
+        if (!dragging) return;
+        dragging = false;
+        preview.style.display = 'none';
+        var start = dragStartMin, end = dragEndMin;
+        if (end <= start) end = start + 30;
+        addItemPrefill = {
+          weekday: scheduleDayViewDay,
+          startTime: minToTimeStr(start),
+          endTime: minToTimeStr(Math.min(24 * 60, end))
+        };
+        openScheduleItemForm(null);
+      });
+    }
+
+    function initGridDrag(gridStart) {
+      var overlay = document.getElementById('schedGridDragOverlay');
+      var preview = document.getElementById('schedGridDragPreview');
+      var content = document.getElementById('schedGridContent');
+      if (!overlay || !preview || !content) return;
+
+      var dragging = false, dragDay = null, dragStartMin = 0, dragEndMin = 0;
+
+      function posToGridCoords(clientX, clientY) {
+        var rect = content.getBoundingClientRect();
+        var x = clientX - rect.left;
+        var y = clientY - rect.top;
+        var colIdx = Math.min(6, Math.max(0, Math.floor(x / rect.width * 7)));
+        var slotIdx = Math.max(0, Math.floor(y / SLOT_HEIGHT));
+        var min = gridStart + slotIdx * 30;
+        return { day: WEEKDAYS_EN[colIdx], min: min, colIdx: colIdx, y: y };
+      }
+
+      function updatePreview(startMin, endMin, colIdx) {
+        var rect = content.getBoundingClientRect();
+        var colW = rect.width / 7;
+        var top = (startMin - gridStart) / 30 * SLOT_HEIGHT;
+        var h = Math.max(SLOT_HEIGHT, (endMin - startMin) / 30 * SLOT_HEIGHT);
+        var left = colIdx * colW + 2;
+        preview.style.cssText = 'display:block;position:absolute;pointer-events:none;z-index:6;' +
+          'border-radius:4px;border-left:3px solid var(--primary-yellow);background:rgba(255,222,89,0.35);' +
+          'top:' + top + 'px;height:' + h + 'px;left:' + left + 'px;width:' + (colW - 6) + 'px;';
+        // 툴팁
+        var existing = preview.querySelector('.grid-drag-tooltip');
+        var tip = existing || document.createElement('div');
+        tip.className = 'grid-drag-tooltip';
+        tip.textContent = minToTimeStr(startMin) + ' – ' + minToTimeStr(endMin);
+        if (!existing) preview.appendChild(tip);
+      }
+
+      overlay.addEventListener('mousedown', function(e) {
+        if (e.button !== 0) return;
+        var coords = posToGridCoords(e.clientX, e.clientY);
+        dragging = true;
+        dragDay = coords.day;
+        dragStartMin = coords.min;
+        dragEndMin = Math.min(24 * 60, coords.min + 30);
+        updatePreview(dragStartMin, dragEndMin, coords.colIdx);
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', function(e) {
+        if (!dragging) return;
+        var coords = posToGridCoords(e.clientX, e.clientY);
+        // 요일이 바뀌면 시작 요일로 고정
+        var endMin = Math.min(24 * 60, Math.max(dragStartMin + 30, coords.min + 30));
+        dragEndMin = endMin;
+        var colIdx = WEEKDAYS_EN.indexOf(dragDay);
+        updatePreview(dragStartMin, dragEndMin, colIdx);
+      }, { passive: true });
+
+      document.addEventListener('mouseup', function(e) {
+        if (!dragging) return;
+        dragging = false;
+        preview.style.display = 'none';
+        var start = dragStartMin, end = dragEndMin;
+        if (end <= start) end = start + 30;
+        addItemPrefill = {
+          weekday: dragDay,
+          startTime: minToTimeStr(start),
+          endTime: minToTimeStr(Math.min(24 * 60, end))
+        };
+        openScheduleItemForm(null);
+      });
+    }
+
+    function onGridCellClick(day, startMin) {
+      var endMin = Math.min(24 * 60, startMin + 60);
+      addItemPrefill = {
+        weekday: day,
+        startTime: minToTimeStr(startMin),
+        endTime: minToTimeStr(endMin)
+      };
+      openScheduleItemForm(null);
+    }
+
+    function renderScheduleMiniGrid(scheduleId) {
+      var items = scheduleItems.filter(function(i) { return i.scheduleId === scheduleId; });
+      var gStart = 6 * 60, gEnd = 22 * 60;
+      if (items.length > 0) {
+        var maxE = items.reduce(function(m, i) { return Math.max(m, timeToMin(i.endTime)); }, 0);
+        if (maxE > gEnd) gEnd = Math.min(24 * 60, Math.ceil((maxE + 30) / 30) * 30);
+      }
+      var range = gEnd - gStart;
+
+      // Current time
+      var now = new Date();
+      var nowMin = now.getHours() * 60 + now.getMinutes();
+      var nowPct = (nowMin >= gStart && nowMin <= gEnd) ? (nowMin - gStart) / range * 100 : -1;
+
+      // Merged blocks
+      var blocks = items.length > 0 ? buildMergedBlocks(items) : [];
+
+      // Day header
+      var html = '<div class="sched-mini-grid">';
+      html += '<div class="sched-mini-header">';
+      WEEKDAYS_KR.forEach(function(kr, i) {
+        html += '<div class="sched-mini-day-lbl' + (i >= 5 ? ' weekend' : '') + '">' + kr + '</div>';
+      });
+      html += '</div>';
+      // Body
+      html += '<div class="sched-mini-body">';
+      // Day separator lines
+      html += '<div style="position:absolute; inset:0; display:flex; pointer-events:none;">';
+      WEEKDAYS_EN.forEach(function(day, i) {
+        html += '<div style="flex:1;' + (i > 0 ? 'border-left:1px solid #eee;' : '') + '"></div>';
+      });
+      html += '</div>';
+      // Hour lines (subtle)
+      for (var h = gStart + 60; h < gEnd; h += 60) {
+        var hp = (h - gStart) / range * 100;
+        html += '<div style="position:absolute; left:0; right:0; top:' + hp + '%; border-top:1px solid #eee; pointer-events:none;"></div>';
+      }
+      // Blocks
+      if (items.length === 0) {
+        html += '<div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#ccc; font-size:9px;">빈 시간표</div>';
+      } else {
+        blocks.forEach(function(b) {
+          var act = activities.find(function(a) { return a.id === b.activityId; });
+          var color = act ? (act.color || '#ffde59') : '#ffde59';
+          var emoji = act ? renderEmoji(act.emoji) : '';
+          var sMin = timeToMin(b.startTime), eMin = timeToMin(b.endTime);
+          var topPct = (sMin - gStart) / range * 100;
+          var heightPct = Math.max(0.5, (eMin - sMin) / range * 100);
+          var leftPct = b.colStart / 7 * 100;
+          var widthPct = b.colSpan / 7 * 100;
+          html += '<div class="sched-mini-block" style="top:' + topPct + '%;height:' + heightPct + '%;left:calc(' + leftPct + '% + 1px);width:calc(' + widthPct + '% - 2px);background:' + color + ';">' + emoji + '</div>';
+        });
+      }
+      // Current time line
+      if (nowPct >= 0) {
+        html += '<div style="position:absolute; left:0; right:0; top:' + nowPct + '%; height:1px; background:var(--primary-pink,#ffaade); z-index:5; pointer-events:none;"></div>';
+      }
+      html += '</div></div>'; // sched-mini-body, sched-mini-grid
+      return html;
+    }
+
+    function formatDurationMin(totalMin) {
+      if (totalMin <= 0) return '0분';
+      var h = Math.floor(totalMin / 60);
+      var m = totalMin % 60;
+      if (h && m) return h + '시간 ' + m + '분';
+      if (h) return h + '시간';
+      return m + '분';
+    }
+
+    function renderScheduleDetailItemList() {
+      var items = scheduleItems.filter(function(i) { return i.scheduleId === currentDetailScheduleId; });
+      var isEdit = (scheduleViewMode2 === 'edit');
+      var c = document.getElementById('schedDetailListContent');
+      if (!c) return;
+      if (items.length === 0) {
+        var addBtn = isEdit ? '<div style="text-align:center; margin-top:14px;"><button class="btn-add" onclick="openScheduleItemForm(null)">+ 일정 추가</button></div>' : '';
+        c.innerHTML = '<div class="schedule-empty" style="margin:20px 0;">일정이 없습니다.' + (isEdit ? ' 아래 버튼 또는 주간 그리드 빈 칸을 클릭해서 추가하세요.' : '') + '</div>' + addBtn;
+        return;
+      }
+      var dayOrd = { MON:0, TUE:1, WED:2, THU:3, FRI:4, SAT:5, SUN:6 };
+      items.sort(function(a, b) {
+        var af = a.weekdays && a.weekdays.length ? dayOrd[a.weekdays[0]] : 7;
+        var bf = b.weekdays && b.weekdays.length ? dayOrd[b.weekdays[0]] : 7;
+        return af !== bf ? af - bf : timeToMin(a.startTime) - timeToMin(b.startTime);
+      });
+      var totalWeekMin = 0;
+      items.forEach(function(item) {
+        var dur = timeToMin(item.endTime) - timeToMin(item.startTime);
+        totalWeekMin += dur * (item.weekdays ? item.weekdays.length : 0);
+      });
+      var html = '<div style="font-size:13px; color:#666; margin-bottom:8px;">총 <b>' + items.length + '개</b> 일정 · 주간 합계 <b>' + formatDurationMin(totalWeekMin) + '</b></div>';
+      html += '<div class="sched-item-list">';
+      items.forEach(function(item) {
+        var act = activities.find(function(a) { return a.id === item.activityId; });
+        var emoji = act ? renderEmoji(act.emoji) : '📅';
+        var name = act ? act.name : '(삭제된 일상)';
+        var color = act ? (act.color || '#ffde59') : '#ffde59';
+        var days = (item.weekdays || []).map(function(d) { return WEEKDAYS_KR[WEEKDAYS_EN.indexOf(d)] || d; }).join('·');
+        var perDayMin = timeToMin(item.endTime) - timeToMin(item.startTime);
+        var weekTotal = perDayMin * (item.weekdays ? item.weekdays.length : 0);
+        html += '<div class="sched-list-item">';
+        html += '<div class="sched-list-item-color" style="background:' + color + ';"></div>';
+        html += '<div class="sched-list-item-emoji">' + emoji + '</div>';
+        html += '<div class="sched-list-item-info"><div class="sched-list-item-name">' + name + '</div>';
+        html += '<div class="sched-list-item-meta">' + days + ' · ' + item.startTime + ' – ' + item.endTime + ' · 주간 ' + formatDurationMin(weekTotal) + '</div></div>';
+        if (isEdit) {
+          html += '<div class="sched-list-item-actions">';
+          html += '<button class="btn-icon" onclick="openScheduleItemForm(&apos;' + item.id + '&apos;)">수정</button>';
+          html += '<button class="btn-icon btn-danger" onclick="deleteScheduleItem(&apos;' + item.id + '&apos;)">삭제</button>';
+          html += '</div>';
+        }
+        html += '</div>';
+      });
+      html += '</div>';
+      if (isEdit) html += '<div style="margin-top:14px; text-align:center;"><button class="btn-add" onclick="openScheduleItemForm(null)">+ 일정 추가</button></div>';
+      c.innerHTML = html;
+    }
+
+    function renderScheduleItemTimeInputs() {
+      var container = document.getElementById('siTimeContainer');
+      if (!container) return;
+      var sameTime = document.getElementById('siSameTime').checked;
+      var modal = document.getElementById('scheduleItemModal');
+      var selectedDays = [];
+      modal.querySelectorAll('.si-day-check:checked').forEach(function(cb) { selectedDays.push(cb.value); });
+
+      if (sameTime) {
+        // 체크 상태: 캐시에서 복원
+        container.innerHTML =
+          '<div class="si-time-group">' +
+          '<input type="time" class="si-start-same" value="' + siTimeCache.start + '">' +
+          '<span class="si-time-sep">~</span>' +
+          '<input type="time" class="si-end-same" value="' + siTimeCache.end + '">' +
+          '</div>';
+      } else {
+        // 해제 상태: 기존 단일 시간값 캐시에 저장 후 요일별 행 생성
+        var prevSingleStart = container.querySelector('.si-start-same');
+        var prevSingleEnd = container.querySelector('.si-end-same');
+        if (prevSingleStart) siTimeCache.start = prevSingleStart.value;
+        if (prevSingleEnd) siTimeCache.end = prevSingleEnd.value;
+
+        // 이미 표시 중이던 요일별 값 보존
+        var prev = {};
+        container.querySelectorAll('.si-per-day-row').forEach(function(row) {
+          var d = row.dataset.day;
+          prev[d] = {
+            start: row.querySelector('.si-start-each').value,
+            end: row.querySelector('.si-end-each').value
+          };
+        });
+
+        if (selectedDays.length === 0) {
+          container.innerHTML = '<div style="color:#aaa;font-size:13px;padding:4px 0;">요일을 먼저 선택해주세요</div>';
+          return;
+        }
+
+        var dayOrd = { MON:0, TUE:1, WED:2, THU:3, FRI:4, SAT:5, SUN:6 };
+        selectedDays.sort(function(a, b) { return dayOrd[a] - dayOrd[b]; });
+        var html = '';
+        selectedDays.forEach(function(d) {
+          var p = prev[d] || {};
+          var startVal = p.start || siTimeCache.start;
+          var endVal   = p.end   || siTimeCache.end;
+          var kr = WEEKDAYS_KR[WEEKDAYS_EN.indexOf(d)];
+          html += '<div class="si-per-day-row" data-day="' + d + '">';
+          html += '<div class="si-per-day-row-label">' + kr + '</div>';
+          html += '<input type="time" class="si-start-each" value="' + startVal + '">';
+          html += '<span class="si-time-sep">~</span>';
+          html += '<input type="time" class="si-end-each" value="' + endVal + '">';
+          html += '</div>';
+        });
+        container.innerHTML = html;
+      }
+    }
+
+    var siSelectedActivityId = '';
+    var siNewActivityEmoji = '';
+    var siNewActivityName = '';
+    var siNewActivityCategoryId = '';
+    var siNewActivityColor = '#ffde59';
+    var siAddingActivity = false;
+
+    function renderSiActivityDropdown() {
+      var list = document.getElementById('siActivityDropdown');
+      if (!list) return;
+      var html = '';
+      activities.filter(function(a) { return a.active; }).forEach(function(a) {
+        var sel = (a.id === siSelectedActivityId) ? ' selected' : '';
+        html += '<div class="custom-select-option' + sel + '" data-id="' + a.id + '" onclick="selectSiActivity(&apos;' + a.id + '&apos;)">';
+        html += '<span>' + renderEmoji(a.emoji) + '</span><span>' + escapeHtml(a.name) + '</span>';
+        html += '</div>';
+      });
+      if (!html) html = '<div class="custom-select-option" style="color:#aaa;cursor:default;">사용 가능한 일상이 없습니다</div>';
+      html += '<div class="si-add-divider"></div>';
+      if (siAddingActivity) {
+        html += '<div class="si-add-activity-form" onclick="event.stopPropagation()">';
+        html += '<div class="si-add-row1">';
+        html += '<button type="button" class="si-add-emoji-btn" id="siAddEmojiBtn" onclick="event.stopPropagation();openSiAddEmojiPicker()">' + renderEmoji(siNewActivityEmoji) + '</button>';
+        html += '<input id="siAddNameInput" class="si-add-name-input" type="text" placeholder="일상 이름" value="' + escapeHtml(siNewActivityName) + '" oninput="siNewActivityName=this.value" onkeydown="if(event.key===&apos;Enter&apos;){event.preventDefault();saveSiNewActivity();}if(event.key===&apos;Escape&apos;){event.stopPropagation();cancelSiAddActivity();}">';
+        html += '<button type="button" class="si-add-cancel-btn" onclick="event.stopPropagation();cancelSiAddActivity()">✕</button>';
+        html += '</div>';
+        html += '<div class="si-add-row2">';
+        html += '<select class="si-add-cat-select" onchange="siNewActivityCategoryId=this.value" onclick="event.stopPropagation()">';
+        html += '<option value="">카테고리 없음</option>';
+        categories.forEach(function(cat) {
+          var sel2 = (cat.id === siNewActivityCategoryId) ? ' selected' : '';
+          html += '<option value="' + cat.id + '"' + sel2 + '>' + cat.emoji + ' ' + cat.name + '</option>';
+        });
+        html += '</select>';
+        html += '<span class="si-add-color-wrap"><label class="si-add-color-label">색상</label><input type="color" class="si-add-color-input" value="' + siNewActivityColor + '" oninput="siNewActivityColor=this.value" onclick="event.stopPropagation()"></span>';
+        html += '</div>';
+        html += '<div class="si-add-row1" style="justify-content:flex-end">';
+        html += '<button type="button" class="si-add-save-btn" onclick="event.stopPropagation();saveSiNewActivity()">일상 추가</button>';
+        html += '</div>';
+        html += '</div>';
+      } else {
+        html += '<div class="si-add-activity-trigger" onclick="event.stopPropagation();showSiAddActivityForm()">+ 새 일상 추가</div>';
+      }
+      list.innerHTML = html;
+      updateSiActivityDisplay();
+      if (siAddingActivity) {
+        var inp = list.querySelector('#siAddNameInput');
+        if (inp) inp.focus();
+      }
+    }
+
+    function showSiAddActivityForm() {
+      siAddingActivity = true;
+      siNewActivityEmoji = getRandomEmoji();
+      siNewActivityName = '';
+      siNewActivityCategoryId = '';
+      siNewActivityColor = '#ffde59';
+      renderSiActivityDropdown();
+    }
+
+    function cancelSiAddActivity() {
+      siAddingActivity = false;
+      siNewActivityEmoji = '';
+      siNewActivityName = '';
+      siNewActivityCategoryId = '';
+      siNewActivityColor = '#ffde59';
+      renderSiActivityDropdown();
+    }
+
+    function openSiAddEmojiPicker() {
+      openEmojiPicker(siNewActivityEmoji || '', function(emoji) {
+        siNewActivityEmoji = emoji;
+        var btn = document.querySelector('#siActivityDropdown .si-add-emoji-btn');
+        if (btn) btn.innerHTML = renderEmoji(emoji);
+      });
+    }
+
+    function saveSiNewActivity() {
+      var name = (siNewActivityName || '').trim();
+      if (!name) {
+        var inp = document.getElementById('siAddNameInput');
+        if (inp) { inp.focus(); inp.style.borderColor = '#e53e3e'; }
+        return;
+      }
+      var newActivity = {
+        id: generateId(),
+        categoryId: siNewActivityCategoryId || null,
+        emoji: siNewActivityEmoji || getRandomEmoji(),
+        name: name,
+        color: siNewActivityColor || '#ffde59',
+        active: true,
+        createdAt: today()
+      };
+      activities.push(newActivity);
+      saveActivities();
+      siAddingActivity = false;
+      siNewActivityEmoji = '';
+      siNewActivityName = '';
+      siNewActivityCategoryId = '';
+      siNewActivityColor = '#ffde59';
+      selectSiActivity(newActivity.id);
+      renderSiActivityDropdown();
+      var wrap = document.getElementById('siActivitySelectWrap');
+      if (wrap) wrap.classList.remove('open');
+    }
+
+    function updateSiActivityDisplay() {
+      var disp = document.getElementById('siActivityDisplay');
+      if (!disp) return;
+      var a = activities.find(function(x) { return x.id === siSelectedActivityId; });
+      if (a) disp.innerHTML = '<span>' + renderEmoji(a.emoji) + '</span><span>' + escapeHtml(a.name) + '</span>';
+      else disp.innerHTML = '<span class="custom-select-placeholder">일상 종류 선택</span>';
+    }
+
+    function toggleSiActivityDropdown(e) {
+      if (e) e.stopPropagation();
+      var wrap = document.getElementById('siActivitySelectWrap');
+      if (!wrap) return;
+      wrap.classList.toggle('open');
+    }
+
+    function selectSiActivity(id) {
+      siSelectedActivityId = id;
+      updateSiActivityDisplay();
+      var wrap = document.getElementById('siActivitySelectWrap');
+      if (wrap) wrap.classList.remove('open');
+      var list = document.getElementById('siActivityDropdown');
+      if (list) list.querySelectorAll('.custom-select-option').forEach(function(el) {
+        el.classList.toggle('selected', el.dataset.id === id);
+      });
+    }
+
+    document.addEventListener('click', function(e) {
+      var wrap = document.getElementById('siActivitySelectWrap');
+      if (wrap && wrap.classList.contains('open') && !wrap.contains(e.target)) {
+        wrap.classList.remove('open');
+      }
+    });
+
+    function openScheduleItemForm(itemId) {
+      editingScheduleItemId = itemId;
+      var modal = document.getElementById('scheduleItemModal');
+      if (!modal) return;
+      document.getElementById('siModalTitle').textContent = itemId ? '일정 수정' : '일정 추가';
+      siSelectedActivityId = '';
+      renderSiActivityDropdown();
+      modal.querySelectorAll('.si-day-check').forEach(function(cb) { cb.checked = false; });
+      document.getElementById('siSameTime').checked = true;
+      document.getElementById('siTimeContainer').innerHTML = '';
+      siTimeCache = {start: '', end: ''};
+      renderScheduleItemTimeInputs();
+
+      if (itemId) {
+        var item = scheduleItems.find(function(i) { return i.id === itemId; });
+        if (item) {
+          siSelectedActivityId = item.activityId;
+          updateSiActivityDisplay();
+          renderSiActivityDropdown();
+          (item.weekdays || []).forEach(function(d) {
+            var cb = modal.querySelector('.si-day-check[value="' + d + '"]');
+            if (cb) cb.checked = true;
+          });
+          siTimeCache = {start: item.startTime || '', end: item.endTime || ''};
+          renderScheduleItemTimeInputs();
+          var startEl = modal.querySelector('.si-start-same');
+          var endEl = modal.querySelector('.si-end-same');
+          if (startEl) startEl.value = item.startTime;
+          if (endEl) endEl.value = item.endTime;
+        }
+      } else if (addItemPrefill) {
+        siTimeCache = {start: addItemPrefill.startTime || '', end: addItemPrefill.endTime || ''};
+        var cb = modal.querySelector('.si-day-check[value="' + addItemPrefill.weekday + '"]');
+        if (cb) cb.checked = true;
+        renderScheduleItemTimeInputs();
+        var s = modal.querySelector('.si-start-same');
+        var e = modal.querySelector('.si-end-same');
+        if (s) s.value = addItemPrefill.startTime;
+        if (e) e.value = addItemPrefill.endTime;
+      }
+      addItemPrefill = null;
+
+      // 요일 체크박스 토글 시 시간 입력 다시 그리기
+      modal.querySelectorAll('.si-day-check').forEach(function(cb) {
+        cb.onchange = function() { renderScheduleItemTimeInputs(); };
+      });
+
+      modal.style.display = 'flex';
+    }
+
+    function closeScheduleItemModal() {
+      var modal = document.getElementById('scheduleItemModal');
+      if (modal) modal.style.display = 'none';
+      editingScheduleItemId = null;
+      addItemPrefill = null;
+      siAddingActivity = false;
+      siNewActivityEmoji = '';
+      siNewActivityName = '';
+      siNewActivityCategoryId = '';
+      siNewActivityColor = '#ffde59';
+    }
+
+    function saveScheduleItem() {
+      var modal = document.getElementById('scheduleItemModal');
+      var actId = siSelectedActivityId;
+      var sameTime = document.getElementById('siSameTime').checked;
+      var weekdays = [];
+      modal.querySelectorAll('.si-day-check:checked').forEach(function(cb) { weekdays.push(cb.value); });
+      if (!actId) { showAlert('입력 오류', '일상 종류를 선택해주세요.'); return; }
+      if (!weekdays.length) { showAlert('입력 오류', '요일을 하나 이상 선택해주세요.'); return; }
+
+      var perDayData = []; // { weekdays:[], start, end }
+      if (sameTime) {
+        var s = (modal.querySelector('.si-start-same') || {}).value || '';
+        var e = (modal.querySelector('.si-end-same') || {}).value || '';
+        if (!s || !e) { showAlert('입력 오류', '시간을 입력해주세요.'); return; }
+        if (timeToMin(e) <= timeToMin(s)) { showAlert('입력 오류', '종료 시간은 시작 시간보다 늦어야 합니다.'); return; }
+        perDayData.push({ weekdays: weekdays.slice(), start: s, end: e });
+      } else {
+        var rows = modal.querySelectorAll('.si-per-day-row');
+        for (var i = 0; i < rows.length; i++) {
+          var d = rows[i].dataset.day;
+          var ss = rows[i].querySelector('.si-start-each').value;
+          var ee = rows[i].querySelector('.si-end-each').value;
+          if (!ss || !ee) { showAlert('입력 오류', WEEKDAYS_KR[WEEKDAYS_EN.indexOf(d)] + '요일 시간을 입력해주세요.'); return; }
+          if (timeToMin(ee) <= timeToMin(ss)) { showAlert('입력 오류', WEEKDAYS_KR[WEEKDAYS_EN.indexOf(d)] + '요일 종료 시간이 시작 시간보다 늦어야 합니다.'); return; }
+          perDayData.push({ weekdays: [d], start: ss, end: ee });
+        }
+      }
+
+      // 편집 중이면 기존 item을 삭제하고 새로 생성 (요일별 시간 다를 수 있으니)
+      if (editingScheduleItemId) {
+        scheduleItems = scheduleItems.filter(function(i) { return i.id !== editingScheduleItemId; });
+      }
+      perDayData.forEach(function(d) {
+        scheduleItems.push({
+          id: generateId(),
+          scheduleId: currentDetailScheduleId,
+          activityId: actId,
+          weekdays: d.weekdays,
+          startTime: d.start,
+          endTime: d.end,
+          createdAt: today()
+        });
+      });
+
+      var sch = schedules.find(function(s) { return s.id === currentDetailScheduleId; });
+      if (sch) sch.updatedAt = today();
+      saveSchedules();
+      closeScheduleItemModal();
+      renderScheduleDetail();
+      renderCurrentScheduleView();
+    }
+
+    function deleteScheduleItem(itemId) {
+      showConfirm('일정 삭제', '이 일정을 삭제하시겠습니까?', function(confirmed) {
+        if (!confirmed) return;
+        scheduleItems = scheduleItems.filter(function(i) { return i.id !== itemId; });
+        saveSchedules();
+        renderScheduleDetail();
+      });
+    }
+
+    function switchScheduleView(mode) {
+      scheduleViewMode = mode;
+      scheduleListPage = 1;
+      const thumbBtn = document.getElementById('viewBtnThumbnail');
+      const listBtn = document.getElementById('viewBtnList');
+      if (thumbBtn) thumbBtn.classList.toggle('active', mode === 'thumbnail');
+      if (listBtn) listBtn.classList.toggle('active', mode === 'list');
+      const filterSel = document.getElementById('scheduleFilterSelect');
+      if (filterSel) filterSel.style.display = mode === 'list' ? 'inline-block' : 'none';
+      if (mode === 'thumbnail') {
+        scheduleFilterLiked = 'all';
+        if (filterSel) filterSel.value = 'all';
+      }
+      renderScheduleTagFilter();
+      const heroSection = document.getElementById('scheduleHeroSection');
+      const othersSection = document.getElementById('scheduleOthersSection');
+      const listView = document.getElementById('scheduleListView');
+      const emptyEl = document.getElementById('scheduleEmpty');
+      const noResultEl = document.getElementById('scheduleNoResult');
+      if (mode === 'list') {
+        if (heroSection) heroSection.style.display = 'none';
+        if (othersSection) othersSection.style.display = 'none';
+        if (emptyEl) emptyEl.style.display = 'none';
+        if (noResultEl) noResultEl.style.display = 'none';
+        if (listView) listView.style.display = 'block';
+        renderScheduleList();
+      } else {
+        if (listView) listView.style.display = 'none';
+        renderScheduleThumbnails();
+      }
+    }
+
+    function setScheduleFilter(filter) {
+      scheduleFilterLiked = filter;
+      scheduleListPage = 1;
+      var sel = document.getElementById('scheduleFilterSelect');
+      if (sel) sel.value = filter;
+      renderCurrentScheduleView();
+    }
+
+    function handleScheduleSort(value) {
+      var parts = value.split('_');
+      scheduleSortKey = parts[0];
+      scheduleSortDir = parts[1];
+      scheduleListPage = 1;
+      renderCurrentScheduleView();
+    }
+
+    function getSortIcon(key) {
+      if (scheduleSortKey !== key) return '<span class="sort-arrow">↕</span>';
+      return '<span class="sort-arrow on">' + (scheduleSortDir === 'asc' ? '↑' : '↓') + '</span>';
+    }
+
+    function toggleListSort(key) {
+      if (scheduleSortKey === key) {
+        scheduleSortDir = scheduleSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        scheduleSortKey = key;
+        scheduleSortDir = 'desc';
+      }
+      scheduleListPage = 1;
+      var sel = document.getElementById('scheduleSortSelect');
+      if (sel) sel.value = scheduleSortKey + '_' + scheduleSortDir;
+      renderScheduleList();
+    }
+
+    function renderScheduleList() {
+      var listView = document.getElementById('scheduleListView');
+      var emptyEl = document.getElementById('scheduleEmpty');
+      var noResultEl = document.getElementById('scheduleNoResult');
+      if (!listView) return;
+
+      updateScheduleBulkBar();
+
+      if (schedules.length === 0) {
+        listView.innerHTML = '';
+        if (emptyEl) emptyEl.style.display = 'block';
+        if (noResultEl) noResultEl.style.display = 'none';
+        return;
+      }
+      if (emptyEl) emptyEl.style.display = 'none';
+
+      var filtered = getSortedFilteredSchedules();
+      if (filtered.length === 0) {
+        listView.innerHTML = '';
+        if (noResultEl) noResultEl.style.display = 'block';
+        return;
+      }
+      if (noResultEl) noResultEl.style.display = 'none';
+
+      var total = filtered.length;
+      var totalPages = Math.max(1, Math.ceil(total / scheduleListPerPage));
+      if (scheduleListPage > totalPages) scheduleListPage = totalPages;
+      var start = (scheduleListPage - 1) * scheduleListPerPage;
+      var paged = filtered.slice(start, start + scheduleListPerPage);
+
+      var pagerBar = buildPagerBar(total);
+
+      var html = pagerBar;
+      html += '<table class="schedule-list-table"><thead><tr>';
+      html += '<th><input type="checkbox" class="schedule-select-checkbox" id="listSelectAll" onchange="toggleSelectAllSchedules(this.checked)"></th>';
+      html += '<th onclick="toggleListSort(&apos;title&apos;)">이름' + getSortIcon('title') + '</th>';
+      html += '<th>태그</th>';
+      html += '<th onclick="toggleListSort(&apos;updatedAt&apos;)">최종수정' + getSortIcon('updatedAt') + '</th>';
+      html += '<th>좋아요</th>';
+      html += '</tr></thead><tbody>';
+
+      paged.forEach(function(sch) {
+        var isSelected = selectedScheduleIds.indexOf(sch.id) >= 0;
+        var tags = (sch.tags || []).map(function(t) {
+          return '<span class="schedule-tag">' + escapeHtml(t) + '</span>';
+        }).join('');
+        var date = (sch.updatedAt || sch.createdAt || '').substring(0, 10);
+        var heartCls = sch.isLiked ? 'heart-btn liked' : 'heart-btn';
+        html += '<tr>';
+        html += '<td><input type="checkbox" class="schedule-select-checkbox"' + (isSelected ? ' checked' : '') + ' onchange="toggleScheduleSelect(&apos;' + sch.id + '&apos;)"></td>';
+        html += '<td><div class="schedule-list-row-name" onclick="openScheduleDetail(&apos;' + sch.id + '&apos;)">';
+        html += '<span>' + renderEmoji(sch.emoji) + '</span><span>' + escapeHtml(sch.title) + '</span></div></td>';
+        html += '<td class="schedule-list-tags-cell' + (tags ? '' : ' no-tags') + '"><div class="schedule-list-tags">' + (tags || '<span style="color:var(--text-secondary);font-size:12px;">-</span>') + '</div></td>';
+        html += '<td class="schedule-list-date">' + date + '</td>';
+        html += '<td style="text-align:center;"><button class="' + heartCls + '" onclick="toggleScheduleLike(&apos;' + sch.id + '&apos;)" title="' + (sch.isLiked ? '좋아요 해제' : '좋아요') + '">' + HEART_SVG + '</button></td>';
+        html += '</tr>';
+      });
+
+      html += '</tbody></table>';
+      html += pagerBar;
+      listView.innerHTML = html;
+
+      // 전체선택 체크박스 상태
+      var listSelectAll = document.getElementById('listSelectAll');
+      if (listSelectAll) {
+        var allIds = filtered.map(function(s) { return s.id; });
+        var checkedCount = allIds.filter(function(id) { return selectedScheduleIds.indexOf(id) >= 0; }).length;
+        listSelectAll.checked = checkedCount === allIds.length && allIds.length > 0;
+        listSelectAll.indeterminate = checkedCount > 0 && checkedCount < allIds.length;
+      }
+    }
+
+    function buildPagerBar(total) {
+      var totalPages = Math.max(1, Math.ceil(total / scheduleListPerPage));
+      var perPageOpts = [10, 20, 50, 100];
+      var perPageHtml = '<div class="schedule-per-page"><span>페이지당</span><select onchange="setSchedulePerPage(this.value)">';
+      perPageOpts.forEach(function(n) {
+        perPageHtml += '<option value="' + n + '"' + (n === scheduleListPerPage ? ' selected' : '') + '>' + n + '개</option>';
+      });
+      perPageHtml += '</select></div>';
+
+      var pagerHtml = '<div class="schedule-pager">';
+      if (totalPages > 1) {
+        pagerHtml += '<button class="pg-btn" onclick="goScheduleListPage(' + (scheduleListPage - 1) + ')"' + (scheduleListPage <= 1 ? ' disabled' : '') + '>‹</button>';
+        var maxBtns = 7;
+        var s = Math.max(1, scheduleListPage - 3);
+        var e = Math.min(totalPages, s + maxBtns - 1);
+        if (e - s < maxBtns - 1) s = Math.max(1, e - maxBtns + 1);
+        if (s > 1) {
+          pagerHtml += '<button class="pg-btn" onclick="goScheduleListPage(1)">1</button>';
+          if (s > 2) pagerHtml += '<span style="padding:0 4px;color:var(--text-secondary)">…</span>';
+        }
+        for (var i = s; i <= e; i++) {
+          pagerHtml += '<button class="pg-btn' + (i === scheduleListPage ? ' active' : '') + '" onclick="goScheduleListPage(' + i + ')">' + i + '</button>';
+        }
+        if (e < totalPages) {
+          if (e < totalPages - 1) pagerHtml += '<span style="padding:0 4px;color:var(--text-secondary)">…</span>';
+          pagerHtml += '<button class="pg-btn" onclick="goScheduleListPage(' + totalPages + ')">' + totalPages + '</button>';
+        }
+        pagerHtml += '<button class="pg-btn" onclick="goScheduleListPage(' + (scheduleListPage + 1) + ')"' + (scheduleListPage >= totalPages ? ' disabled' : '') + '>›</button>';
+      }
+      pagerHtml += '</div>';
+
+      return '<div class="schedule-pager-bar">' + pagerHtml + perPageHtml + '</div>';
+    }
+
+    function goScheduleListPage(page) {
+      var filtered = getSortedFilteredSchedules();
+      var totalPages = Math.ceil(filtered.length / scheduleListPerPage);
+      if (page < 1 || page > totalPages) return;
+      scheduleListPage = page;
+      renderScheduleList();
+    }
+
+    function setSchedulePerPage(val) {
+      scheduleListPerPage = parseInt(val, 10) || 10;
+      scheduleListPage = 1;
+      renderScheduleList();
+    }
+
+    const HEART_SVG = '<svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.5-9C0.5 8 3 4 7 4c2.2 0 3.7 1.1 5 2.8C13.3 5.1 14.8 4 17 4c4 0 6.5 4 4.5 8-2.5 4.5-9.5 9-9.5 9z"/></svg>';
+
+    function escapeHtml(str) {
+      if (str == null) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function renderScheduleThumbnails() {
+      const heroSection = document.getElementById('scheduleHeroSection');
+      const othersSection = document.getElementById('scheduleOthersSection');
+      const emptyEl = document.getElementById('scheduleEmpty');
+      const noResultEl = document.getElementById('scheduleNoResult');
+      if (!heroSection || !othersSection) return;
+
+      updateScheduleBulkBar();
+
+      // 전체가 비어있으면 빈 상태
+      if (schedules.length === 0) {
+        heroSection.style.display = 'none';
+        othersSection.style.display = 'none';
+        if (noResultEl) noResultEl.style.display = 'none';
+        if (emptyEl) emptyEl.style.display = 'block';
+        return;
+      }
+
+      if (emptyEl) emptyEl.style.display = 'none';
+
+      const filtered = getSortedFilteredSchedules();
+      if (filtered.length === 0) {
+        heroSection.style.display = 'none';
+        othersSection.style.display = 'none';
+        const listView = document.getElementById('scheduleListView');
+        if (listView) listView.style.display = 'none';
+        if (noResultEl) noResultEl.style.display = 'block';
+        return;
+      }
+      if (noResultEl) noResultEl.style.display = 'none';
+
+      const liked = filtered.filter(function(s) { return s.isLiked; });
+      const others = filtered.filter(function(s) { return !s.isLiked; });
+
+      renderHeroSchedule(liked);
+      renderOtherSchedules(others);
+    }
+
+    function renderHeroSchedule(liked) {
+      const section = document.getElementById('scheduleHeroSection');
+      section.style.display = 'block';
+      if (liked.length === 0) {
+        section.innerHTML =
+          '<div class="schedule-scroll-wrap" data-scroll-start="true" data-scroll-end="true">' +
+          '  <div class="schedule-hero-scroll">' +
+          '    <div class="schedule-hero-card empty">' +
+          '      <div class="hero-empty-emoji">💛</div>' +
+          '      <div class="hero-empty-msg">좋아하는 시간표가 아직 없습니다</div>' +
+          '    </div>' +
+          '  </div>' +
+          '</div>';
+        return;
+      }
+
+      if (scheduleHeroIndex >= liked.length) scheduleHeroIndex = 0;
+
+      let html = '<div class="schedule-scroll-wrap" data-scroll-start="true" data-scroll-end="' + (liked.length <= 1 ? 'true' : 'false') + '">';
+      html += '  <div class="schedule-hero-scroll" id="scheduleHeroScroll">';
+
+      liked.forEach(function(sch) {
+        const itemCount = scheduleItems.filter(function(i) { return i.scheduleId === sch.id; }).length;
+        const isSelected = selectedScheduleIds.indexOf(sch.id) >= 0;
+        const tags = (sch.tags || []).map(function(t) { return '<span class="schedule-tag">' + escapeHtml(t) + '</span>'; }).join('');
+        const descText = sch.description ? escapeHtml(sch.description) : '세부 설명 없음';
+        const descClass = sch.description ? 'hero-description-display' : 'hero-description-display empty';
+
+        html += '<div class="schedule-hero-card" onclick="openScheduleDetail(&apos;' + sch.id + '&apos;)">';
+        html += '  <label class="hero-checkbox-wrap" onclick="event.stopPropagation()"><input type="checkbox" class="schedule-select-checkbox"' + (isSelected ? ' checked' : '') + ' onchange="toggleScheduleSelect(&apos;' + sch.id + '&apos;)"></label>';
+        html += '  <button class="heart-btn liked hero-heart-wrap" onclick="event.stopPropagation(); toggleScheduleLike(&apos;' + sch.id + '&apos;)" title="좋아요 해제">' + HEART_SVG + '</button>';
+        html += '  <div class="hero-emoji-title">';
+        html += '    <span class="hero-emoji">' + renderEmoji(sch.emoji) + '</span>';
+        html += '    <span class="hero-title-display">' + escapeHtml(sch.title) + '</span>';
+        html += '  </div>';
+        html += '  <div class="' + descClass + '">' + descText + '</div>';
+        html += '  <div class="hero-thumbnail-frame sched-hero-card">' + renderScheduleMiniGrid(sch.id) + '</div>';
+        if (tags) {
+          html += '  <div class="hero-tags-row">' + tags + '</div>';
+        }
+        html += '  <div class="hero-meta-row">' + itemCount + '개 일정 · 최종수정 ' + (sch.updatedAt || sch.createdAt) + '</div>';
+        html += '</div>';
+      });
+
+      html += '  </div>';
+      html += '</div>';
+
+      if (liked.length > 1) {
+        html += '<div class="hero-indicators">';
+        for (let i = 0; i < liked.length; i++) {
+          html += '<button class="hero-indicator' + (i === scheduleHeroIndex ? ' active' : '') + '" onclick="scrollHeroTo(' + i + ')" aria-label="' + (i + 1) + '"></button>';
+        }
+        html += '</div>';
+      }
+
+      section.innerHTML = html;
+
+      const scrollEl = document.getElementById('scheduleHeroScroll');
+      if (scrollEl) {
+        // 이전 인덱스가 유효하면 해당 카드로 즉시 스크롤 (애니메이션 없이)
+        if (scheduleHeroIndex > 0) {
+          const target = scrollEl.children[scheduleHeroIndex];
+          if (target) scrollEl.scrollLeft = target.offsetLeft;
+        }
+        updateScrollHintState(scrollEl);
+        scrollEl.addEventListener('scroll', function() {
+          const cardWidth = scrollEl.clientWidth;
+          const idx = Math.round(scrollEl.scrollLeft / cardWidth);
+          if (idx !== scheduleHeroIndex && idx >= 0 && idx < liked.length) {
+            scheduleHeroIndex = idx;
+            updateHeroIndicators();
+          }
+          updateScrollHintState(scrollEl);
+        });
+        attachDragScroll(scrollEl);
+      }
+    }
+
+    function renderOtherSchedules(others) {
+      const section = document.getElementById('scheduleOthersSection');
+      if (others.length === 0) {
+        section.style.display = 'none';
+        return;
+      }
+      section.style.display = 'block';
+
+      let html = '<div class="schedule-others-header">전체 시간표 (' + others.length + '개)</div>';
+      html += '<div class="schedule-scroll-wrap" data-scroll-start="true" data-scroll-end="false">';
+      html += '  <div class="schedule-others-scroll" id="scheduleOthersScroll">';
+
+      others.forEach(function(sch) {
+        const isSelected = selectedScheduleIds.indexOf(sch.id) >= 0;
+        html += '<div class="schedule-mini-card" onclick="openScheduleDetail(&apos;' + sch.id + '&apos;)">';
+        html += '  <label class="mini-checkbox-wrap" onclick="event.stopPropagation()"><input type="checkbox" class="schedule-select-checkbox"' + (isSelected ? ' checked' : '') + ' onchange="toggleScheduleSelect(&apos;' + sch.id + '&apos;)"></label>';
+        html += '  <button class="heart-btn mini-heart-wrap" onclick="event.stopPropagation(); toggleScheduleLike(&apos;' + sch.id + '&apos;)" title="좋아요">' + HEART_SVG + '</button>';
+        html += '  <div class="schedule-mini-emoji">' + renderEmoji(sch.emoji) + '</div>';
+        html += '  <div class="schedule-mini-title">' + escapeHtml(sch.title) + '</div>';
+        html += '  <div class="schedule-mini-date">' + (sch.updatedAt || sch.createdAt) + '</div>';
+        html += '</div>';
+      });
+
+      html += '  </div>';
+      html += '</div>';
+
+      section.innerHTML = html;
+
+      const scrollEl = document.getElementById('scheduleOthersScroll');
+      if (scrollEl) {
+        updateScrollHintState(scrollEl);
+        scrollEl.addEventListener('scroll', function() {
+          updateScrollHintState(scrollEl);
+        });
+        attachDragScroll(scrollEl);
+      }
+    }
+
+    // ========================================
+    // Google Sheets API 헬퍼 (준비)
+    // ========================================
+    async function fetchSheetData(sheetName) {
+      console.log('fetchSheetData:', sheetName);
+      return [];
+    }
+
+    async function appendSheetData(sheetName, values) {
+      console.log('appendSheetData:', sheetName, values);
+      return true;
+    }
+
+    // ========================================
+    // 프로필 관리
+    // ========================================
+    let profilePhoto = '';
+    let profileQuote = '오늘도 화이팅! ✨';
+    let currentSettingsSection = '';
+
+    function loadProfile() {
+      const savedPhoto = localStorage.getItem('profilePhoto');
+      const savedQuote = localStorage.getItem('profileQuote');
+      
+      if (savedPhoto) {
+        profilePhoto = savedPhoto;
+      }
+      if (savedQuote) {
+        profileQuote = savedQuote;
+      }
+      
+      updateProfileDisplay();
+    }
+
+    function updateProfileDisplay() {
+      const sidebarPhoto = document.getElementById('sidebarProfilePhoto');
+      const sidebarQuote = document.getElementById('sidebarProfileQuote');
+      
+      // 우선순위: 업로드된 사진 → Google 프로필 사진 → 기본 이모지
+      const displayPhoto = profilePhoto || (currentUser && currentUser.picture) || '';
+      
+      if (sidebarPhoto) {
+        if (displayPhoto) {
+          sidebarPhoto.innerHTML = '<img src="' + displayPhoto + '" alt="Profile">';
+        } else {
+          sidebarPhoto.innerHTML = '👤';
+        }
+      }
+      
+      if (sidebarQuote) {
+        sidebarQuote.textContent = profileQuote || '오늘도 화이팅! ✨';
+      }
+      
+      const preview = document.getElementById('profilePreview');
+      if (preview) {
+        if (displayPhoto) {
+          preview.innerHTML = '<img src="' + displayPhoto + '" alt="Profile">';
+        } else {
+          preview.innerHTML = '👤';
+        }
+      }
+      
+      const quoteInput = document.getElementById('profileQuoteInput');
+      if (quoteInput) {
+        quoteInput.value = profileQuote;
+      }
+    }
+
+    function handleProfilePhotoUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        showAlert('오류', '이미지 파일만 업로드 가능합니다.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          // 최대 200px으로 축소 (비율 유지)
+          var MAX = 200;
+          var w = img.width, h = img.height;
+          if (w > MAX || h > MAX) {
+            if (w >= h) { h = Math.round(h * MAX / w); w = MAX; }
+            else { w = Math.round(w * MAX / h); h = MAX; }
+          }
+          var canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+
+          // JPEG 품질을 내려가며 40000자 이하로 압축
+          var quality = 0.85;
+          var dataUrl;
+          do {
+            dataUrl = canvas.toDataURL('image/jpeg', quality);
+            quality -= 0.1;
+          } while (dataUrl.length > 40000 && quality > 0.2);
+
+          if (dataUrl.length > 40000) {
+            showAlert('업로드 실패', '이미지가 너무 복잡하여 압축 후에도 Sheets 저장 한계를 초과합니다.\n더 작은 이미지를 사용해주세요.');
+            return;
+          }
+          var kb = Math.round(dataUrl.length * 3 / 4 / 1024);
+          profilePhoto = dataUrl;
+          updateProfileDisplay();
+          // 압축 결과 안내
+          var hint = document.getElementById('profileUploadHint');
+          if (hint) hint.textContent = '✅ ' + w + '×' + h + 'px · 약 ' + kb + 'KB로 저장됩니다';
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function saveProfile() {
+      const quoteInput = document.getElementById('profileQuoteInput');
+      if (quoteInput) {
+        profileQuote = quoteInput.value || '오늘도 화이팅! ✨';
+      }
+      
+      localStorage.setItem('profilePhoto', profilePhoto);
+      localStorage.setItem('profileQuote', profileQuote);
+      GS.syncSheets(['사용자설정']);
+      updateProfileDisplay();
+      showAlert('저장 완료', '프로필이 저장되었습니다.');
+    }
+
+    function openProfileSettings() {
+      navigateTo('settings');
+      setTimeout(function() {
+        showSettingsSection('profile');
+      }, 100);
+    }
+
+    // ========================================
+    // 설정 페이지 섹션 관리
+    // ========================================
+    function showSettingsSection(sectionName) {
+      currentSettingsSection = sectionName;
+
+      // 설정 페이지 내부의 탭만 제어 (일상 페이지의 .tab-btn과 충돌 방지)
+      document.querySelectorAll('#settingsPage .tab-btn').forEach(function(btn) {
+        btn.classList.remove('active');
+      });
+
+      document.querySelectorAll('#settingsPage .tab-content').forEach(function(content) {
+        content.classList.remove('active');
+      });
+
+      const menuItems = document.querySelectorAll('#settingsPage .tab-btn');
+      if (sectionName === 'profile' && menuItems[0]) {
+        menuItems[0].classList.add('active');
+        document.getElementById('settingsProfileSection').classList.add('active');
+      } else if (sectionName === 'menu' && menuItems[1]) {
+        menuItems[1].classList.add('active');
+        document.getElementById('settingsMenuSection').classList.add('active');
+      } else if (sectionName === 'design' && menuItems[2]) {
+        menuItems[2].classList.add('active');
+        document.getElementById('settingsDesignSection').classList.add('active');
+        renderDesignSettings();
+      }
+
+      updateProfileDisplay();
+    }
+
+    // ========================================
+    // 디자인 설정 관리
+    // ========================================
+    const DESIGN_DEFAULTS = {
+      primaryColor: '#ffde59',
+      sidebarBg: '#fafafa',
+      fontFamily: "'Noto Sans KR', sans-serif",
+      navWidth: 220,
+      buttonRadius: 8,
+      accentBtnBg: '#c1ff72',
+      accentBtnColor: '#1a1a1a',
+      baseFontSize: 14,
+      borderColor: '#e0e0e0',
+      cardBg: '#ffffff',
+      primaryBtnBg: '#ffde59',
+      primaryBtnColor: '#1a1a1a',
+      mobileTopbarBg: '#ffffff',
+      mobileTopbarBorder: '#e0e0e0',
+      mobileTopbarText: '#1a1a1a'
+    };
+
+    let designSettings = Object.assign({}, DESIGN_DEFAULTS);
+
+    function loadDesignSettings() {
+      const saved = localStorage.getItem('designSettings');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          designSettings = Object.assign({}, DESIGN_DEFAULTS, parsed);
+        } catch (e) {
+          designSettings = Object.assign({}, DESIGN_DEFAULTS);
+        }
+      }
+      applyDesignSettings();
+    }
+
+    function saveDesignSettings() {
+      localStorage.setItem('designSettings', JSON.stringify(designSettings));
+      GS.syncSheets(['사용자설정']);
+    }
+
+    function applyDesignSettings() {
+      const root = document.documentElement;
+      root.style.setProperty('--primary-yellow', designSettings.primaryColor);
+      root.style.setProperty('--bg-side', designSettings.sidebarBg);
+      root.style.setProperty('--nav-width', designSettings.navWidth + 'px');
+      root.style.setProperty('--button-radius', designSettings.buttonRadius + 'px');
+      root.style.setProperty('--primary-green', designSettings.accentBtnBg);
+      root.style.setProperty('--accent-btn-color', designSettings.accentBtnColor);
+      root.style.setProperty('--base-font-size', designSettings.baseFontSize + 'px');
+      root.style.setProperty('--border-color', designSettings.borderColor);
+      root.style.setProperty('--bg-card', designSettings.cardBg);
+      root.style.setProperty('--primary-btn-bg', designSettings.primaryBtnBg);
+      root.style.setProperty('--primary-btn-color', designSettings.primaryBtnColor);
+      root.style.setProperty('--mobile-topbar-bg', designSettings.mobileTopbarBg);
+      root.style.setProperty('--mobile-topbar-border', designSettings.mobileTopbarBorder);
+      root.style.setProperty('--mobile-topbar-text', designSettings.mobileTopbarText);
+      document.body.style.fontFamily = designSettings.fontFamily;
+      document.body.style.fontSize = designSettings.baseFontSize + 'px';
+
+      // 사이드바 토글 버튼 위치도 갱신 (--nav-width 연동)
+      const toggleBtn = document.getElementById('sidebarToggleBtn');
+      if (toggleBtn && !isSidebarCollapsed) {
+        toggleBtn.style.left = (parseInt(designSettings.navWidth) - 48) + "px";
+      }
+    }
+
+    function renderDesignSettings() {
+      // 색상 입력 반영
+      const primaryColor = document.getElementById('designPrimaryColor');
+      const primaryColorValue = document.getElementById('designPrimaryColorValue');
+      if (primaryColor) primaryColor.value = designSettings.primaryColor;
+      if (primaryColorValue) primaryColorValue.textContent = designSettings.primaryColor;
+
+      const sidebarBg = document.getElementById('designSidebarBg');
+      const sidebarBgValue = document.getElementById('designSidebarBgValue');
+      if (sidebarBg) sidebarBg.value = designSettings.sidebarBg;
+      if (sidebarBgValue) sidebarBgValue.textContent = designSettings.sidebarBg;
+
+      // 폰트
+      const fontFamily = document.getElementById('designFontFamily');
+      if (fontFamily) fontFamily.value = designSettings.fontFamily;
+
+      // 슬라이더
+      const navWidth = document.getElementById('designNavWidth');
+      const navWidthValue = document.getElementById('designNavWidthValue');
+      if (navWidth) navWidth.value = designSettings.navWidth;
+      if (navWidthValue) navWidthValue.textContent = designSettings.navWidth + 'px';
+
+      const buttonRadius = document.getElementById('designButtonRadius');
+      const buttonRadiusValue = document.getElementById('designButtonRadiusValue');
+      if (buttonRadius) buttonRadius.value = designSettings.buttonRadius;
+      if (buttonRadiusValue) buttonRadiusValue.textContent = designSettings.buttonRadius + 'px';
+
+      const baseFontSize = document.getElementById('designBaseFontSize');
+      const baseFontSizeValue = document.getElementById('designBaseFontSizeValue');
+      if (baseFontSize) baseFontSize.value = designSettings.baseFontSize;
+      if (baseFontSizeValue) baseFontSizeValue.textContent = designSettings.baseFontSize + 'px';
+
+      const accentBtnBg = document.getElementById('designAccentBtnBg');
+      const accentBtnBgValue = document.getElementById('designAccentBtnBgValue');
+      if (accentBtnBg) accentBtnBg.value = designSettings.accentBtnBg;
+      if (accentBtnBgValue) accentBtnBgValue.textContent = designSettings.accentBtnBg;
+
+      const accentBtnColor = document.getElementById('designAccentBtnColor');
+      const accentBtnColorValue = document.getElementById('designAccentBtnColorValue');
+      if (accentBtnColor) accentBtnColor.value = designSettings.accentBtnColor;
+      if (accentBtnColorValue) accentBtnColorValue.textContent = designSettings.accentBtnColor;
+
+      const borderColor = document.getElementById('designBorderColor');
+      const borderColorValue = document.getElementById('designBorderColorValue');
+      if (borderColor) borderColor.value = designSettings.borderColor;
+      if (borderColorValue) borderColorValue.textContent = designSettings.borderColor;
+
+      const cardBg = document.getElementById('designCardBg');
+      const cardBgValue = document.getElementById('designCardBgValue');
+      if (cardBg) cardBg.value = designSettings.cardBg;
+      if (cardBgValue) cardBgValue.textContent = designSettings.cardBg;
+
+      const primaryBtnBg = document.getElementById('designPrimaryBtnBg');
+      const primaryBtnBgValue = document.getElementById('designPrimaryBtnBgValue');
+      if (primaryBtnBg) primaryBtnBg.value = designSettings.primaryBtnBg;
+      if (primaryBtnBgValue) primaryBtnBgValue.textContent = designSettings.primaryBtnBg;
+
+      const primaryBtnColor = document.getElementById('designPrimaryBtnColor');
+      const primaryBtnColorValue = document.getElementById('designPrimaryBtnColorValue');
+      if (primaryBtnColor) primaryBtnColor.value = designSettings.primaryBtnColor;
+      if (primaryBtnColorValue) primaryBtnColorValue.textContent = designSettings.primaryBtnColor;
+
+      const mobileTopbarBg = document.getElementById('designMobileTopbarBg');
+      const mobileTopbarBgValue = document.getElementById('designMobileTopbarBgValue');
+      if (mobileTopbarBg) mobileTopbarBg.value = designSettings.mobileTopbarBg;
+      if (mobileTopbarBgValue) mobileTopbarBgValue.textContent = designSettings.mobileTopbarBg;
+
+      const mobileTopbarBorder = document.getElementById('designMobileTopbarBorder');
+      const mobileTopbarBorderValue = document.getElementById('designMobileTopbarBorderValue');
+      if (mobileTopbarBorder) mobileTopbarBorder.value = designSettings.mobileTopbarBorder;
+      if (mobileTopbarBorderValue) mobileTopbarBorderValue.textContent = designSettings.mobileTopbarBorder;
+
+      const mobileTopbarText = document.getElementById('designMobileTopbarText');
+      const mobileTopbarTextValue = document.getElementById('designMobileTopbarTextValue');
+      if (mobileTopbarText) mobileTopbarText.value = designSettings.mobileTopbarText;
+      if (mobileTopbarTextValue) mobileTopbarTextValue.textContent = designSettings.mobileTopbarText;
+    }
+
+    function updateDesign(key, value) {
+      const numericKeys = ['navWidth', 'buttonRadius', 'baseFontSize'];
+      if (numericKeys.indexOf(key) >= 0) {
+        designSettings[key] = parseInt(value);
+      } else {
+        designSettings[key] = value;
+      }
+
+      // 실시간 미리보기 값 표시 갱신
+      const valueEl = document.getElementById('design' + key.charAt(0).toUpperCase() + key.slice(1) + 'Value');
+      if (valueEl) {
+        if (numericKeys.indexOf(key) >= 0) {
+          valueEl.textContent = designSettings[key] + 'px';
+        } else {
+          valueEl.textContent = designSettings[key];
+        }
+      }
+
+      applyDesignSettings();
+      saveDesignSettings();
+    }
+
+    function resetDesign() {
+      showConfirm('초기화 확인', '디자인 설정을 기본값으로 되돌리시겠습니까?', function(confirmed) {
+        if (confirmed) {
+          designSettings = Object.assign({}, DESIGN_DEFAULTS);
+          applyDesignSettings();
+          saveDesignSettings();
+          renderDesignSettings();
+        }
+      });
+    }
+
+    // ========================================
+    // 초기화
+    // ========================================
+    console.log('베이 관리자 v2.1 로드 완료');
+    console.log('오늘 날짜:', today());
