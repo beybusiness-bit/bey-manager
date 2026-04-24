@@ -2296,6 +2296,34 @@
       font-family: inherit;
     }
 
+    /* 일괄 선택 액션바 */
+    .bulk-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; min-height: 32px; }
+    .bulk-bar label { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; user-select: none; }
+    .bulk-bar label input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--primary-yellow); cursor: pointer; }
+    .bulk-count { font-size: 12px; color: var(--text-secondary); flex: 1; }
+    .btn-bulk-delete { padding: 4px 12px; font-size: 12px; border-radius: 6px; border: 1px solid #e53e3e; background: transparent; color: #e53e3e; cursor: pointer; }
+    .btn-bulk-delete:hover { background: #e53e3e; color: #fff; }
+
+    /* 카드 체크박스 */
+    .card-cb { position: absolute; top: 8px; left: 8px; z-index: 3; display: flex; align-items: center; }
+    .card-cb input[type="checkbox"] { width: 16px; height: 16px; accent-color: #555; cursor: pointer; }
+
+    /* 드롭다운 인라인 일상 추가 */
+    .si-add-divider { height: 1px; background: var(--border-color); margin: 2px 0; }
+    .si-add-activity-trigger { display: flex; align-items: center; gap: 6px; padding: 9px 12px; font-size: 13px; color: var(--primary-yellow); font-weight: 600; cursor: pointer; }
+    .si-add-activity-trigger:hover { background: var(--bg-main); }
+    .si-add-activity-form { padding: 8px 10px; display: flex; align-items: center; gap: 6px; }
+    .si-add-emoji-btn { font-size: 20px; cursor: pointer; border: 1px solid var(--border-color); border-radius: 6px; padding: 2px 5px; background: var(--bg-card); flex-shrink: 0; line-height: 1.2; }
+    .si-add-emoji-btn:hover { background: var(--bg-main); }
+    .si-add-name-input { flex: 1; min-width: 0; padding: 5px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; }
+    .si-add-save-btn { padding: 5px 10px; font-size: 12px; border-radius: 6px; background: var(--primary-yellow); border: none; cursor: pointer; font-weight: 600; flex-shrink: 0; }
+    .si-add-save-btn:hover { opacity: 0.85; }
+    .si-add-cancel-btn { padding: 5px 8px; font-size: 13px; border-radius: 6px; border: 1px solid var(--border-color); background: transparent; cursor: pointer; color: #888; flex-shrink: 0; line-height: 1; }
+    .si-add-cat-select { width: 100%; padding: 5px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; }
+    .si-add-actions { display: flex; gap: 6px; }
+    .si-add-actions button { flex: 1; padding: 5px; font-size: 12px; border-radius: 6px; cursor: pointer; border: 1px solid var(--border-color); background: transparent; }
+    .si-add-actions .btn-save { background: var(--primary-yellow); border-color: var(--primary-yellow); font-weight: 600; }
+
     /* 카테고리 카드 레이아웃 */
     .category-grid {
       display: grid;
@@ -2920,9 +2948,12 @@
               </select>
             </div>
 
-            <!-- 일상 추가 버튼 -->
-            <div style="margin-bottom: 16px;">
+            <!-- 일상 추가 + 일괄 선택 액션바 -->
+            <div class="bulk-bar">
               <button class="btn-add" onclick="addActivityInline()">+ 일상 추가</button>
+              <label><input type="checkbox" id="activitySelectAll" onchange="toggleSelectAllActivities(this.checked)"> 전체 선택</label>
+              <span class="bulk-count" id="activityBulkCount"></span>
+              <button class="btn-bulk-delete" id="activityBulkDelete" style="display:none" onclick="deleteSelectedActivities()">선택 삭제</button>
             </div>
 
             <!-- 일상 카드 그리드 -->
@@ -2935,9 +2966,12 @@
           <div class="card">
             <h3>📂 카테고리</h3>
             
-            <!-- 카테고리 추가 버튼 -->
-            <div style="margin-bottom: 16px;">
+            <!-- 카테고리 추가 + 일괄 선택 액션바 -->
+            <div class="bulk-bar">
               <button class="btn-add" onclick="addCategoryInline()">+ 카테고리 추가</button>
+              <label><input type="checkbox" id="categorySelectAll" onchange="toggleSelectAllCategories(this.checked)"> 전체 선택</label>
+              <span class="bulk-count" id="categoryBulkCount"></span>
+              <button class="btn-bulk-delete" id="categoryBulkDelete" style="display:none" onclick="deleteSelectedCategories()">선택 삭제</button>
             </div>
 
             <!-- 카테고리 카드 그리드 -->
@@ -4151,6 +4185,8 @@
     let selectedCategoryFilter = '';
     let editingActivityId = null;
     let editingCategoryId = null;
+    var selectedActivityIds = new Set();
+    var selectedCategoryIds = new Set();
     let currentEmojiCallback = null;
     let currentSelectedEmoji = '';
 
@@ -5257,19 +5293,66 @@
       showConfirm('카테고리 삭제', '이 카테고리를 삭제하시겠습니까?\n(관련된 일상 종류는 미지정 상태로 변경됩니다)', function(confirmed) {
         if (confirmed) {
           categories = categories.filter(function(c) { return c.id !== categoryId; });
-          
+
           activities.forEach(function(a) {
             if (a.categoryId === categoryId) {
               a.categoryId = null;
             }
           });
-          
+
           saveCategories();
           saveActivities();
           renderCategories();
           renderCategoryFilter();
           renderActivities();
         }
+      });
+    }
+
+    function toggleCategorySelect(id, checked) {
+      if (checked) selectedCategoryIds.add(id);
+      else selectedCategoryIds.delete(id);
+      updateCategoryBulkBar();
+    }
+
+    function toggleSelectAllCategories(checked) {
+      var visibleIds = categories.filter(function(c) { return c.active !== false; }).map(function(c) { return c.id; });
+      if (checked) visibleIds.forEach(function(id) { selectedCategoryIds.add(id); });
+      else selectedCategoryIds.clear();
+      updateCategoryBulkBar();
+      renderCategories();
+    }
+
+    function updateCategoryBulkBar() {
+      var count = selectedCategoryIds.size;
+      var countEl = document.getElementById('categoryBulkCount');
+      var deleteBtn = document.getElementById('categoryBulkDelete');
+      var selectAll = document.getElementById('categorySelectAll');
+      if (countEl) countEl.textContent = count > 0 ? count + '개 선택됨' : '';
+      if (deleteBtn) deleteBtn.style.display = count > 0 ? '' : 'none';
+      if (selectAll) {
+        var total = categories.filter(function(c) { return c.active !== false; }).length;
+        selectAll.checked = count > 0 && count === total;
+        selectAll.indeterminate = count > 0 && count < total;
+      }
+    }
+
+    function deleteSelectedCategories() {
+      var ids = Array.from(selectedCategoryIds);
+      if (!ids.length) return;
+      showConfirm('카테고리 삭제', ids.length + '개의 카테고리를 삭제하시겠습니까?\n(관련된 일상 종류는 미지정 상태로 변경됩니다)', function(confirmed) {
+        if (!confirmed) return;
+        categories = categories.filter(function(c) { return !selectedCategoryIds.has(c.id); });
+        activities.forEach(function(a) {
+          if (selectedCategoryIds.has(a.categoryId)) a.categoryId = null;
+        });
+        selectedCategoryIds.clear();
+        saveCategories();
+        saveActivities();
+        updateCategoryBulkBar();
+        renderCategories();
+        renderCategoryFilter();
+        renderActivities();
       });
     }
 
@@ -5288,7 +5371,11 @@
         const isEditing = (editingCategoryId === category.id);
         const isSelected = (selectedCategoryFilter === category.id);
         
+        const isCatChecked = selectedCategoryIds.has(category.id);
         html += '<div class="category-card' + (isEditing ? ' editing' : '') + (isSelected ? ' selected' : '') + '" onclick="' + (isEditing ? '' : 'editCategory(\'' + category.id + '\')') + '">';
+        if (!isEditing) {
+          html += '<label class="card-cb" onclick="event.stopPropagation()"><input type="checkbox" ' + (isCatChecked ? 'checked' : '') + ' onchange="toggleCategorySelect(&apos;' + category.id + '&apos;,this.checked)"></label>';
+        }
         html += '  <div class="category-card-header">';
         
         if (isEditing) {
@@ -5509,6 +5596,57 @@
       });
     }
 
+    function toggleActivitySelect(id, checked) {
+      if (checked) selectedActivityIds.add(id);
+      else selectedActivityIds.delete(id);
+      updateActivityBulkBar();
+    }
+
+    function toggleSelectAllActivities(checked) {
+      var visibleIds = getFilteredActivities().map(function(a) { return a.id; });
+      if (checked) visibleIds.forEach(function(id) { selectedActivityIds.add(id); });
+      else selectedActivityIds.clear();
+      updateActivityBulkBar();
+      renderActivities();
+    }
+
+    function updateActivityBulkBar() {
+      var count = selectedActivityIds.size;
+      var countEl = document.getElementById('activityBulkCount');
+      var deleteBtn = document.getElementById('activityBulkDelete');
+      var selectAll = document.getElementById('activitySelectAll');
+      if (countEl) countEl.textContent = count > 0 ? count + '개 선택됨' : '';
+      if (deleteBtn) deleteBtn.style.display = count > 0 ? '' : 'none';
+      if (selectAll) {
+        var total = getFilteredActivities().length;
+        selectAll.checked = count > 0 && count === total;
+        selectAll.indeterminate = count > 0 && count < total;
+      }
+    }
+
+    function deleteSelectedActivities() {
+      var ids = Array.from(selectedActivityIds);
+      if (!ids.length) return;
+      showConfirm('일상 종류 삭제', ids.length + '개의 일상 종류를 삭제하시겠습니까?', function(confirmed) {
+        if (!confirmed) return;
+        activities = activities.filter(function(a) { return !selectedActivityIds.has(a.id); });
+        selectedActivityIds.clear();
+        saveActivities();
+        updateActivityBulkBar();
+        renderActivities();
+        renderCategories();
+      });
+    }
+
+    function getFilteredActivities() {
+      var filtered = activities.slice();
+      if (typeof selectedCategoryFilter !== 'undefined' && selectedCategoryFilter) {
+        if (selectedCategoryFilter === 'unassigned') filtered = filtered.filter(function(a) { return !a.categoryId; });
+        else filtered = filtered.filter(function(a) { return a.categoryId === selectedCategoryFilter; });
+      }
+      return filtered;
+    }
+
     function renderActivities() {
       const container = document.getElementById('activityGrid');
       if (!container) return;
@@ -5532,8 +5670,12 @@
         const categoryLabel = category ? (category.emoji + ' ' + category.name) : '미지정';
         const isEditing = (editingActivityId === activity.id);
         
+        const isChecked = selectedActivityIds.has(activity.id);
         const cardStyle = isEditing ? '' : ' style="' + getActivityCardStyle(activity.color) + '"';
         html += '<div class="activity-card' + (isEditing ? ' editing' : ' colored') + '"' + cardStyle + ' onclick="' + (isEditing ? '' : 'editActivity(\'' + activity.id + '\')') + '">';
+        if (!isEditing) {
+          html += '<label class="card-cb" onclick="event.stopPropagation()"><input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onchange="toggleActivitySelect(&apos;' + activity.id + '&apos;,this.checked)"></label>';
+        }
 
         if (isEditing) {
           html += '  <div class="activity-card-emoji">';
@@ -7060,6 +7202,9 @@
     }
 
     var siSelectedActivityId = '';
+    var siNewActivityEmoji = '';
+    var siNewActivityName = '';
+    var siAddingActivity = false;
 
     function renderSiActivityDropdown() {
       var list = document.getElementById('siActivityDropdown');
@@ -7072,8 +7217,76 @@
         html += '</div>';
       });
       if (!html) html = '<div class="custom-select-option" style="color:#aaa;cursor:default;">사용 가능한 일상이 없습니다</div>';
+      html += '<div class="si-add-divider"></div>';
+      if (siAddingActivity) {
+        html += '<div class="si-add-activity-form" onclick="event.stopPropagation()">';
+        html += '<button type="button" class="si-add-emoji-btn" onclick="event.stopPropagation();openSiAddEmojiPicker()">' + renderEmoji(siNewActivityEmoji || getRandomEmoji()) + '</button>';
+        html += '<input id="siAddNameInput" class="si-add-name-input" type="text" placeholder="일상 이름" value="' + escapeHtml(siNewActivityName) + '" oninput="siNewActivityName=this.value" onkeydown="if(event.key===&apos;Enter&apos;){event.preventDefault();saveSiNewActivity();}if(event.key===&apos;Escape&apos;){event.stopPropagation();cancelSiAddActivity();}">';
+        html += '<button type="button" class="si-add-save-btn" onclick="event.stopPropagation();saveSiNewActivity()">추가</button>';
+        html += '<button type="button" class="si-add-cancel-btn" onclick="event.stopPropagation();cancelSiAddActivity()">✕</button>';
+        html += '</div>';
+      } else {
+        html += '<div class="si-add-activity-trigger" onclick="event.stopPropagation();showSiAddActivityForm()">+ 새 일상 추가</div>';
+      }
       list.innerHTML = html;
       updateSiActivityDisplay();
+      if (siAddingActivity) {
+        var inp = list.querySelector('#siAddNameInput');
+        if (inp) inp.focus();
+        if (!siNewActivityEmoji) siNewActivityEmoji = getRandomEmoji();
+        var emojiBtn = list.querySelector('.si-add-emoji-btn');
+        if (emojiBtn) emojiBtn.innerHTML = renderEmoji(siNewActivityEmoji);
+      }
+    }
+
+    function showSiAddActivityForm() {
+      siAddingActivity = true;
+      siNewActivityEmoji = getRandomEmoji();
+      siNewActivityName = '';
+      renderSiActivityDropdown();
+    }
+
+    function cancelSiAddActivity() {
+      siAddingActivity = false;
+      siNewActivityEmoji = '';
+      siNewActivityName = '';
+      renderSiActivityDropdown();
+    }
+
+    function openSiAddEmojiPicker() {
+      openEmojiPicker(siNewActivityEmoji || '', function(emoji) {
+        siNewActivityEmoji = emoji;
+        var btn = document.querySelector('#siActivityDropdown .si-add-emoji-btn');
+        if (btn) btn.innerHTML = renderEmoji(emoji);
+      });
+    }
+
+    function saveSiNewActivity() {
+      var name = (siNewActivityName || '').trim();
+      if (!name) {
+        var inp = document.getElementById('siAddNameInput');
+        if (inp) { inp.focus(); inp.style.borderColor = '#e53e3e'; }
+        return;
+      }
+      var emoji = siNewActivityEmoji || getRandomEmoji();
+      var newActivity = {
+        id: generateId(),
+        categoryId: null,
+        emoji: emoji,
+        name: name,
+        color: '#ffde59',
+        active: true,
+        createdAt: today()
+      };
+      activities.push(newActivity);
+      saveActivities();
+      siAddingActivity = false;
+      siNewActivityEmoji = '';
+      siNewActivityName = '';
+      selectSiActivity(newActivity.id);
+      renderSiActivityDropdown();
+      var wrap = document.getElementById('siActivitySelectWrap');
+      if (wrap) wrap.classList.remove('open');
     }
 
     function updateSiActivityDisplay() {
@@ -7164,6 +7377,9 @@
       if (modal) modal.style.display = 'none';
       editingScheduleItemId = null;
       addItemPrefill = null;
+      siAddingActivity = false;
+      siNewActivityEmoji = '';
+      siNewActivityName = '';
     }
 
     function saveScheduleItem() {
