@@ -1317,7 +1317,7 @@
       border: 2px solid #ff4d6d;
       border-radius: 14px;
       padding: 40px 18px 18px;
-      min-height: 300px;
+      min-height: 540px;
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -1411,17 +1411,14 @@
     }
 
     .hero-thumbnail-frame {
-      border: 2px dashed #d0d0d0;
-      border-radius: 10px;
-      min-height: 100px;
+      flex: 1;
+      min-height: 260px;
       display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-secondary);
-      font-size: 12px;
-      background: rgba(255,255,255,0.5);
-      text-align: center;
-      padding: 8px;
+      flex-direction: column;
+    }
+    .hero-thumbnail-frame > .sched-mini-grid {
+      flex: 1;
+      height: auto;
     }
 
     .hero-tags-row {
@@ -1476,10 +1473,11 @@
     @media (max-width: 767px) {
       .schedule-hero-card {
         padding: 36px 14px 14px;
-        min-height: 260px;
+        min-height: 440px;
       }
       .hero-emoji { font-size: 32px; }
       .hero-title-display { font-size: 18px; }
+      .hero-thumbnail-frame { min-height: 200px; }
     }
 
     .schedule-mini-card {
@@ -1549,6 +1547,58 @@
       gap: 8px;
       flex-wrap: wrap;
       margin-bottom: 14px;
+    }
+
+    /* 태그 필터 바 */
+    .schedule-tag-filter {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--button-radius, 8px);
+      background: var(--bg-card);
+    }
+    .schedule-tag-filter-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 600;
+      margin-right: 4px;
+    }
+    .schedule-tag-filter-chip {
+      padding: 3px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      background: var(--bg-card);
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.15s;
+      font-family: inherit;
+      line-height: 1.4;
+    }
+    .schedule-tag-filter-chip:hover {
+      border-color: var(--primary-yellow);
+    }
+    .schedule-tag-filter-chip.active {
+      background: var(--primary-yellow);
+      border-color: var(--primary-yellow);
+      color: #333;
+      font-weight: 600;
+    }
+    .schedule-tag-filter-clear {
+      background: transparent;
+      border: none;
+      font-size: 12px;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      padding: 3px 6px;
+      font-family: inherit;
+    }
+    .schedule-tag-filter-clear:hover {
+      color: var(--text-primary);
     }
 
     .schedule-filter-group {
@@ -1802,8 +1852,9 @@
     }
     .sched-detail-back {
       background: transparent; border: 1px solid var(--border-color); border-radius: var(--button-radius, 8px);
-      padding: 8px 12px; cursor: pointer; font-size: 14px; color: inherit; font-family: inherit;
-      display: flex; align-items: center; gap: 4px; white-space: nowrap; transition: all 0.2s;
+      padding: 6px 12px; cursor: pointer; font-size: 18px; color: inherit; font-family: inherit;
+      display: flex; align-items: center; justify-content: center;
+      line-height: 1; min-width: 40px; transition: all 0.2s;
     }
     .sched-detail-back:hover { background: var(--bg-hover); }
     .sched-detail-title-wrap { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
@@ -1849,16 +1900,24 @@
       padding: 3px 5px; overflow: hidden; cursor: pointer;
       border-left: 4px solid transparent; box-sizing: border-box;
       transition: filter 0.1s;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; text-align: center;
     }
     .sched-item-block:hover { filter: brightness(0.94); }
-    .sched-item-emoji { font-size: 18px; line-height: 1.1; margin-bottom: 1px; }
+    .sched-item-emoji { font-size: 18px; line-height: 1.1; margin-bottom: 1px; text-align: center; }
     .sched-item-emoji img { width: 18px; height: 18px; vertical-align: middle; border-radius: 2px; }
-    .sched-item-name { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
-    .sched-item-time { font-size: 11px; color: #444; margin-top: 1px; }
+    .sched-item-name { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; text-align: center; max-width: 100%; }
+    .sched-item-time { font-size: 11px; color: #444; margin-top: 1px; text-align: center; }
     .sched-empty-cell { cursor: pointer; }
     .sched-empty-cell:hover { background: rgba(255, 222, 89, 0.12); }
 
     /* 상세/수정 메타 영역 */
+    .sched-detail-meta-plain { margin: 0 0 14px 0; padding: 0; border: none; background: transparent; }
+    .sched-detail-meta-plain .sched-detail-desc-text {
+      font-size: 14px; color: var(--text-secondary); line-height: 1.5;
+      white-space: pre-wrap; word-break: break-word; margin-bottom: 8px;
+    }
+    .sched-detail-meta-plain .sched-detail-tags-row { display: flex; flex-wrap: wrap; gap: 4px; }
     .sched-meta-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--button-radius,8px); padding: 14px; margin-bottom: 14px; }
     .sched-meta-card input, .sched-meta-card textarea {
       width: 100%; border: 1px solid var(--border-color); border-radius: var(--button-radius, 8px);
@@ -2693,6 +2752,9 @@
               </div>
             </div>
 
+            <!-- 태그 필터 -->
+            <div id="scheduleTagFilter" class="schedule-tag-filter" style="display:none;"></div>
+
             <!-- 좋아요된 시간표 Hero 섹션 -->
             <div id="scheduleHeroSection" class="schedule-hero-section" style="display:none;">
               <!-- 동적 생성 -->
@@ -2766,7 +2828,7 @@
       <div id="scheduleDetailView" style="display:none;">
         <!-- 상세 헤더 -->
         <div class="sched-detail-header">
-          <button class="sched-detail-back" onclick="closeScheduleDetail()">← 뒤로</button>
+          <button class="sched-detail-back" onclick="closeScheduleDetail()" aria-label="뒤로">←</button>
           <div class="sched-detail-title-wrap">
             <span class="sched-detail-emoji" id="detailScheduleEmoji"></span>
             <span class="sched-detail-title" id="detailScheduleTitle"></span>
@@ -3985,6 +4047,7 @@
     let scheduleSortKey = 'updatedAt';
     let scheduleSortDir = 'desc';
     let scheduleFilterLiked = 'all';
+    let scheduleFilterTags = []; // 선택된 태그 (AND 조건)
 
     // 모달 콜백
     let confirmModalCallback = null;
@@ -4450,6 +4513,7 @@
       renderCategoryFilter();
       renderActivities();
       renderCategories();
+      renderScheduleTagFilter();
       renderScheduleThumbnails();
       const lastPage = sessionStorage.getItem('lastPage');
       if (lastPage && document.getElementById(lastPage + 'Page')) {
@@ -5509,6 +5573,14 @@
         result = result.filter(function(s) { return !s.isLiked; });
       }
 
+      // 태그 필터 (모든 선택 태그를 포함해야 통과 = AND)
+      if (scheduleFilterTags.length > 0) {
+        result = result.filter(function(s) {
+          var schTags = s.tags || [];
+          return scheduleFilterTags.every(function(t) { return schTags.indexOf(t) >= 0; });
+        });
+      }
+
       // 정렬
       result.sort(function(a, b) {
         var va, vb;
@@ -5537,7 +5609,60 @@
       renderCurrentScheduleView();
     }
 
+    function renderScheduleTagFilter() {
+      var el = document.getElementById('scheduleTagFilter');
+      if (!el) return;
+      var tagSet = {};
+      schedules.forEach(function(s) {
+        (s.tags || []).forEach(function(t) {
+          if (t) tagSet[t] = (tagSet[t] || 0) + 1;
+        });
+      });
+      var allTags = Object.keys(tagSet).sort(function(a, b) { return a.localeCompare(b, 'ko'); });
+      // 선택돼 있지만 존재하지 않는 태그 정리
+      scheduleFilterTags = scheduleFilterTags.filter(function(t) { return allTags.indexOf(t) >= 0; });
+      if (allTags.length === 0) {
+        el.style.display = 'none';
+        el.innerHTML = '';
+        return;
+      }
+      el.style.display = 'flex';
+      var html = '<span class="schedule-tag-filter-label">🏷️ 태그</span>';
+      allTags.forEach(function(t) {
+        var active = scheduleFilterTags.indexOf(t) >= 0;
+        html += '<button class="schedule-tag-filter-chip' + (active ? ' active' : '') + '" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + ' <span style="opacity:0.55;">(' + tagSet[t] + ')</span></button>';
+      });
+      if (scheduleFilterTags.length > 0) {
+        html += '<button class="schedule-tag-filter-clear" onclick="clearScheduleTagFilter()">전체 해제</button>';
+      }
+      el.innerHTML = html;
+      // 클릭 위임
+      el.querySelectorAll('.schedule-tag-filter-chip').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          toggleScheduleTagFilter(btn.getAttribute('data-tag'));
+        });
+      });
+    }
+
+    function toggleScheduleTagFilter(tag) {
+      if (!tag) return;
+      var idx = scheduleFilterTags.indexOf(tag);
+      if (idx >= 0) scheduleFilterTags.splice(idx, 1);
+      else scheduleFilterTags.push(tag);
+      scheduleListPage = 1;
+      scheduleHeroIndex = 0;
+      renderCurrentScheduleView();
+    }
+
+    function clearScheduleTagFilter() {
+      scheduleFilterTags = [];
+      scheduleListPage = 1;
+      scheduleHeroIndex = 0;
+      renderCurrentScheduleView();
+    }
+
     function renderCurrentScheduleView() {
+      renderScheduleTagFilter();
       if (scheduleViewMode === 'list') {
         renderScheduleList();
       } else {
@@ -5814,7 +5939,7 @@
           '<button class="btn-icon btn-danger" onclick="deleteCurrentSchedule()">삭제</button>';
       }
 
-      // 메타 카드 (이름/설명/태그)
+      // 메타 영역 (이름/설명/태그) — 읽기 모드는 박스 없이, 내용 있을 때만 표시
       var metaEl = document.getElementById('detailMetaCard');
       if (isEdit) {
         var tagsStr = (data.tags || []).join(', ');
@@ -5825,22 +5950,22 @@
         mh += '<textarea placeholder="상세 설명 (선택)" oninput="updateDraftDesc(this.value)" style="margin-bottom:10px;">' + (data.description || '') + '</textarea>';
         mh += '<div class="sched-meta-label">태그 (쉼표로 구분)</div>';
         mh += '<input type="text" value="' + tagsStr.replace(/"/g,'&quot;') + '" placeholder="예: 여름학기, 평일용" oninput="updateDraftTags(this.value)">';
+        metaEl.className = 'sched-meta-card';
         metaEl.innerHTML = mh;
+        metaEl.style.display = 'block';
       } else {
         var mh = '';
-        mh += '<div class="sched-meta-label">이름</div>';
-        mh += '<div class="sched-meta-value">' + (data.title || '') + '</div>';
-        mh += '<div class="sched-meta-label">상세 설명</div>';
-        mh += '<div class="sched-meta-value">' + (data.description || '') + '</div>';
-        mh += '<div class="sched-meta-label">태그</div>';
-        mh += '<div>';
-        if (data.tags && data.tags.length) {
-          data.tags.forEach(function(t) { mh += '<span class="sched-tag-chip">' + t + '</span>'; });
-        } else {
-          mh += '<div class="sched-meta-value"></div>';
+        if (data.description) {
+          mh += '<div class="sched-detail-desc-text">' + escapeHtml(data.description) + '</div>';
         }
-        mh += '</div>';
+        if (data.tags && data.tags.length) {
+          mh += '<div class="sched-detail-tags-row">';
+          data.tags.forEach(function(t) { mh += '<span class="sched-tag-chip">' + escapeHtml(t) + '</span>'; });
+          mh += '</div>';
+        }
+        metaEl.className = 'sched-detail-meta-plain';
         metaEl.innerHTML = mh;
+        metaEl.style.display = mh ? 'block' : 'none';
       }
 
       // 탭
@@ -6334,6 +6459,7 @@
         scheduleFilterLiked = 'all';
         if (filterSel) filterSel.value = 'all';
       }
+      renderScheduleTagFilter();
       const heroSection = document.getElementById('scheduleHeroSection');
       const othersSection = document.getElementById('scheduleOthersSection');
       const listView = document.getElementById('scheduleListView');
@@ -6647,7 +6773,6 @@
         html += '  <label class="mini-checkbox-wrap" onclick="event.stopPropagation()"><input type="checkbox" class="schedule-select-checkbox"' + (isSelected ? ' checked' : '') + ' onchange="toggleScheduleSelect(&apos;' + sch.id + '&apos;)"></label>';
         html += '  <button class="heart-btn mini-heart-wrap" onclick="event.stopPropagation(); toggleScheduleLike(&apos;' + sch.id + '&apos;)" title="좋아요">' + HEART_SVG + '</button>';
         html += '  <div class="schedule-mini-emoji">' + renderEmoji(sch.emoji) + '</div>';
-        html += '  <div style="width:100%; margin:4px 0;">' + renderScheduleMiniGrid(sch.id) + '</div>';
         html += '  <div class="schedule-mini-title">' + escapeHtml(sch.title) + '</div>';
         html += '  <div class="schedule-mini-date">' + (sch.updatedAt || sch.createdAt) + '</div>';
         html += '</div>';
