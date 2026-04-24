@@ -1100,7 +1100,7 @@
         if (tabMy) tabMy.classList.add('active');
         renderMyEmojisGrid();
       } else {
-        if (stdSection) stdSection.style.display = 'block';
+        if (stdSection) stdSection.style.display = 'flex';
         if (mySection) mySection.style.display = 'none';
         if (tabStd) tabStd.classList.add('active');
         if (tabMy) tabMy.classList.remove('active');
