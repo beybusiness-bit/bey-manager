@@ -1109,6 +1109,39 @@
     let scheduleFilterLiked = 'all';
     let scheduleFilterTags = []; // 선택된 태그 (AND 조건)
 
+    // 태그 색상 팔레트 (Notion 스타일, 파스텔·저채도 10색)
+    const TAG_PALETTE = [
+      { bg: '#ffe3e3', fg: '#8a3a3a', name: '빨강' },
+      { bg: '#ffe8d1', fg: '#8a5a2a', name: '주황' },
+      { bg: '#fff5c0', fg: '#6e5a1a', name: '노랑' },
+      { bg: '#d8f5c6', fg: '#3a6a24', name: '초록' },
+      { bg: '#c6ecf0', fg: '#1f5a67', name: '민트' },
+      { bg: '#d4e6ff', fg: '#2a4a7a', name: '파랑' },
+      { bg: '#e2dafc', fg: '#4a3a8a', name: '보라' },
+      { bg: '#fbd8ee', fg: '#8a3a70', name: '핑크' },
+      { bg: '#efe4d3', fg: '#6a4a2a', name: '갈색' },
+      { bg: '#e5e5e5', fg: '#4a4a4a', name: '회색' }
+    ];
+    // 텍스트 해시 → 팔레트 인덱스 (동일 텍스트는 항상 동일 색)
+    function hashTagIndex(text) {
+      var h = 0;
+      var s = String(text || '');
+      for (var i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+      return Math.abs(h) % TAG_PALETTE.length;
+    }
+    function getTagPaletteEntry(text) {
+      return TAG_PALETTE[hashTagIndex(text)];
+    }
+    // 태그 칩 공통 렌더러 — 각 태그에 팔레트 색 적용
+    // opts: { cls='sched-tag-chip', extra='', escapeForAttr=false }
+    function renderTagChip(text, opts) {
+      opts = opts || {};
+      var p = getTagPaletteEntry(text);
+      var cls = opts.cls || 'sched-tag-chip';
+      var style = 'background:' + p.bg + ';color:' + p.fg + ';';
+      return '<span class="' + cls + '" style="' + style + '"' + (opts.extra || '') + '>' + escapeHtml(text) + '</span>';
+    }
+
     // 모달 콜백
     let confirmModalCallback = null;
 
@@ -3326,7 +3359,9 @@
       var html = '';
       allTags.forEach(function(t) {
         var active = scheduleFilterTags.indexOf(t) >= 0;
-        html += '<button class="schedule-tag-filter-chip' + (active ? ' active' : '') + '" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + ' <span style="opacity:0.55;">(' + tagSet[t] + ')</span></button>';
+        var p = getTagPaletteEntry(t);
+        var inactiveStyle = 'background:' + p.bg + ';color:' + p.fg + ';';
+        html += '<button class="schedule-tag-filter-chip' + (active ? ' active' : '') + '" data-tag="' + escapeHtml(t) + '" style="' + (active ? '' : inactiveStyle) + '">' + escapeHtml(t) + ' <span style="opacity:0.55;">(' + tagSet[t] + ')</span></button>';
       });
       if (scheduleFilterTags.length > 0) {
         html += '<button class="schedule-tag-filter-clear" onclick="clearScheduleTagFilter()">전체 해제</button>';
@@ -3658,8 +3693,9 @@
       if (!container || !scheduleDraft) return;
       var html = '';
       (scheduleDraft.tags || []).forEach(function(t, i) {
-        html += '<span class="draft-tag-chip">' + escapeHtml(t) +
-          '<button class="draft-tag-chip-remove" onclick="removeDraftTag(' + i + ')" title="삭제">×</button></span>';
+        var p = getTagPaletteEntry(t);
+        html += '<span class="draft-tag-chip" style="background:' + p.bg + ';color:' + p.fg + ';">' + escapeHtml(t) +
+          '<button class="draft-tag-chip-remove" onclick="removeDraftTag(' + i + ')" title="삭제" style="color:' + p.fg + ';">×</button></span>';
       });
       container.innerHTML = html;
     }
@@ -3695,7 +3731,8 @@
       });
       if (filtered.length === 0) { sugg.style.display = 'none'; return; }
       sugg.innerHTML = filtered.map(function(t) {
-        return '<div class="tag-suggestion-item" onclick="addDraftTag(&apos;' + escapeHtml(t) + '&apos;)">' + escapeHtml(t) + '</div>';
+        var p2 = getTagPaletteEntry(t);
+        return '<div class="tag-suggestion-item" onclick="addDraftTag(&apos;' + escapeHtml(t) + '&apos;)"><span class="sched-tag-chip" style="background:' + p2.bg + ';color:' + p2.fg + ';">' + escapeHtml(t) + '</span></div>';
       }).join('');
       sugg.style.display = 'block';
     }
@@ -3776,7 +3813,7 @@
         }
         if (data.tags && data.tags.length) {
           mh += '<div class="sched-detail-tags-row">';
-          data.tags.forEach(function(t) { mh += '<span class="sched-tag-chip">' + escapeHtml(t) + '</span>'; });
+          data.tags.forEach(function(t) { mh += renderTagChip(t); });
           mh += '</div>';
         }
         metaEl.className = 'sched-detail-meta-plain';
@@ -4709,7 +4746,7 @@
       paged.forEach(function(sch) {
         var isSelected = selectedScheduleIds.indexOf(sch.id) >= 0;
         var tags = (sch.tags || []).map(function(t) {
-          return '<span class="schedule-tag">' + escapeHtml(t) + '</span>';
+          return renderTagChip(t, { cls: 'schedule-tag' });
         }).join('');
         var date = (sch.updatedAt || sch.createdAt || '').substring(0, 10);
         var heartCls = sch.isLiked ? 'heart-btn liked' : 'heart-btn';
@@ -4922,7 +4959,7 @@
       liked.forEach(function(sch) {
         const itemCount = scheduleItems.filter(function(i) { return i.scheduleId === sch.id; }).length;
         const isSelected = selectedScheduleIds.indexOf(sch.id) >= 0;
-        const tags = (sch.tags || []).map(function(t) { return '<span class="schedule-tag">' + escapeHtml(t) + '</span>'; }).join('');
+        const tags = (sch.tags || []).map(function(t) { return renderTagChip(t, { cls: 'schedule-tag' }); }).join('');
         const descText = sch.description ? escapeHtml(sch.description) : '세부 설명 없음';
         const descClass = sch.description ? 'hero-description-display' : 'hero-description-display empty';
 
