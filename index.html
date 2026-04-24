@@ -769,40 +769,40 @@
       background: var(--bg-side);
     }
 
+    /* 사이드바 하단 (Sheets + 로그아웃) */
     .sidebar-footer {
-      padding: 16px 20px;
+      padding: 10px 16px 14px;
       border-top: 1px solid var(--border-color);
     }
-
+    .sidebar-footer-row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+    }
     .btn-logout {
-      width: 100%;
-      padding: 10px;
-      background: transparent;
+      flex-shrink: 0;
+      padding: 3px 10px;
+      font-size: 11px;
       border: 1px solid var(--border-color);
-      border-radius: var(--button-radius);
-      font-size: 14px;
+      border-radius: 6px;
+      background: transparent;
       cursor: pointer;
-      transition: all 0.2s;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      transition: color .15s, border-color .15s;
     }
-
-    .btn-logout:hover {
-      background: var(--bg-main);
-      border-color: var(--text-secondary);
-    }
+    .btn-logout:hover { color: #c00; border-color: #c00; }
 
     /* Google Sheets 연동 패널 */
-    .gs-panel { padding: 10px 16px 0; border-top: 1px solid var(--border-color); }
-    .gs-status { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
+    .gs-status { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; }
     .gs-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #ccc; transition: background .3s; }
     .gs-dot.ok { background: #2a7a00; }
     .gs-dot.err { background: #c00; }
     .gs-dot.sync { background: #c8a800; animation: gsPulse .8s infinite; }
     @keyframes gsPulse { 0%,100%{opacity:1} 50%{opacity:.35} }
     .gs-label { flex: 1; color: var(--text-secondary); font-size: 10px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .gs-btn { width: 100%; padding: 5px 0; font-size: 11px; border-radius: 6px; cursor: pointer; border: 1px solid var(--border-color); background: transparent; margin-bottom: 4px; }
+    .gs-btn { width: 100%; padding: 5px 0; font-size: 11px; border-radius: 6px; cursor: pointer; border: 1px solid var(--border-color); background: transparent; }
     .gs-btn.connect { border-color: var(--primary-yellow); background: var(--primary-yellow); font-weight: 600; }
     .gs-btn.connect:hover { opacity: .85; }
-    .gs-btn.disconnect { color: #999; }
+    .gs-btn.disconnect { color: #999; font-size: 10px; }
     .gs-btn.disconnect:hover { color: #c00; border-color: #c00; }
     /* 토스트 알림 */
     #gs-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(8px); background: #333; color: #fff; padding: 8px 18px; border-radius: 8px; font-size: 13px; z-index: 9999; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; white-space: nowrap; max-width: 90vw; text-overflow: ellipsis; overflow: hidden; }
@@ -2790,11 +2790,13 @@
         <!-- 동적으로 생성 -->
       </nav>
 
-      <!-- Google Sheets 연동 패널 -->
-      <div class="gs-panel" id="gs-panel">
-        <div class="gs-status">
-          <div class="gs-dot" id="gs-dot"></div>
-          <div class="gs-label" id="gs-label">Sheets 미연결</div>
+      <div class="sidebar-footer">
+        <div class="sidebar-footer-row">
+          <div class="gs-status">
+            <div class="gs-dot" id="gs-dot"></div>
+            <div class="gs-label" id="gs-label">Sheets 미연결</div>
+          </div>
+          <button class="btn-logout" onclick="handleLogout()">로그아웃</button>
         </div>
         <div id="gs-setup">
           <button class="gs-btn connect" onclick="GS.connect()">☁️ Sheets 연결</button>
@@ -2802,10 +2804,6 @@
         <div id="gs-connected" style="display:none">
           <button class="gs-btn disconnect" onclick="GS.disconnect()">연결 해제</button>
         </div>
-      </div>
-
-      <div class="sidebar-footer">
-        <button class="btn-logout" onclick="handleLogout()">로그아웃</button>
       </div>
     </aside>
 
@@ -5164,7 +5162,7 @@
       if (blockIfInlineEditing()) return;
       const newCategory = {
         id: generateId(),
-        emoji: '',
+        emoji: getRandomEmoji(),
         name: '',
         active: true,
         createdAt: today(),
@@ -5399,7 +5397,7 @@
       const newActivity = {
         id: generateId(),
         categoryId: selectedCategoryFilter === 'unassigned' ? null : (selectedCategoryFilter || null),
-        emoji: '',
+        emoji: getRandomEmoji(),
         name: '',
         color: '#ffde59',
         active: true,
