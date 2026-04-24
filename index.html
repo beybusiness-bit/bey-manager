@@ -5626,6 +5626,7 @@
     // ========================================
     var sheetsToken = null;
     var sheetsEnabled = false;
+    var sheetsTokenClient = null;
     var SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets/' + AUTH.SHEET_ID;
 
     // ① 로그인 후 Sheets API용 access_token 획득 (id_token과 별도)
@@ -5636,7 +5637,7 @@
         return;
       }
       try {
-        var tc = google.accounts.oauth2.initTokenClient({
+        sheetsTokenClient = google.accounts.oauth2.initTokenClient({
           client_id: AUTH.GOOGLE_CLIENT_ID,
           scope: 'https://www.googleapis.com/auth/spreadsheets',
           callback: function(resp) {
@@ -5651,12 +5652,27 @@
             if (callback) callback(true);
           }
         });
-        // prompt:'' = 기존 동의 있으면 팝업 없이 자동 처리
-        tc.requestAccessToken({ prompt: '' });
+        // prompt:'' = 기존 동의 있으면 팝업 없이 자동. 첫 사용 시엔 실패 → 버튼 표시
+        sheetsTokenClient.requestAccessToken({ prompt: '' });
       } catch (e) {
         console.warn('[Sheets] initTokenClient 실패:', e);
         if (callback) callback(false);
       }
+    }
+
+    // 사용자가 직접 클릭 → consent 팝업 허용
+    function connectSheets() {
+      if (!sheetsTokenClient) return;
+      sheetsTokenClient.callback = function(resp) {
+        if (resp.error) { console.warn('[Sheets] 연결 실패:', resp.error); return; }
+        sheetsToken = resp.access_token;
+        sheetsEnabled = true;
+        updateSheetsStatus(true);
+        sheetsLoadAll().then(function(loaded) {
+          if (loaded) renderCurrentScheduleView();
+        });
+      };
+      sheetsTokenClient.requestAccessToken({ prompt: 'consent' });
     }
 
     // ② Sheets API 공통 fetch 헬퍼
@@ -5753,12 +5769,21 @@
       await sheetsReq('PUT', '/values/' + encodeURIComponent('시간표_일정!A1') + '?valueInputOption=RAW', { values: itemRows });
     }
 
-    // ⑥ 상태 표시 (앱 어딘가에 작은 뱃지 — 없으면 조용히 패스)
+    // ⑥ 상태 표시 (사이드바 하단 뱃지)
     function updateSheetsStatus(ok) {
       var el = document.getElementById('sheetsStatusBadge');
       if (!el) return;
-      el.textContent = ok ? '☁️ 연결됨' : '⚠️ 로컬 전용';
-      el.style.color = ok ? '#2a9d2a' : '#c00';
+      if (ok) {
+        el.innerHTML = '☁️ Sheets 연결됨';
+        el.style.color = '#2a9d2a';
+        el.style.cursor = 'default';
+        el.onclick = null;
+      } else {
+        el.innerHTML = '<button onclick="connectSheets()" style="background:none;border:1px solid #c00;border-radius:6px;color:#c00;font-size:11px;padding:2px 8px;cursor:pointer;">☁️ Sheets 연결</button>';
+        el.style.color = '';
+        el.style.cursor = '';
+        el.onclick = null;
+      }
     }
 
     function addSchedule() {
