@@ -2072,18 +2072,18 @@
     .sched-mini-day-lbl { flex: 1; font-size: 7px; text-align: center; line-height: 14px; color: #999; }
     .sched-mini-day-lbl.weekend { color: #e05; }
     .sched-mini-body { flex: 1; position: relative; overflow: hidden; }
-    .sched-mini-block { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; overflow: hidden; font-size: 14px; line-height: 1; }
+    .sched-mini-block { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; overflow: hidden; font-size: 10px; line-height: 1; }
     .mini-emoji-badge { display: inline-flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; }
-    .mini-emoji-badge img { width: 14px; height: 14px; object-fit: cover; }
+    .mini-emoji-badge img { width: 10px; height: 10px; object-fit: cover; }
     .mini-block-name { display: none; font-size: 6px; color: rgba(0,0,0,0.85); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding: 0 1px; font-weight: 600; }
     .sched-hero-card .sched-mini-grid { height: 120px; }
     .sched-hero-card .sched-mini-header { height: 16px; }
     .sched-hero-card .sched-mini-day-lbl { font-size: 9px; line-height: 16px; }
-    .sched-hero-card .mini-emoji-badge { font-size: 20px; }
-    .sched-hero-card .mini-emoji-badge img { width: 20px; height: 20px; }
+    .sched-hero-card .mini-emoji-badge { font-size: 15px; }
+    .sched-hero-card .mini-emoji-badge img { width: 15px; height: 15px; }
     @media (min-width: 769px) {
-      .sched-hero-card .mini-emoji-badge { font-size: 24px; }
-      .sched-hero-card .mini-emoji-badge img { width: 24px; height: 24px; }
+      .sched-hero-card .mini-emoji-badge { font-size: 18px; }
+      .sched-hero-card .mini-emoji-badge img { width: 18px; height: 18px; }
       .sched-hero-card .mini-block-name { display: block; font-size: 8px; }
     }
 

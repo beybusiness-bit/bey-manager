@@ -4096,6 +4096,7 @@
             }
           }
         });
+        scheduleDraft.tags[idx] = newText;
         saveSchedules();
       }
       if (colorIdx >= 0) {
