@@ -55,20 +55,25 @@ const AUTH = {
   - 노션 업무 시간 기록 페이지
   - 노션 레시피 페이지
 
-### 파일 구조
+### 파일 구조 (2026-04-25 R3단계 분할 완료)
 
 ```
 bey-manager/
 ├── CLAUDE.md                    # Claude Code용 프로젝트 지침 (이 파일)
-├── index.html                   # 메인 앱 (단일 파일, 현재 7,116줄) — 과거 bey-manager.html에서 index.html로 리네임됨
+├── index.html                   # HTML 뼈대 (672줄)
+├── styles.css                   # 모든 CSS (2,665줄)
+├── app.js                       # 모든 JavaScript (4,881줄)
+├── .gitignore                   # .secrets/ 제외
+├── .secrets/github_token        # GitHub PAT 저장 (git 제외)
 ├── README.md                    # GitHub 리포 소개 (선택)
 └── docs/
     ├── guide.md                 # 사용 가이드 (Phase 4에서 생성)
     └── screenshots/             # 가이드용 이미지
 ```
 
-**파일 분할은 현재 안 함.** 이유: Google OAuth가 file:// 프로토콜에서 CORS 문제로 실패한 전례 있음. 단일 HTML은 CORS 이슈 자체를 회피함.
-→ **분할 타이밍**: 시간표 기능 다 들어가서 6000줄 이상 되면 재검토. 그때는 로컬 서버(`python3 -m http.server`)를 상시 띄워서 개발하는 것 전제.
+**로컬 개발 필수**: `python3 -m http.server 8000` 로 서버 띄워 `http://localhost:8000`으로 접속. `file://`로 직접 열면 CORS 때문에 CSS/JS 못 읽어서 깨짐.
+**GitHub Pages**: https 환경이라 정상 작동 (CORS 무관).
+**OAuth/Sheets 영향 없음**: 파일 분리와 API 호출은 독립.
 
 ---
 
@@ -424,7 +429,7 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 ### Phase 6: 리팩토링 (후순위)
 - [ ] R1단계: `USER_EMAIL` → `ALLOWED_EMAILS` 배열로 리팩토링 🔲 (15단계 이후)
 - [ ] R2단계: localStorage → Google Sheets 연동 🔲
-- [ ] R3단계: 파일 분할 검토 (6000줄 초과 시) 🔲
+- [x] R3단계: 파일 분할 ✅ (2026-04-25) — index.html(672줄) + styles.css(2,665줄) + app.js(4,881줄)
 
 ---
 
@@ -589,8 +594,8 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 
 ### 🎯 다음 단계 (재정렬된 우선순위)
 
-1. **R3단계: 파일 분할** — index.html → index.html + styles.css + app.js로 분리 (**지금 바로 시작**)
-2. **18단계: 습관 페이지** — 습관 목록 + 오늘 체크 + 달성률 캘린더
+1. ~~R3단계: 파일 분할~~ ✅ **완료** (2026-04-25)
+2. **18단계: 습관 페이지** ← **다음 작업** — 습관 목록 + 오늘 체크 + 달성률 캘린더
 3. **19단계: 할일 페이지** — To-do 리스트 + 완료 체크 + 날짜 필터
 4. **20단계: 아이디어 페이지** — 메모 카드 + 태그 + 검색
 5. **21단계: 레시피 페이지** — 레시피 카드 + 재료/단계
