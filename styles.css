@@ -2334,6 +2334,17 @@
     .bulk-actions { display: flex; gap: 8px; align-items: center; margin-left: 4px; }
     .bulk-actions .bulk-count { font-size: 13px; color: var(--text-secondary); }
 
+    /* 카드 드래그 순서 변경 피드백 */
+    .activity-card[draggable="true"],
+    .category-card[draggable="true"] { cursor: grab; }
+    .activity-card[draggable="true"]:active,
+    .category-card[draggable="true"]:active { cursor: grabbing; }
+    .card-dragging { opacity: 0.4; }
+    .card-drag-over {
+      outline: 2px dashed var(--primary-yellow);
+      outline-offset: 2px;
+    }
+
     /* 카드 체크박스 — 카드 우상단 고정 */
     .card-cb { position: absolute; top: 8px; right: 8px; display: flex; align-items: center; z-index: 2; }
     .card-cb input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary-yellow); cursor: pointer; }

@@ -2373,7 +2373,8 @@
         const isSelected = (selectedCategoryFilter === category.id);
         
         const isCatChecked = selectedCategoryIds.has(category.id);
-        html += '<div class="category-card' + (isEditing ? ' editing' : '') + (isSelected ? ' selected' : '') + '" onclick="' + (isEditing ? '' : 'editCategory(\'' + category.id + '\')') + '">';
+        const catDragAttrs = isEditing ? '' : ' draggable="true" data-drag-id="' + category.id + '"';
+        html += '<div class="category-card' + (isEditing ? ' editing' : '') + (isSelected ? ' selected' : '') + '"' + catDragAttrs + ' onclick="' + (isEditing ? '' : 'editCategory(\'' + category.id + '\')') + '">';
         if (!isEditing) {
           html += '<label class="card-cb" onclick="event.stopPropagation()"><input type="checkbox" ' + (isCatChecked ? 'checked' : '') + ' onchange="toggleCategorySelect(&apos;' + category.id + '&apos;,this.checked)"></label>';
         }
@@ -2417,6 +2418,10 @@
       });
 
       container.innerHTML = html;
+      attachCardDragReorder(container, categories, saveCategories, function() {
+        renderCategoryFilter();
+        renderCategories();
+      });
     }
 
     function renderCategoryFilter() {
@@ -2730,7 +2735,8 @@
         
         const isChecked = selectedActivityIds.has(activity.id);
         const cardStyle = isEditing ? '' : ' style="' + getActivityCardStyle(activity.color) + '"';
-        html += '<div class="activity-card' + (isEditing ? ' editing' : ' colored') + '"' + cardStyle + ' onclick="' + (isEditing ? '' : 'editActivity(\'' + activity.id + '\')') + '">';
+        const dragAttrs = isEditing ? '' : ' draggable="true" data-drag-id="' + activity.id + '"';
+        html += '<div class="activity-card' + (isEditing ? ' editing' : ' colored') + '"' + cardStyle + dragAttrs + ' onclick="' + (isEditing ? '' : 'editActivity(\'' + activity.id + '\')') + '">';
         if (!isEditing) {
           html += '<label class="card-cb" onclick="event.stopPropagation()"><input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onchange="toggleActivitySelect(&apos;' + activity.id + '&apos;,this.checked)"></label>';
         }
@@ -2790,6 +2796,65 @@
       });
 
       container.innerHTML = html;
+      attachCardDragReorder(container, activities, saveActivities, renderActivities);
+    }
+
+    // 드래그 순서 변경 공통 헬퍼 (일상·카테고리 카드)
+    // array: 원본 전체 배열 (순서 바꿀 대상)
+    // saveFn: 저장 콜백 (순서 변경 후 호출)
+    // rerenderFn: 순서 변경 후 다시 렌더
+    function attachCardDragReorder(container, array, saveFn, rerenderFn) {
+      if (!container) return;
+      var dragId = null;
+      var overEl = null;
+      container.querySelectorAll('[data-drag-id]').forEach(function(card) {
+        card.addEventListener('dragstart', function(e) {
+          dragId = card.dataset.dragId;
+          card.classList.add('card-dragging');
+          if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = 'move';
+            try { e.dataTransfer.setData('text/plain', dragId); } catch(err) {}
+          }
+        });
+        card.addEventListener('dragend', function() {
+          card.classList.remove('card-dragging');
+          container.querySelectorAll('.card-drag-over').forEach(function(el) { el.classList.remove('card-drag-over'); });
+          dragId = null; overEl = null;
+        });
+        card.addEventListener('dragover', function(e) {
+          if (!dragId || card.dataset.dragId === dragId) return;
+          e.preventDefault();
+          if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+          if (overEl !== card) {
+            container.querySelectorAll('.card-drag-over').forEach(function(el) { el.classList.remove('card-drag-over'); });
+            card.classList.add('card-drag-over');
+            overEl = card;
+          }
+        });
+        card.addEventListener('dragleave', function() {
+          card.classList.remove('card-drag-over');
+          if (overEl === card) overEl = null;
+        });
+        card.addEventListener('drop', function(e) {
+          e.preventDefault();
+          var targetId = card.dataset.dragId;
+          if (!dragId || targetId === dragId) return;
+          var srcIdx = array.findIndex(function(x) { return x.id === dragId; });
+          var tgtIdx = array.findIndex(function(x) { return x.id === targetId; });
+          if (srcIdx < 0 || tgtIdx < 0) return;
+          var item = array.splice(srcIdx, 1)[0];
+          // splice로 제거 후 tgtIdx 보정: 제거 인덱스가 타겟보다 앞이면 -1
+          var insertAt = srcIdx < tgtIdx ? tgtIdx - 1 : tgtIdx;
+          // 드롭 위치를 카드 좌/우 기준으로 앞/뒤 결정
+          var rect = card.getBoundingClientRect();
+          if (e.clientX > rect.left + rect.width / 2) insertAt += 1;
+          if (insertAt > array.length) insertAt = array.length;
+          if (insertAt < 0) insertAt = 0;
+          array.splice(insertAt, 0, item);
+          saveFn();
+          rerenderFn();
+        });
+      });
     }
 
     // ========================================
