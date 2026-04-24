@@ -2297,32 +2297,32 @@
     }
 
     /* 일괄 선택 액션바 */
-    .bulk-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; min-height: 32px; }
+    .bulk-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; min-height: 36px; }
     .bulk-bar label { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; user-select: none; }
     .bulk-bar label input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--primary-yellow); cursor: pointer; }
-    .bulk-count { font-size: 12px; color: var(--text-secondary); flex: 1; }
-    .btn-bulk-delete { padding: 4px 12px; font-size: 12px; border-radius: 6px; border: 1px solid #e53e3e; background: transparent; color: #e53e3e; cursor: pointer; }
-    .btn-bulk-delete:hover { background: #e53e3e; color: #fff; }
+    .bulk-actions { display: flex; gap: 8px; align-items: center; margin-left: 4px; }
+    .bulk-actions .bulk-count { font-size: 13px; color: var(--text-secondary); }
 
-    /* 카드 체크박스 */
-    .card-cb { position: absolute; top: 8px; left: 8px; z-index: 3; display: flex; align-items: center; }
-    .card-cb input[type="checkbox"] { width: 16px; height: 16px; accent-color: #555; cursor: pointer; }
+    /* 카드 체크박스 — 카드 상단에 별도 행으로 배치 */
+    .card-cb { display: block; margin-bottom: 6px; }
+    .card-cb input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary-yellow); cursor: pointer; }
 
     /* 드롭다운 인라인 일상 추가 */
     .si-add-divider { height: 1px; background: var(--border-color); margin: 2px 0; }
     .si-add-activity-trigger { display: flex; align-items: center; gap: 6px; padding: 9px 12px; font-size: 13px; color: var(--primary-yellow); font-weight: 600; cursor: pointer; }
     .si-add-activity-trigger:hover { background: var(--bg-main); }
-    .si-add-activity-form { padding: 8px 10px; display: flex; align-items: center; gap: 6px; }
-    .si-add-emoji-btn { font-size: 20px; cursor: pointer; border: 1px solid var(--border-color); border-radius: 6px; padding: 2px 5px; background: var(--bg-card); flex-shrink: 0; line-height: 1.2; }
+    .si-add-activity-form { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+    .si-add-row1 { display: flex; align-items: center; gap: 6px; }
+    .si-add-row2 { display: flex; align-items: center; gap: 8px; }
+    .si-add-emoji-btn { font-size: 20px; cursor: pointer; border: 1px solid var(--border-color); border-radius: 6px; padding: 2px 6px; background: var(--bg-card); flex-shrink: 0; line-height: 1.3; }
     .si-add-emoji-btn:hover { background: var(--bg-main); }
     .si-add-name-input { flex: 1; min-width: 0; padding: 5px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; }
     .si-add-save-btn { padding: 5px 10px; font-size: 12px; border-radius: 6px; background: var(--primary-yellow); border: none; cursor: pointer; font-weight: 600; flex-shrink: 0; }
     .si-add-save-btn:hover { opacity: 0.85; }
     .si-add-cancel-btn { padding: 5px 8px; font-size: 13px; border-radius: 6px; border: 1px solid var(--border-color); background: transparent; cursor: pointer; color: #888; flex-shrink: 0; line-height: 1; }
-    .si-add-cat-select { width: 100%; padding: 5px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; }
-    .si-add-actions { display: flex; gap: 6px; }
-    .si-add-actions button { flex: 1; padding: 5px; font-size: 12px; border-radius: 6px; cursor: pointer; border: 1px solid var(--border-color); background: transparent; }
-    .si-add-actions .btn-save { background: var(--primary-yellow); border-color: var(--primary-yellow); font-weight: 600; }
+    .si-add-cat-select { flex: 1; padding: 5px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; min-width: 0; }
+    .si-add-color-label { font-size: 12px; color: var(--text-secondary); white-space: nowrap; flex-shrink: 0; }
+    .si-add-color-input { width: 32px; height: 28px; border: 1px solid var(--border-color); border-radius: 6px; padding: 2px; cursor: pointer; flex-shrink: 0; }
 
     /* 카테고리 카드 레이아웃 */
     .category-grid {
@@ -2952,8 +2952,11 @@
             <div class="bulk-bar">
               <button class="btn-add" onclick="addActivityInline()">+ 일상 추가</button>
               <label><input type="checkbox" id="activitySelectAll" onchange="toggleSelectAllActivities(this.checked)"> 전체 선택</label>
-              <span class="bulk-count" id="activityBulkCount"></span>
-              <button class="btn-bulk-delete" id="activityBulkDelete" style="display:none" onclick="deleteSelectedActivities()">선택 삭제</button>
+              <div class="bulk-actions" id="activityBulkActions" style="display:none">
+                <span class="bulk-count" id="activityBulkCount"></span>
+                <button class="btn-icon btn-danger" onclick="deleteSelectedActivities()">선택 삭제</button>
+                <button class="btn-icon" onclick="clearActivitySelection()">선택 해제</button>
+              </div>
             </div>
 
             <!-- 일상 카드 그리드 -->
@@ -2970,8 +2973,11 @@
             <div class="bulk-bar">
               <button class="btn-add" onclick="addCategoryInline()">+ 카테고리 추가</button>
               <label><input type="checkbox" id="categorySelectAll" onchange="toggleSelectAllCategories(this.checked)"> 전체 선택</label>
-              <span class="bulk-count" id="categoryBulkCount"></span>
-              <button class="btn-bulk-delete" id="categoryBulkDelete" style="display:none" onclick="deleteSelectedCategories()">선택 삭제</button>
+              <div class="bulk-actions" id="categoryBulkActions" style="display:none">
+                <span class="bulk-count" id="categoryBulkCount"></span>
+                <button class="btn-icon btn-danger" onclick="deleteSelectedCategories()">선택 삭제</button>
+                <button class="btn-icon" onclick="clearCategorySelection()">선택 해제</button>
+              </div>
             </div>
 
             <!-- 카테고리 카드 그리드 -->
@@ -5326,15 +5332,21 @@
     function updateCategoryBulkBar() {
       var count = selectedCategoryIds.size;
       var countEl = document.getElementById('categoryBulkCount');
-      var deleteBtn = document.getElementById('categoryBulkDelete');
+      var actions = document.getElementById('categoryBulkActions');
       var selectAll = document.getElementById('categorySelectAll');
-      if (countEl) countEl.textContent = count > 0 ? count + '개 선택됨' : '';
-      if (deleteBtn) deleteBtn.style.display = count > 0 ? '' : 'none';
+      if (countEl) countEl.textContent = count + '개 선택됨';
+      if (actions) actions.style.display = count > 0 ? '' : 'none';
       if (selectAll) {
-        var total = categories.filter(function(c) { return c.active !== false; }).length;
+        var total = categories.length;
         selectAll.checked = count > 0 && count === total;
         selectAll.indeterminate = count > 0 && count < total;
       }
+    }
+
+    function clearCategorySelection() {
+      selectedCategoryIds.clear();
+      updateCategoryBulkBar();
+      renderCategories();
     }
 
     function deleteSelectedCategories() {
@@ -5613,15 +5625,21 @@
     function updateActivityBulkBar() {
       var count = selectedActivityIds.size;
       var countEl = document.getElementById('activityBulkCount');
-      var deleteBtn = document.getElementById('activityBulkDelete');
+      var actions = document.getElementById('activityBulkActions');
       var selectAll = document.getElementById('activitySelectAll');
-      if (countEl) countEl.textContent = count > 0 ? count + '개 선택됨' : '';
-      if (deleteBtn) deleteBtn.style.display = count > 0 ? '' : 'none';
+      if (countEl) countEl.textContent = count + '개 선택됨';
+      if (actions) actions.style.display = count > 0 ? '' : 'none';
       if (selectAll) {
         var total = getFilteredActivities().length;
         selectAll.checked = count > 0 && count === total;
         selectAll.indeterminate = count > 0 && count < total;
       }
+    }
+
+    function clearActivitySelection() {
+      selectedActivityIds.clear();
+      updateActivityBulkBar();
+      renderActivities();
     }
 
     function deleteSelectedActivities() {
@@ -7204,6 +7222,8 @@
     var siSelectedActivityId = '';
     var siNewActivityEmoji = '';
     var siNewActivityName = '';
+    var siNewActivityCategoryId = '';
+    var siNewActivityColor = '#ffde59';
     var siAddingActivity = false;
 
     function renderSiActivityDropdown() {
@@ -7220,10 +7240,25 @@
       html += '<div class="si-add-divider"></div>';
       if (siAddingActivity) {
         html += '<div class="si-add-activity-form" onclick="event.stopPropagation()">';
-        html += '<button type="button" class="si-add-emoji-btn" onclick="event.stopPropagation();openSiAddEmojiPicker()">' + renderEmoji(siNewActivityEmoji || getRandomEmoji()) + '</button>';
+        html += '<div class="si-add-row1">';
+        html += '<button type="button" class="si-add-emoji-btn" id="siAddEmojiBtn" onclick="event.stopPropagation();openSiAddEmojiPicker()">' + renderEmoji(siNewActivityEmoji) + '</button>';
         html += '<input id="siAddNameInput" class="si-add-name-input" type="text" placeholder="일상 이름" value="' + escapeHtml(siNewActivityName) + '" oninput="siNewActivityName=this.value" onkeydown="if(event.key===&apos;Enter&apos;){event.preventDefault();saveSiNewActivity();}if(event.key===&apos;Escape&apos;){event.stopPropagation();cancelSiAddActivity();}">';
-        html += '<button type="button" class="si-add-save-btn" onclick="event.stopPropagation();saveSiNewActivity()">추가</button>';
         html += '<button type="button" class="si-add-cancel-btn" onclick="event.stopPropagation();cancelSiAddActivity()">✕</button>';
+        html += '</div>';
+        html += '<div class="si-add-row2">';
+        html += '<select class="si-add-cat-select" onchange="siNewActivityCategoryId=this.value" onclick="event.stopPropagation()">';
+        html += '<option value="">카테고리 없음</option>';
+        categories.forEach(function(cat) {
+          var sel2 = (cat.id === siNewActivityCategoryId) ? ' selected' : '';
+          html += '<option value="' + cat.id + '"' + sel2 + '>' + cat.emoji + ' ' + cat.name + '</option>';
+        });
+        html += '</select>';
+        html += '<label class="si-add-color-label">색상</label>';
+        html += '<input type="color" class="si-add-color-input" value="' + siNewActivityColor + '" oninput="siNewActivityColor=this.value" onclick="event.stopPropagation()">';
+        html += '</div>';
+        html += '<div class="si-add-row1" style="justify-content:flex-end">';
+        html += '<button type="button" class="si-add-save-btn" onclick="event.stopPropagation();saveSiNewActivity()">일상 추가</button>';
+        html += '</div>';
         html += '</div>';
       } else {
         html += '<div class="si-add-activity-trigger" onclick="event.stopPropagation();showSiAddActivityForm()">+ 새 일상 추가</div>';
@@ -7233,9 +7268,6 @@
       if (siAddingActivity) {
         var inp = list.querySelector('#siAddNameInput');
         if (inp) inp.focus();
-        if (!siNewActivityEmoji) siNewActivityEmoji = getRandomEmoji();
-        var emojiBtn = list.querySelector('.si-add-emoji-btn');
-        if (emojiBtn) emojiBtn.innerHTML = renderEmoji(siNewActivityEmoji);
       }
     }
 
@@ -7243,6 +7275,8 @@
       siAddingActivity = true;
       siNewActivityEmoji = getRandomEmoji();
       siNewActivityName = '';
+      siNewActivityCategoryId = '';
+      siNewActivityColor = '#ffde59';
       renderSiActivityDropdown();
     }
 
@@ -7250,6 +7284,8 @@
       siAddingActivity = false;
       siNewActivityEmoji = '';
       siNewActivityName = '';
+      siNewActivityCategoryId = '';
+      siNewActivityColor = '#ffde59';
       renderSiActivityDropdown();
     }
 
@@ -7268,13 +7304,12 @@
         if (inp) { inp.focus(); inp.style.borderColor = '#e53e3e'; }
         return;
       }
-      var emoji = siNewActivityEmoji || getRandomEmoji();
       var newActivity = {
         id: generateId(),
-        categoryId: null,
-        emoji: emoji,
+        categoryId: siNewActivityCategoryId || null,
+        emoji: siNewActivityEmoji || getRandomEmoji(),
         name: name,
-        color: '#ffde59',
+        color: siNewActivityColor || '#ffde59',
         active: true,
         createdAt: today()
       };
@@ -7283,6 +7318,8 @@
       siAddingActivity = false;
       siNewActivityEmoji = '';
       siNewActivityName = '';
+      siNewActivityCategoryId = '';
+      siNewActivityColor = '#ffde59';
       selectSiActivity(newActivity.id);
       renderSiActivityDropdown();
       var wrap = document.getElementById('siActivitySelectWrap');
@@ -7380,6 +7417,8 @@
       siAddingActivity = false;
       siNewActivityEmoji = '';
       siNewActivityName = '';
+      siNewActivityCategoryId = '';
+      siNewActivityColor = '#ffde59';
     }
 
     function saveScheduleItem() {
