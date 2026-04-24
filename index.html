@@ -1932,7 +1932,7 @@
     /* ====== 시간표 상세 화면 ====== */
     .sched-detail-header {
       display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
-      padding-left: 28px;
+      padding-left: 12px;
     }
     .sidebar.collapsed ~ .main-content .sched-detail-header {
       padding-left: 48px;
@@ -2919,7 +2919,6 @@
       <div id="scheduleDetailPage" class="page">
         <!-- 상세 헤더 -->
         <div class="sched-detail-header">
-          <button class="sched-detail-back" onclick="closeScheduleDetail()" aria-label="목록으로">목록</button>
           <div class="sched-detail-title-wrap">
             <span class="sched-detail-emoji" id="detailScheduleEmoji"></span>
             <span class="sched-detail-title" id="detailScheduleTitle"></span>
@@ -6126,6 +6125,7 @@
           '<button class="btn-confirm" onclick="saveScheduleEdit()">저장</button>';
       } else {
         actionsEl.innerHTML =
+          '<button class="btn-icon" onclick="closeScheduleDetail()">목록</button>' +
           '<button class="btn-icon" onclick="enterScheduleEditMode()">수정</button>' +
           '<button class="btn-icon btn-danger" onclick="deleteCurrentSchedule()">삭제</button>';
       }
