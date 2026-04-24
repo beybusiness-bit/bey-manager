@@ -425,11 +425,22 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 - [x] **(이번 세션)** 시간표 삭제 메시지에서 "포함된 일정도 함께 삭제됩니다" 제거
 - [x] **(이번 세션)** 이모지 피커 z-index 1400으로 상향 (scheduleItemModal 1200 위로)
 - [x] **(이번 세션)** 프로필 사진 Canvas 자동 압축 (최대 200×200px / JPEG / 40,000자 이하, 결과 크기 안내)
+- [x] **(이번 세션 - 피드백 ①)** Notion 스타일 태그 색상 — `TAG_PALETTE` 10색 + `hashTagIndex` 해시 기반 자동 배정 + `tagColorOverrides` 사용자 재정의 → Sheets `사용자설정` 동기화
+- [x] **(이번 세션 - 피드백 ④)** 일상/카테고리 드래그 순서 변경 — HTML5 DnD, box-shadow 삽입선, 카테고리 간 이동, 그룹 순서 변경
+- [x] **(이번 세션 - 피드백 ⑤)** 일상/카테고리 페이저 — 시간표 목록뷰와 동일 규격 (상하단 배치, per-page 드롭다운, `.pg-btn`)
+- [x] **(이번 세션)** 일상 카테고리별 그룹화 보기 (뷰 토글: 기본/카테고리별, 각 그룹 하단 "+ 일상 추가")
+- [x] **(이번 세션)** 시간표 미니 그리드 이모지 + 데스크탑 일상명 표시 (이모지 10/15/18px)
+- [x] **(이번 세션)** 드래그 삽입선 box-shadow 방식으로 교체 (점선 아웃라인 제거)
+- [x] **(이번 세션)** 태그 이름/색상 인라인 편집 패널 (applyTagEdit — 이름 변경 전체 시간표 전파, 색상 팔레트 선택)
+- [x] **(이번 세션)** Others 카드에 태그 칩 표시 (최대 4개 + "+N" 더보기)
+- [x] **(이번 세션)** 작업 완료 토스트 (시간표 추가/수정/삭제, 일상/카테고리 추가/수정/삭제, 일정 추가/삭제)
+- [x] **(이번 세션)** `btn-confirm`/`btn-cancel` 자기완결 스타일 (padding/font-size 내장)
+- [x] **(이번 세션)** 태그 수정 저장 버그 수정 (`applyTagEdit`에서 `scheduleDraft.tags[idx] = newText` 누락 수정)
 
 ### Phase 6: 리팩토링 (후순위)
 - [ ] R1단계: `USER_EMAIL` → `ALLOWED_EMAILS` 배열로 리팩토링 🔲 (15단계 이후)
 - [ ] R2단계: localStorage → Google Sheets 연동 🔲
-- [x] R3단계: 파일 분할 ✅ (2026-04-25) — index.html(672줄) + styles.css(2,665줄) + app.js(4,881줄)
+- [x] R3단계: 파일 분할 ✅ (2026-04-25) — index.html(682줄) + styles.css(2,834줄) + app.js(5,824줄)
 
 ---
 
@@ -460,6 +471,7 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
   - `myEmojis` | JSON 배열 (My Emojis 업로드 목록)
   - `menus` | JSON 배열 (메뉴 구성)
   - `profilePhoto` | base64 JPEG (40,000자 초과 시 생략됨 — Sheets 셀 제한)
+  - `tagColorOverrides` | JSON 객체 `{ "태그명": paletteIdx }` (이모지 피커 팔레트 색상 재정의)
 
 ---
 
@@ -582,46 +594,37 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 
 ## 10. 다음 세션 시작점
 
-> **마지막 세션: 2026-04-25 (태그 Enter 이중 추가 버그 수정 + 단계 재정렬 + 피드백 저장)**
+> **마지막 세션: 2026-04-25 (이번 세션 — 드래그DnD + 그룹화 보기 + 태그 색상·편집 + 버그 수정 다수)**
 
 ### 🔄 현재 진행 상태
 
-- **작업 브랜치**: `claude/review-session-notes-nb8G8` (origin에 아직 미푸시 — 토큰 필요)
-- **마지막 커밋**: `a009e85 fix: 태그 입력 Enter 이중 추가 버그 — keydown→keyup으로 한국어 IME 조합 완료 후 처리`
-- 직전 커밋들: `7a2321e` → `2d515de` → `bfcc423` → `1c4ee60` (지난 세션 시리즈)
-- **배포 상태**: main 브랜치에 이전 작업까지 반영. 이번 세션 커밋은 미푸시.
-- **파일 라인 수**: 8,220줄 (단일 index.html)
+- **작업 브랜치**: `main` (모든 커밋 origin에 푸시 완료)
+- **마지막 커밋**: `03a88b1 fix: 태그 수정 저장 버그(scheduleDraft 미반영) + 썸네일 이모지 크기 축소(10/15/18px)`
+- 직전 커밋들: `a18b2c0` → `8aae305` → `a25d6db` → `ee06098` → `804d4f2` → `0ae675b` → `03afe99`
+- **배포 상태**: main 브랜치 전체 푸시 완료. GitHub Pages 반영됨.
+- **파일 라인 수**: app.js 5,824줄 / styles.css 2,834줄 / index.html 682줄
 
 ### 🎯 다음 단계 (재정렬된 우선순위)
 
-1. ~~R3단계: 파일 분할~~ ✅ **완료** (2026-04-25)
-2. **18단계: 습관 페이지** ← **다음 작업** — 습관 목록 + 오늘 체크 + 달성률 캘린더
-3. **19단계: 할일 페이지** — To-do 리스트 + 완료 체크 + 날짜 필터
-4. **20단계: 아이디어 페이지** — 메모 카드 + 태그 + 검색
-5. **21단계: 레시피 페이지** — 레시피 카드 + 재료/단계
-6. **22단계: 금전 페이지** — 수입/지출 기록 + 월별 집계
-7. **23단계: 업무 페이지** — 업무 시간 기록 + 프로젝트별 집계
-8. **17단계: 홈 대시보드** — 마지막에 (다른 페이지 데이터 쌓인 후 위젯 알참)
-9. **R1단계**: `USER_EMAIL` → `ALLOWED_EMAILS` 배열 리팩토링 (후순위)
+1. **18단계: 습관 페이지** ← **다음 작업** — 습관 목록 + 오늘 체크 + 달성률 캘린더
+2. **19단계: 할일 페이지** — To-do 리스트 + 완료 체크 + 날짜 필터
+3. **20단계: 아이디어 페이지** — 메모 카드 + 태그 + 검색
+4. **21단계: 레시피 페이지** — 레시피 카드 + 재료/단계
+5. **22단계: 금전 페이지** — 수입/지출 기록 + 월별 집계
+6. **23단계: 업무 페이지** — 업무 시간 기록 + 프로젝트별 집계
+7. **17단계: 홈 대시보드** — 마지막에 (다른 페이지 데이터 쌓인 후 위젯 알참)
+8. **R1단계**: `USER_EMAIL` → `ALLOWED_EMAILS` 배열 리팩토링 (후순위)
 
 ### 🚨 push 방법
 
 ```bash
-sh /home/user/bey-manager/.git/push.sh origin claude/review-session-notes-nb8G8
+sh /home/user/bey-manager/.git/push.sh origin main
 ```
-- `push.sh`는 `.git/push.sh`에 존재 (이번 세션에서 재생성됨)
+- `push.sh`는 `.git/push.sh`에 존재
 - 토큰 파일이 없으면: `echo "ghp_..." > /home/user/bey-manager/.git/GITHUB_TOKEN`
 - **주의**: `.git/GITHUB_TOKEN`은 세션 컨테이너 리셋 시 사라질 수 있음 → 리셋 후 재발급 필요
 
-### 🔖 적용 대기 중인 피드백 (파일 분할 이후 구현 예정)
-
-#### ① 시간표 태그 색상 시스템 (Notion 스타일)
-- **현재**: 모든 태그가 노란색(`--primary-yellow`) 단색
-- **목표**: 태그 생성 시 랜덤 색상 자동 부여 (노션의 "선택 항목 속성"처럼)
-- **색상 후보 팔레트**: 노션과 유사하게 파스텔/채도 낮은 색상 10개 내외 (노란/핑크/초록/파랑/보라/주황/빨강/민트/회색 계열)
-- **태그 클릭 시 편집 UI**: 현재 텍스트·색상을 보여주는 팝업/드롭다운 → 텍스트 수정 + 색상 변경 가능
-- **저장 구조**: 태그는 현재 `schedule.tags: string[]`인데, `schedule.tags: {text: string, color: string}[]`로 변경 필요. Sheets 저장 시 `"회복:pink,복지:blue"` 같은 직렬화 방식으로 호환성 유지.
-- **태그 필터 바도 같이 색상 반영**: 기존 태그칩과 필터 바 칩 모두 동일 색상으로 표시
+### 🔖 적용 대기 중인 피드백 (미구현 — 다음 세션 이후)
 
 #### ② 시간표 인라인 일상 추가 폼 UI 개선
 - **문제**: 이모지 피커 버튼, 일상 이름 입력칸, 끄기(×) 버튼, 카테고리 셀렉트, 색상 입력, 일상 추가 버튼의 스타일이 제각각이어서 정리되지 않은 모달처럼 보임
@@ -637,35 +640,6 @@ sh /home/user/bey-manager/.git/push.sh origin claude/review-session-notes-nb8G8
   3. `saveSchedule()` vs `syncSheets()` 의 호출 경로가 달라서 한쪽만 연결 체크를 잘못할 가능성
 - **디버깅 포인트**: 저장 버튼 누를 때 콘솔에서 `GS.isConnected()` 반환값과 `gsAccessToken` 변수 확인 후 실제 API 호출 에러 메시지 확인
 - **해결 방향**: 연결 상태 체크를 단일 변수 기준으로 통일하고, 실패 시 에러 메시지를 구체적으로 분기(미연결 vs API 오류)
-
-#### ④ 일상/카테고리 드래그 순서 변경 (Drag-and-Drop 정렬)
-- **현재**: 일상 종류, 카테고리 모두 카드 추가 순서대로 고정 표시. 순서 변경 UI 없음.
-- **목표**: 일상 카드끼리, 카테고리 카드끼리 **드래그로 위치 교환** 가능
-- **구현 방향**:
-  - HTML5 `draggable="true"` + `dragstart`/`dragover`/`drop` 이벤트 사용 (모바일은 touch polyfill 필요할 수도)
-  - 드래그 중 시각 피드백: 반투명 + 삽입 위치에 하이라이트 라인
-  - 순서가 바뀌면 배열(activities/categories)의 순서 재배치 → localStorage + Sheets 동기화
-  - **Sheets 저장 시**: 현재 `categories`/`activities` 배열에는 `order` 필드가 없음. 배열 순서 자체를 저장 순서로 삼거나, `order: number` 필드를 추가해서 명시적으로 저장
-  - 편집 모드일 때만 드래그 활성화 할지, 항상 활성화할지는 UX 판단 (항상 활성화 쪽이 자연스러워 보임)
-- **엣지 케이스**: 필터링(미지정/특정 카테고리) 상태에서 드래그 시 어떻게 동작? → 필터 적용 중에는 드래그 비활성화 또는 필터 결과 내에서만 순서 변경 (원본 전체 배열에서는 필터 결과 위치만 바뀜)
-- **모바일**: 긴 프레스 + 드래그 패턴. 스크롤과 충돌 주의.
-
-#### ⑤ 일상/카테고리 페이저 추가 (시간표 목록뷰와 동일 규격)
-- **현재**: 일상 종류, 카테고리 모두 페이저 없이 전체 목록 표시. 수가 많아지면 스크롤 길어짐.
-- **목표**: 시간표 목록뷰(`scheduleListPage`, `scheduleListPerPage`)와 **완전히 동일한 규격·디자인·작동방식** 페이저 적용
-- **시간표 목록뷰 페이저 참조**:
-  - 상하단 둘 다 배치 (`.pagination` 위아래)
-  - per-page 선택 드롭다운 (10/20/50/100)
-  - 페이지 번호 버튼 `.pg-btn` (mono 폰트, flex + gap:6px)
-  - 이전/다음/처음/마지막 버튼
-  - 현재 페이지 강조, 호버 효과
-- **구현 포인트**:
-  - 일상 상태: `activityListPage`, `activityListPerPage` 전역 변수 추가
-  - 카테고리 상태: `categoryListPage`, `categoryListPerPage` 전역 변수 추가
-  - 필터(카테고리별/미지정/전체), 검색 후 결과에 대해 페이징 적용
-  - 드래그 순서 변경(피드백 ④)과 함께 작동해야 함 → 페이지 내에서 드래그는 전체 배열 인덱스로 변환 필요
-  - 각 탭 전환 시(`#dailyPage .tab-btn`) 페이지 상태 초기화 여부는 판단 필요 (기본은 유지)
-- **모바일 최적화**: 시간표 목록뷰와 마찬가지로 모바일에서 페이저가 잘 보이고 눌리기 쉬운 크기
 
 #### ⑥ 모달 위의 모달 z-index 자동 관리 (스마트 스태킹)
 - **증상**: 이모지 피커 모달 → My Emojies 탭 → 업로드 이미지 삭제 버튼을 누르면, 확인 모달(`confirmModal`)이 이모지 피커 **뒤에** 뜸. 그래서 확인/취소 버튼을 누를 수 없음.
@@ -696,55 +670,35 @@ sh /home/user/bey-manager/.git/push.sh origin claude/review-session-notes-nb8G8
   - 기존 수동 추가분은 **우선순위**로 유지 (검색 시 베이님 커스텀이 상단, CLDR이 하단)
   - 로드 타이밍: 최초 이모지 피커 open 시 lazy load (앱 시작 시점엔 로드하지 않음)
 
+#### ⑦ 이모지 종류 대폭 확장 (사람·과일·채소·취미)
+- **즉시 조치 (수동 확장)**: 사람/직업 이모지, 과일 전체, 채소, 취미 이모지 + 한글·영어 키워드 3~5개씩
+- **장기 조치 (R5단계)**: `unicode-emoji-json` CDN lazy load → 약 4,000개 이모지 + 한국어 키워드 자동 확보
+
 #### ⑧ 이모지 피커 카테고리 내 스크롤 불가 버그
-- **증상**: 이모지 분류군(카테고리)을 클릭해서 해당 이모지 목록이 뜨면, 위쪽 몇 줄만 보이고 **아래쪽 이모지는 스크롤로도 볼 수 없고 선택도 불가**
-- **원인 추정**:
-  1. 이모지 리스트 컨테이너에 `overflow-y: auto` 또는 `overflow-y: scroll`이 안 걸려 있거나
-  2. 컨테이너의 `max-height`가 없어서 자식 요소들이 viewport 바깥으로 나가고 모달 자체가 확장 안 됨
-  3. 모달 전체엔 scroll이 있지만 카테고리 리스트는 flexbox 자식이라 flex shrink로 잘림
-- **해결 방향**:
-  - 이모지 그리드 컨테이너에 `max-height: 60vh` + `overflow-y: auto`
-  - 또는 모달 body 전체에 `overflow-y: auto`를 걸고, 고정 영역(탭, 검색바, 저장 버튼)과 분리
-  - 모바일에서 viewport 작을 때도 잘 작동하는지 확인
-- **회귀 체크**: 이모지 피커의 다른 탭(전체·My Emojies·검색결과)에서도 스크롤 되는지 확인
-- **현재**: 일상 종류, 카테고리 모두 페이저 없이 전체 목록 표시. 수가 많아지면 스크롤 길어짐.
-- **목표**: 시간표 목록뷰(`scheduleListPage`, `scheduleListPerPage`)와 **완전히 동일한 규격·디자인·작동방식** 페이저 적용
-- **시간표 목록뷰 페이저 참조**:
-  - 상하단 둘 다 배치 (`.pagination` 위아래)
-  - per-page 선택 드롭다운 (10/20/50/100)
-  - 페이지 번호 버튼 `.pg-btn` (mono 폰트, flex + gap:6px)
-  - 이전/다음/처음/마지막 버튼
-  - 현재 페이지 강조, 호버 효과
-- **구현 포인트**:
-  - 일상 상태: `activityListPage`, `activityListPerPage` 전역 변수 추가
-  - 카테고리 상태: `categoryListPage`, `categoryListPerPage` 전역 변수 추가
-  - 필터(카테고리별/미지정/전체), 검색 후 결과에 대해 페이징 적용
-  - 드래그 순서 변경(피드백 ④)과 함께 작동해야 함 → 페이지 내에서 드래그는 전체 배열 인덱스로 변환 필요
-  - 각 탭 전환 시(`#dailyPage .tab-btn`) 페이지 상태 초기화 여부는 판단 필요 (기본은 유지)
-- **모바일 최적화**: 시간표 목록뷰와 마찬가지로 모바일에서 페이저가 잘 보이고 눌리기 쉬운 크기
+- **증상**: 이모지 분류군 클릭 시 아래쪽 이모지 스크롤 불가
+- **해결 방향**: 이모지 그리드 컨테이너에 `max-height: 60vh` + `overflow-y: auto`
 
-### 📌 설계 결정 (이번 세션)
+### 📌 설계 결정 누적
 
-- **태그 Enter 이중 추가 버그**: `onkeydown` → `onkeyup`으로 변경. 한국어 IME에서 `keydown`은 조합 완료 전에 발화(isComposing=true)될 수 있어 이중 추가 발생. `keyup` 시점엔 IME 조합 완료 후라 단 한 번만 처리됨.
-- **파일 분할 방향 확정**: `index.html` + `styles.css` + `app.js` 3파일 분리. 로컬 개발은 `python3 -m http.server 8000` 필수. `file://` 직접 열기는 CORS로 불가.
-- **단계 순서 변경**: 홈 대시보드(17단계)를 맨 뒤로 이동. R3 파일 분할 → 18~23단계 순서로 진행.
-
-### 📌 설계 결정 (이전 세션 누적)
-
-- **시간표**: Hero 카드 680px(모바일 560px), 드래그 스크롤, 도트 인디케이터. Others 160px 카드. `attachDragScroll(el)` 헬퍼.
+- **태그 색상**: `TAG_PALETTE` 10색 상수. `hashTagIndex(text)` — 텍스트 char 합산 % 10. `tagColorOverrides: {tagText: idx}` 전역 → `사용자설정` 시트에 `tagColorOverrides` 키로 저장.
+- **태그 편집**: `openTagEdit(idx)` → `editingTagIdx` 상태 설정 → `renderDraftTagChips()` 재렌더 → 인라인 패널 표시. `applyTagEdit(idx)` — 이름 변경 시 모든 `schedules` 배열 전파 + `scheduleDraft.tags[idx] = newText`. `saveTagColorOverrides()` 별도.
+- **일상 뷰 모드**: `activityViewMode: 'default' | 'grouped'` 전역. `setActivityViewMode(mode)` 호출 → 뷰 버튼 active 갱신 + `renderActivities()`.
+- **드래그 공유 상태**: `var __drag = { type: null, id: null, srcCatId: null }` 모듈 레벨. `__clearDragCss()` 헬퍼. `attachCardDragReorder`(기본 뷰, clientX 기반 좌우 삽입), `attachCardDragReorderGrouped`(그룹 뷰, clientY 기반 상하 삽입, 카테고리 간 이동), `attachGroupDragReorder`(그룹 헤더 DnD).
+- **pointer-events:none + HTML5 DnD**: `.card-dragging`에 `pointer-events:none` 넣으면 네이티브 DnD 깨짐 (Chrome 이슈). 반드시 제거.
+- **그룹 dragover에서 e.preventDefault() 필수**: 소스 그룹 위 hover 때도 항상 호출해야 "드롭 허용" 커서 유지됨.
+- **태그 저장 버그 패턴**: `applyTagEdit`에서 전체 schedules 배열을 업데이트했어도 `scheduleDraft.tags[idx] = newText` 빠지면 현재 편집 중인 draft에 반영 안 됨 → 저장 시 구 이름으로 덮어써짐.
+- **시간표**: Hero 카드 680px(모바일 560px). Others 160px 카드. `attachDragScroll(el)` 헬퍼.
 - **일상 color 필드**: 기본 `#ffde59`. `getActivityCardStyle(color)` — 40% 알파 배경 + WCAG 휘도 자동 텍스트색.
-- **Sheets 연동**: 저장=localStorage+Sheets 동시, 로드=Sheets 우선→localStorage 폴백. `사용자설정` 시트에 profileQuote/designSettings/myEmojis/menus/profilePhoto 저장.
-- **디자인 CSS 변수**: `--primary-btn-bg/color`, `--mobile-topbar-bg/border/text` 추가됨.
+- **Sheets 연동**: 저장=localStorage+Sheets 동시, 로드=Sheets 우선→localStorage 폴백. `사용자설정` 시트에 profileQuote/designSettings/myEmojis/menus/profilePhoto/tagColorOverrides 저장.
 - **탭 UI 전역 통일**: `.tab-nav` + `.tab-btn` + `.tab-content`. 페이지별 스코프 필수(`#dailyPage .tab-btn` 등).
-- **사이드바 푸터 3행**: 상태dot+라벨 / 이메일 / 연결·해제·로그아웃 버튼
-- **인라인 일상 추가 폼**: `.si-add-activity-form` 2행 구조. `siNewActivityEmoji/Name/CategoryId/Color` 전역 상태.
 - **삭제 확인 모달**: `showConfirm(title, msg, cb, detailHtml)` 4번째 인자로 의존성 목록 표시.
+- **인라인 일상 추가 폼**: `.si-add-activity-form` 2행 구조. `siNewActivityEmoji/Name/CategoryId/Color` 전역 상태.
 
 ### ⚠️ 다음 세션 유의사항
 
-1. 세션 시작 시 `git log -5 --oneline` + `wc -l index.html` + CLAUDE.md §10 정독
+1. 세션 시작 시 `git log -5 --oneline` + `wc -l app.js styles.css index.html` + CLAUDE.md §10 정독
 2. `.git/GITHUB_TOKEN` 존재 여부 확인 → 없으면 토큰 요청 (세션 컨테이너 리셋 시 사라짐)
-3. 파일 분할 후 로컬 테스트는 반드시 `python3 -m http.server 8000` 사용
+3. 로컬 테스트는 반드시 `python3 -m http.server 8000` 사용 (file:// CORS 불가)
 4. 세션 컨텍스트 길어지면 스트림 타임아웃 → CLAUDE.md 편집은 짧은 Edit 여러 번으로 분할
 ---
 
@@ -892,5 +846,20 @@ sh /home/user/bey-manager/.git/push.sh origin claude/review-session-notes-nb8G8
 - `.git/` 디렉토리는 `/home/user/bey-manager/` 안에 있어 세션 간 유지됨
 - `post-checkout` 훅도 설치됨: 브랜치 전환 시 URL 자동 복구
 - SSH 명령어 없음(`ssh: command not found`), MCP write 권한 없음(OAuth만) — `push.sh`가 유일한 방법
+
+### HTML5 DnD: pointer-events:none + draggable 충돌 (이번 세션 교훈)
+- `.card-dragging { pointer-events: none }` 을 넣으면 Chrome에서 네이티브 DnD 이벤트(`dragover`, `drop`)가 아예 발화 안 됨 → 드래그 자체가 불가해짐
+- **해결**: `pointer-events: none` 제거. opacity 토글만으로 "잡힌 느낌" 충분.
+- 교훈: HTML5 `draggable` 요소에는 `pointer-events:none` 절대 금지. CSS hover 억제가 필요하면 자식 요소에만 걸 것.
+
+### HTML5 DnD dragover에서 e.preventDefault() 필수 (이번 세션 교훈)
+- `dragover` 이벤트 기본 동작 = "드롭 불허". `e.preventDefault()`를 호출해야만 "드롭 가능" 커서로 바뀌고 `drop` 이벤트가 발화됨.
+- **버그 패턴**: 소스 요소가 자기 자신 위로 드래그될 때 시각 표시를 건너뛰면서 `e.preventDefault()`도 같이 빠트리면 드롭이 완전히 막힘.
+- **해결**: `e.preventDefault()`는 조건과 무관하게 항상 먼저 호출, 시각 피드백만 조건부 처리.
+
+### applyTagEdit 패턴 — 편집 중인 draft 업데이트 필수 (이번 세션 교훈)
+- 태그 이름 변경 시 모든 `schedules` 배열을 순회해 업데이트했더라도, 현재 편집 중인 `scheduleDraft.tags[idx]`도 따로 갱신해야 함.
+- `scheduleDraft`는 실제 저장된 객체와 다른 shallow copy일 수 있어서, 배열 전파로는 반영이 안 되는 경우가 있음.
+- **패턴**: 이름 변경 블록 안에 `scheduleDraft.tags[idx] = newText;` 한 줄 추가. 항상 draft와 글로벌 배열을 동시에 업데이트.
 
 **마지막 업데이트**: 2026-04-24 세션 3 · main 배포 완료(`ac4cd63`) · push.sh 영구 설정 완료 · 파일 7,478줄
