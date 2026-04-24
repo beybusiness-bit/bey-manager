@@ -2702,7 +2702,6 @@
     function renderActivitiesGrouped(container) {
       if (!container) return;
       var html = '';
-      // Build groups: each active category + "미지정" for activities with no category
       var groupList = categories.slice();
       var hasUnassigned = activities.some(function(a) { return !a.categoryId; });
       if (hasUnassigned) groupList = groupList.concat([{ id: null, emoji: '📂', name: '미지정' }]);
@@ -2713,18 +2712,24 @@
       }
 
       groupList.forEach(function(cat) {
+        var catIdStr = cat.id || '';
         var groupActivities = activities.filter(function(a) {
           return cat.id === null ? !a.categoryId : a.categoryId === cat.id;
         });
-        if (cat.id !== null && groupActivities.length === 0) return; // 일상 없는 카테고리 건너뜀
+        if (cat.id !== null && groupActivities.length === 0 && editingActivityId === null) {
+          // 빈 카테고리도 표시 (드롭 대상이 되어야 함)
+        }
 
-        html += '<div class="activity-group">';
-        html += '<div class="activity-group-header">' + cat.emoji + ' ' + cat.name + ' <span class="activity-group-count">' + groupActivities.length + '</span></div>';
+        var isDraggableGroup = cat.id !== null; // 미지정 그룹은 순서 고정
+        html += '<div class="activity-group" data-drag-cat-id="' + catIdStr + '">';
+        html += '<div class="activity-group-header"' + (isDraggableGroup ? ' draggable="true" data-drag-cat-id="' + catIdStr + '"' : '') + '>';
+        html += (isDraggableGroup ? '<span style="font-size:11px;opacity:0.4;margin-right:4px;">⠿</span>' : '') + cat.emoji + ' ' + cat.name;
+        html += ' <span class="activity-group-count">' + groupActivities.length + '</span></div>';
         html += '<div class="activity-group-cards">';
         groupActivities.forEach(function(activity) {
           var isEditing = (editingActivityId === activity.id);
           var cardStyle = isEditing ? '' : ' style="' + getActivityCardStyle(activity.color) + '"';
-          var dragAttrs = isEditing ? '' : ' draggable="true" data-drag-id="' + activity.id + '"';
+          var dragAttrs = isEditing ? '' : ' draggable="true" data-drag-id="' + activity.id + '" data-drag-cat-id="' + catIdStr + '"';
           html += '<div class="activity-card' + (isEditing ? ' editing' : ' colored') + '"' + cardStyle + dragAttrs + ' onclick="' + (isEditing ? '' : 'editActivity(\'' + activity.id + '\')') + '">';
           if (!isEditing) {
             html += '<label class="card-cb" onclick="event.stopPropagation()"><input type="checkbox" ' + (selectedActivityIds.has(activity.id) ? 'checked' : '') + ' onchange="toggleActivitySelect(&apos;' + activity.id + '&apos;,this.checked)"></label>';
@@ -2735,9 +2740,7 @@
           } else {
             html += '  <div class="activity-card-main">';
             html += '    <div class="activity-card-emoji">' + renderEmoji(activity.emoji) + '</div>';
-            html += '    <div class="activity-card-text">';
-            html += '      <div class="activity-card-name">' + activity.name + '</div>';
-            html += '    </div>';
+            html += '    <div class="activity-card-text"><div class="activity-card-name">' + activity.name + '</div></div>';
             html += '  </div>';
           }
           if (isEditing) {
@@ -2763,15 +2766,14 @@
           html += '  </div>';
           html += '</div>';
         });
-        // "+ 추가" button for this category
-        var catId = cat.id || '';
-        html += '<button class="activity-group-add-btn btn-add" onclick="addActivityInlineToCategory(\'' + catId + '\')">+ 일상 추가</button>';
+        html += '<button class="activity-group-add-btn btn-add" onclick="addActivityInlineToCategory(\'' + catIdStr + '\')">+ 일상 추가</button>';
         html += '</div>'; // .activity-group-cards
         html += '</div>'; // .activity-group
       });
 
       container.innerHTML = html;
-      attachCardDragReorder(container, activities, saveActivities, renderActivities);
+      attachCardDragReorderGrouped(container, renderActivities);
+      attachGroupDragReorder(container, renderActivities);
     }
 
     function addActivityInlineToCategory(categoryId) {
@@ -2920,59 +2922,176 @@
       attachCardDragReorder(container, activities, saveActivities, renderActivities);
     }
 
-    // 드래그 순서 변경 공통 헬퍼 (일상·카테고리 카드)
-    // array: 원본 전체 배열 (순서 바꿀 대상)
-    // saveFn: 저장 콜백 (순서 변경 후 호출)
-    // rerenderFn: 순서 변경 후 다시 렌더
+    // ===== 공통 드래그 상태 (한 번에 하나만 드래그 가능) =====
+    var __drag = { type: null, id: null, srcCatId: null };
+    function __clearDragCss() {
+      document.querySelectorAll('.card-insert-before,.card-insert-after,.group-insert-before,.group-insert-after,.group-drag-over').forEach(function(el) {
+        el.classList.remove('card-insert-before','card-insert-after','group-insert-before','group-insert-after','group-drag-over');
+      });
+    }
+
+    // 드래그 순서 변경 — 기본 뷰 (삽입선 방식, array는 원본 배열 참조)
     function attachCardDragReorder(container, array, saveFn, rerenderFn) {
       if (!container) return;
-      var dragId = null;
-      var overEl = null;
       container.querySelectorAll('[data-drag-id]').forEach(function(card) {
         card.addEventListener('dragstart', function(e) {
-          dragId = card.dataset.dragId;
+          __drag.type = 'card'; __drag.id = card.dataset.dragId; __drag.srcCatId = card.dataset.dragCatId || '';
           card.classList.add('card-dragging');
-          if (e.dataTransfer) {
-            e.dataTransfer.effectAllowed = 'move';
-            try { e.dataTransfer.setData('text/plain', dragId); } catch(err) {}
-          }
+          if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', __drag.id); } catch(err) {} }
         });
         card.addEventListener('dragend', function() {
           card.classList.remove('card-dragging');
-          container.querySelectorAll('.card-drag-over').forEach(function(el) { el.classList.remove('card-drag-over'); });
-          dragId = null; overEl = null;
+          __clearDragCss();
+          __drag.type = null; __drag.id = null; __drag.srcCatId = null;
         });
         card.addEventListener('dragover', function(e) {
-          if (!dragId || card.dataset.dragId === dragId) return;
+          if (__drag.type !== 'card' || !__drag.id || card.dataset.dragId === __drag.id) return;
           e.preventDefault();
-          if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
-          if (overEl !== card) {
-            container.querySelectorAll('.card-drag-over').forEach(function(el) { el.classList.remove('card-drag-over'); });
-            card.classList.add('card-drag-over');
-            overEl = card;
-          }
+          var rect = card.getBoundingClientRect();
+          var side = e.clientX < rect.left + rect.width / 2 ? 'before' : 'after';
+          __clearDragCss();
+          card.classList.add('card-insert-' + side);
         });
-        card.addEventListener('dragleave', function() {
-          card.classList.remove('card-drag-over');
-          if (overEl === card) overEl = null;
+        card.addEventListener('dragleave', function(e) {
+          if (!card.contains(e.relatedTarget)) card.classList.remove('card-insert-before', 'card-insert-after');
         });
         card.addEventListener('drop', function(e) {
           e.preventDefault();
           var targetId = card.dataset.dragId;
-          if (!dragId || targetId === dragId) return;
-          var srcIdx = array.findIndex(function(x) { return x.id === dragId; });
-          var tgtIdx = array.findIndex(function(x) { return x.id === targetId; });
-          if (srcIdx < 0 || tgtIdx < 0) return;
-          var item = array.splice(srcIdx, 1)[0];
-          // splice로 제거 후 tgtIdx 보정: 제거 인덱스가 타겟보다 앞이면 -1
-          var insertAt = srcIdx < tgtIdx ? tgtIdx - 1 : tgtIdx;
-          // 드롭 위치를 카드 좌/우 기준으로 앞/뒤 결정
+          if (__drag.type !== 'card' || !__drag.id || targetId === __drag.id) return;
           var rect = card.getBoundingClientRect();
-          if (e.clientX > rect.left + rect.width / 2) insertAt += 1;
+          var after = e.clientX > rect.left + rect.width / 2;
+          var srcIdx = array.findIndex(function(x) { return x.id === __drag.id; });
+          if (srcIdx < 0) return;
+          var item = array.splice(srcIdx, 1)[0];
+          var newTgtIdx = array.findIndex(function(x) { return x.id === targetId; });
+          if (newTgtIdx < 0) { array.splice(srcIdx, 0, item); return; }
+          var insertAt = after ? newTgtIdx + 1 : newTgtIdx;
           if (insertAt > array.length) insertAt = array.length;
-          if (insertAt < 0) insertAt = 0;
           array.splice(insertAt, 0, item);
           saveFn();
+          rerenderFn();
+        });
+      });
+    }
+
+    // 드래그 순서 변경 — 카테고리별 보기 (삽입선 + 카테고리간 이동)
+    function attachCardDragReorderGrouped(container, rerenderFn) {
+      if (!container) return;
+      container.querySelectorAll('[data-drag-id]').forEach(function(card) {
+        card.addEventListener('dragstart', function(e) {
+          __drag.type = 'card'; __drag.id = card.dataset.dragId; __drag.srcCatId = card.dataset.dragCatId || '';
+          card.classList.add('card-dragging');
+          if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', __drag.id); } catch(err) {} }
+        });
+        card.addEventListener('dragend', function() {
+          card.classList.remove('card-dragging');
+          __clearDragCss();
+          __drag.type = null; __drag.id = null; __drag.srcCatId = null;
+        });
+        card.addEventListener('dragover', function(e) {
+          if (__drag.type !== 'card' || !__drag.id || card.dataset.dragId === __drag.id) return;
+          e.preventDefault(); e.stopPropagation();
+          var rect = card.getBoundingClientRect();
+          var side = e.clientX < rect.left + rect.width / 2 ? 'before' : 'after';
+          __clearDragCss();
+          card.classList.add('card-insert-' + side);
+        });
+        card.addEventListener('dragleave', function(e) {
+          if (!card.contains(e.relatedTarget)) card.classList.remove('card-insert-before', 'card-insert-after');
+        });
+        card.addEventListener('drop', function(e) {
+          e.preventDefault(); e.stopPropagation();
+          var targetId = card.dataset.dragId;
+          var tgtCatId = card.dataset.dragCatId || '';
+          if (__drag.type !== 'card' || !__drag.id || targetId === __drag.id) return;
+          var rect = card.getBoundingClientRect();
+          var after = e.clientX > rect.left + rect.width / 2;
+          var srcIdx = activities.findIndex(function(a) { return a.id === __drag.id; });
+          if (srcIdx < 0) return;
+          var item = activities.splice(srcIdx, 1)[0];
+          if (__drag.srcCatId !== tgtCatId) item.categoryId = tgtCatId || null;
+          var newTgtIdx = activities.findIndex(function(a) { return a.id === targetId; });
+          if (newTgtIdx < 0) { activities.splice(srcIdx, 0, item); return; }
+          var insertAt = after ? newTgtIdx + 1 : newTgtIdx;
+          if (insertAt > activities.length) insertAt = activities.length;
+          activities.splice(insertAt, 0, item);
+          saveActivities();
+          rerenderFn();
+        });
+      });
+      // 빈 그룹 영역에 드롭 → 해당 카테고리 맨 끝으로 이동
+      container.querySelectorAll('.activity-group').forEach(function(group) {
+        var groupCatId = group.dataset.dragCatId || '';
+        group.addEventListener('dragover', function(e) {
+          if (__drag.type !== 'card' || !__drag.id) return;
+          if (e.target.closest && e.target.closest('[data-drag-id]')) return;
+          e.preventDefault();
+          __clearDragCss();
+          group.classList.add('group-drag-over');
+        });
+        group.addEventListener('dragleave', function(e) {
+          if (!group.contains(e.relatedTarget)) group.classList.remove('group-drag-over');
+        });
+        group.addEventListener('drop', function(e) {
+          if (e.target.closest && e.target.closest('[data-drag-id]')) return;
+          if (__drag.type !== 'card' || !__drag.id) return;
+          e.preventDefault();
+          var srcIdx = activities.findIndex(function(a) { return a.id === __drag.id; });
+          if (srcIdx < 0) return;
+          var item = activities.splice(srcIdx, 1)[0];
+          item.categoryId = groupCatId || null;
+          var lastInCat = -1;
+          activities.forEach(function(a, i) { if ((a.categoryId || '') === groupCatId) lastInCat = i; });
+          activities.splice(lastInCat >= 0 ? lastInCat + 1 : activities.length, 0, item);
+          saveActivities();
+          rerenderFn();
+        });
+      });
+    }
+
+    // 카테고리 그룹 순서 변경 (카테고리별 보기에서 그룹 헤더 드래그)
+    function attachGroupDragReorder(container, rerenderFn) {
+      if (!container) return;
+      container.querySelectorAll('.activity-group-header[draggable]').forEach(function(header) {
+        var group = header.closest('.activity-group');
+        header.addEventListener('dragstart', function(e) {
+          __drag.type = 'group'; __drag.id = header.dataset.dragCatId || '';
+          if (group) group.classList.add('card-dragging');
+          if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', __drag.id); } catch(err) {} }
+        });
+        header.addEventListener('dragend', function() {
+          if (group) group.classList.remove('card-dragging');
+          __clearDragCss();
+          __drag.type = null; __drag.id = null;
+        });
+      });
+      container.querySelectorAll('.activity-group[data-drag-cat-id]').forEach(function(group) {
+        var groupCatId = group.dataset.dragCatId;
+        group.addEventListener('dragover', function(e) {
+          if (__drag.type !== 'group' || !__drag.id || __drag.id === groupCatId) return;
+          e.preventDefault();
+          var rect = group.getBoundingClientRect();
+          var side = e.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
+          __clearDragCss();
+          group.classList.add('group-insert-' + side);
+        });
+        group.addEventListener('dragleave', function(e) {
+          if (!group.contains(e.relatedTarget)) group.classList.remove('group-insert-before', 'group-insert-after');
+        });
+        group.addEventListener('drop', function(e) {
+          if (__drag.type !== 'group' || !__drag.id || __drag.id === groupCatId) return;
+          e.preventDefault();
+          var srcCatIdx = categories.findIndex(function(c) { return c.id === __drag.id; });
+          if (srcCatIdx < 0) return;
+          var catItem = categories.splice(srcCatIdx, 1)[0];
+          var newTgtIdx = categories.findIndex(function(c) { return c.id === groupCatId; });
+          if (newTgtIdx < 0) { categories.splice(srcCatIdx, 0, catItem); return; }
+          var rect = group.getBoundingClientRect();
+          var after = e.clientY > rect.top + rect.height / 2;
+          var insertAt = after ? newTgtIdx + 1 : newTgtIdx;
+          categories.splice(insertAt, 0, catItem);
+          saveCategories();
           rerenderFn();
         });
       });

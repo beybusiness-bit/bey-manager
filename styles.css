@@ -2043,19 +2043,19 @@
     .sched-mini-day-lbl { flex: 1; font-size: 7px; text-align: center; line-height: 14px; color: #999; }
     .sched-mini-day-lbl.weekend { color: #e05; }
     .sched-mini-body { flex: 1; position: relative; overflow: hidden; }
-    .sched-mini-block { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; overflow: hidden; }
-    .mini-emoji-badge { display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.72); border-radius: 50%; width: 13px; height: 13px; font-size: 8px; line-height: 1; flex-shrink: 0; }
-    .mini-emoji-badge img { width: 8px; height: 8px; object-fit: cover; }
-    .mini-block-name { display: none; font-size: 6px; color: rgba(0,0,0,0.75); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding: 0 1px; font-weight: 600; }
+    .sched-mini-block { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; overflow: hidden; font-size: 16px; line-height: 1; }
+    .mini-emoji-badge { display: inline-flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; }
+    .mini-emoji-badge img { width: 16px; height: 16px; object-fit: cover; }
+    .mini-block-name { display: none; font-size: 6px; color: rgba(0,0,0,0.85); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding: 0 1px; font-weight: 600; }
     .sched-hero-card .sched-mini-grid { height: 120px; }
     .sched-hero-card .sched-mini-header { height: 16px; }
     .sched-hero-card .sched-mini-day-lbl { font-size: 9px; line-height: 16px; }
-    .sched-hero-card .mini-emoji-badge { width: 18px; height: 18px; font-size: 12px; }
-    .sched-hero-card .mini-emoji-badge img { width: 12px; height: 12px; }
+    .sched-hero-card .mini-emoji-badge { font-size: 22px; }
+    .sched-hero-card .mini-emoji-badge img { width: 22px; height: 22px; }
     @media (min-width: 769px) {
-      .sched-hero-card .mini-emoji-badge { width: 22px; height: 22px; font-size: 15px; }
-      .sched-hero-card .mini-emoji-badge img { width: 15px; height: 15px; }
-      .sched-hero-card .mini-block-name { display: block; font-size: 7px; }
+      .sched-hero-card .mini-emoji-badge { font-size: 26px; }
+      .sched-hero-card .mini-emoji-badge img { width: 26px; height: 26px; }
+      .sched-hero-card .mini-block-name { display: block; font-size: 8px; }
     }
 
     /* 일정 목록 */
@@ -2346,11 +2346,15 @@
     .category-card[draggable="true"] { cursor: grab; }
     .activity-card[draggable="true"]:active,
     .category-card[draggable="true"]:active { cursor: grabbing; }
-    .card-dragging { opacity: 0.4; }
-    .card-drag-over {
-      outline: 2px dashed var(--primary-yellow);
-      outline-offset: 2px;
-    }
+    .card-dragging { opacity: 0.4; pointer-events: none; }
+    /* 드래그 삽입 위치 표시 — 세로선(카드 그리드) / 가로선(그룹) */
+    .card-insert-before { box-shadow: -3px 0 0 0 var(--primary-yellow); }
+    .card-insert-after  { box-shadow:  3px 0 0 0 var(--primary-yellow); }
+    .group-insert-before { box-shadow: 0 -3px 0 0 var(--primary-yellow); }
+    .group-insert-after  { box-shadow: 0  3px 0 0 var(--primary-yellow); }
+    .group-drag-over .activity-group-cards { outline: 2px dashed var(--primary-yellow); outline-offset: 4px; border-radius: 4px; }
+    .activity-group-header[draggable="true"] { cursor: grab; user-select: none; }
+    .activity-group-header[draggable="true"]:active { cursor: grabbing; }
 
     /* 일상 뷰 토글 버튼 */
     .activity-view-btn { transition: background 0.15s, border-color 0.15s, color 0.15s; }
