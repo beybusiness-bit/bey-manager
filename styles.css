@@ -244,23 +244,38 @@
       transition: all 0.2s;
     }
 
+    /* 기본 확인/취소 버튼 — 어디서 써도 일관된 스타일 */
+    .btn-confirm, .btn-cancel {
+      padding: 7px 14px;
+      border-radius: var(--button-radius);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+      line-height: 1.3;
+    }
     .btn-cancel {
       background: transparent;
       border: 1px solid var(--border-color);
+      color: inherit;
     }
-
     .btn-cancel:hover {
       background: var(--bg-hover);
     }
-
     .btn-confirm {
-      background: var(--primary-yellow);
-      border: none;
+      background: var(--primary-btn-bg, var(--primary-yellow));
+      color: var(--primary-btn-color, inherit);
+      border: 1px solid var(--primary-btn-bg, var(--primary-yellow));
     }
-
     .btn-confirm:hover {
       transform: translateY(-1px);
       box-shadow: var(--shadow-sm);
+    }
+    /* 모달 안에서는 가로로 꽉 채우는 특수 케이스 */
+    .modal-actions .btn-confirm, .modal-actions .btn-cancel {
+      padding: 12px;
+      font-size: 14px;
     }
 
     /* 이모지 피커 */
@@ -1542,6 +1557,9 @@
       font-size: 11px;
       color: var(--text-secondary);
     }
+    .schedule-mini-tags { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; padding: 0 4px; max-width: 100%; }
+    .schedule-mini-tag { font-size: 10px; padding: 1px 6px; border-radius: 8px; font-weight: 500; line-height: 1.3; white-space: nowrap; }
+    .schedule-mini-tag-more { font-size: 10px; color: var(--text-secondary); padding: 1px 4px; }
 
     /* 체크박스 공통 */
     .schedule-select-checkbox {
@@ -2054,18 +2072,18 @@
     .sched-mini-day-lbl { flex: 1; font-size: 7px; text-align: center; line-height: 14px; color: #999; }
     .sched-mini-day-lbl.weekend { color: #e05; }
     .sched-mini-body { flex: 1; position: relative; overflow: hidden; }
-    .sched-mini-block { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; overflow: hidden; font-size: 16px; line-height: 1; }
+    .sched-mini-block { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; overflow: hidden; font-size: 14px; line-height: 1; }
     .mini-emoji-badge { display: inline-flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; }
-    .mini-emoji-badge img { width: 16px; height: 16px; object-fit: cover; }
+    .mini-emoji-badge img { width: 14px; height: 14px; object-fit: cover; }
     .mini-block-name { display: none; font-size: 6px; color: rgba(0,0,0,0.85); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding: 0 1px; font-weight: 600; }
     .sched-hero-card .sched-mini-grid { height: 120px; }
     .sched-hero-card .sched-mini-header { height: 16px; }
     .sched-hero-card .sched-mini-day-lbl { font-size: 9px; line-height: 16px; }
-    .sched-hero-card .mini-emoji-badge { font-size: 22px; }
-    .sched-hero-card .mini-emoji-badge img { width: 22px; height: 22px; }
+    .sched-hero-card .mini-emoji-badge { font-size: 20px; }
+    .sched-hero-card .mini-emoji-badge img { width: 20px; height: 20px; }
     @media (min-width: 769px) {
-      .sched-hero-card .mini-emoji-badge { font-size: 26px; }
-      .sched-hero-card .mini-emoji-badge img { width: 26px; height: 26px; }
+      .sched-hero-card .mini-emoji-badge { font-size: 24px; }
+      .sched-hero-card .mini-emoji-badge img { width: 24px; height: 24px; }
       .sched-hero-card .mini-block-name { display: block; font-size: 8px; }
     }
 
@@ -2358,12 +2376,13 @@
     .activity-card[draggable="true"]:active,
     .category-card[draggable="true"]:active { cursor: grabbing; }
     .card-dragging { opacity: 0.4; }
-    /* 드래그 삽입 위치 표시 — 세로선(카드 그리드) / 가로선(그룹) */
+    /* 드래그 삽입 위치 표시 — 세로선(기본뷰 가로 그리드) / 가로선(카테고리별뷰 단일 컬럼) */
     .card-insert-before { box-shadow: -3px 0 0 0 var(--primary-yellow); }
     .card-insert-after  { box-shadow:  3px 0 0 0 var(--primary-yellow); }
+    .card-insert-top    { box-shadow: 0 -3px 0 0 var(--primary-yellow); }
+    .card-insert-bottom { box-shadow: 0  3px 0 0 var(--primary-yellow); }
     .group-insert-before { box-shadow: 0 -3px 0 0 var(--primary-yellow); }
     .group-insert-after  { box-shadow: 0  3px 0 0 var(--primary-yellow); }
-    .group-drag-over .activity-group-cards { outline: 2px dashed var(--primary-yellow); outline-offset: 4px; border-radius: 4px; }
     .activity-group-header[draggable="true"] { cursor: grab; user-select: none; -webkit-user-drag: element; }
     .activity-group-header[draggable="true"] * { pointer-events: none; }
     .activity-group-header[draggable="true"]:active { cursor: grabbing; }
@@ -2376,7 +2395,7 @@
     .activity-group { margin-bottom: 24px; }
     .activity-group-header { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--text-main); padding: 6px 0 10px; border-bottom: 2px solid var(--primary-yellow); margin-bottom: 12px; }
     .activity-group-count { font-size: 11px; font-weight: 500; color: var(--text-secondary); background: var(--bg-hover); border-radius: 10px; padding: 1px 7px; margin-left: 2px; }
-    .activity-group-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 10px; }
+    .activity-group-cards { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
     .activity-group-add-btn { margin-top: 4px; width: 100%; }
 
     /* 카드 체크박스 — 카드 우상단 고정 */

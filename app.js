@@ -2204,18 +2204,20 @@
     function saveCategoryInline(categoryId) {
       const category = categories.find(function(c) { return c.id === categoryId; });
       if (!category) return;
-      
+
       if (!category.emoji || !category.name) {
         showAlert('입력 오류', '이모지와 카테고리 이름을 모두 입력해주세요.');
         return;
       }
-      
+
+      const wasNew = !!category.isNew;
       delete category.isNew;
       editingCategoryId = null;
       saveCategories();
       renderCategories();
       renderCategoryFilter();
       renderActivities();
+      showToast(wasNew ? '✅ 카테고리가 추가되었습니다' : '✅ 카테고리가 수정되었습니다');
     }
 
     function cancelCategoryInline(categoryId) {
@@ -2283,6 +2285,7 @@
           renderCategories();
           renderCategoryFilter();
           renderActivities();
+          showToast('🗑️ 카테고리가 삭제되었습니다');
         }
       }, detailHtml);
     }
@@ -2334,6 +2337,7 @@
       }
       showConfirm('카테고리 삭제', msg, function(confirmed) {
         if (!confirmed) return;
+        var count = ids.length;
         categories = categories.filter(function(c) { return !selectedCategoryIds.has(c.id); });
         activities.forEach(function(a) { if (selectedCategoryIds.has(a.categoryId)) a.categoryId = null; });
         selectedCategoryIds.clear();
@@ -2343,6 +2347,7 @@
         renderCategories();
         renderCategoryFilter();
         renderActivities();
+        showToast('🗑️ ' + count + '개 카테고리가 삭제되었습니다');
       }, detailHtml);
     }
 
@@ -2539,17 +2544,19 @@
     function saveActivityInline(activityId) {
       const activity = activities.find(function(a) { return a.id === activityId; });
       if (!activity) return;
-      
+
       if (!activity.emoji || !activity.name) {
         showAlert('입력 오류', '이모지와 일상 이름을 모두 입력해주세요.');
         return;
       }
-      
+
+      const wasNew = !!activity.isNew;
       delete activity.isNew;
       editingActivityId = null;
       saveActivities();
       renderActivities();
       renderCategories();
+      showToast(wasNew ? '✅ 일상이 추가되었습니다' : '✅ 일상이 수정되었습니다');
     }
 
     function cancelActivityInline(activityId) {
@@ -2627,6 +2634,7 @@
           saveActivities();
           renderActivities();
           renderCategories();
+          showToast('🗑️ 일상이 삭제되었습니다');
         }
       }, detailHtml);
     }
@@ -2680,12 +2688,14 @@
       }
       showConfirm('일상 종류 삭제', msg, function(confirmed) {
         if (!confirmed) return;
+        var count = ids.length;
         activities = activities.filter(function(a) { return !selectedActivityIds.has(a.id); });
         selectedActivityIds.clear();
         saveActivities();
         updateActivityBulkBar();
         renderActivities();
         renderCategories();
+        showToast('🗑️ ' + count + '개 일상이 삭제되었습니다');
       }, detailHtml);
     }
 
@@ -2940,8 +2950,8 @@
     // ===== 공통 드래그 상태 (한 번에 하나만 드래그 가능) =====
     var __drag = { type: null, id: null, srcCatId: null };
     function __clearDragCss() {
-      document.querySelectorAll('.card-insert-before,.card-insert-after,.group-insert-before,.group-insert-after,.group-drag-over').forEach(function(el) {
-        el.classList.remove('card-insert-before','card-insert-after','group-insert-before','group-insert-after','group-drag-over');
+      document.querySelectorAll('.card-insert-before,.card-insert-after,.card-insert-top,.card-insert-bottom,.group-insert-before,.group-insert-after').forEach(function(el) {
+        el.classList.remove('card-insert-before','card-insert-after','card-insert-top','card-insert-bottom','group-insert-before','group-insert-after');
       });
     }
 
@@ -2990,7 +3000,7 @@
       });
     }
 
-    // 드래그 순서 변경 — 카테고리별 보기 (삽입선 + 카테고리간 이동)
+    // 드래그 순서 변경 — 카테고리별 보기 (가로 삽입선 + 카테고리간 이동)
     function attachCardDragReorderGrouped(container, rerenderFn) {
       if (!container) return;
       container.querySelectorAll('[data-drag-id]').forEach(function(card) {
@@ -3008,12 +3018,12 @@
           if (__drag.type !== 'card' || !__drag.id || card.dataset.dragId === __drag.id) return;
           e.preventDefault(); e.stopPropagation();
           var rect = card.getBoundingClientRect();
-          var side = e.clientX < rect.left + rect.width / 2 ? 'before' : 'after';
+          var side = e.clientY < rect.top + rect.height / 2 ? 'top' : 'bottom';
           __clearDragCss();
           card.classList.add('card-insert-' + side);
         });
         card.addEventListener('dragleave', function(e) {
-          if (!card.contains(e.relatedTarget)) card.classList.remove('card-insert-before', 'card-insert-after');
+          if (!card.contains(e.relatedTarget)) card.classList.remove('card-insert-top', 'card-insert-bottom');
         });
         card.addEventListener('drop', function(e) {
           e.preventDefault(); e.stopPropagation();
@@ -3021,7 +3031,7 @@
           var tgtCatId = card.dataset.dragCatId || '';
           if (__drag.type !== 'card' || !__drag.id || targetId === __drag.id) return;
           var rect = card.getBoundingClientRect();
-          var after = e.clientX > rect.left + rect.width / 2;
+          var after = e.clientY > rect.top + rect.height / 2;
           var srcIdx = activities.findIndex(function(a) { return a.id === __drag.id; });
           if (srcIdx < 0) return;
           var item = activities.splice(srcIdx, 1)[0];
@@ -3035,7 +3045,7 @@
           rerenderFn();
         });
       });
-      // 빈 그룹 영역에 드롭 → 해당 카테고리 맨 끝으로 이동
+      // 빈 그룹 영역(카드 아닌 곳)에 드롭 → 해당 카테고리 마지막 카드 아래에 삽입선
       container.querySelectorAll('.activity-group').forEach(function(group) {
         var groupCatId = group.dataset.dragCatId || '';
         group.addEventListener('dragover', function(e) {
@@ -3043,10 +3053,10 @@
           if (e.target.closest && e.target.closest('[data-drag-id]')) return;
           e.preventDefault();
           __clearDragCss();
-          group.classList.add('group-drag-over');
-        });
-        group.addEventListener('dragleave', function(e) {
-          if (!group.contains(e.relatedTarget)) group.classList.remove('group-drag-over');
+          var lastCard = group.querySelector('.activity-group-cards [data-drag-id]:last-child');
+          if (lastCard && lastCard.dataset.dragId !== __drag.id) {
+            lastCard.classList.add('card-insert-bottom');
+          }
         });
         group.addEventListener('drop', function(e) {
           if (e.target.closest && e.target.closest('[data-drag-id]')) return;
@@ -3556,6 +3566,7 @@
       schedules.push(newSchedule);
       saveSchedules();
       renderCurrentScheduleView();
+      showToast('✅ 시간표가 추가되었습니다');
     }
 
     function updateScheduleTitle(scheduleId, title) {
@@ -3886,6 +3897,7 @@
         scheduleItems = scheduleItems.filter(function(i) { return i.scheduleId !== scheduleId; });
         saveSchedules();
         renderCurrentScheduleView();
+        showToast('🗑️ 시간표가 삭제되었습니다');
       });
     }
 
@@ -3968,6 +3980,7 @@
       scheduleDraft = null;
       renderScheduleDetail();
       renderCurrentScheduleView();
+      showToast('✅ 시간표가 저장되었습니다');
     }
 
     function cancelScheduleEdit() {
@@ -4065,23 +4078,36 @@
       var inp = document.getElementById('tagEditInput');
       var newText = (inp ? inp.value : oldText).trim();
       if (!newText) { closeTagEdit(); return; }
-      // 색상 오버라이드 전송 (이름 변경 시에도 따라감)
+
       var colorIdx = editingTagColorIdx >= 0 ? editingTagColorIdx : (tagColorOverrides.hasOwnProperty(oldText) ? tagColorOverrides[oldText] : -1);
+
       if (oldText !== newText) {
-        // 기존 이름의 오버라이드 삭제
         delete tagColorOverrides[oldText];
+        // 이름 변경을 모든 시간표에 전파
+        schedules.forEach(function(sch) {
+          if (!sch.tags || !sch.tags.length) return;
+          var i = sch.tags.indexOf(oldText);
+          if (i >= 0) {
+            if (sch.tags.indexOf(newText) >= 0) {
+              // 이미 새 이름이 있으면 중복 방지 — 기존 제거만
+              sch.tags.splice(i, 1);
+            } else {
+              sch.tags[i] = newText;
+            }
+          }
+        });
+        saveSchedules();
       }
       if (colorIdx >= 0) {
         tagColorOverrides[newText] = colorIdx;
-      } else if (colorIdx < 0 && newText === oldText) {
-        // 색상 변경 없이 같은 이름이면 오버라이드 제거 (해시로 돌아감)
+      } else if (newText === oldText) {
         delete tagColorOverrides[newText];
       }
-      scheduleDraft.tags[idx] = newText;
       saveTagColorOverrides();
       editingTagIdx = null;
       editingTagColorIdx = -1;
       renderDraftTagChips();
+      showToast('✅ 태그가 수정되었습니다');
     }
 
     function addDraftTag(tag) {
@@ -5009,10 +5035,12 @@
 
       var sch = schedules.find(function(s) { return s.id === currentDetailScheduleId; });
       if (sch) sch.updatedAt = today();
+      var wasEditing = !!editingScheduleItemId;
       saveSchedules();
       closeScheduleItemModal();
       renderScheduleDetail();
       renderCurrentScheduleView();
+      showToast(wasEditing ? '✅ 일정이 수정되었습니다' : '✅ 일정이 추가되었습니다');
     }
 
     function deleteScheduleItem(itemId) {
@@ -5021,6 +5049,7 @@
         scheduleItems = scheduleItems.filter(function(i) { return i.id !== itemId; });
         saveSchedules();
         renderScheduleDetail();
+        showToast('🗑️ 일정이 삭제되었습니다');
       });
     }
 
@@ -5415,11 +5444,16 @@
 
       others.forEach(function(sch) {
         const isSelected = selectedScheduleIds.indexOf(sch.id) >= 0;
+        const miniTags = (sch.tags || []).slice(0, 4).map(function(t) { return renderTagChip(t, { cls: 'schedule-mini-tag' }); }).join('');
+        const moreTagsCount = (sch.tags || []).length - 4;
         html += '<div class="schedule-mini-card" onclick="openScheduleDetail(&apos;' + sch.id + '&apos;)">';
         html += '  <label class="mini-checkbox-wrap" onclick="event.stopPropagation()"><input type="checkbox" class="schedule-select-checkbox"' + (isSelected ? ' checked' : '') + ' onchange="toggleScheduleSelect(&apos;' + sch.id + '&apos;)"></label>';
         html += '  <button class="heart-btn mini-heart-wrap" onclick="event.stopPropagation(); toggleScheduleLike(&apos;' + sch.id + '&apos;)" title="좋아요">' + HEART_SVG + '</button>';
         html += '  <div class="schedule-mini-emoji">' + renderEmoji(sch.emoji) + '</div>';
         html += '  <div class="schedule-mini-title">' + escapeHtml(sch.title) + '</div>';
+        if (miniTags) {
+          html += '  <div class="schedule-mini-tags">' + miniTags + (moreTagsCount > 0 ? '<span class="schedule-mini-tag-more">+' + moreTagsCount + '</span>' : '') + '</div>';
+        }
         html += '  <div class="schedule-mini-date">' + (sch.updatedAt || sch.createdAt) + '</div>';
         html += '</div>';
       });
@@ -5563,7 +5597,7 @@
       localStorage.setItem('profileQuote', profileQuote);
       GS.syncSheets(['사용자설정']);
       updateProfileDisplay();
-      showAlert('저장 완료', '프로필이 저장되었습니다.');
+      showToast('✅ 프로필이 저장되었습니다');
     }
 
     function openProfileSettings() {
