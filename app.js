@@ -1665,6 +1665,8 @@
       loadTagColorOverrides();
       loadActivities();
       loadSchedules();
+      loadHabits();
+      loadHabitLogs();
       loadProfile();
       loadDesignSettings();
       renderSidebar();
@@ -1923,6 +1925,8 @@
 
       updateActiveMenu();
       updateMobileTopTitle();
+
+      if (pageId === 'habit') renderHabitPage();
 
       if (window.innerWidth <= 768) {
         toggleSidebar();
@@ -5815,6 +5819,338 @@
           renderDesignSettings();
         }
       });
+    }
+
+    // ========================================
+    // 습관 페이지
+    // ========================================
+    var habits = [];
+    var habitLogs = [];
+    var habitCurrentTab = 'today';
+    var habitStatsMonth = '';
+    var habitDraft = null;
+
+    function loadHabits() {
+      try { habits = JSON.parse(localStorage.getItem('habits') || '[]'); } catch(e) { habits = []; }
+      if (!Array.isArray(habits)) habits = [];
+    }
+    function saveHabits() {
+      localStorage.setItem('habits', JSON.stringify(habits));
+    }
+    function loadHabitLogs() {
+      try { habitLogs = JSON.parse(localStorage.getItem('habitLogs') || '[]'); } catch(e) { habitLogs = []; }
+      if (!Array.isArray(habitLogs)) habitLogs = [];
+    }
+    function saveHabitLogs() {
+      localStorage.setItem('habitLogs', JSON.stringify(habitLogs));
+    }
+
+    function switchHabitTab(tab) {
+      habitCurrentTab = tab;
+      document.querySelectorAll('#habitPage .tab-btn').forEach(function(btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
+      });
+      document.querySelectorAll('#habitPage .tab-content').forEach(function(el) {
+        el.classList.toggle('active', el.getAttribute('data-tab') === tab);
+      });
+      renderHabitPage();
+    }
+
+    function renderHabitPage() {
+      if (habitCurrentTab === 'today') renderHabitToday();
+      else if (habitCurrentTab === 'list') renderHabitList();
+      else renderHabitStats();
+    }
+
+    // 날짜 문자열로 영어 요일 이름 반환 (MON~SUN)
+    function getHabitDayName(dateStr) {
+      var d = new Date(dateStr + 'T12:00:00');
+      return WEEKDAYS_EN[(d.getDay() + 6) % 7];
+    }
+
+    function isHabitScheduledOn(habit, dateStr) {
+      if (!habit.weekdays || habit.weekdays.length === 0) return true;
+      return habit.weekdays.indexOf(getHabitDayName(dateStr)) >= 0;
+    }
+
+    function isHabitDone(habitId, dateStr) {
+      return habitLogs.some(function(log) {
+        return log.habitId === habitId && log.date === dateStr && log.done;
+      });
+    }
+
+    function toggleHabitDone(habitId, dateStr) {
+      var existingIdx = -1;
+      for (var i = 0; i < habitLogs.length; i++) {
+        if (habitLogs[i].habitId === habitId && habitLogs[i].date === dateStr) { existingIdx = i; break; }
+      }
+      if (existingIdx >= 0) {
+        habitLogs.splice(existingIdx, 1);
+      } else {
+        habitLogs.push({ id: generateId(), habitId: habitId, date: dateStr, done: true });
+      }
+      saveHabitLogs();
+      renderHabitToday();
+    }
+
+    // ---- 오늘 탭 ----
+    function renderHabitToday() {
+      var container = document.getElementById('habitTodayContent');
+      if (!container) return;
+      var todayStr = today();
+      var d = new Date(todayStr + 'T12:00:00');
+      var dayNames = ['일','월','화','수','목','금','토'];
+      var dayStr = dayNames[d.getDay()];
+      var activeHabits = habits.filter(function(h) { return h.active && isHabitScheduledOn(h, todayStr); });
+      var doneCount = activeHabits.filter(function(h) { return isHabitDone(h.id, todayStr); }).length;
+      var total = activeHabits.length;
+      var pct = total > 0 ? Math.round(doneCount / total * 100) : 0;
+
+      var html = '<div class="habit-today-header">';
+      html += '<span class="habit-today-date">' + todayStr.replace(/-/g, '.') + ' (' + dayStr + ')</span>';
+      if (total > 0) html += '<span class="habit-today-count">' + doneCount + ' / ' + total + ' 완료</span>';
+      html += '</div>';
+
+      if (total > 0) {
+        html += '<div class="habit-progress-wrap"><div class="habit-progress-bar" style="width:' + pct + '%"></div></div>';
+      }
+
+      if (activeHabits.length === 0) {
+        html += '<div class="empty-state"><p>오늘 할 습관이 없습니다.</p><button class="btn-primary" onclick="switchHabitTab(\'list\')">+ 습관 추가하기</button></div>';
+      } else {
+        html += '<div class="habit-today-list">';
+        activeHabits.forEach(function(h) {
+          var done = isHabitDone(h.id, todayStr);
+          var color = h.color || '#ffde59';
+          html += '<div class="habit-today-item' + (done ? ' done' : '') + '" onclick="toggleHabitDone(\'' + h.id + '\',\'' + todayStr + '\')">';
+          html += '<div class="habit-today-check">';
+          if (done) {
+            html += '<svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="' + color + '" stroke="' + color + '" stroke-width="1.5"/><path d="M6 11.5l3.5 3.5 6.5-6.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';
+          } else {
+            html += '<svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="none" stroke="var(--border-color)" stroke-width="1.5"/></svg>';
+          }
+          html += '</div>';
+          html += '<span class="habit-today-emoji">' + renderEmoji(h.emoji) + '</span>';
+          html += '<span class="habit-today-name">' + h.name + '</span>';
+          html += '</div>';
+        });
+        html += '</div>';
+        if (doneCount === total && total > 0) {
+          html += '<div class="habit-all-done">🎉 오늘 모든 습관 완료!</div>';
+        }
+      }
+      container.innerHTML = html;
+    }
+
+    // ---- 목록 탭 ----
+    function renderHabitList() {
+      var container = document.getElementById('habitListContent');
+      if (!container) return;
+      var html = '<div class="habit-list-header"><button class="btn-primary" onclick="openHabitForm(null)">+ 습관 추가</button></div>';
+      if (habits.length === 0) {
+        html += '<div class="empty-state"><p>아직 등록된 습관이 없습니다.</p></div>';
+      } else {
+        html += '<div class="habit-card-list">';
+        habits.forEach(function(h) {
+          var wdLabels = (h.weekdays && h.weekdays.length > 0 && h.weekdays.length < 7)
+            ? h.weekdays.map(function(w) { return WEEKDAYS_KR[WEEKDAYS_EN.indexOf(w)]; }).join('')
+            : '매일';
+          html += '<div class="habit-card">';
+          html += '<div class="habit-card-color-bar" style="background:' + (h.color || '#ffde59') + '"></div>';
+          html += '<span class="habit-card-emoji">' + renderEmoji(h.emoji) + '</span>';
+          html += '<div class="habit-card-info"><div class="habit-card-name">' + h.name + '</div><div class="habit-card-days">' + wdLabels + '</div></div>';
+          html += '<div class="habit-card-actions"><button class="btn-icon" onclick="openHabitForm(\'' + h.id + '\')">✏️</button><button class="btn-icon" onclick="deleteHabit(\'' + h.id + '\')">🗑️</button></div>';
+          html += '</div>';
+        });
+        html += '</div>';
+      }
+      container.innerHTML = html;
+    }
+
+    function openHabitForm(id) {
+      var existing = id ? habits.find(function(h) { return h.id === id; }) : null;
+      habitDraft = existing
+        ? { id: existing.id, emoji: existing.emoji, name: existing.name,
+            weekdays: (existing.weekdays || []).slice(), color: existing.color || '#ffde59' }
+        : { id: null, emoji: '✅', name: '', weekdays: ['MON','TUE','WED','THU','FRI','SAT','SUN'], color: '#ffde59' };
+      document.getElementById('habitFormTitle').textContent = id ? '습관 편집' : '습관 추가';
+      document.getElementById('habitEmojiBtn').innerHTML = renderEmoji(habitDraft.emoji);
+      document.getElementById('habitNameInput').value = habitDraft.name;
+      document.getElementById('habitColorInput').value = habitDraft.color;
+      renderHabitWeekdayToggles();
+      var modal = document.getElementById('habitFormModal');
+      modal.style.display = 'flex';
+      bringModalToFront(modal);
+      setTimeout(function() { document.getElementById('habitNameInput').focus(); }, 50);
+    }
+
+    function closeHabitForm() {
+      document.getElementById('habitFormModal').style.display = 'none';
+      habitDraft = null;
+    }
+
+    function openHabitFormEmojiPicker() {
+      if (!habitDraft) return;
+      openEmojiPicker(habitDraft.emoji, function(emoji) {
+        habitDraft.emoji = emoji;
+        document.getElementById('habitEmojiBtn').innerHTML = renderEmoji(emoji);
+      });
+    }
+
+    function renderHabitWeekdayToggles() {
+      var container = document.getElementById('habitWeekdayToggles');
+      if (!container || !habitDraft) return;
+      var html = '';
+      WEEKDAYS_EN.forEach(function(day, i) {
+        var active = habitDraft.weekdays.indexOf(day) >= 0;
+        html += '<button type="button" class="habit-wd-btn' + (active ? ' active' : '') + '" onclick="habitToggleWeekday(\'' + day + '\')">' + WEEKDAYS_KR[i] + '</button>';
+      });
+      container.innerHTML = html;
+    }
+
+    function habitToggleWeekday(day) {
+      if (!habitDraft) return;
+      var idx = habitDraft.weekdays.indexOf(day);
+      if (idx >= 0) habitDraft.weekdays.splice(idx, 1);
+      else habitDraft.weekdays.push(day);
+      renderHabitWeekdayToggles();
+    }
+
+    function saveHabitForm() {
+      if (!habitDraft) return;
+      var name = document.getElementById('habitNameInput').value.trim();
+      if (!name) { document.getElementById('habitNameInput').focus(); return; }
+      habitDraft.name = name;
+      habitDraft.color = document.getElementById('habitColorInput').value;
+      if (habitDraft.weekdays.length === 0) habitDraft.weekdays = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+
+      if (habitDraft.id) {
+        var idx = -1;
+        for (var i = 0; i < habits.length; i++) { if (habits[i].id === habitDraft.id) { idx = i; break; } }
+        if (idx >= 0) Object.assign(habits[idx], { emoji: habitDraft.emoji, name: habitDraft.name, weekdays: habitDraft.weekdays, color: habitDraft.color });
+        showToast('습관을 수정했습니다.', 'success');
+      } else {
+        habits.push({ id: generateId(), emoji: habitDraft.emoji, name: habitDraft.name,
+          weekdays: habitDraft.weekdays, color: habitDraft.color, active: true, order: habits.length, createdAt: today() });
+        showToast('습관을 추가했습니다.', 'success');
+      }
+      saveHabits();
+      closeHabitForm();
+      renderHabitList();
+      if (habitCurrentTab === 'today') renderHabitToday();
+    }
+
+    function deleteHabit(id) {
+      var habit = habits.find(function(h) { return h.id === id; });
+      if (!habit) return;
+      showConfirm('삭제 확인', habit.name + ' 습관을 삭제하시겠습니까? 관련 기록도 모두 삭제됩니다.', function(confirmed) {
+        if (!confirmed) return;
+        habits = habits.filter(function(h) { return h.id !== id; });
+        habitLogs = habitLogs.filter(function(l) { return l.habitId !== id; });
+        saveHabits();
+        saveHabitLogs();
+        renderHabitList();
+        showToast('습관을 삭제했습니다.', 'success');
+      });
+    }
+
+    // ---- 통계 탭 ----
+    function renderHabitStats() {
+      var container = document.getElementById('habitStatsContent');
+      if (!container) return;
+      if (!habitStatsMonth) {
+        var now = new Date();
+        habitStatsMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+      }
+      var parts = habitStatsMonth.split('-');
+      var yr = parseInt(parts[0]);
+      var mo = parseInt(parts[1]);
+      var monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+      var daysInMonth = new Date(yr, mo, 0).getDate();
+      var firstDayKR = (new Date(yr, mo - 1, 1).getDay() + 6) % 7;
+      var todayStr = today();
+
+      var html = '<div class="habit-stats-nav">';
+      html += '<button class="btn-icon" onclick="habitStatsChangeMonth(-1)">&#8249;</button>';
+      html += '<span class="habit-stats-month-label">' + yr + '년 ' + monthNames[mo-1] + '</span>';
+      html += '<button class="btn-icon" onclick="habitStatsChangeMonth(1)">&#8250;</button>';
+      html += '</div>';
+
+      html += '<div class="habit-stats-calendar">';
+      ['월','화','수','목','금','토','일'].forEach(function(d) {
+        html += '<div class="habit-cal-header">' + d + '</div>';
+      });
+      for (var e = 0; e < firstDayKR; e++) html += '<div class="habit-cal-cell empty"></div>';
+
+      for (var day = 1; day <= daysInMonth; day++) {
+        var ds = yr + '-' + String(mo).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+        var isFuture = ds > todayStr;
+        var isToday = ds === todayStr;
+        var scheduled = habits.filter(function(h) { return h.active && isHabitScheduledOn(h, ds); });
+        var doneHabits = scheduled.filter(function(h) { return isHabitDone(h.id, ds); });
+        var pct = scheduled.length > 0 ? doneHabits.length / scheduled.length : -1;
+
+        var cellClass = 'habit-cal-cell' + (isFuture ? ' future' : '') + (isToday ? ' cal-today' : '');
+        var bg = '';
+        if (!isFuture && scheduled.length > 0) {
+          if (pct === 1) bg = 'background:rgba(76,175,80,0.25);';
+          else if (pct > 0) bg = 'background:rgba(255,222,89,0.45);';
+        }
+        html += '<div class="' + cellClass + '" style="' + bg + '">';
+        html += '<span class="habit-cal-day">' + day + '</span>';
+        if (!isFuture && scheduled.length > 0) {
+          html += '<span class="habit-cal-count">' + doneHabits.length + '/' + scheduled.length + '</span>';
+        }
+        html += '</div>';
+      }
+      html += '</div>';
+
+      if (habits.length > 0) {
+        html += '<div class="habit-stats-list"><h4 class="habit-stats-title">개별 달성률</h4>';
+        habits.forEach(function(h) {
+          if (!h.active) return;
+          var sDays = 0, dDays = 0;
+          for (var d2 = 1; d2 <= daysInMonth; d2++) {
+            var ds2 = yr + '-' + String(mo).padStart(2, '0') + '-' + String(d2).padStart(2, '0');
+            if (ds2 > todayStr) break;
+            if (isHabitScheduledOn(h, ds2)) { sDays++; if (isHabitDone(h.id, ds2)) dDays++; }
+          }
+          var p = sDays > 0 ? Math.round(dDays / sDays * 100) : 0;
+          var streak = 0;
+          var checkD = new Date(todayStr + 'T12:00:00');
+          for (var s = 0; s < 365; s++) {
+            var sds = checkD.getFullYear() + '-' + String(checkD.getMonth()+1).padStart(2,'0') + '-' + String(checkD.getDate()).padStart(2,'0');
+            if (isHabitScheduledOn(h, sds)) {
+              if (isHabitDone(h.id, sds)) streak++;
+              else break;
+            }
+            checkD.setDate(checkD.getDate() - 1);
+          }
+          html += '<div class="habit-stats-item">';
+          html += '<span class="habit-stats-emoji">' + renderEmoji(h.emoji) + '</span>';
+          html += '<div class="habit-stats-info">';
+          html += '<div class="habit-stats-name">' + h.name + '</div>';
+          html += '<div class="habit-stats-bar-wrap"><div class="habit-stats-bar" style="width:' + p + '%;background:' + (h.color || '#ffde59') + '"></div></div>';
+          html += '</div>';
+          html += '<div class="habit-stats-nums">';
+          html += '<span class="habit-stats-pct">' + p + '%</span>';
+          if (streak > 0) html += '<span class="habit-stats-streak">🔥' + streak + '</span>';
+          html += '</div>';
+          html += '</div>';
+        });
+        html += '</div>';
+      }
+      container.innerHTML = html;
+    }
+
+    function habitStatsChangeMonth(delta) {
+      var parts = habitStatsMonth.split('-');
+      var yr = parseInt(parts[0]);
+      var mo = parseInt(parts[1]) + delta;
+      if (mo < 1) { mo = 12; yr--; }
+      if (mo > 12) { mo = 1; yr++; }
+      habitStatsMonth = yr + '-' + String(mo).padStart(2, '0');
+      renderHabitStats();
     }
 
     // ========================================

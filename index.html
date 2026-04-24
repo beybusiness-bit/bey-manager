@@ -389,9 +389,19 @@
           <h2>✅ 습관</h2>
           <p>습관 추적 및 관리</p>
         </div>
-        <div class="card">
-          <h3>습관 페이지</h3>
-          <p>개발 예정입니다.</p>
+        <div class="tab-nav" id="habitTabNav">
+          <button class="tab-btn active" data-tab="today" onclick="switchHabitTab('today')">오늘</button>
+          <button class="tab-btn" data-tab="list" onclick="switchHabitTab('list')">목록</button>
+          <button class="tab-btn" data-tab="stats" onclick="switchHabitTab('stats')">통계</button>
+        </div>
+        <div class="tab-content active" id="habitTodayTab" data-tab="today">
+          <div id="habitTodayContent"></div>
+        </div>
+        <div class="tab-content" id="habitListTab" data-tab="list">
+          <div id="habitListContent"></div>
+        </div>
+        <div class="tab-content" id="habitStatsTab" data-tab="stats">
+          <div id="habitStatsContent"></div>
         </div>
       </div>
 
@@ -675,6 +685,31 @@
         </div>
       </div>
     </main>
+
+  <!-- 습관 추가/편집 모달 -->
+  <div id="habitFormModal" class="modal-overlay" style="z-index:1300;display:none;" onclick="if(event.target===this)closeHabitForm()">
+    <div class="modal-box" style="max-width:400px;width:100%;">
+      <h3 id="habitFormTitle">습관 추가</h3>
+      <div class="habit-form-row">
+        <button class="emoji-edit-btn" id="habitEmojiBtn" onclick="openHabitFormEmojiPicker()">✅</button>
+        <input class="input-field" id="habitNameInput" placeholder="습관 이름" style="flex:1;"
+          onkeydown="if(event.key==='Enter')saveHabitForm();if(event.key==='Escape')closeHabitForm()">
+      </div>
+      <div style="margin-bottom:14px;">
+        <div class="form-label" style="margin-bottom:8px;">반복 요일</div>
+        <div class="habit-wd-row" id="habitWeekdayToggles"></div>
+      </div>
+      <div class="habit-form-row" style="margin-bottom:20px;">
+        <div class="form-label" style="margin:0;flex:none;">색상</div>
+        <input type="color" id="habitColorInput" value="#ffde59"
+          style="width:36px;height:36px;border:none;cursor:pointer;border-radius:6px;padding:2px;">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn-cancel" onclick="closeHabitForm()">취소</button>
+        <button class="btn-confirm" onclick="saveHabitForm()">저장</button>
+      </div>
+    </div>
+  </div>
   </div>
 
   <script src="app.js"></script>
