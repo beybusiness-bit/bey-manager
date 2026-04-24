@@ -1317,7 +1317,7 @@
       border: 2px solid #ff4d6d;
       border-radius: 14px;
       padding: 40px 18px 18px;
-      min-height: 540px;
+      min-height: 680px;
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -1412,7 +1412,7 @@
 
     .hero-thumbnail-frame {
       flex: 1;
-      min-height: 260px;
+      min-height: 400px;
       display: flex;
       flex-direction: column;
     }
@@ -1473,11 +1473,11 @@
     @media (max-width: 767px) {
       .schedule-hero-card {
         padding: 36px 14px 14px;
-        min-height: 440px;
+        min-height: 560px;
       }
       .hero-emoji { font-size: 32px; }
       .hero-title-display { font-size: 18px; }
-      .hero-thumbnail-frame { min-height: 200px; }
+      .hero-thumbnail-frame { min-height: 300px; }
     }
 
     .schedule-mini-card {
@@ -1549,9 +1549,44 @@
       margin-bottom: 14px;
     }
 
-    /* 태그 필터 바 */
-    .schedule-tag-filter {
+    /* 태그 필터 드롭다운 */
+    .schedule-tag-filter-toggle {
+      padding: 5px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--button-radius, 8px);
+      background: var(--bg-card);
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-family: inherit;
       display: flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .schedule-tag-filter-toggle:hover {
+      border-color: var(--primary-yellow);
+    }
+    .schedule-tag-filter-toggle.has-active {
+      background: var(--primary-yellow);
+      border-color: var(--primary-yellow);
+      color: #333;
+      font-weight: 600;
+    }
+    .schedule-tag-filter-count {
+      background: #ff4d6d;
+      color: #fff;
+      border-radius: 8px;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 0 5px;
+      line-height: 16px;
+      min-width: 16px;
+      text-align: center;
+    }
+    .schedule-tag-filter {
+      display: none;
       flex-wrap: wrap;
       gap: 6px;
       align-items: center;
@@ -1561,12 +1596,7 @@
       border-radius: var(--button-radius, 8px);
       background: var(--bg-card);
     }
-    .schedule-tag-filter-label {
-      font-size: 12px;
-      color: var(--text-secondary);
-      font-weight: 600;
-      margin-right: 4px;
-    }
+    .schedule-tag-filter.open { display: flex; }
     .schedule-tag-filter-chip {
       padding: 3px 10px;
       border: 1px solid var(--border-color);
@@ -1600,6 +1630,59 @@
     .schedule-tag-filter-clear:hover {
       color: var(--text-primary);
     }
+
+    /* 태그 자동완성 (수정 모드) */
+    .draft-tags-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 8px;
+      min-height: 24px;
+    }
+    .draft-tag-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 8px 2px 10px;
+      background: var(--primary-yellow);
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #333;
+    }
+    .draft-tag-chip-remove {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 15px;
+      padding: 0;
+      line-height: 1;
+      color: #666;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+    }
+    .draft-tag-chip-remove:hover { color: #c00; }
+    .tag-input-wrap { position: relative; }
+    .tag-suggestions {
+      position: absolute;
+      top: calc(100% + 2px);
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--button-radius, 8px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      z-index: 200;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+    .tag-suggestion-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .tag-suggestion-item:hover { background: var(--bg-hover, #f5f5f5); }
 
     .schedule-filter-group {
       display: flex;
@@ -1910,6 +1993,12 @@
     .sched-item-time { font-size: 11px; color: #444; margin-top: 1px; text-align: center; }
     .sched-empty-cell { cursor: pointer; }
     .sched-empty-cell:hover { background: rgba(255, 222, 89, 0.12); }
+    /* 드래그 오버레이 시간 툴팁 */
+    .grid-drag-tooltip {
+      position: absolute; background: #333; color: #fff; font-size: 11px;
+      padding: 2px 7px; border-radius: 4px; pointer-events: none; white-space: nowrap;
+      transform: translateY(-100%); margin-top: -4px; font-family: 'DM Mono', monospace;
+    }
 
     /* 상세/수정 메타 영역 */
     .sched-detail-meta-plain { margin: 0 0 14px 0; padding: 0; border: none; background: transparent; }
@@ -2732,13 +2821,8 @@
               </div>
             </div>
 
-            <!-- 뷰 컨트롤: 필터 + 정렬 + 뷰 토글 -->
+            <!-- 뷰 컨트롤: 정렬 + 태그 필터 버튼 + 뷰 토글 -->
             <div class="schedule-view-controls">
-              <select class="schedule-sort-select" id="scheduleFilterSelect" onchange="setScheduleFilter(this.value)" style="display:none;">
-                <option value="all">전체</option>
-                <option value="liked">❤️ 좋아요만</option>
-                <option value="unliked">🤍 미좋아요</option>
-              </select>
               <select class="schedule-sort-select" id="scheduleSortSelect" onchange="handleScheduleSort(this.value)">
                 <option value="updatedAt_desc">최신순</option>
                 <option value="updatedAt_asc">오래된순</option>
@@ -2746,14 +2830,17 @@
                 <option value="title_desc">가나다역순</option>
                 <option value="isLiked_desc">좋아요순</option>
               </select>
+              <button id="scheduleTagFilterBtn" class="schedule-tag-filter-toggle" onclick="toggleScheduleTagPanel()" style="display:none;">
+                🏷️ 태그<span id="scheduleTagFilterCount" class="schedule-tag-filter-count" style="display:none;"></span>
+              </button>
               <div class="schedule-view-toggle-group">
                 <button class="schedule-view-btn active" id="viewBtnThumbnail" onclick="switchScheduleView('thumbnail')" title="썸네일 뷰">⊞</button>
                 <button class="schedule-view-btn" id="viewBtnList" onclick="switchScheduleView('list')" title="목록 뷰">☰</button>
               </div>
             </div>
 
-            <!-- 태그 필터 -->
-            <div id="scheduleTagFilter" class="schedule-tag-filter" style="display:none;"></div>
+            <!-- 태그 필터 패널 (접힘/펼침) -->
+            <div id="scheduleTagFilter" class="schedule-tag-filter"></div>
 
             <!-- 좋아요된 시간표 Hero 섹션 -->
             <div id="scheduleHeroSection" class="schedule-hero-section" style="display:none;">
@@ -2841,13 +2928,19 @@
 
         <!-- 탭 -->
         <div class="tab-nav" id="scheduleDetailTabNav">
-          <button class="tab-btn active" data-tab="grid" onclick="switchScheduleDetailTab('grid')">📅 주간 그리드</button>
-          <button class="tab-btn" data-tab="items" onclick="switchScheduleDetailTab('items')">☰ 일정 목록</button>
+          <button class="tab-btn active" data-tab="grid" onclick="switchScheduleDetailTab('grid')">📅 주간</button>
+          <button class="tab-btn" data-tab="day" onclick="switchScheduleDetailTab('day')">📆 요일별</button>
+          <button class="tab-btn" data-tab="items" onclick="switchScheduleDetailTab('items')">☰ 목록</button>
         </div>
 
         <!-- 주간 그리드 탭 -->
         <div class="sched-tab-content" data-tab="grid">
           <div id="schedDetailGridContent" style="margin-top:12px;"></div>
+        </div>
+
+        <!-- 요일별 보기 탭 -->
+        <div class="sched-tab-content" data-tab="day" style="display:none;">
+          <div id="schedDetailDayContent" style="margin-top:12px;"></div>
         </div>
 
         <!-- 일정 목록 탭 -->
@@ -5611,6 +5704,8 @@
 
     function renderScheduleTagFilter() {
       var el = document.getElementById('scheduleTagFilter');
+      var toggleBtn = document.getElementById('scheduleTagFilterBtn');
+      var countEl = document.getElementById('scheduleTagFilterCount');
       if (!el) return;
       var tagSet = {};
       schedules.forEach(function(s) {
@@ -5621,13 +5716,29 @@
       var allTags = Object.keys(tagSet).sort(function(a, b) { return a.localeCompare(b, 'ko'); });
       // 선택돼 있지만 존재하지 않는 태그 정리
       scheduleFilterTags = scheduleFilterTags.filter(function(t) { return allTags.indexOf(t) >= 0; });
+
+      // 토글 버튼 표시/숨김
+      if (toggleBtn) {
+        toggleBtn.style.display = allTags.length > 0 ? '' : 'none';
+        toggleBtn.classList.toggle('has-active', scheduleFilterTags.length > 0);
+        if (countEl) {
+          if (scheduleFilterTags.length > 0) {
+            countEl.textContent = scheduleFilterTags.length;
+            countEl.style.display = '';
+          } else {
+            countEl.style.display = 'none';
+          }
+        }
+      }
+
       if (allTags.length === 0) {
-        el.style.display = 'none';
+        el.classList.remove('open');
         el.innerHTML = '';
         return;
       }
-      el.style.display = 'flex';
-      var html = '<span class="schedule-tag-filter-label">🏷️ 태그</span>';
+
+      // 패널 내용 렌더
+      var html = '';
       allTags.forEach(function(t) {
         var active = scheduleFilterTags.indexOf(t) >= 0;
         html += '<button class="schedule-tag-filter-chip' + (active ? ' active' : '') + '" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + ' <span style="opacity:0.55;">(' + tagSet[t] + ')</span></button>';
@@ -5642,6 +5753,12 @@
           toggleScheduleTagFilter(btn.getAttribute('data-tag'));
         });
       });
+    }
+
+    function toggleScheduleTagPanel() {
+      var el = document.getElementById('scheduleTagFilter');
+      if (!el) return;
+      el.classList.toggle('open');
     }
 
     function toggleScheduleTagFilter(tag) {
@@ -5848,6 +5965,9 @@
       document.querySelectorAll('#dailyPage .tab-content').forEach(function(el) { el.style.display = 'none'; });
       var dv = document.getElementById('scheduleDetailView');
       if (dv) dv.style.display = 'block';
+      // 상단으로 스크롤
+      var mc = document.querySelector('.main-content');
+      if (mc) mc.scrollTop = 0;
       renderScheduleDetail();
     }
 
@@ -5903,9 +6023,71 @@
 
     function updateDraftTitle(v) { if (scheduleDraft) scheduleDraft.title = v; }
     function updateDraftDesc(v) { if (scheduleDraft) scheduleDraft.description = v; }
-    function updateDraftTags(v) {
+
+    function getAllScheduleTags() {
+      var tagSet = {};
+      schedules.forEach(function(s) {
+        (s.tags || []).forEach(function(t) { if (t) tagSet[t] = true; });
+      });
+      return Object.keys(tagSet).sort(function(a, b) { return a.localeCompare(b, 'ko'); });
+    }
+
+    function renderDraftTagChips() {
+      var container = document.getElementById('draftTagsContainer');
+      if (!container || !scheduleDraft) return;
+      var html = '';
+      (scheduleDraft.tags || []).forEach(function(t, i) {
+        html += '<span class="draft-tag-chip">' + escapeHtml(t) +
+          '<button class="draft-tag-chip-remove" onclick="removeDraftTag(' + i + ')" title="삭제">×</button></span>';
+      });
+      container.innerHTML = html;
+    }
+
+    function addDraftTag(tag) {
+      if (!scheduleDraft || !tag) return;
+      tag = tag.trim();
+      if (!tag || (scheduleDraft.tags || []).indexOf(tag) >= 0) return;
+      if (!scheduleDraft.tags) scheduleDraft.tags = [];
+      scheduleDraft.tags.push(tag);
+      var input = document.getElementById('draftTagInput');
+      if (input) input.value = '';
+      var sugg = document.getElementById('tagSuggestions');
+      if (sugg) sugg.style.display = 'none';
+      renderDraftTagChips();
+    }
+
+    function removeDraftTag(idx) {
       if (!scheduleDraft) return;
-      scheduleDraft.tags = v.split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t.length > 0; });
+      scheduleDraft.tags.splice(idx, 1);
+      renderDraftTagChips();
+    }
+
+    function onDraftTagInput(val) {
+      val = (val || '').trim();
+      var sugg = document.getElementById('tagSuggestions');
+      if (!sugg) return;
+      if (!val) { sugg.style.display = 'none'; return; }
+      var existing = getAllScheduleTags();
+      var current = scheduleDraft ? (scheduleDraft.tags || []) : [];
+      var filtered = existing.filter(function(t) {
+        return t.toLowerCase().indexOf(val.toLowerCase()) >= 0 && current.indexOf(t) < 0;
+      });
+      if (filtered.length === 0) { sugg.style.display = 'none'; return; }
+      sugg.innerHTML = filtered.map(function(t) {
+        return '<div class="tag-suggestion-item" onclick="addDraftTag(&apos;' + escapeHtml(t) + '&apos;)">' + escapeHtml(t) + '</div>';
+      }).join('');
+      sugg.style.display = 'block';
+    }
+
+    function onDraftTagKeydown(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        var input = document.getElementById('draftTagInput');
+        if (input && input.value.trim()) addDraftTag(input.value);
+      } else if (e.key === 'Escape') {
+        var sugg = document.getElementById('tagSuggestions');
+        if (sugg) sugg.style.display = 'none';
+      }
     }
 
     function closeScheduleDetail() {
@@ -5948,11 +6130,16 @@
         mh += '<input type="text" value="' + (data.title || '').replace(/"/g,'&quot;') + '" placeholder="시간표 이름" oninput="updateDraftTitle(this.value)" style="margin-bottom:10px;">';
         mh += '<div class="sched-meta-label">상세 설명</div>';
         mh += '<textarea placeholder="상세 설명 (선택)" oninput="updateDraftDesc(this.value)" style="margin-bottom:10px;">' + (data.description || '') + '</textarea>';
-        mh += '<div class="sched-meta-label">태그 (쉼표로 구분)</div>';
-        mh += '<input type="text" value="' + tagsStr.replace(/"/g,'&quot;') + '" placeholder="예: 여름학기, 평일용" oninput="updateDraftTags(this.value)">';
+        mh += '<div class="sched-meta-label">태그</div>';
+        mh += '<div id="draftTagsContainer" class="draft-tags-container"></div>';
+        mh += '<div class="tag-input-wrap">';
+        mh += '<input type="text" id="draftTagInput" placeholder="태그 입력 후 Enter..." autocomplete="off" oninput="onDraftTagInput(this.value)" onkeydown="onDraftTagKeydown(event)">';
+        mh += '<div id="tagSuggestions" class="tag-suggestions" style="display:none;"></div>';
+        mh += '</div>';
         metaEl.className = 'sched-meta-card';
         metaEl.innerHTML = mh;
         metaEl.style.display = 'block';
+        renderDraftTagChips();
       } else {
         var mh = '';
         if (data.description) {
@@ -5976,6 +6163,7 @@
         el.style.display = (el.dataset.tab === scheduleDetailTab) ? 'block' : 'none';
       });
       if (scheduleDetailTab === 'grid') renderScheduleGrid();
+      else if (scheduleDetailTab === 'day') renderScheduleDayView();
       else renderScheduleDetailItemList();
     }
 
@@ -6043,24 +6231,20 @@
       }
       html += '</div>';
       // Grid content: background cols + items overlay
-      html += '<div style="flex:1; position:relative; height:' + totalHeight + 'px;">';
-      // Background columns (grid lines + clickable cells)
+      html += '<div id="schedGridContent" style="flex:1; position:relative; height:' + totalHeight + 'px;" data-gridstart="' + gridStart + '">';
+      // Background columns (grid lines)
       html += '<div style="position:absolute; inset:0; display:flex;">';
       WEEKDAYS_EN.forEach(function(day) {
-        html += '<div class="sched-day-col" style="flex:1; height:100%;" data-day="' + day + '">';
+        html += '<div class="sched-day-col" style="flex:1; height:100%;">';
         for (var s = 0; s < totalSlots; s++) {
           var slotMin = gridStart + s * 30;
           var cellClass = 'sched-bg-slot' + ((slotMin % 60 === 0) ? ' hour' : '');
-          if (isEdit) {
-            html += '<div class="' + cellClass + ' sched-empty-cell" onclick="onGridCellClick(&apos;' + day + '&apos;,' + slotMin + ')"></div>';
-          } else {
-            html += '<div class="' + cellClass + '"></div>';
-          }
+          html += '<div class="' + cellClass + '"></div>';
         }
         html += '</div>';
       });
       html += '</div>';
-      // Items overlay
+      // Items overlay (pointer-events on items only in edit mode)
       html += '<div style="position:absolute; inset:0; pointer-events:none;">';
       blocks.forEach(function(b) {
         var act = activities.find(function(a) { return a.id === b.activityId; });
@@ -6083,13 +6267,191 @@
       html += '</div>';
       // Current time line
       if (nowTop >= 0) html += '<div class="sched-now-line" style="top:' + nowTop + 'px;"></div>';
+      // Drag overlay (edit mode only) + preview block
+      if (isEdit) {
+        html += '<div id="schedGridDragOverlay" style="position:absolute;inset:0;cursor:crosshair;z-index:5;"></div>';
+        html += '<div id="schedGridDragPreview" style="display:none;position:absolute;pointer-events:none;z-index:6;border-radius:4px;border-left:3px solid var(--primary-yellow);background:rgba(255,222,89,0.35);"></div>';
+      }
       html += '</div>'; // grid content
       html += '</div></div></div>'; // sched-body, sched-grid-wrap, sched-grid-outer
       if (isEdit) {
         html += '<div style="margin-top:14px; text-align:center;"><button class="btn-add" onclick="openScheduleItemForm(null)">+ 일정 추가</button></div>';
       }
       var c = document.getElementById('schedDetailGridContent');
-      if (c) c.innerHTML = html;
+      if (c) {
+        c.innerHTML = html;
+        if (isEdit) initGridDrag(gridStart);
+      }
+    }
+
+    var scheduleDayViewDay = 'MON'; // 요일별 뷰에서 선택된 요일
+
+    function renderScheduleDayView() {
+      var items = scheduleItems.filter(function(i) { return i.scheduleId === currentDetailScheduleId; });
+      var isEdit = (scheduleViewMode2 === 'edit');
+      var c = document.getElementById('schedDetailDayContent');
+      if (!c) return;
+
+      // 요일 선택 탭
+      var html = '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;">';
+      WEEKDAYS_EN.forEach(function(en, i) {
+        var kr = WEEKDAYS_KR[i];
+        var isWeekend = i >= 5;
+        var isActive = (scheduleDayViewDay === en);
+        var hasItems = items.some(function(it) { return (it.weekdays || []).indexOf(en) >= 0; });
+        html += '<button onclick="selectDayViewDay(&apos;' + en + '&apos;)" style="' +
+          'padding:5px 12px;border:1px solid var(--border-color);border-radius:var(--button-radius,8px);' +
+          'font-family:inherit;font-size:13px;cursor:pointer;' +
+          'background:' + (isActive ? 'var(--primary-yellow)' : 'var(--bg-card)') + ';' +
+          'font-weight:' + (isActive ? '700' : '400') + ';' +
+          'color:' + (isWeekend ? '#e44' : (isActive ? '#333' : 'var(--text-secondary)')) + ';' +
+          'border-color:' + (isActive ? 'var(--primary-yellow)' : 'var(--border-color)') + ';' +
+          (hasItems ? '' : 'opacity:0.45;') +
+          '">' + kr + '</button>';
+      });
+      html += '</div>';
+
+      // 선택된 요일의 아이템
+      var dayItems = items.filter(function(it) { return (it.weekdays || []).indexOf(scheduleDayViewDay) >= 0; });
+      dayItems.sort(function(a, b) { return timeToMin(a.startTime) - timeToMin(b.startTime); });
+
+      var gridStart = 6 * 60, gridEnd = 22 * 60;
+      if (dayItems.length > 0) {
+        var maxE = dayItems.reduce(function(m, i) { return Math.max(m, timeToMin(i.endTime)); }, 0);
+        if (maxE > gridEnd) gridEnd = Math.min(24 * 60, Math.ceil((maxE + 30) / 30) * 30);
+      }
+      var totalSlots = (gridEnd - gridStart) / 30;
+      var totalHeight = totalSlots * SLOT_HEIGHT;
+      var now = new Date();
+      var nowMin = now.getHours() * 60 + now.getMinutes();
+      var nowTop = (nowMin >= gridStart && nowMin <= gridEnd) ? (nowMin - gridStart) / 30 * SLOT_HEIGHT : -1;
+
+      // 단일 요일 그리드 (넓게)
+      html += '<div class="sched-grid-outer"><div class="sched-grid-wrap">';
+      html += '<div class="sched-body"><div class="sched-time-gutter">';
+      for (var t = gridStart; t < gridEnd; t += 30) {
+        var isH = (t % 60 === 0);
+        html += '<div class="sched-time-slot-label' + (isH ? ' hour' : '') + '">' + (isH ? minToTimeStr(t) : '') + '</div>';
+      }
+      html += '</div>';
+      html += '<div style="flex:1;position:relative;height:' + totalHeight + 'px;">';
+      // 배경 슬롯
+      html += '<div style="position:absolute;inset:0;">';
+      for (var s = 0; s < totalSlots; s++) {
+        var slotMin = gridStart + s * 30;
+        var cellClass = 'sched-bg-slot' + ((slotMin % 60 === 0) ? ' hour' : '');
+        if (isEdit) {
+          html += '<div class="' + cellClass + ' sched-empty-cell" style="width:100%;" onclick="onGridCellClick(&apos;' + scheduleDayViewDay + '&apos;,' + slotMin + ')"></div>';
+        } else {
+          html += '<div class="' + cellClass + '" style="width:100%;"></div>';
+        }
+      }
+      html += '</div>';
+      // 아이템 블록 (오버레이)
+      html += '<div style="position:absolute;inset:0;pointer-events:none;">';
+      dayItems.forEach(function(item) {
+        var act = activities.find(function(a) { return a.id === item.activityId; });
+        var emoji = act ? renderEmoji(act.emoji) : '📅';
+        var name = act ? act.name : '(삭제된 일상)';
+        var color = act ? (act.color || '#ffde59') : '#ffde59';
+        var sMin = timeToMin(item.startTime), eMin = timeToMin(item.endTime);
+        var top = (sMin - gridStart) / 30 * SLOT_HEIGHT;
+        var height = Math.max(SLOT_HEIGHT, (eMin - sMin) / 30 * SLOT_HEIGHT);
+        var ptrStyle = isEdit ? 'pointer-events:auto;cursor:pointer;' : '';
+        var clickAttr = isEdit ? ('onclick="openScheduleItemForm(&apos;' + item.id + '&apos;)"') : '';
+        html += '<div class="sched-item-block" style="position:absolute;' + ptrStyle + 'top:' + top + 'px;height:' + height + 'px;left:2px;right:2px;background:' + color + '30;border-left-color:' + color + ';" ' + clickAttr + '>';
+        if (height >= 28) html += '<div class="sched-item-emoji">' + emoji + '</div>';
+        if (height >= 42) html += '<div class="sched-item-name">' + name + '</div>';
+        if (height >= 60) html += '<div class="sched-item-time">' + item.startTime + '–' + item.endTime + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+      if (nowTop >= 0) html += '<div class="sched-now-line" style="top:' + nowTop + 'px;"></div>';
+      html += '</div></div></div></div>';
+
+      if (dayItems.length === 0) {
+        html += '<div style="text-align:center;color:var(--text-tertiary);padding:24px 0;font-size:13px;">이 요일에 등록된 일정이 없습니다</div>';
+      }
+      if (isEdit) {
+        html += '<div style="margin-top:14px;text-align:center;"><button class="btn-add" onclick="onGridCellClick(&apos;' + scheduleDayViewDay + '&apos;,' + (8*60) + ')">+ 일정 추가</button></div>';
+      }
+      c.innerHTML = html;
+    }
+
+    function selectDayViewDay(en) {
+      scheduleDayViewDay = en;
+      renderScheduleDayView();
+    }
+
+    function initGridDrag(gridStart) {
+      var overlay = document.getElementById('schedGridDragOverlay');
+      var preview = document.getElementById('schedGridDragPreview');
+      var content = document.getElementById('schedGridContent');
+      if (!overlay || !preview || !content) return;
+
+      var dragging = false, dragDay = null, dragStartMin = 0, dragEndMin = 0;
+
+      function posToGridCoords(clientX, clientY) {
+        var rect = content.getBoundingClientRect();
+        var x = clientX - rect.left;
+        var y = clientY - rect.top;
+        var colIdx = Math.min(6, Math.max(0, Math.floor(x / rect.width * 7)));
+        var slotIdx = Math.max(0, Math.floor(y / SLOT_HEIGHT));
+        var min = gridStart + slotIdx * 30;
+        return { day: WEEKDAYS_EN[colIdx], min: min, colIdx: colIdx, y: y };
+      }
+
+      function updatePreview(startMin, endMin, colIdx) {
+        var rect = content.getBoundingClientRect();
+        var colW = rect.width / 7;
+        var top = (startMin - gridStart) / 30 * SLOT_HEIGHT;
+        var h = Math.max(SLOT_HEIGHT, (endMin - startMin) / 30 * SLOT_HEIGHT);
+        var left = colIdx * colW + 2;
+        preview.style.cssText = 'display:block;position:absolute;pointer-events:none;z-index:6;' +
+          'border-radius:4px;border-left:3px solid var(--primary-yellow);background:rgba(255,222,89,0.35);' +
+          'top:' + top + 'px;height:' + h + 'px;left:' + left + 'px;width:' + (colW - 6) + 'px;';
+        // 툴팁
+        var existing = preview.querySelector('.grid-drag-tooltip');
+        var tip = existing || document.createElement('div');
+        tip.className = 'grid-drag-tooltip';
+        tip.textContent = minToTimeStr(startMin) + ' – ' + minToTimeStr(endMin);
+        if (!existing) preview.appendChild(tip);
+      }
+
+      overlay.addEventListener('mousedown', function(e) {
+        if (e.button !== 0) return;
+        var coords = posToGridCoords(e.clientX, e.clientY);
+        dragging = true;
+        dragDay = coords.day;
+        dragStartMin = coords.min;
+        dragEndMin = Math.min(24 * 60, coords.min + 30);
+        updatePreview(dragStartMin, dragEndMin, coords.colIdx);
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', function(e) {
+        if (!dragging) return;
+        var coords = posToGridCoords(e.clientX, e.clientY);
+        // 요일이 바뀌면 시작 요일로 고정
+        var endMin = Math.min(24 * 60, Math.max(dragStartMin + 30, coords.min + 30));
+        dragEndMin = endMin;
+        var colIdx = WEEKDAYS_EN.indexOf(dragDay);
+        updatePreview(dragStartMin, dragEndMin, colIdx);
+      }, { passive: true });
+
+      document.addEventListener('mouseup', function(e) {
+        if (!dragging) return;
+        dragging = false;
+        preview.style.display = 'none';
+        var start = dragStartMin, end = dragEndMin;
+        if (end <= start) end = start + 30;
+        addItemPrefill = {
+          weekday: dragDay,
+          startTime: minToTimeStr(start),
+          endTime: minToTimeStr(Math.min(24 * 60, end))
+        };
+        openScheduleItemForm(null);
+      });
     }
 
     function onGridCellClick(day, startMin) {
