@@ -577,37 +577,67 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 
 ## 10. 다음 세션 시작점
 
-> **마지막 세션: 2026-04-25 (일상 일괄선택/삭제 + 인라인 일상 추가 + 삭제 의존성 안내 + 이모지피커 z-index + 프로필 사진 자동압축)**
+> **마지막 세션: 2026-04-25 (태그 Enter 이중 추가 버그 수정 + 단계 재정렬 + 피드백 저장)**
 
 ### 🔄 현재 진행 상태
 
-- **마지막 커밋**: `2d515de feat: 프로필 사진 자동 압축 (200px/30KB 이하) + 결과 크기 안내`
-- 직전 커밋들: `bfcc423` → `1c4ee60` → `755765e` → `25c22da` (Sheets/일상개선 시리즈)
-- **배포 상태**: main 브랜치, GitHub Pages 반영 완료
-- **파일 라인 수**: 8,220줄
+- **작업 브랜치**: `claude/review-session-notes-nb8G8` (origin에 아직 미푸시 — 토큰 필요)
+- **마지막 커밋**: `a009e85 fix: 태그 입력 Enter 이중 추가 버그 — keydown→keyup으로 한국어 IME 조합 완료 후 처리`
+- 직전 커밋들: `7a2321e` → `2d515de` → `bfcc423` → `1c4ee60` (지난 세션 시리즈)
+- **배포 상태**: main 브랜치에 이전 작업까지 반영. 이번 세션 커밋은 미푸시.
+- **파일 라인 수**: 8,220줄 (단일 index.html)
 
-### 🎯 다음 단계 (우선순위 순)
+### 🎯 다음 단계 (재정렬된 우선순위)
 
-1. **17단계: 홈 대시보드 위젯** — 오늘 일정 요약, 최근 활동, 좋아요 시간표 바로가기
-2. **R1단계**: `USER_EMAIL` → `ALLOWED_EMAILS` 배열 리팩토링 (후순위)
-3. **파일 분할 검토**: 8,220줄 → 분할 타이밍 재검토 필요 (기준 6,000줄 초과)
+1. **R3단계: 파일 분할** — index.html → index.html + styles.css + app.js로 분리 (**지금 바로 시작**)
+2. **18단계: 습관 페이지** — 습관 목록 + 오늘 체크 + 달성률 캘린더
+3. **19단계: 할일 페이지** — To-do 리스트 + 완료 체크 + 날짜 필터
+4. **20단계: 아이디어 페이지** — 메모 카드 + 태그 + 검색
+5. **21단계: 레시피 페이지** — 레시피 카드 + 재료/단계
+6. **22단계: 금전 페이지** — 수입/지출 기록 + 월별 집계
+7. **23단계: 업무 페이지** — 업무 시간 기록 + 프로젝트별 집계
+8. **17단계: 홈 대시보드** — 마지막에 (다른 페이지 데이터 쌓인 후 위젯 알참)
+9. **R1단계**: `USER_EMAIL` → `ALLOWED_EMAILS` 배열 리팩토링 (후순위)
 
 ### 🚨 push 방법
 
 ```bash
-sh /home/user/bey-manager/.git/push.sh origin main
+sh /home/user/bey-manager/.git/push.sh origin claude/review-session-notes-nb8G8
 ```
-- `push.sh`가 `.git/GITHUB_TOKEN` 읽어서 프록시 우회
-- 토큰 만료 시: `echo "NEW_TOKEN" > /home/user/bey-manager/.git/GITHUB_TOKEN`
+- `push.sh`는 `.git/push.sh`에 존재 (이번 세션에서 재생성됨)
+- 토큰 파일이 없으면: `echo "ghp_..." > /home/user/bey-manager/.git/GITHUB_TOKEN`
+- **주의**: `.git/GITHUB_TOKEN`은 세션 컨테이너 리셋 시 사라질 수 있음 → 리셋 후 재발급 필요
 
-### 📌 이번 세션 설계 결정
+### 🔖 적용 대기 중인 피드백 (파일 분할 이후 구현 예정)
 
-- **일괄 선택 바**: `#activityBulkActions` / `#categoryBulkActions` div — `selectedActivityIds`/`selectedCategoryIds` Set으로 관리. `display:none` ↔ `display:flex` 토글. btn-icon + btn-danger 스타일 통일.
-- **카드 체크박스**: `position:absolute` 제거 → 카드 상단 별도 행(block)으로 배치. 이모지와 겹침 없음.
-- **인라인 일상 추가 폼**: `.si-add-activity-form` 2행 구조 — 1행(이모지+이름+취소), 2행(카테고리+색상), 3행(추가버튼). `siNewActivityEmoji/Name/CategoryId/Color` 전역 상태.
-- **삭제 확인 모달**: `showConfirm(title, msg, cb, detailHtml)` 4번째 인자 추가. `confirmDetail` div가 의존성 목록 표시.
-- **프로필 사진 압축**: Canvas max 200×200 → JPEG 85%부터 40,000자 이하까지 품질 감소. 실패 시 업로드 거절.
-- **이모지 피커 z-index**: `1100 → 1400` (scheduleItemModal 1200 위)
+#### ① 시간표 태그 색상 시스템 (Notion 스타일)
+- **현재**: 모든 태그가 노란색(`--primary-yellow`) 단색
+- **목표**: 태그 생성 시 랜덤 색상 자동 부여 (노션의 "선택 항목 속성"처럼)
+- **색상 후보 팔레트**: 노션과 유사하게 파스텔/채도 낮은 색상 10개 내외 (노란/핑크/초록/파랑/보라/주황/빨강/민트/회색 계열)
+- **태그 클릭 시 편집 UI**: 현재 텍스트·색상을 보여주는 팝업/드롭다운 → 텍스트 수정 + 색상 변경 가능
+- **저장 구조**: 태그는 현재 `schedule.tags: string[]`인데, `schedule.tags: {text: string, color: string}[]`로 변경 필요. Sheets 저장 시 `"회복:pink,복지:blue"` 같은 직렬화 방식으로 호환성 유지.
+- **태그 필터 바도 같이 색상 반영**: 기존 태그칩과 필터 바 칩 모두 동일 색상으로 표시
+
+#### ② 시간표 인라인 일상 추가 폼 UI 개선
+- **문제**: 이모지 피커 버튼, 일상 이름 입력칸, 끄기(×) 버튼, 카테고리 셀렉트, 색상 입력, 일상 추가 버튼의 스타일이 제각각이어서 정리되지 않은 모달처럼 보임
+- **색상 선택 문제**: 현재 색상 피커를 열기 전에는 어떤 색인지 미리보기가 안 보임 → 색상 샘플(16x16px 컬러 원 또는 사각형)을 색상 입력 옆에 항상 표시해야 함
+- **일상 추가 버튼 크기**: 다른 버튼들에 비해 너무 좁음 → full-width 또는 충분한 패딩으로 넓힘
+- **정리 방향**: 전체 폼을 일관된 카드 스타일로 통일. 각 행은 label + input 구조로 정렬. 버튼은 모두 같은 높이(36~40px). 색상 미리보기 원은 항상 표시.
+
+#### ③ Sheets 미연결 토스트 오류 버그
+- **증상**: 수정 사항 저장 버튼 눌렀을 때 "⚠️ Sheets 미연결 — 로컬에만 저장됩니다" 토스트가 뜸. 그러나 사이드바 Sheets 상태는 "연결됨(초록 dot)"으로 표시됨.
+- **의심 원인**:
+  1. `GS.isConnected()` 체크와 실제 연결 상태 변수(`gsAccessToken`, `gsConnected` 등)가 다른 변수를 참조할 가능성
+  2. 저장 함수 내에서 Sheets 저장 실패 시 catch 블록이 미연결 메시지를 뿌리는데, 실제 토큰은 있지만 API 호출 자체가 실패하는 경우 (scope 부족, 시트 ID 오류 등)
+  3. `saveSchedule()` vs `syncSheets()` 의 호출 경로가 달라서 한쪽만 연결 체크를 잘못할 가능성
+- **디버깅 포인트**: 저장 버튼 누를 때 콘솔에서 `GS.isConnected()` 반환값과 `gsAccessToken` 변수 확인 후 실제 API 호출 에러 메시지 확인
+- **해결 방향**: 연결 상태 체크를 단일 변수 기준으로 통일하고, 실패 시 에러 메시지를 구체적으로 분기(미연결 vs API 오류)
+
+### 📌 설계 결정 (이번 세션)
+
+- **태그 Enter 이중 추가 버그**: `onkeydown` → `onkeyup`으로 변경. 한국어 IME에서 `keydown`은 조합 완료 전에 발화(isComposing=true)될 수 있어 이중 추가 발생. `keyup` 시점엔 IME 조합 완료 후라 단 한 번만 처리됨.
+- **파일 분할 방향 확정**: `index.html` + `styles.css` + `app.js` 3파일 분리. 로컬 개발은 `python3 -m http.server 8000` 필수. `file://` 직접 열기는 CORS로 불가.
+- **단계 순서 변경**: 홈 대시보드(17단계)를 맨 뒤로 이동. R3 파일 분할 → 18~23단계 순서로 진행.
 
 ### 📌 설계 결정 (이전 세션 누적)
 
@@ -617,12 +647,15 @@ sh /home/user/bey-manager/.git/push.sh origin main
 - **디자인 CSS 변수**: `--primary-btn-bg/color`, `--mobile-topbar-bg/border/text` 추가됨.
 - **탭 UI 전역 통일**: `.tab-nav` + `.tab-btn` + `.tab-content`. 페이지별 스코프 필수(`#dailyPage .tab-btn` 등).
 - **사이드바 푸터 3행**: 상태dot+라벨 / 이메일 / 연결·해제·로그아웃 버튼
+- **인라인 일상 추가 폼**: `.si-add-activity-form` 2행 구조. `siNewActivityEmoji/Name/CategoryId/Color` 전역 상태.
+- **삭제 확인 모달**: `showConfirm(title, msg, cb, detailHtml)` 4번째 인자로 의존성 목록 표시.
 
 ### ⚠️ 다음 세션 유의사항
 
 1. 세션 시작 시 `git log -5 --oneline` + `wc -l index.html` + CLAUDE.md §10 정독
-2. 새 컴퓨터: `git pull origin main` 먼저
-3. 세션 컨텍스트 길어지면 스트림 타임아웃 → CLAUDE.md 편집은 Python 스크립트로(작은 Edit 여러 번 or python3 replace)
+2. `.git/GITHUB_TOKEN` 존재 여부 확인 → 없으면 토큰 요청 (세션 컨테이너 리셋 시 사라짐)
+3. 파일 분할 후 로컬 테스트는 반드시 `python3 -m http.server 8000` 사용
+4. 세션 컨텍스트 길어지면 스트림 타임아웃 → CLAUDE.md 편집은 짧은 Edit 여러 번으로 분할
 ---
 
 ## 11. 교훈
