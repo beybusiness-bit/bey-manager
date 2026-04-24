@@ -1839,10 +1839,10 @@
     .sched-day-header.weekend { color: #e05; }
     .sched-body { display: flex; }
     .sched-time-gutter { flex: 0 0 44px; }
-    .sched-time-slot-label { height: 24px; line-height: 24px; font-size: 9px; color: #bbb; text-align: right; padding-right: 4px; box-sizing: border-box; }
+    .sched-time-slot-label { height: 28px; line-height: 28px; font-size: 9px; color: #bbb; text-align: right; padding-right: 4px; box-sizing: border-box; }
     .sched-time-slot-label.hour { font-size: 10px; color: #999; border-top: 1px solid #e0e0e0; }
     .sched-day-col { flex: 1; position: relative; border-left: 1px solid #ececec; min-width: 36px; }
-    .sched-bg-slot { height: 24px; border-top: 1px solid #f8f8f8; box-sizing: border-box; }
+    .sched-bg-slot { height: 28px; border-top: 1px solid #f8f8f8; box-sizing: border-box; }
     .sched-bg-slot.hour { border-top-color: #e8e8e8; }
     .sched-item-block {
       position: absolute; left: 2px; right: 2px; border-radius: 4px;
@@ -1873,14 +1873,18 @@
     .sched-tag-chip { display: inline-block; background: var(--primary-yellow); border-radius: 12px; padding: 2px 10px; font-size: 12px; margin: 0 4px 4px 0; }
 
     /* 시간표 썸네일 미니 그리드 */
-    .sched-mini-grid { display: flex; width: 100%; height: 72px; border: 1px solid var(--border-color); border-radius: 4px; overflow: hidden; background: #fafafa; }
-    .sched-mini-col { flex: 1; position: relative; border-left: 1px solid #f0f0f0; }
-    .sched-mini-col:first-child { border-left: none; }
-    .sched-mini-block { position: absolute; left: 0; right: 0; display: flex; align-items: center; justify-content: center; font-size: 8px; overflow: hidden; }
+    .sched-mini-grid { display: flex; flex-direction: column; width: 100%; height: 72px; border: 1px solid var(--border-color); border-radius: 4px; overflow: hidden; background: #fafafa; }
+    .sched-mini-header { display: flex; height: 14px; flex-shrink: 0; background: #f0f0f0; border-bottom: 1px solid #e4e4e4; }
+    .sched-mini-day-lbl { flex: 1; font-size: 7px; text-align: center; line-height: 14px; color: #999; }
+    .sched-mini-day-lbl.weekend { color: #e05; }
+    .sched-mini-body { flex: 1; position: relative; overflow: hidden; }
+    .sched-mini-block { position: absolute; display: flex; align-items: center; justify-content: center; font-size: 8px; overflow: hidden; }
     .sched-mini-block img { width: 8px; height: 8px; object-fit: cover; }
     .sched-hero-card .sched-mini-grid { height: 120px; }
-    .sched-hero-card .sched-mini-block { font-size: 12px; }
-    .sched-hero-card .sched-mini-block img { width: 12px; height: 12px; }
+    .sched-hero-card .sched-mini-header { height: 16px; }
+    .sched-hero-card .sched-mini-day-lbl { font-size: 9px; line-height: 16px; }
+    .sched-hero-card .sched-mini-block { font-size: 11px; }
+    .sched-hero-card .sched-mini-block img { width: 11px; height: 11px; }
 
     /* 일정 목록 */
     .sched-item-list { display: flex; flex-direction: column; gap: 8px; }
@@ -5855,6 +5859,34 @@
       renderScheduleDetail();
     }
 
+    function buildMergedBlocks(items) {
+      var dayOrd = { MON:0, TUE:1, WED:2, THU:3, FRI:4, SAT:5, SUN:6 };
+      var groups = {};
+      items.forEach(function(item) {
+        var key = item.activityId + '|' + item.startTime + '|' + item.endTime;
+        if (!groups[key]) groups[key] = { activityId: item.activityId, startTime: item.startTime, endTime: item.endTime, firstItemId: item.id, allDays: [] };
+        (item.weekdays || []).forEach(function(d) {
+          if (groups[key].allDays.indexOf(d) < 0) groups[key].allDays.push(d);
+        });
+      });
+      var blocks = [];
+      Object.keys(groups).forEach(function(key) {
+        var g = groups[key];
+        var idxs = g.allDays.map(function(d) { return dayOrd[d]; }).filter(function(x) { return x !== undefined; }).sort(function(a, b) { return a - b; });
+        var curRun = [];
+        idxs.forEach(function(idx) {
+          if (curRun.length === 0 || idx === curRun[curRun.length - 1] + 1) {
+            curRun.push(idx);
+          } else {
+            blocks.push({ activityId: g.activityId, startTime: g.startTime, endTime: g.endTime, firstItemId: g.firstItemId, colStart: curRun[0], colSpan: curRun.length });
+            curRun = [idx];
+          }
+        });
+        if (curRun.length) blocks.push({ activityId: g.activityId, startTime: g.startTime, endTime: g.endTime, firstItemId: g.firstItemId, colStart: curRun[0], colSpan: curRun.length });
+      });
+      return blocks;
+    }
+
     function renderScheduleGrid() {
       var items = scheduleItems.filter(function(i) { return i.scheduleId === currentDetailScheduleId; });
       var isEdit = (scheduleViewMode2 === 'edit');
@@ -5865,6 +5897,14 @@
       }
       var totalSlots = (gridEnd - gridStart) / 30;
       var totalHeight = totalSlots * SLOT_HEIGHT;
+
+      // Current time line
+      var now = new Date();
+      var nowMin = now.getHours() * 60 + now.getMinutes();
+      var nowTop = (nowMin >= gridStart && nowMin <= gridEnd) ? (nowMin - gridStart) / 30 * SLOT_HEIGHT : -1;
+
+      // Merged blocks
+      var blocks = buildMergedBlocks(items);
 
       var html = '<div class="sched-grid-outer"><div class="sched-grid-wrap">';
       html += '<div class="sched-header-row"><div class="sched-time-gutter-h"></div>';
@@ -5877,38 +5917,49 @@
         html += '<div class="sched-time-slot-label' + (isH ? ' hour' : '') + '">' + (isH ? minToTimeStr(t) : '') + '</div>';
       }
       html += '</div>';
-      WEEKDAYS_EN.forEach(function(day, dayIdx) {
-        var di = items.filter(function(i) { return i.weekdays && i.weekdays.indexOf(day) >= 0; });
-        html += '<div class="sched-day-col" style="height:' + totalHeight + 'px;" data-day="' + day + '">';
+      // Grid content: background cols + items overlay
+      html += '<div style="flex:1; position:relative; height:' + totalHeight + 'px;">';
+      // Background columns (grid lines + clickable cells)
+      html += '<div style="position:absolute; inset:0; display:flex;">';
+      WEEKDAYS_EN.forEach(function(day) {
+        html += '<div class="sched-day-col" style="flex:1; height:100%;" data-day="' + day + '">';
         for (var s = 0; s < totalSlots; s++) {
           var slotMin = gridStart + s * 30;
-          var cellClass = 'sched-bg-slot' + (((slotMin) % 60 === 0) ? ' hour' : '');
+          var cellClass = 'sched-bg-slot' + ((slotMin % 60 === 0) ? ' hour' : '');
           if (isEdit) {
-            cellClass += ' sched-empty-cell';
-            html += '<div class="' + cellClass + '" onclick="onGridCellClick(&apos;' + day + '&apos;,' + slotMin + ')"></div>';
+            html += '<div class="' + cellClass + ' sched-empty-cell" onclick="onGridCellClick(&apos;' + day + '&apos;,' + slotMin + ')"></div>';
           } else {
             html += '<div class="' + cellClass + '"></div>';
           }
         }
-        di.forEach(function(item) {
-          var sMin = timeToMin(item.startTime), eMin = timeToMin(item.endTime);
-          var top = (sMin - gridStart) / 30 * SLOT_HEIGHT;
-          var height = Math.max(SLOT_HEIGHT, (eMin - sMin) / 30 * SLOT_HEIGHT);
-          var act = activities.find(function(a) { return a.id === item.activityId; });
-          var emoji = act ? renderEmoji(act.emoji) : '📅';
-          var name = act ? act.name : '(삭제된 일상)';
-          var color = act ? (act.color || '#ffde59') : '#ffde59';
-          var clickHandler = isEdit ? ('onclick="event.stopPropagation(); openScheduleItemForm(&apos;' + item.id + '&apos;)"') : '';
-          var cursorStyle = isEdit ? 'cursor:pointer;' : 'cursor:default;';
-          html += '<div class="sched-item-block" style="' + cursorStyle + 'top:' + top + 'px;height:' + height + 'px;background:' + color + '30;border-left-color:' + color + ';" ' + clickHandler + '>';
-          if (height >= 28) html += '<div class="sched-item-emoji">' + emoji + '</div>';
-          if (height >= 42) html += '<div class="sched-item-name">' + name + '</div>';
-          if (height >= 60) html += '<div class="sched-item-time">' + item.startTime + '-' + item.endTime + '</div>';
-          html += '</div>';
-        });
         html += '</div>';
       });
-      html += '</div></div></div>';
+      html += '</div>';
+      // Items overlay
+      html += '<div style="position:absolute; inset:0; pointer-events:none;">';
+      blocks.forEach(function(b) {
+        var act = activities.find(function(a) { return a.id === b.activityId; });
+        var emoji = act ? renderEmoji(act.emoji) : '📅';
+        var name = act ? act.name : '(삭제된 일상)';
+        var color = act ? (act.color || '#ffde59') : '#ffde59';
+        var sMin = timeToMin(b.startTime), eMin = timeToMin(b.endTime);
+        var top = (sMin - gridStart) / 30 * SLOT_HEIGHT;
+        var height = Math.max(SLOT_HEIGHT, (eMin - sMin) / 30 * SLOT_HEIGHT);
+        var leftPct = b.colStart / 7 * 100;
+        var widthPct = b.colSpan / 7 * 100;
+        var ptrStyle = isEdit ? 'pointer-events:auto; cursor:pointer;' : '';
+        var clickAttr = isEdit ? ('onclick="openScheduleItemForm(&apos;' + b.firstItemId + '&apos;)"') : '';
+        html += '<div class="sched-item-block" style="position:absolute;' + ptrStyle + 'top:' + top + 'px;height:' + height + 'px;left:calc(' + leftPct + '% + 2px);width:calc(' + widthPct + '% - 4px);background:' + color + '30;border-left-color:' + color + ';" ' + clickAttr + '>';
+        if (height >= 28) html += '<div class="sched-item-emoji">' + emoji + '</div>';
+        if (height >= 42) html += '<div class="sched-item-name">' + name + '</div>';
+        if (height >= 60) html += '<div class="sched-item-time">' + b.startTime + '–' + b.endTime + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+      // Current time line
+      if (nowTop >= 0) html += '<div class="sched-now-line" style="top:' + nowTop + 'px;"></div>';
+      html += '</div>'; // grid content
+      html += '</div></div></div>'; // sched-body, sched-grid-wrap, sched-grid-outer
       if (isEdit) {
         html += '<div style="margin-top:14px; text-align:center;"><button class="btn-add" onclick="openScheduleItemForm(null)">+ 일정 추가</button></div>';
       }
@@ -5928,30 +5979,62 @@
 
     function renderScheduleMiniGrid(scheduleId) {
       var items = scheduleItems.filter(function(i) { return i.scheduleId === scheduleId; });
-      if (items.length === 0) {
-        return '<div class="sched-mini-grid" style="display:flex; align-items:center; justify-content:center; color:#bbb; font-size:10px;">빈 시간표</div>';
+      var gStart = 6 * 60, gEnd = 22 * 60;
+      if (items.length > 0) {
+        var maxE = items.reduce(function(m, i) { return Math.max(m, timeToMin(i.endTime)); }, 0);
+        if (maxE > gEnd) gEnd = Math.min(24 * 60, Math.ceil((maxE + 30) / 30) * 30);
       }
-      var minS = items.reduce(function(m, i) { return Math.min(m, timeToMin(i.startTime)); }, Infinity);
-      var maxE = items.reduce(function(m, i) { return Math.max(m, timeToMin(i.endTime)); }, 0);
-      var gStart = Math.max(0, Math.floor(minS / 30) * 30);
-      var gEnd = Math.min(24 * 60, Math.ceil(maxE / 30) * 30);
-      if (gEnd - gStart < 60) gEnd = gStart + 60;
       var range = gEnd - gStart;
+
+      // Current time
+      var now = new Date();
+      var nowMin = now.getHours() * 60 + now.getMinutes();
+      var nowPct = (nowMin >= gStart && nowMin <= gEnd) ? (nowMin - gStart) / range * 100 : -1;
+
+      // Merged blocks
+      var blocks = items.length > 0 ? buildMergedBlocks(items) : [];
+
+      // Day header
       var html = '<div class="sched-mini-grid">';
-      WEEKDAYS_EN.forEach(function(day) {
-        html += '<div class="sched-mini-col">';
-        items.filter(function(i) { return i.weekdays && i.weekdays.indexOf(day) >= 0; }).forEach(function(item) {
-          var sMin = timeToMin(item.startTime), eMin = timeToMin(item.endTime);
-          var topPct = (sMin - gStart) / range * 100;
-          var heightPct = (eMin - sMin) / range * 100;
-          var act = activities.find(function(a) { return a.id === item.activityId; });
-          var color = act ? (act.color || '#ffde59') : '#ffde59';
-          var emoji = act ? renderEmoji(act.emoji) : '';
-          html += '<div class="sched-mini-block" style="top:' + topPct + '%;height:' + heightPct + '%;background:' + color + ';">' + emoji + '</div>';
-        });
-        html += '</div>';
+      html += '<div class="sched-mini-header">';
+      WEEKDAYS_KR.forEach(function(kr, i) {
+        html += '<div class="sched-mini-day-lbl' + (i >= 5 ? ' weekend' : '') + '">' + kr + '</div>';
       });
       html += '</div>';
+      // Body
+      html += '<div class="sched-mini-body">';
+      // Day separator lines
+      html += '<div style="position:absolute; inset:0; display:flex; pointer-events:none;">';
+      WEEKDAYS_EN.forEach(function(day, i) {
+        html += '<div style="flex:1;' + (i > 0 ? 'border-left:1px solid #eee;' : '') + '"></div>';
+      });
+      html += '</div>';
+      // Hour lines (subtle)
+      for (var h = gStart + 60; h < gEnd; h += 60) {
+        var hp = (h - gStart) / range * 100;
+        html += '<div style="position:absolute; left:0; right:0; top:' + hp + '%; border-top:1px solid #eee; pointer-events:none;"></div>';
+      }
+      // Blocks
+      if (items.length === 0) {
+        html += '<div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#ccc; font-size:9px;">빈 시간표</div>';
+      } else {
+        blocks.forEach(function(b) {
+          var act = activities.find(function(a) { return a.id === b.activityId; });
+          var color = act ? (act.color || '#ffde59') : '#ffde59';
+          var emoji = act ? renderEmoji(act.emoji) : '';
+          var sMin = timeToMin(b.startTime), eMin = timeToMin(b.endTime);
+          var topPct = (sMin - gStart) / range * 100;
+          var heightPct = Math.max(0.5, (eMin - sMin) / range * 100);
+          var leftPct = b.colStart / 7 * 100;
+          var widthPct = b.colSpan / 7 * 100;
+          html += '<div class="sched-mini-block" style="top:' + topPct + '%;height:' + heightPct + '%;left:calc(' + leftPct + '% + 1px);width:calc(' + widthPct + '% - 2px);background:' + color + ';">' + emoji + '</div>';
+        });
+      }
+      // Current time line
+      if (nowPct >= 0) {
+        html += '<div style="position:absolute; left:0; right:0; top:' + nowPct + '%; height:1px; background:var(--primary-pink,#ffaade); z-index:5; pointer-events:none;"></div>';
+      }
+      html += '</div></div>'; // sched-mini-body, sched-mini-grid
       return html;
     }
 
