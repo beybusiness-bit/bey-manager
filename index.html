@@ -283,7 +283,7 @@
       right: 0;
       bottom: 0;
       background: rgba(0, 0, 0, 0.3);
-      z-index: 1100;
+      z-index: 1400;
       align-items: center;
       justify-content: center;
       padding: 20px;
@@ -2320,9 +2320,10 @@
     .si-add-save-btn { padding: 5px 10px; font-size: 12px; border-radius: 6px; background: var(--primary-yellow); border: none; cursor: pointer; font-weight: 600; flex-shrink: 0; }
     .si-add-save-btn:hover { opacity: 0.85; }
     .si-add-cancel-btn { padding: 5px 8px; font-size: 13px; border-radius: 6px; border: 1px solid var(--border-color); background: transparent; cursor: pointer; color: #888; flex-shrink: 0; line-height: 1; }
-    .si-add-cat-select { flex: 1; padding: 5px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; min-width: 0; }
-    .si-add-color-label { font-size: 12px; color: var(--text-secondary); white-space: nowrap; flex-shrink: 0; }
-    .si-add-color-input { width: 32px; height: 28px; border: 1px solid var(--border-color); border-radius: 6px; padding: 2px; cursor: pointer; flex-shrink: 0; }
+    .si-add-cat-select { flex: 1; min-width: 0; padding: 5px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; }
+    .si-add-color-wrap { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .si-add-color-label { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
+    .si-add-color-input { width: 30px; height: 26px; border: 1px solid var(--border-color); border-radius: 5px; padding: 1px; cursor: pointer; background: none; }
 
     /* 카테고리 카드 레이아웃 */
     .category-grid {
@@ -2732,6 +2733,7 @@
     <div class="modal-box">
       <h3 id="confirmTitle">확인</h3>
       <p id="confirmMessage"></p>
+      <div id="confirmDetail" style="display:none; margin: 8px 0 4px; max-height:160px; overflow-y:auto; background:var(--bg-main); border:1px solid var(--border-color); border-radius:8px; padding:8px 12px; font-size:13px; line-height:1.8;"></div>
       <div class="modal-actions">
         <button class="btn-cancel" onclick="closeConfirmModal(false)">취소</button>
         <button class="btn-confirm" onclick="closeConfirmModal(true)">확인</button>
@@ -4344,13 +4346,18 @@
     // ========================================
     // 공통 모달 시스템
     // ========================================
-    function showConfirm(title, message, callback) {
+    function showConfirm(title, message, callback, detailHtml) {
       const modal = document.getElementById('confirmModal');
       const titleEl = document.getElementById('confirmTitle');
       const messageEl = document.getElementById('confirmMessage');
-      
+      const detailEl = document.getElementById('confirmDetail');
+
       titleEl.textContent = title;
       messageEl.textContent = message;
+      if (detailEl) {
+        if (detailHtml) { detailEl.innerHTML = detailHtml; detailEl.style.display = ''; }
+        else { detailEl.innerHTML = ''; detailEl.style.display = 'none'; }
+      }
       confirmModalCallback = callback;
       modal.classList.add('show');
     }
@@ -4358,7 +4365,9 @@
     function closeConfirmModal(result) {
       const modal = document.getElementById('confirmModal');
       modal.classList.remove('show');
-      
+      var detailEl = document.getElementById('confirmDetail');
+      if (detailEl) { detailEl.innerHTML = ''; detailEl.style.display = 'none'; }
+
       if (confirmModalCallback) {
         confirmModalCallback(result);
         confirmModalCallback = null;
@@ -5296,23 +5305,26 @@
     }
 
     function deleteCategory(categoryId) {
-      showConfirm('카테고리 삭제', '이 카테고리를 삭제하시겠습니까?\n(관련된 일상 종류는 미지정 상태로 변경됩니다)', function(confirmed) {
+      var cat = categories.find(function(c) { return c.id === categoryId; });
+      var memberActivities = activities.filter(function(a) { return a.categoryId === categoryId; });
+      var detailHtml = '';
+      var msg = '이 카테고리를 삭제하시겠습니까?';
+      if (memberActivities.length > 0) {
+        msg = '이 카테고리를 삭제하시겠습니까?\n소속 일상은 미지정 상태로 변경됩니다.';
+        detailHtml = '<b>소속 일상 (' + memberActivities.length + '개):</b><br>' +
+          memberActivities.map(function(a) { return renderEmoji(a.emoji) + ' ' + escapeHtml(a.name); }).join('<br>');
+      }
+      showConfirm('카테고리 삭제', msg, function(confirmed) {
         if (confirmed) {
           categories = categories.filter(function(c) { return c.id !== categoryId; });
-
-          activities.forEach(function(a) {
-            if (a.categoryId === categoryId) {
-              a.categoryId = null;
-            }
-          });
-
+          activities.forEach(function(a) { if (a.categoryId === categoryId) a.categoryId = null; });
           saveCategories();
           saveActivities();
           renderCategories();
           renderCategoryFilter();
           renderActivities();
         }
-      });
+      }, detailHtml);
     }
 
     function toggleCategorySelect(id, checked) {
@@ -5352,12 +5364,18 @@
     function deleteSelectedCategories() {
       var ids = Array.from(selectedCategoryIds);
       if (!ids.length) return;
-      showConfirm('카테고리 삭제', ids.length + '개의 카테고리를 삭제하시겠습니까?\n(관련된 일상 종류는 미지정 상태로 변경됩니다)', function(confirmed) {
+      var memberActivities = activities.filter(function(a) { return selectedCategoryIds.has(a.categoryId); });
+      var msg = ids.length + '개의 카테고리를 삭제하시겠습니까?';
+      var detailHtml = '';
+      if (memberActivities.length > 0) {
+        msg = ids.length + '개의 카테고리를 삭제하시겠습니까?\n소속 일상은 미지정 상태로 변경됩니다.';
+        detailHtml = '<b>미지정으로 변경될 일상 (' + memberActivities.length + '개):</b><br>' +
+          memberActivities.map(function(a) { return renderEmoji(a.emoji) + ' ' + escapeHtml(a.name); }).join('<br>');
+      }
+      showConfirm('카테고리 삭제', msg, function(confirmed) {
         if (!confirmed) return;
         categories = categories.filter(function(c) { return !selectedCategoryIds.has(c.id); });
-        activities.forEach(function(a) {
-          if (selectedCategoryIds.has(a.categoryId)) a.categoryId = null;
-        });
+        activities.forEach(function(a) { if (selectedCategoryIds.has(a.categoryId)) a.categoryId = null; });
         selectedCategoryIds.clear();
         saveCategories();
         saveActivities();
@@ -5365,7 +5383,7 @@
         renderCategories();
         renderCategoryFilter();
         renderActivities();
-      });
+      }, detailHtml);
     }
 
     function renderCategories() {
@@ -5598,14 +5616,24 @@
     }
 
     function deleteActivity(activityId) {
-      showConfirm('일상 종류 삭제', '이 일상 종류를 삭제하시겠습니까?', function(confirmed) {
+      var usedItems = scheduleItems.filter(function(i) { return i.activityId === activityId; });
+      var usedScheduleIds = usedItems.map(function(i) { return i.scheduleId; });
+      var usedSchedules = schedules.filter(function(s) { return usedScheduleIds.indexOf(s.id) >= 0; });
+      var msg = '이 일상 종류를 삭제하시겠습니까?';
+      var detailHtml = '';
+      if (usedSchedules.length > 0) {
+        msg = '이 일상 종류를 삭제하시겠습니까?\n아래 시간표에서 사용 중입니다.';
+        detailHtml = '<b>사용 중인 시간표 (' + usedSchedules.length + '개):</b><br>' +
+          usedSchedules.map(function(s) { return renderEmoji(s.emoji) + ' ' + escapeHtml(s.title); }).join('<br>');
+      }
+      showConfirm('일상 종류 삭제', msg, function(confirmed) {
         if (confirmed) {
           activities = activities.filter(function(a) { return a.id !== activityId; });
           saveActivities();
           renderActivities();
           renderCategories();
         }
-      });
+      }, detailHtml);
     }
 
     function toggleActivitySelect(id, checked) {
@@ -5645,7 +5673,17 @@
     function deleteSelectedActivities() {
       var ids = Array.from(selectedActivityIds);
       if (!ids.length) return;
-      showConfirm('일상 종류 삭제', ids.length + '개의 일상 종류를 삭제하시겠습니까?', function(confirmed) {
+      var usedItems = scheduleItems.filter(function(i) { return selectedActivityIds.has(i.activityId); });
+      var usedScheduleIds = usedItems.map(function(i) { return i.scheduleId; }).filter(function(v, i, a) { return a.indexOf(v) === i; });
+      var usedSchedules = schedules.filter(function(s) { return usedScheduleIds.indexOf(s.id) >= 0; });
+      var msg = ids.length + '개의 일상 종류를 삭제하시겠습니까?';
+      var detailHtml = '';
+      if (usedSchedules.length > 0) {
+        msg = ids.length + '개의 일상 종류를 삭제하시겠습니까?\n일부는 아래 시간표에서 사용 중입니다.';
+        detailHtml = '<b>사용 중인 시간표 (' + usedSchedules.length + '개):</b><br>' +
+          usedSchedules.map(function(s) { return renderEmoji(s.emoji) + ' ' + escapeHtml(s.title); }).join('<br>');
+      }
+      showConfirm('일상 종류 삭제', msg, function(confirmed) {
         if (!confirmed) return;
         activities = activities.filter(function(a) { return !selectedActivityIds.has(a.id); });
         selectedActivityIds.clear();
@@ -5653,7 +5691,7 @@
         updateActivityBulkBar();
         renderActivities();
         renderCategories();
-      });
+      }, detailHtml);
     }
 
     function getFilteredActivities() {
@@ -6420,7 +6458,7 @@
     function bulkDeleteSchedules() {
       if (selectedScheduleIds.length === 0) return;
       const count = selectedScheduleIds.length;
-      showConfirm('시간표 삭제', count + '개 시간표를 삭제하시겠습니까?\n(포함된 일정도 함께 삭제됩니다)', function(confirmed) {
+      showConfirm('시간표 삭제', count + '개 시간표를 삭제하시겠습니까?', function(confirmed) {
         if (!confirmed) return;
         schedules = schedules.filter(function(s) { return selectedScheduleIds.indexOf(s.id) < 0; });
         scheduleItems = scheduleItems.filter(function(i) { return selectedScheduleIds.indexOf(i.scheduleId) < 0; });
@@ -6463,7 +6501,7 @@
     }
 
     function deleteSchedule(scheduleId) {
-      showConfirm('시간표 삭제', '이 시간표를 삭제하시겠습니까?\n(포함된 일정도 함께 삭제됩니다)', function(confirmed) {
+      showConfirm('시간표 삭제', '이 시간표를 삭제하시겠습니까?', function(confirmed) {
         if (!confirmed) return;
         schedules = schedules.filter(function(s) { return s.id !== scheduleId; });
         scheduleItems = scheduleItems.filter(function(i) { return i.scheduleId !== scheduleId; });
@@ -7253,8 +7291,7 @@
           html += '<option value="' + cat.id + '"' + sel2 + '>' + cat.emoji + ' ' + cat.name + '</option>';
         });
         html += '</select>';
-        html += '<label class="si-add-color-label">색상</label>';
-        html += '<input type="color" class="si-add-color-input" value="' + siNewActivityColor + '" oninput="siNewActivityColor=this.value" onclick="event.stopPropagation()">';
+        html += '<span class="si-add-color-wrap"><label class="si-add-color-label">색상</label><input type="color" class="si-add-color-input" value="' + siNewActivityColor + '" oninput="siNewActivityColor=this.value" onclick="event.stopPropagation()"></span>';
         html += '</div>';
         html += '<div class="si-add-row1" style="justify-content:flex-end">';
         html += '<button type="button" class="si-add-save-btn" onclick="event.stopPropagation();saveSiNewActivity()">일상 추가</button>';
