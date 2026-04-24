@@ -2043,13 +2043,20 @@
     .sched-mini-day-lbl { flex: 1; font-size: 7px; text-align: center; line-height: 14px; color: #999; }
     .sched-mini-day-lbl.weekend { color: #e05; }
     .sched-mini-body { flex: 1; position: relative; overflow: hidden; }
-    .sched-mini-block { position: absolute; display: flex; align-items: center; justify-content: center; font-size: 8px; overflow: hidden; }
-    .sched-mini-block img { width: 8px; height: 8px; object-fit: cover; }
+    .sched-mini-block { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; overflow: hidden; }
+    .mini-emoji-badge { display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.72); border-radius: 50%; width: 13px; height: 13px; font-size: 8px; line-height: 1; flex-shrink: 0; }
+    .mini-emoji-badge img { width: 8px; height: 8px; object-fit: cover; }
+    .mini-block-name { display: none; font-size: 6px; color: rgba(0,0,0,0.75); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding: 0 1px; font-weight: 600; }
     .sched-hero-card .sched-mini-grid { height: 120px; }
     .sched-hero-card .sched-mini-header { height: 16px; }
     .sched-hero-card .sched-mini-day-lbl { font-size: 9px; line-height: 16px; }
-    .sched-hero-card .sched-mini-block { font-size: 11px; }
-    .sched-hero-card .sched-mini-block img { width: 11px; height: 11px; }
+    .sched-hero-card .mini-emoji-badge { width: 18px; height: 18px; font-size: 12px; }
+    .sched-hero-card .mini-emoji-badge img { width: 12px; height: 12px; }
+    @media (min-width: 769px) {
+      .sched-hero-card .mini-emoji-badge { width: 22px; height: 22px; font-size: 15px; }
+      .sched-hero-card .mini-emoji-badge img { width: 15px; height: 15px; }
+      .sched-hero-card .mini-block-name { display: block; font-size: 7px; }
+    }
 
     /* 일정 목록 */
     .sched-item-list { display: flex; flex-direction: column; gap: 8px; }
@@ -2344,6 +2351,17 @@
       outline: 2px dashed var(--primary-yellow);
       outline-offset: 2px;
     }
+
+    /* 일상 뷰 토글 버튼 */
+    .activity-view-btn { transition: background 0.15s, border-color 0.15s, color 0.15s; }
+    .activity-view-btn.active { background: var(--primary-yellow) !important; border-color: var(--primary-yellow) !important; font-weight: 600; }
+
+    /* 카테고리별 보기 — 그룹 레이아웃 */
+    .activity-group { margin-bottom: 24px; }
+    .activity-group-header { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--text-main); padding: 6px 0 10px; border-bottom: 2px solid var(--primary-yellow); margin-bottom: 12px; }
+    .activity-group-count { font-size: 11px; font-weight: 500; color: var(--text-secondary); background: var(--bg-hover); border-radius: 10px; padding: 1px 7px; margin-left: 2px; }
+    .activity-group-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 10px; }
+    .activity-group-add-btn { margin-top: 4px; width: 100%; }
 
     /* 카드 체크박스 — 카드 우상단 고정 */
     .card-cb { position: absolute; top: 8px; right: 8px; display: flex; align-items: center; z-index: 2; }

@@ -276,8 +276,14 @@
           <div class="card">
             <h3>🏷️ 일상 종류</h3>
             
-            <!-- 카테고리 필터 -->
-            <div style="margin-bottom: 16px; display: flex; gap: 12px; align-items: center;">
+            <!-- 뷰 토글 -->
+            <div style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center;">
+              <button class="activity-view-btn active" id="activityViewDefault" onclick="setActivityViewMode('default')" style="padding: 6px 14px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; background: var(--card-bg); cursor: pointer;">기본 보기</button>
+              <button class="activity-view-btn" id="activityViewGrouped" onclick="setActivityViewMode('grouped')" style="padding: 6px 14px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; background: var(--card-bg); cursor: pointer;">카테고리별 보기</button>
+            </div>
+
+            <!-- 카테고리 필터 (기본 보기에서만 표시) -->
+            <div id="activityCategoryFilterWrap" style="margin-bottom: 16px; display: flex; gap: 12px; align-items: center;">
               <label style="font-size: 14px; font-weight: 500;">카테고리:</label>
               <select id="activityCategoryFilter" onchange="filterActivitiesByCategory()" style="flex: 1; max-width: 300px; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 14px;">
                 <option value="">전체</option>

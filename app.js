@@ -1100,6 +1100,7 @@
     let scheduleViewMode = 'thumbnail';
     let scheduleListPage = 1;
     let scheduleListPerPage = 10;
+    let activityViewMode = 'default'; // 'default' | 'grouped'
     let activityListPage = 1;
     let activityListPerPage = 20;
     let categoryListPage = 1;
@@ -2681,11 +2682,131 @@
       return filtered;
     }
 
+    function setActivityViewMode(mode) {
+      activityViewMode = mode;
+      var defaultBtn = document.getElementById('activityViewDefault');
+      var groupedBtn = document.getElementById('activityViewGrouped');
+      var filterWrap = document.getElementById('activityCategoryFilterWrap');
+      var topPager = document.getElementById('activityPagerTop');
+      var bottomPager = document.getElementById('activityPagerBottom');
+      if (defaultBtn) defaultBtn.classList.toggle('active', mode === 'default');
+      if (groupedBtn) groupedBtn.classList.toggle('active', mode === 'grouped');
+      if (filterWrap) filterWrap.style.display = mode === 'default' ? 'flex' : 'none';
+      if (mode === 'grouped') {
+        if (topPager) topPager.innerHTML = '';
+        if (bottomPager) bottomPager.innerHTML = '';
+      }
+      renderActivities();
+    }
+
+    function renderActivitiesGrouped(container) {
+      if (!container) return;
+      var html = '';
+      // Build groups: each active category + "미지정" for activities with no category
+      var groupList = categories.slice();
+      var hasUnassigned = activities.some(function(a) { return !a.categoryId; });
+      if (hasUnassigned) groupList = groupList.concat([{ id: null, emoji: '📂', name: '미지정' }]);
+
+      if (groupList.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px; grid-column: 1 / -1;">카테고리가 없습니다. 카테고리를 먼저 추가해주세요.</p>';
+        return;
+      }
+
+      groupList.forEach(function(cat) {
+        var groupActivities = activities.filter(function(a) {
+          return cat.id === null ? !a.categoryId : a.categoryId === cat.id;
+        });
+        if (cat.id !== null && groupActivities.length === 0) return; // 일상 없는 카테고리 건너뜀
+
+        html += '<div class="activity-group">';
+        html += '<div class="activity-group-header">' + cat.emoji + ' ' + cat.name + ' <span class="activity-group-count">' + groupActivities.length + '</span></div>';
+        html += '<div class="activity-group-cards">';
+        groupActivities.forEach(function(activity) {
+          var isEditing = (editingActivityId === activity.id);
+          var cardStyle = isEditing ? '' : ' style="' + getActivityCardStyle(activity.color) + '"';
+          var dragAttrs = isEditing ? '' : ' draggable="true" data-drag-id="' + activity.id + '"';
+          html += '<div class="activity-card' + (isEditing ? ' editing' : ' colored') + '"' + cardStyle + dragAttrs + ' onclick="' + (isEditing ? '' : 'editActivity(\'' + activity.id + '\')') + '">';
+          if (!isEditing) {
+            html += '<label class="card-cb" onclick="event.stopPropagation()"><input type="checkbox" ' + (selectedActivityIds.has(activity.id) ? 'checked' : '') + ' onchange="toggleActivitySelect(&apos;' + activity.id + '&apos;,this.checked)"></label>';
+          }
+          if (isEditing) {
+            html += '  <div class="activity-card-emoji"><div class="emoji-edit-btn" onclick="event.stopPropagation(); openEmojiPicker(&apos;' + activity.emoji + '&apos;, function(emoji) { updateActivityEmoji(&apos;' + activity.id + '&apos;, emoji); var btn=document.querySelector(&apos;.activity-card.editing .emoji-edit-btn&apos;); if(btn) btn.innerHTML=renderEmoji(emoji); })">' + renderEmoji(activity.emoji) + '</div></div>';
+            html += '  <div class="activity-card-name"><input type="text" value="' + activity.name + '" oninput="updateActivityName(&apos;' + activity.id + '&apos;, this.value)" onkeydown="if(event.key===&apos;Enter&apos;) saveActivityInline(&apos;' + activity.id + '&apos;); if(event.key===&apos;Escape&apos;) cancelActivityInline(&apos;' + activity.id + '&apos;)" placeholder="일상 이름"></div>';
+          } else {
+            html += '  <div class="activity-card-main">';
+            html += '    <div class="activity-card-emoji">' + renderEmoji(activity.emoji) + '</div>';
+            html += '    <div class="activity-card-text">';
+            html += '      <div class="activity-card-name">' + activity.name + '</div>';
+            html += '    </div>';
+            html += '  </div>';
+          }
+          if (isEditing) {
+            html += '  <div class="activity-card-category"><select onclick="event.stopPropagation()" onchange="updateActivityCategory(&apos;' + activity.id + '&apos;, this.value)">';
+            html += '    <option value=""' + (!activity.categoryId ? ' selected' : '') + '>미지정</option>';
+            categories.forEach(function(c) {
+              html += '    <option value="' + c.id + '"' + (activity.categoryId === c.id ? ' selected' : '') + '>' + c.emoji + ' ' + c.name + '</option>';
+            });
+            html += '  </select></div>';
+            html += '  <div class="activity-card-color"><label>대표 색상</label><input type="color" value="' + (activity.color || '#ffde59') + '" onclick="event.stopPropagation()" oninput="updateActivityColor(&apos;' + activity.id + '&apos;, this.value)"></div>';
+          }
+          if (!isEditing) {
+            html += '  <div class="activity-card-badges">' + (!activity.active ? '<span class="activity-badge inactive">비활성</span>' : '') + '</div>';
+          }
+          html += '  <div class="activity-card-actions">';
+          if (isEditing) {
+            html += '    <button class="btn-confirm" onclick="event.stopPropagation(); saveActivityInline(\'' + activity.id + '\')">저장</button>';
+            html += '    <button class="btn-cancel" onclick="event.stopPropagation(); cancelActivityInline(\'' + activity.id + '\')">취소</button>';
+          } else {
+            html += '    <button class="btn-icon" onclick="event.stopPropagation(); toggleActivityActive(\'' + activity.id + '\')">' + (activity.active ? '비활성' : '활성') + '</button>';
+            html += '    <button class="btn-icon btn-danger" onclick="event.stopPropagation(); deleteActivity(\'' + activity.id + '\')">삭제</button>';
+          }
+          html += '  </div>';
+          html += '</div>';
+        });
+        // "+ 추가" button for this category
+        var catId = cat.id || '';
+        html += '<button class="activity-group-add-btn btn-add" onclick="addActivityInlineToCategory(\'' + catId + '\')">+ 일상 추가</button>';
+        html += '</div>'; // .activity-group-cards
+        html += '</div>'; // .activity-group
+      });
+
+      container.innerHTML = html;
+      attachCardDragReorder(container, activities, saveActivities, renderActivities);
+    }
+
+    function addActivityInlineToCategory(categoryId) {
+      if (blockIfInlineEditing()) return;
+      var newActivity = {
+        id: generateId(),
+        categoryId: categoryId || null,
+        emoji: getRandomEmoji(),
+        name: '',
+        color: '#ffde59',
+        active: true,
+        createdAt: today(),
+        isNew: true
+      };
+      activities.push(newActivity);
+      editingActivityId = newActivity.id;
+      renderActivities();
+      setTimeout(function() {
+        var nameInput = document.querySelector('.activity-card.editing .activity-card-name input');
+        if (nameInput) nameInput.focus();
+      }, 50);
+    }
+
     function renderActivities() {
       const container = document.getElementById('activityGrid');
       if (!container) return;
       const topPager = document.getElementById('activityPagerTop');
       const bottomPager = document.getElementById('activityPagerBottom');
+
+      if (activityViewMode === 'grouped') {
+        if (topPager) topPager.innerHTML = '';
+        if (bottomPager) bottomPager.innerHTML = '';
+        renderActivitiesGrouped(container);
+        return;
+      }
 
       let filteredActivities = activities;
 
@@ -4304,7 +4425,11 @@
           var heightPct = Math.max(0.5, dur / range * 100);
           var leftPct = b.colStart / 7 * 100;
           var widthPct = b.colSpan / 7 * 100;
-          html += '<div class="sched-mini-block" style="top:' + topPct + '%;height:' + heightPct + '%;left:calc(' + leftPct + '% + 1px);width:calc(' + widthPct + '% - 2px);background:' + color + ';">' + emoji + '</div>';
+          var actName = act ? act.name : '';
+          html += '<div class="sched-mini-block" style="top:' + topPct + '%;height:' + heightPct + '%;left:calc(' + leftPct + '% + 1px);width:calc(' + widthPct + '% - 2px);background:' + color + ';">';
+          html += '<span class="mini-emoji-badge">' + emoji + '</span>';
+          html += '<span class="mini-block-name">' + actName + '</span>';
+          html += '</div>';
         });
       }
       // Current time line
