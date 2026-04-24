@@ -6698,7 +6698,7 @@
         mh += '<div class="sched-meta-label">태그</div>';
         mh += '<div id="draftTagsContainer" class="draft-tags-container"></div>';
         mh += '<div class="tag-input-wrap">';
-        mh += '<input type="text" id="draftTagInput" placeholder="태그 입력 후 Enter..." autocomplete="off" oninput="onDraftTagInput(this.value)" onkeydown="onDraftTagKeydown(event)">';
+        mh += '<input type="text" id="draftTagInput" placeholder="태그 입력 후 Enter..." autocomplete="off" oninput="onDraftTagInput(this.value)" onkeyup="onDraftTagKeydown(event)">';
         mh += '<div id="tagSuggestions" class="tag-suggestions" style="display:none;"></div>';
         mh += '</div>';
         metaEl.className = 'sched-meta-card';
