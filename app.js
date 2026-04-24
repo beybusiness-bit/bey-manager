@@ -2544,7 +2544,7 @@
       var BASE = 'https://sheets.googleapis.com/v4/spreadsheets/' + AUTH.SHEET_ID;
 
       var SHEETS_DEF = {
-        '시간표':    ['id','emoji','title','description','tags','isLiked','gridStartHour','createdAt','updatedAt'],
+        '시간표':    ['id','emoji','title','description','tags','isLiked','gridStartMin','createdAt','updatedAt'],
         '시간표_일정': ['id','scheduleId','activityId','weekdays','startTime','endTime','createdAt'],
         '카테고리':  ['id','emoji','name','active','createdAt'],
         '일상종류':  ['id','categoryId','emoji','name','color','active','createdAt'],
@@ -2656,7 +2656,7 @@
         switch (name) {
           case '시간표':
             return schedules.map(function(s) {
-              return [s.id, s.emoji||'', s.title||'', s.description||'', (s.tags||[]).join(','), s.isLiked?'TRUE':'FALSE', String(getScheduleGridStartHour(s)), s.createdAt||'', s.updatedAt||''];
+              return [s.id, s.emoji||'', s.title||'', s.description||'', (s.tags||[]).join(','), s.isLiked?'TRUE':'FALSE', String(getScheduleGridStartMin(s)), s.createdAt||'', s.updatedAt||''];
             });
           case '시간표_일정':
             return scheduleItems.map(function(i) {
@@ -2705,18 +2705,24 @@
         // 시간표
         if (results['시간표'].length > 0) {
           schedules = results['시간표'].map(function(r) {
-            var gshRaw = parseInt(r[6], 10);
-            var gsh = (isNaN(gshRaw) || gshRaw < 0 || gshRaw > 23) ? 6 : gshRaw;
-            // 기존 시트(컬럼 8개) 하위 호환 — r[6]이 숫자가 아니면 createdAt로 간주하고 gsh=6
+            var rawGsm = parseInt(r[6], 10);
+            var gsm;
             var createdAt, updatedAt;
-            if (isNaN(gshRaw)) {
+            // 기존 시트(컬럼 8개) 하위 호환 — r[6]이 숫자가 아니면 createdAt로 간주
+            if (isNaN(rawGsm)) {
+              gsm = 360;
               createdAt = r[6] || today();
               updatedAt = r[7] || today();
             } else {
+              // 0~23: 구 gridStartHour 값 (시) → 분으로 변환
+              // 24~1439: 신 gridStartMin 값 (분)
+              if (rawGsm >= 0 && rawGsm <= 23) gsm = rawGsm * 60;
+              else if (rawGsm >= 24 && rawGsm < 1440) gsm = Math.round(rawGsm / 30) * 30;
+              else gsm = 360;
               createdAt = r[7] || today();
               updatedAt = r[8] || today();
             }
-            return { id:r[0], emoji:r[1]||'📅', title:r[2]||'', description:r[3]||'', tags:r[4]?r[4].split(',').filter(Boolean):[], isLiked:r[5]==='TRUE', gridStartHour:gsh, createdAt:createdAt, updatedAt:updatedAt };
+            return { id:r[0], emoji:r[1]||'📅', title:r[2]||'', description:r[3]||'', tags:r[4]?r[4].split(',').filter(Boolean):[], isLiked:r[5]==='TRUE', gridStartMin:gsm, createdAt:createdAt, updatedAt:updatedAt };
           });
           scheduleItems = results['시간표_일정'].map(function(r) {
             return { id:r[0], scheduleId:r[1], activityId:r[2], weekdays:r[3]?r[3].split(',').filter(Boolean):[], startTime:r[4]||'09:00', endTime:r[5]||'10:00', createdAt:r[6]||today() };
@@ -2883,7 +2889,7 @@
         description: '',
         tags: [],
         isLiked: false,
-        gridStartHour: 6,
+        gridStartMin: 360,
         createdAt: today(),
         updatedAt: today()
       };
@@ -3233,12 +3239,20 @@
       return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
     }
 
-    // 시간표별 그리드 시작 시각(0-23), 기본 6
-    function getScheduleGridStartHour(schedule) {
-      if (!schedule) return 6;
-      var h = parseInt(schedule.gridStartHour, 10);
-      if (isNaN(h) || h < 0 || h > 23) return 6;
-      return h;
+    // 시간표별 그리드 시작 분(0~1410, 30분 단위), 기본 360(06:00)
+    function getScheduleGridStartMin(schedule) {
+      if (!schedule) return 360;
+      // 새 필드 우선
+      if (schedule.gridStartMin !== undefined && schedule.gridStartMin !== null && schedule.gridStartMin !== '') {
+        var m = parseInt(schedule.gridStartMin, 10);
+        if (!isNaN(m) && m >= 0 && m < 1440) return Math.round(m / 30) * 30;
+      }
+      // 구 필드(gridStartHour, 0-23) 호환
+      if (schedule.gridStartHour !== undefined && schedule.gridStartHour !== null && schedule.gridStartHour !== '') {
+        var h = parseInt(schedule.gridStartHour, 10);
+        if (!isNaN(h) && h >= 0 && h <= 23) return h * 60;
+      }
+      return 360;
     }
     // 절대분(0-1439) → 가상분(gridStart 이상, gridStart+1439 이하)
     function toVirtualMin(absMin, gridStart) {
@@ -3271,7 +3285,7 @@
         emoji: schedule.emoji,
         description: schedule.description || '',
         tags: (schedule.tags || []).slice(),
-        gridStartHour: getScheduleGridStartHour(schedule)
+        gridStartMin: getScheduleGridStartMin(schedule)
       };
       renderScheduleDetail();
     }
@@ -3284,7 +3298,8 @@
       schedule.emoji = scheduleDraft.emoji;
       schedule.description = scheduleDraft.description || '';
       schedule.tags = scheduleDraft.tags || [];
-      schedule.gridStartHour = getScheduleGridStartHour(scheduleDraft);
+      schedule.gridStartMin = getScheduleGridStartMin(scheduleDraft);
+      delete schedule.gridStartHour; // 구 필드 정리
       schedule.updatedAt = today();
       saveSchedules();
       scheduleViewMode2 = 'detail';
@@ -3316,11 +3331,11 @@
 
     function updateDraftTitle(v) { if (scheduleDraft) scheduleDraft.title = v; }
     function updateDraftDesc(v) { if (scheduleDraft) scheduleDraft.description = v; }
-    function updateDraftGridStartHour(v) {
+    function updateDraftGridStartMin(v) {
       if (!scheduleDraft) return;
-      var h = parseInt(v, 10);
-      if (isNaN(h) || h < 0 || h > 23) h = 6;
-      scheduleDraft.gridStartHour = h;
+      var m = parseInt(v, 10);
+      if (isNaN(m) || m < 0 || m >= 1440) m = 360;
+      scheduleDraft.gridStartMin = Math.round(m / 30) * 30;
       // 그리드 탭에 있을 때만 즉시 렌더 갱신
       if (scheduleDetailTab === 'grid') renderScheduleGrid();
       else if (scheduleDetailTab === 'day') renderScheduleDayView();
@@ -3437,14 +3452,15 @@
         mh += '<div id="tagSuggestions" class="tag-suggestions" style="display:none;"></div>';
         mh += '</div>';
         mh += '<div class="sched-meta-label" style="margin-top:10px;">그리드 시작 시각</div>';
-        var curStartHour = getScheduleGridStartHour(data);
-        mh += '<select onchange="updateDraftGridStartHour(this.value)" style="width:auto;min-width:120px;">';
-        for (var sh = 0; sh < 24; sh++) {
-          var shLabel = (sh < 10 ? '0' : '') + sh + ':00';
-          mh += '<option value="' + sh + '"' + (sh === curStartHour ? ' selected' : '') + '>' + shLabel + '</option>';
+        var curStartMin = getScheduleGridStartMin(data);
+        mh += '<select onchange="updateDraftGridStartMin(this.value)">';
+        for (var sm = 0; sm < 1440; sm += 30) {
+          var hh = Math.floor(sm / 60), mm = sm % 60;
+          var smLabel = (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm;
+          mh += '<option value="' + sm + '"' + (sm === curStartMin ? ' selected' : '') + '>' + smLabel + '</option>';
         }
         mh += '</select>';
-        mh += '<div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">선택한 시각부터 24시간 그리드가 시작됩니다.</div>';
+        mh += '<div class="sched-meta-hint">선택한 시각부터 24시간 그리드가 시작됩니다.</div>';
         metaEl.className = 'sched-meta-card';
         metaEl.innerHTML = mh;
         metaEl.style.display = 'block';
@@ -3517,8 +3533,7 @@
       var items = scheduleItems.filter(function(i) { return i.scheduleId === currentDetailScheduleId; });
       var schedule = schedules.find(function(s) { return s.id === currentDetailScheduleId; });
       var isEdit = (scheduleViewMode2 === 'edit');
-      var startHour = getScheduleGridStartHour(isEdit && scheduleDraft ? scheduleDraft : schedule);
-      var gridStart = startHour * 60;
+      var gridStart = getScheduleGridStartMin(isEdit && scheduleDraft ? scheduleDraft : schedule);
       var gridEnd = gridStart + 24 * 60; // 항상 24시간
       var totalSlots = (gridEnd - gridStart) / 30;
       var totalHeight = totalSlots * SLOT_HEIGHT;
@@ -3540,7 +3555,8 @@
       html += '</div><div class="sched-body"><div class="sched-time-gutter">';
       for (var t = gridStart; t < gridEnd; t += 30) {
         var isH = (t % 60 === 0);
-        html += '<div class="sched-time-slot-label' + (isH ? ' hour' : '') + '">' + (isH ? minToTimeStr(t) : '') + '</div>';
+        var showLabel = isH || (t === gridStart);
+        html += '<div class="sched-time-slot-label' + (isH ? ' hour' : '') + '">' + (showLabel ? minToTimeStr(t) : '') + '</div>';
       }
       html += '</div>';
       // Grid content: background cols + items overlay
@@ -3624,8 +3640,7 @@
       dayItems.sort(function(a, b) { return timeToMin(a.startTime) - timeToMin(b.startTime); });
 
       var dayViewSchedule = schedules.find(function(s) { return s.id === currentDetailScheduleId; });
-      var dayStartHour = getScheduleGridStartHour(isEdit && scheduleDraft ? scheduleDraft : dayViewSchedule);
-      var gridStart = dayStartHour * 60;
+      var gridStart = getScheduleGridStartMin(isEdit && scheduleDraft ? scheduleDraft : dayViewSchedule);
       var gridEnd = gridStart + 24 * 60;
       var totalSlots = (gridEnd - gridStart) / 30;
       var totalHeight = totalSlots * SLOT_HEIGHT;
@@ -3639,7 +3654,8 @@
       html += '<div class="sched-body"><div class="sched-time-gutter">';
       for (var t = gridStart; t < gridEnd; t += 30) {
         var isH = (t % 60 === 0);
-        html += '<div class="sched-time-slot-label' + (isH ? ' hour' : '') + '">' + (isH ? minToTimeStr(t) : '') + '</div>';
+        var showLabel = isH || (t === gridStart);
+        html += '<div class="sched-time-slot-label' + (isH ? ' hour' : '') + '">' + (showLabel ? minToTimeStr(t) : '') + '</div>';
       }
       html += '</div>';
       html += '<div id="schedDayGridContent" style="flex:1;position:relative;height:' + totalHeight + 'px;" data-gridstart="' + gridStart + '">';
@@ -3834,8 +3850,7 @@
     function renderScheduleMiniGrid(scheduleId) {
       var items = scheduleItems.filter(function(i) { return i.scheduleId === scheduleId; });
       var miniSchedule = schedules.find(function(s) { return s.id === scheduleId; });
-      var miniStartHour = getScheduleGridStartHour(miniSchedule);
-      var gStart = miniStartHour * 60;
+      var gStart = getScheduleGridStartMin(miniSchedule);
       var gEnd = gStart + 24 * 60;
       var range = gEnd - gStart;
 
