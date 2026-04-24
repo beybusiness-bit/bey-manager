@@ -1328,7 +1328,7 @@
       border: 2px solid #ff4d6d;
       border-radius: 14px;
       padding: 40px 18px 18px;
-      min-height: 680px;
+      min-height: 1000px;
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -1423,7 +1423,7 @@
 
     .hero-thumbnail-frame {
       flex: 1;
-      min-height: 400px;
+      min-height: 800px;
       display: flex;
       flex-direction: column;
     }
@@ -1484,11 +1484,11 @@
     @media (max-width: 767px) {
       .schedule-hero-card {
         padding: 36px 14px 14px;
-        min-height: 560px;
+        min-height: 800px;
       }
       .hero-emoji { font-size: 32px; }
       .hero-title-display { font-size: 18px; }
-      .hero-thumbnail-frame { min-height: 300px; }
+      .hero-thumbnail-frame { min-height: 600px; }
     }
 
     .schedule-mini-card {
@@ -1674,6 +1674,17 @@
       align-items: center;
     }
     .draft-tag-chip-remove:hover { color: #c00; }
+    .draft-tag-chip-text { cursor: pointer; }
+    .draft-tag-chip-text:hover { text-decoration: underline; }
+    /* 태그 편집 패널 */
+    .tag-edit-panel { display: inline-flex; flex-direction: column; gap: 8px; background: var(--card-bg, #fff); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; margin: 6px 0 2px; width: 100%; box-sizing: border-box; }
+    .tag-edit-row { display: flex; align-items: center; gap: 8px; }
+    .tag-edit-row label { font-size: 12px; font-weight: 600; color: var(--text-secondary); min-width: 28px; }
+    .tag-edit-row input { flex: 1; padding: 5px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; }
+    .tag-edit-actions { justify-content: flex-end; margin-top: 2px; }
+    .tag-color-swatches { display: flex; gap: 5px; flex-wrap: wrap; }
+    .tag-color-swatch { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; outline: 2px solid transparent; transition: outline-color 0.12s; }
+    .tag-color-swatch:hover, .tag-color-swatch.active { outline: 2px solid var(--text-main); outline-offset: 1px; }
     .tag-input-wrap { position: relative; }
     .tag-suggestions {
       position: absolute;
@@ -2346,14 +2357,15 @@
     .category-card[draggable="true"] { cursor: grab; }
     .activity-card[draggable="true"]:active,
     .category-card[draggable="true"]:active { cursor: grabbing; }
-    .card-dragging { opacity: 0.4; pointer-events: none; }
+    .card-dragging { opacity: 0.4; }
     /* 드래그 삽입 위치 표시 — 세로선(카드 그리드) / 가로선(그룹) */
     .card-insert-before { box-shadow: -3px 0 0 0 var(--primary-yellow); }
     .card-insert-after  { box-shadow:  3px 0 0 0 var(--primary-yellow); }
     .group-insert-before { box-shadow: 0 -3px 0 0 var(--primary-yellow); }
     .group-insert-after  { box-shadow: 0  3px 0 0 var(--primary-yellow); }
     .group-drag-over .activity-group-cards { outline: 2px dashed var(--primary-yellow); outline-offset: 4px; border-radius: 4px; }
-    .activity-group-header[draggable="true"] { cursor: grab; user-select: none; }
+    .activity-group-header[draggable="true"] { cursor: grab; user-select: none; -webkit-user-drag: element; }
+    .activity-group-header[draggable="true"] * { pointer-events: none; }
     .activity-group-header[draggable="true"]:active { cursor: grabbing; }
 
     /* 일상 뷰 토글 버튼 */

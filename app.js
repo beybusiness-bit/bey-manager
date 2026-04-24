@@ -1101,6 +1101,9 @@
     let scheduleListPage = 1;
     let scheduleListPerPage = 10;
     let activityViewMode = 'default'; // 'default' | 'grouped'
+    let tagColorOverrides = {}; // { tagText: paletteIdx } — 사용자 지정 색상
+    let editingTagIdx = null;
+    let editingTagColorIdx = -1;
     let activityListPage = 1;
     let activityListPerPage = 20;
     let categoryListPage = 1;
@@ -1131,6 +1134,10 @@
       return Math.abs(h) % TAG_PALETTE.length;
     }
     function getTagPaletteEntry(text) {
+      if (tagColorOverrides.hasOwnProperty(text)) {
+        var oi = tagColorOverrides[text];
+        if (oi >= 0 && oi < TAG_PALETTE.length) return TAG_PALETTE[oi];
+      }
       return TAG_PALETTE[hashTagIndex(text)];
     }
     // 태그 칩 공통 렌더러 — 각 태그에 팔레트 색 적용
@@ -1345,6 +1352,14 @@
 
     function saveMyEmojis() {
       localStorage.setItem('myEmojis', JSON.stringify(myEmojis));
+      GS.syncSheets(['사용자설정']);
+    }
+
+    function loadTagColorOverrides() {
+      try { tagColorOverrides = JSON.parse(localStorage.getItem('tagColorOverrides') || '{}'); } catch(e) { tagColorOverrides = {}; }
+    }
+    function saveTagColorOverrides() {
+      localStorage.setItem('tagColorOverrides', JSON.stringify(tagColorOverrides));
       GS.syncSheets(['사용자설정']);
     }
 
@@ -1647,6 +1662,7 @@
       loadSidebarState();
       loadCategories();
       loadMyEmojis();
+      loadTagColorOverrides();
       loadActivities();
       loadSchedules();
       loadProfile();
@@ -2723,8 +2739,7 @@
         var isDraggableGroup = cat.id !== null; // 미지정 그룹은 순서 고정
         html += '<div class="activity-group" data-drag-cat-id="' + catIdStr + '">';
         html += '<div class="activity-group-header"' + (isDraggableGroup ? ' draggable="true" data-drag-cat-id="' + catIdStr + '"' : '') + '>';
-        html += (isDraggableGroup ? '<span style="font-size:11px;opacity:0.4;margin-right:4px;">⠿</span>' : '') + cat.emoji + ' ' + cat.name;
-        html += ' <span class="activity-group-count">' + groupActivities.length + '</span></div>';
+        html += cat.emoji + ' ' + cat.name + ' <span class="activity-group-count">' + groupActivities.length + '</span></div>';
         html += '<div class="activity-group-cards">';
         groupActivities.forEach(function(activity) {
           var isEditing = (editingActivityId === activity.id);
@@ -3069,8 +3084,9 @@
       container.querySelectorAll('.activity-group[data-drag-cat-id]').forEach(function(group) {
         var groupCatId = group.dataset.dragCatId;
         group.addEventListener('dragover', function(e) {
-          if (__drag.type !== 'group' || !__drag.id || __drag.id === groupCatId) return;
-          e.preventDefault();
+          if (__drag.type !== 'group' || !__drag.id) return;
+          e.preventDefault(); // 항상 호출 — move 커서 표시
+          if (__drag.id === groupCatId) return; // 자기 자신: 인디케이터만 생략
           var rect = group.getBoundingClientRect();
           var side = e.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
           __clearDragCss();
@@ -3317,7 +3333,8 @@
               ['profileQuote', profileQuote || ''],
               ['designSettings', JSON.stringify(designSettings || {})],
               ['myEmojis', JSON.stringify(myEmojis || [])],
-              ['menus', JSON.stringify(menus || [])]
+              ['menus', JSON.stringify(menus || [])],
+              ['tagColorOverrides', JSON.stringify(tagColorOverrides || {})]
             ];
             if (profilePhoto && profilePhoto.length < 45000) pairs.push(['profilePhoto', profilePhoto]);
             return pairs;
@@ -3400,6 +3417,7 @@
           if (sm['myEmojis']) { try { myEmojis = JSON.parse(sm['myEmojis']); localStorage.setItem('myEmojis', JSON.stringify(myEmojis)); } catch(e) { myEmojis = []; } }
           if (sm['menus']) { try { menus = JSON.parse(sm['menus']); localStorage.setItem('menus', JSON.stringify(menus)); renderSidebar(); } catch(e) {} }
           if (sm['profilePhoto']) { profilePhoto = sm['profilePhoto']; localStorage.setItem('profilePhoto', profilePhoto); }
+          if (sm['tagColorOverrides']) { try { tagColorOverrides = JSON.parse(sm['tagColorOverrides']); localStorage.setItem('tagColorOverrides', JSON.stringify(tagColorOverrides)); } catch(e) { tagColorOverrides = {}; } }
         } else { await _writeSheet('사용자설정'); }
 
         console.log('[GS] ✅ 전체 로드 완료');
@@ -3999,10 +4017,71 @@
       var html = '';
       (scheduleDraft.tags || []).forEach(function(t, i) {
         var p = getTagPaletteEntry(t);
-        html += '<span class="draft-tag-chip" style="background:' + p.bg + ';color:' + p.fg + ';">' + escapeHtml(t) +
-          '<button class="draft-tag-chip-remove" onclick="removeDraftTag(' + i + ')" title="삭제" style="color:' + p.fg + ';">×</button></span>';
+        html += '<span class="draft-tag-chip" style="background:' + p.bg + ';color:' + p.fg + ';">';
+        html += '<span class="draft-tag-chip-text" onclick="openTagEdit(' + i + ')" title="클릭하여 이름/색상 변경">' + escapeHtml(t) + '</span>';
+        html += '<button class="draft-tag-chip-remove" onclick="removeDraftTag(' + i + ')" title="삭제" style="color:' + p.fg + ';">×</button></span>';
+        // 해당 태그 편집 패널
+        if (editingTagIdx === i) {
+          var curPaletteIdx = tagColorOverrides.hasOwnProperty(t) ? tagColorOverrides[t] : hashTagIndex(t);
+          html += '<div class="tag-edit-panel">';
+          html += '<div class="tag-edit-row"><label>이름</label><input type="text" id="tagEditInput" value="' + escapeHtml(t) + '" placeholder="태그 이름" onkeyup="if(event.key===&apos;Enter&apos;)applyTagEdit(' + i + ');else if(event.key===&apos;Escape&apos;)closeTagEdit()"></div>';
+          html += '<div class="tag-edit-row"><label>색상</label><div class="tag-color-swatches">';
+          TAG_PALETTE.forEach(function(pal, pi) {
+            html += '<span class="tag-color-swatch' + (editingTagColorIdx >= 0 ? (editingTagColorIdx === pi ? ' active' : '') : (curPaletteIdx === pi ? ' active' : '')) + '" style="background:' + pal.bg + ';outline-color:' + pal.fg + ';" onclick="setTagEditColor(' + pi + ')" title="' + pal.name + '"></span>';
+          });
+          html += '</div></div>';
+          html += '<div class="tag-edit-row tag-edit-actions"><button class="btn-confirm" onclick="applyTagEdit(' + i + ')">저장</button><button class="btn-cancel" onclick="closeTagEdit()">취소</button></div>';
+          html += '</div>';
+        }
       });
       container.innerHTML = html;
+      // 편집 패널이 열렸을 때 인풋에 포커스
+      if (editingTagIdx !== null) {
+        var inp = document.getElementById('tagEditInput');
+        if (inp) { inp.focus(); inp.select(); }
+      }
+    }
+
+    function openTagEdit(idx) {
+      editingTagIdx = idx;
+      editingTagColorIdx = -1;
+      renderDraftTagChips();
+    }
+    function closeTagEdit() {
+      editingTagIdx = null;
+      editingTagColorIdx = -1;
+      renderDraftTagChips();
+    }
+    function setTagEditColor(colorIdx) {
+      editingTagColorIdx = colorIdx;
+      // 스와치 active 상태만 갱신 (re-render 없이)
+      document.querySelectorAll('.tag-color-swatch').forEach(function(sw, i) {
+        sw.classList.toggle('active', i === colorIdx);
+      });
+    }
+    function applyTagEdit(idx) {
+      if (!scheduleDraft || !scheduleDraft.tags) return;
+      var oldText = scheduleDraft.tags[idx];
+      var inp = document.getElementById('tagEditInput');
+      var newText = (inp ? inp.value : oldText).trim();
+      if (!newText) { closeTagEdit(); return; }
+      // 색상 오버라이드 전송 (이름 변경 시에도 따라감)
+      var colorIdx = editingTagColorIdx >= 0 ? editingTagColorIdx : (tagColorOverrides.hasOwnProperty(oldText) ? tagColorOverrides[oldText] : -1);
+      if (oldText !== newText) {
+        // 기존 이름의 오버라이드 삭제
+        delete tagColorOverrides[oldText];
+      }
+      if (colorIdx >= 0) {
+        tagColorOverrides[newText] = colorIdx;
+      } else if (colorIdx < 0 && newText === oldText) {
+        // 색상 변경 없이 같은 이름이면 오버라이드 제거 (해시로 돌아감)
+        delete tagColorOverrides[newText];
+      }
+      scheduleDraft.tags[idx] = newText;
+      saveTagColorOverrides();
+      editingTagIdx = null;
+      editingTagColorIdx = -1;
+      renderDraftTagChips();
     }
 
     function addDraftTag(tag) {
