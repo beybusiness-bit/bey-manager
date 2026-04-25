@@ -2833,11 +2833,14 @@
       const bottomPager = document.getElementById('activityPagerBottom');
 
       if (activityViewMode === 'grouped') {
+        container.classList.add('activity-grid-grouped');
         if (topPager) topPager.innerHTML = '';
         if (bottomPager) bottomPager.innerHTML = '';
         renderActivitiesGrouped(container);
         return;
       }
+
+      container.classList.remove('activity-grid-grouped');
 
       let filteredActivities = activities;
 

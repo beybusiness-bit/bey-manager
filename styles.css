@@ -2381,6 +2381,10 @@
     .card-insert-after  { box-shadow:  3px 0 0 0 var(--primary-yellow); }
     .card-insert-top    { box-shadow: 0 -3px 0 0 var(--primary-yellow); }
     .card-insert-bottom { box-shadow: 0  3px 0 0 var(--primary-yellow); }
+    /* 카테고리별 보기: 데스크탑은 단일 컬럼 */
+    .activity-grid-grouped {
+      grid-template-columns: 1fr !important;
+    }
     .activity-group { position: relative; }
     .group-insert-before::before,
     .group-insert-after::after {
@@ -2863,6 +2867,32 @@
       .activity-grid,
       .category-grid {
         grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      }
+
+      /* 카테고리별 보기: 가로 스크롤 (한 카테고리씩) */
+      .activity-grid-grouped {
+        display: flex !important;
+        flex-direction: row;
+        overflow-x: auto;
+        overflow-y: visible;
+        gap: 12px;
+        padding: 4px 0 12px;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+      }
+      .activity-grid-grouped .activity-group {
+        flex-shrink: 0;
+        width: calc(90vw - 32px);
+        min-width: 240px;
+        max-width: 340px;
+        scroll-snap-align: start;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        padding: 14px;
+        box-sizing: border-box;
+        margin-bottom: 0;
+        overflow: visible;
       }
     }
 
