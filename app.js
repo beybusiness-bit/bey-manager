@@ -3160,6 +3160,56 @@
       return 'background: ' + bg + '; color: ' + textColor + ';';
     }
 
+    // 그리드 블록이 gridEnd를 초과하면 상단 세그먼트(래핑)를 추가로 반환
+    // returns [{top, height, isContinued}]
+    function splitGridBlock(sVirtual, eVirtual, gridStart, gridEnd, unitPx) {
+      var segs = [];
+      if (eVirtual <= gridEnd) {
+        var top = (sVirtual - gridStart) / 30 * unitPx;
+        var h = Math.max(unitPx, (eVirtual - sVirtual) / 30 * unitPx);
+        segs.push({ top: top, height: h, isContinued: false });
+      } else {
+        // Bottom segment: sVirtual → gridEnd
+        var top1 = (sVirtual - gridStart) / 30 * unitPx;
+        var h1 = (gridEnd - sVirtual) / 30 * unitPx;
+        if (h1 > 0) segs.push({ top: top1, height: Math.max(unitPx, h1), isContinued: false });
+        // Top segment: gridStart → (eVirtual - 1440)
+        var wrapEnd = eVirtual - 1440;
+        if (wrapEnd > gridStart) {
+          var h2 = (wrapEnd - gridStart) / 30 * unitPx;
+          segs.push({ top: 0, height: Math.max(unitPx, h2), isContinued: true });
+        }
+      }
+      return segs;
+    }
+
+    // 퍼센트 기반 버전 (mini-grid용)
+    function splitGridBlockPct(sVirtual, eVirtual, gridStart, gridEnd) {
+      var range = gridEnd - gridStart;
+      var segs = [];
+      if (eVirtual <= gridEnd) {
+        var topPct = (sVirtual - gridStart) / range * 100;
+        var hPct = Math.max(0.5, (eVirtual - sVirtual) / range * 100);
+        segs.push({ topPct: topPct, heightPct: hPct, isContinued: false });
+      } else {
+        var top1Pct = (sVirtual - gridStart) / range * 100;
+        var h1Pct = (gridEnd - sVirtual) / range * 100;
+        if (h1Pct > 0) segs.push({ topPct: top1Pct, heightPct: Math.max(0.5, h1Pct), isContinued: false });
+        var wrapEnd = eVirtual - 1440;
+        if (wrapEnd > gridStart) {
+          var h2Pct = (wrapEnd - gridStart) / range * 100;
+          segs.push({ topPct: 0, heightPct: Math.max(0.5, h2Pct), isContinued: true });
+        }
+      }
+      return segs;
+    }
+
+    function hexToTextColor(hex) {
+      var rgb = hexToRgb(hex || '#ffde59');
+      var brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
+      return brightness < 150 ? '#ffffff' : '#333333';
+    }
+
     function loadSchedules() {
       const saved = localStorage.getItem('schedules');
       if (saved) {
@@ -4338,18 +4388,21 @@
         var color = act ? (act.color || '#ffde59') : '#ffde59';
         var sMin = timeToMin(b.startTime), eMin = timeToMin(b.endTime);
         var sVirtual = toVirtualMin(sMin, gridStart);
-        var eVirtual = sVirtual + (eMin >= sMin ? (eMin - sMin) : (eMin + 1440 - sMin));
-        var top = (sVirtual - gridStart) / 30 * SLOT_HEIGHT;
-        var height = Math.max(SLOT_HEIGHT, (eVirtual - sVirtual) / 30 * SLOT_HEIGHT);
+        var dur = (eMin === sMin) ? 1440 : (eMin > sMin ? (eMin - sMin) : (eMin + 1440 - sMin));
+        var eVirtual = sVirtual + dur;
         var leftPct = b.colStart / 7 * 100;
         var widthPct = b.colSpan / 7 * 100;
         var ptrStyle = isEdit ? 'pointer-events:auto; cursor:pointer;' : '';
         var clickAttr = isEdit ? ('onclick="openScheduleItemForm(&apos;' + b.firstItemId + '&apos;)"') : '';
-        html += '<div class="sched-item-block" style="position:absolute;' + ptrStyle + 'top:' + top + 'px;height:' + height + 'px;left:calc(' + leftPct + '% + 2px);width:calc(' + widthPct + '% - 4px);background:' + color + '30;border-left-color:' + color + ';" ' + clickAttr + '>';
-        if (height >= 28) html += '<div class="sched-item-emoji">' + emoji + '</div>';
-        if (height >= 42) html += '<div class="sched-item-name">' + name + '</div>';
-        if (height >= 60) html += '<div class="sched-item-time">' + b.startTime + '–' + b.endTime + '</div>';
-        html += '</div>';
+        var segs = splitGridBlock(sVirtual, eVirtual, gridStart, gridEnd, SLOT_HEIGHT);
+        segs.forEach(function(seg) {
+          var borderTop = seg.isContinued ? 'border-top:2px dashed ' + color + ';' : '';
+          html += '<div class="sched-item-block" style="position:absolute;' + ptrStyle + 'top:' + seg.top + 'px;height:' + seg.height + 'px;left:calc(' + leftPct + '% + 2px);width:calc(' + widthPct + '% - 4px);background:' + color + '30;border-left-color:' + color + ';' + borderTop + '" ' + clickAttr + '>';
+          if (seg.height >= 28) html += '<div class="sched-item-emoji">' + emoji + '</div>';
+          if (seg.height >= 42) html += '<div class="sched-item-name">' + name + '</div>';
+          if (seg.height >= 60) html += '<div class="sched-item-time">' + b.startTime + '–' + b.endTime + '</div>';
+          html += '</div>';
+        });
       });
       html += '</div>';
       // Current time line
@@ -4432,16 +4485,19 @@
         var color = act ? (act.color || '#ffde59') : '#ffde59';
         var sMin = timeToMin(item.startTime), eMin = timeToMin(item.endTime);
         var sVirtual = toVirtualMin(sMin, gridStart);
-        var eVirtual = sVirtual + (eMin >= sMin ? (eMin - sMin) : (eMin + 1440 - sMin));
-        var top = (sVirtual - gridStart) / 30 * SLOT_HEIGHT;
-        var height = Math.max(SLOT_HEIGHT, (eVirtual - sVirtual) / 30 * SLOT_HEIGHT);
+        var dur2 = (eMin === sMin) ? 1440 : (eMin > sMin ? (eMin - sMin) : (eMin + 1440 - sMin));
+        var eVirtual = sVirtual + dur2;
         var ptrStyle = isEdit ? 'pointer-events:auto;cursor:pointer;' : '';
         var clickAttr = isEdit ? ('onclick="openScheduleItemForm(&apos;' + item.id + '&apos;)"') : '';
-        html += '<div class="sched-item-block" style="position:absolute;' + ptrStyle + 'top:' + top + 'px;height:' + height + 'px;left:2px;right:2px;background:' + color + '30;border-left-color:' + color + ';" ' + clickAttr + '>';
-        if (height >= 28) html += '<div class="sched-item-emoji">' + emoji + '</div>';
-        if (height >= 42) html += '<div class="sched-item-name">' + name + '</div>';
-        if (height >= 60) html += '<div class="sched-item-time">' + item.startTime + '–' + item.endTime + '</div>';
-        html += '</div>';
+        var segs2 = splitGridBlock(sVirtual, eVirtual, gridStart, gridEnd, SLOT_HEIGHT);
+        segs2.forEach(function(seg) {
+          var bt = seg.isContinued ? 'border-top:2px dashed ' + color + ';' : '';
+          html += '<div class="sched-item-block" style="position:absolute;' + ptrStyle + 'top:' + seg.top + 'px;height:' + seg.height + 'px;left:2px;right:2px;background:' + color + '30;border-left-color:' + color + ';' + bt + '" ' + clickAttr + '>';
+          if (seg.height >= 28) html += '<div class="sched-item-emoji">' + emoji + '</div>';
+          if (seg.height >= 42) html += '<div class="sched-item-name">' + name + '</div>';
+          if (seg.height >= 60) html += '<div class="sched-item-time">' + item.startTime + '–' + item.endTime + '</div>';
+          html += '</div>';
+        });
       });
       html += '</div>';
       if (nowTop >= 0) html += '<div class="sched-now-line" style="top:' + nowTop + 'px;"></div>';
@@ -4649,16 +4705,20 @@
           var emoji = act ? renderEmoji(act.emoji) : '';
           var sMin = timeToMin(b.startTime), eMin = timeToMin(b.endTime);
           var sVirtual = toVirtualMin(sMin, gStart);
-          var dur = eMin >= sMin ? (eMin - sMin) : (eMin + 1440 - sMin);
-          var topPct = (sVirtual - gStart) / range * 100;
-          var heightPct = Math.max(0.5, dur / range * 100);
+          var dur = (eMin === sMin) ? 1440 : (eMin > sMin ? (eMin - sMin) : (eMin + 1440 - sMin));
+          var eVirtualM = sVirtual + dur;
           var leftPct = b.colStart / 7 * 100;
           var widthPct = b.colSpan / 7 * 100;
           var actName = act ? act.name : '';
-          html += '<div class="sched-mini-block" style="top:' + topPct + '%;height:' + heightPct + '%;left:calc(' + leftPct + '% + 1px);width:calc(' + widthPct + '% - 2px);background:' + color + ';">';
+          var txtColor = hexToTextColor(color);
+          var miniSegs = splitGridBlockPct(sVirtual, eVirtualM, gStart, gEnd);
+          miniSegs.forEach(function(seg) {
+          var btStyle = seg.isContinued ? 'border-top:2px dashed ' + color + ';' : '';
+          html += '<div class="sched-mini-block" style="top:' + seg.topPct + '%;height:' + seg.heightPct + '%;left:calc(' + leftPct + '% + 1px);width:calc(' + widthPct + '% - 2px);background:' + color + ';color:' + txtColor + ';' + btStyle + '">';
           html += '<span class="mini-emoji-badge">' + emoji + '</span>';
           html += '<span class="mini-block-name">' + actName + '</span>';
           html += '</div>';
+          }); // miniSegs
         });
       }
       // Current time line
@@ -4736,12 +4796,19 @@
       modal.querySelectorAll('.si-day-check:checked').forEach(function(cb) { selectedDays.push(cb.value); });
 
       if (sameTime) {
-        // 체크 상태: 캐시에서 복원
+        // 재렌더 전에 현재 입력값을 캐시에 반영 (시간 변경 후 요일 추가 시 원복 방지)
+        var curStart = container.querySelector('.si-start-same');
+        var curEnd   = container.querySelector('.si-end-same');
+        if (curStart && curStart.value) siTimeCache.start = curStart.value;
+        if (curEnd   && curEnd.value)   siTimeCache.end   = curEnd.value;
+        var isMidnight = siTimeCache.start && siTimeCache.end &&
+          timeToMin(siTimeCache.end) < timeToMin(siTimeCache.start);
         container.innerHTML =
           '<div class="si-time-group">' +
-          '<input type="time" class="si-start-same" value="' + siTimeCache.start + '">' +
+          '<input type="time" class="si-start-same" value="' + siTimeCache.start + '" oninput="siTimeCache.start=this.value;updateSiMidnightBadge()">' +
           '<span class="si-time-sep">~</span>' +
-          '<input type="time" class="si-end-same" value="' + siTimeCache.end + '">' +
+          '<input type="time" class="si-end-same" value="' + siTimeCache.end + '" oninput="siTimeCache.end=this.value;updateSiMidnightBadge()">' +
+          '<span class="si-midnight-badge" style="' + (isMidnight ? '' : 'display:none;') + '">+1일</span>' +
           '</div>';
       } else {
         // 해제 상태: 기존 단일 시간값 캐시에 저장 후 요일별 행 생성
@@ -4784,118 +4851,157 @@
       }
     }
 
+    function updateSiMidnightBadge() {
+      var modal = document.getElementById('scheduleItemModal');
+      if (!modal) return;
+      var badge = modal.querySelector('.si-midnight-badge');
+      var s = siTimeCache.start, e = siTimeCache.end;
+      if (badge && s && e) {
+        badge.style.display = (timeToMin(e) < timeToMin(s)) ? 'inline' : 'none';
+      }
+    }
+
     var siSelectedActivityId = '';
     var siNewActivityEmoji = '';
     var siNewActivityName = '';
     var siNewActivityCategoryId = '';
     var siNewActivityColor = '#ffde59';
     var siAddingActivity = false;
+    var siActivitySearchQuery = '';
+    var siActivityCatFilter = '';
 
     function renderSiActivityDropdown() {
       var list = document.getElementById('siActivityDropdown');
       if (!list) return;
       var html = '';
-      activities.filter(function(a) { return a.active; }).forEach(function(a) {
-        var sel = (a.id === siSelectedActivityId) ? ' selected' : '';
-        html += '<div class="custom-select-option' + sel + '" data-id="' + a.id + '" onclick="selectSiActivity(&apos;' + a.id + '&apos;)">';
-        html += '<span>' + renderEmoji(a.emoji) + '</span><span>' + escapeHtml(a.name) + '</span>';
-        html += '</div>';
-      });
-      if (!html) html = '<div class="custom-select-option" style="color:#aaa;cursor:default;">사용 가능한 일상이 없습니다</div>';
-      html += '<div class="si-add-divider"></div>';
-      if (siAddingActivity) {
-        html += '<div class="si-add-activity-form" onclick="event.stopPropagation()">';
-        html += '  <button type="button" class="si-add-close-btn" onclick="event.stopPropagation();cancelSiAddActivity()" title="닫기">✕</button>';
-        html += '  <div class="si-add-field">';
-        html += '    <div class="si-add-label">이모지 / 이름</div>';
-        html += '    <div class="si-add-inline">';
-        html += '      <button type="button" class="si-add-emoji-btn" id="siAddEmojiBtn" onclick="event.stopPropagation();openSiAddEmojiPicker()">' + renderEmoji(siNewActivityEmoji) + '</button>';
-        html += '      <input id="siAddNameInput" class="si-add-name-input" type="text" placeholder="일상 이름" value="' + escapeHtml(siNewActivityName) + '" oninput="siNewActivityName=this.value" onkeydown="if(event.key===&apos;Enter&apos;){event.preventDefault();saveSiNewActivity();}if(event.key===&apos;Escape&apos;){event.stopPropagation();cancelSiAddActivity();}">';
-        html += '    </div>';
-        html += '  </div>';
-        html += '  <div class="si-add-field">';
-        html += '    <div class="si-add-label">카테고리</div>';
-        html += '    <select class="si-add-cat-select" onchange="siNewActivityCategoryId=this.value" onclick="event.stopPropagation()">';
-        html += '      <option value="">카테고리 없음</option>';
-        categories.forEach(function(cat) {
-          var sel2 = (cat.id === siNewActivityCategoryId) ? ' selected' : '';
-          html += '      <option value="' + cat.id + '"' + sel2 + '>' + cat.emoji + ' ' + cat.name + '</option>';
+
+      // 검색 입력
+      html += '<div class="si-search-row" onclick="event.stopPropagation()">';
+      html += '<input id="siActivitySearch" class="si-search-input" type="text" placeholder="일상 검색..." value="' + escapeHtml(siActivitySearchQuery) + '" oninput="siActivitySearchQuery=this.value;renderSiActivityDropdown()" onkeydown="event.stopPropagation()">';
+      html += '</div>';
+
+      // 카테고리 필터
+      if (categories.filter(function(c){ return c.active; }).length > 0) {
+        html += '<div class="si-cat-filter" onclick="event.stopPropagation()">';
+        html += '<button class="si-cat-btn' + (!siActivityCatFilter ? ' active' : '') + '" onclick="event.stopPropagation();siActivityCatFilter=&apos;&apos;;renderSiActivityDropdown()">전체</button>';
+        html += '<button class="si-cat-btn' + (siActivityCatFilter === 'none' ? ' active' : '') + '" onclick="event.stopPropagation();siActivityCatFilter=&apos;none&apos;;renderSiActivityDropdown()">미지정</button>';
+        categories.filter(function(c){ return c.active; }).forEach(function(cat) {
+          var isActive = (siActivityCatFilter === cat.id) ? ' active' : '';
+          html += '<button class="si-cat-btn' + isActive + '" onclick="event.stopPropagation();siActivityCatFilter=&apos;' + cat.id + '&apos;;renderSiActivityDropdown()">';
+          html += renderEmoji(cat.emoji) + ' ' + escapeHtml(cat.name) + '</button>';
         });
-        html += '    </select>';
-        html += '  </div>';
-        html += '  <div class="si-add-field">';
-        html += '    <div class="si-add-label">대표 색상</div>';
-        html += '    <div class="si-add-inline">';
-        html += '      <label class="si-add-color-swatch" style="background:' + siNewActivityColor + '"><input type="color" class="si-add-color-input" value="' + siNewActivityColor + '" oninput="siNewActivityColor=this.value;this.parentNode.style.background=this.value;var h=this.parentNode.parentNode.querySelector(&apos;.si-add-color-hex&apos;);if(h)h.textContent=this.value;" onclick="event.stopPropagation()"></label>';
-        html += '      <span class="si-add-color-hex">' + siNewActivityColor + '</span>';
-        html += '    </div>';
-        html += '  </div>';
-        html += '  <button type="button" class="si-add-save-btn" onclick="event.stopPropagation();saveSiNewActivity()">+ 일상 추가</button>';
         html += '</div>';
-      } else {
-        html += '<div class="si-add-activity-trigger" onclick="event.stopPropagation();showSiAddActivityForm()">+ 새 일상 추가</div>';
       }
+
+      // 일상 목록 필터링
+      var filtered = activities.filter(function(a) {
+        if (!a.active) return false;
+        if (siActivityCatFilter === 'none') { if (a.categoryId) return false; }
+        else if (siActivityCatFilter) { if (a.categoryId !== siActivityCatFilter) return false; }
+        if (siActivitySearchQuery) {
+          var q = siActivitySearchQuery.toLowerCase();
+          if (a.name.toLowerCase().indexOf(q) === -1) return false;
+        }
+        return true;
+      });
+
+      if (filtered.length) {
+        filtered.forEach(function(a) {
+          var sel = (a.id === siSelectedActivityId) ? ' selected' : '';
+          html += '<div class="custom-select-option' + sel + '" data-id="' + a.id + '" onclick="selectSiActivity(&apos;' + a.id + '&apos;)">';
+          html += '<span>' + renderEmoji(a.emoji) + '</span><span>' + escapeHtml(a.name) + '</span>';
+          html += '</div>';
+        });
+      } else {
+        html += '<div class="custom-select-option" style="color:#aaa;cursor:default;">' + (siActivitySearchQuery ? '검색 결과 없음' : '사용 가능한 일상이 없습니다') + '</div>';
+      }
+
+      html += '<div class="si-add-divider"></div>';
+      html += '<div class="si-add-activity-trigger" onclick="event.stopPropagation();showSiAddActivityModal()">+ 새 일상 추가</div>';
+
       list.innerHTML = html;
       updateSiActivityDisplay();
-      if (siAddingActivity) {
-        var inp = list.querySelector('#siAddNameInput');
-        if (inp) inp.focus();
-      }
     }
 
-    function showSiAddActivityForm() {
-      siAddingActivity = true;
+    function showSiAddActivityModal() {
       siNewActivityEmoji = getRandomEmoji();
       siNewActivityName = '';
       siNewActivityCategoryId = '';
       siNewActivityColor = '#ffde59';
-      renderSiActivityDropdown();
+      var modal = document.getElementById('siAddActivityModal');
+      if (!modal) return;
+      // 이모지 버튼
+      var emojiBtn = modal.querySelector('#siAddModalEmojiBtn');
+      if (emojiBtn) emojiBtn.innerHTML = renderEmoji(siNewActivityEmoji);
+      // 이름 초기화
+      var nameInp = modal.querySelector('#siAddModalNameInput');
+      if (nameInp) { nameInp.value = ''; nameInp.style.borderColor = ''; }
+      // 카테고리 드롭다운 채우기
+      var catSel = modal.querySelector('#siAddModalCatSelect');
+      if (catSel) {
+        catSel.innerHTML = '<option value="">카테고리 없음</option>';
+        categories.filter(function(c){ return c.active; }).forEach(function(cat) {
+          catSel.innerHTML += '<option value="' + cat.id + '">' + cat.emoji + ' ' + escapeHtml(cat.name) + '</option>';
+        });
+        catSel.value = '';
+      }
+      // 색상 초기화
+      var colorInp = modal.querySelector('#siAddModalColorInput');
+      var colorSwatch = modal.querySelector('#siAddModalColorSwatch');
+      var colorHex = modal.querySelector('#siAddModalColorHex');
+      if (colorInp) colorInp.value = '#ffde59';
+      if (colorSwatch) colorSwatch.style.background = '#ffde59';
+      if (colorHex) colorHex.textContent = '#ffde59';
+      modal.style.display = 'flex';
+      bringModalToFront(modal);
+      if (nameInp) setTimeout(function(){ nameInp.focus(); }, 50);
     }
 
-    function cancelSiAddActivity() {
-      siAddingActivity = false;
-      siNewActivityEmoji = '';
-      siNewActivityName = '';
-      siNewActivityCategoryId = '';
-      siNewActivityColor = '#ffde59';
-      renderSiActivityDropdown();
+    function closeSiAddActivityModal() {
+      var modal = document.getElementById('siAddActivityModal');
+      if (modal) modal.style.display = 'none';
     }
 
-    function openSiAddEmojiPicker() {
+    function openSiAddModalEmojiPicker() {
       openEmojiPicker(siNewActivityEmoji || '', function(emoji) {
         siNewActivityEmoji = emoji;
-        var btn = document.querySelector('#siActivityDropdown .si-add-emoji-btn');
+        var btn = document.getElementById('siAddModalEmojiBtn');
         if (btn) btn.innerHTML = renderEmoji(emoji);
       });
     }
 
-    function saveSiNewActivity() {
-      var name = (siNewActivityName || '').trim();
+    function saveSiAddActivityModal() {
+      var modal = document.getElementById('siAddActivityModal');
+      if (!modal) return;
+      var nameInp = modal.querySelector('#siAddModalNameInput');
+      var name = nameInp ? nameInp.value.trim() : '';
       if (!name) {
-        var inp = document.getElementById('siAddNameInput');
-        if (inp) { inp.focus(); inp.style.borderColor = '#e53e3e'; }
+        if (nameInp) { nameInp.focus(); nameInp.style.borderColor = '#e53e3e'; }
         return;
       }
+      var catSel = modal.querySelector('#siAddModalCatSelect');
+      var colorInp = modal.querySelector('#siAddModalColorInput');
       var newActivity = {
         id: generateId(),
-        categoryId: siNewActivityCategoryId || null,
+        categoryId: (catSel && catSel.value) ? catSel.value : null,
         emoji: siNewActivityEmoji || getRandomEmoji(),
         name: name,
-        color: siNewActivityColor || '#ffde59',
+        color: (colorInp && colorInp.value) ? colorInp.value : '#ffde59',
         active: true,
         createdAt: today()
       };
       activities.push(newActivity);
       saveActivities();
-      siAddingActivity = false;
       siNewActivityEmoji = '';
       siNewActivityName = '';
       siNewActivityCategoryId = '';
       siNewActivityColor = '#ffde59';
+      closeSiAddActivityModal();
       selectSiActivity(newActivity.id);
       renderSiActivityDropdown();
       var wrap = document.getElementById('siActivitySelectWrap');
       if (wrap) wrap.classList.remove('open');
+      showToast('일상 추가 완료');
     }
 
     function updateSiActivityDisplay() {
@@ -4937,6 +5043,8 @@
       if (!modal) return;
       document.getElementById('siModalTitle').textContent = itemId ? '일정 수정' : '일정 추가';
       siSelectedActivityId = '';
+      siActivitySearchQuery = '';
+      siActivityCatFilter = '';
       renderSiActivityDropdown();
       modal.querySelectorAll('.si-day-check').forEach(function(cb) { cb.checked = false; });
       document.getElementById('siSameTime').checked = true;
@@ -5008,7 +5116,7 @@
         var s = (modal.querySelector('.si-start-same') || {}).value || '';
         var e = (modal.querySelector('.si-end-same') || {}).value || '';
         if (!s || !e) { showAlert('입력 오류', '시간을 입력해주세요.'); return; }
-        if (timeToMin(e) <= timeToMin(s)) { showAlert('입력 오류', '종료 시간은 시작 시간보다 늦어야 합니다.'); return; }
+        if (timeToMin(e) === timeToMin(s)) { showAlert('입력 오류', '시작 시간과 종료 시간이 같습니다.'); return; }
         perDayData.push({ weekdays: weekdays.slice(), start: s, end: e });
       } else {
         var rows = modal.querySelectorAll('.si-per-day-row');
@@ -5017,7 +5125,7 @@
           var ss = rows[i].querySelector('.si-start-each').value;
           var ee = rows[i].querySelector('.si-end-each').value;
           if (!ss || !ee) { showAlert('입력 오류', WEEKDAYS_KR[WEEKDAYS_EN.indexOf(d)] + '요일 시간을 입력해주세요.'); return; }
-          if (timeToMin(ee) <= timeToMin(ss)) { showAlert('입력 오류', WEEKDAYS_KR[WEEKDAYS_EN.indexOf(d)] + '요일 종료 시간이 시작 시간보다 늦어야 합니다.'); return; }
+          if (timeToMin(ee) === timeToMin(ss)) { showAlert('입력 오류', WEEKDAYS_KR[WEEKDAYS_EN.indexOf(d)] + '요일 시작/종료 시간이 같습니다.'); return; }
           perDayData.push({ weekdays: [d], start: ss, end: ee });
         }
       }

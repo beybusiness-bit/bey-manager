@@ -712,6 +712,34 @@
   </div>
   </div>
 
+  <!-- 일상 추가 서브 모달 (scheduleItemModal 1200 위, z-index:1400) -->
+  <div id="siAddActivityModal" class="modal-overlay" style="z-index:1400;display:none;" onclick="if(event.target===this)closeSiAddActivityModal()">
+    <div class="modal-box" style="max-width:360px;width:100%;">
+      <h3 style="margin:0 0 16px;font-size:16px;font-weight:700;">새 일상 추가</h3>
+      <div class="habit-form-row" style="margin-bottom:12px;">
+        <button class="emoji-edit-btn" id="siAddModalEmojiBtn" onclick="openSiAddModalEmojiPicker()">✅</button>
+        <input class="input-field" id="siAddModalNameInput" placeholder="일상 이름" style="flex:1;"
+          onkeydown="if(event.key==='Enter')saveSiAddActivityModal();if(event.key==='Escape')closeSiAddActivityModal()">
+      </div>
+      <div style="margin-bottom:12px;">
+        <div class="form-label" style="margin-bottom:6px;">카테고리</div>
+        <select class="input-field" id="siAddModalCatSelect" style="width:100%;height:36px;padding:4px 10px;box-sizing:border-box;"></select>
+      </div>
+      <div class="habit-form-row" style="margin-bottom:20px;">
+        <div class="form-label" style="margin:0;flex:none;">색상</div>
+        <label class="si-add-color-swatch" id="siAddModalColorSwatch" style="background:#ffde59;">
+          <input type="color" id="siAddModalColorInput" value="#ffde59"
+            oninput="document.getElementById('siAddModalColorSwatch').style.background=this.value;document.getElementById('siAddModalColorHex').textContent=this.value;">
+        </label>
+        <span id="siAddModalColorHex" class="si-add-color-hex">#ffde59</span>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn-cancel" onclick="closeSiAddActivityModal()">취소</button>
+        <button class="btn-confirm" onclick="saveSiAddActivityModal()">추가</button>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>

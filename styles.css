@@ -2122,7 +2122,7 @@
     .custom-select-arrow { font-size: 10px; color: #888; flex-shrink: 0; }
     .custom-select-dropdown {
       display: none; position: absolute; top: calc(100% + 2px); left: 0; right: 0;
-      max-height: 240px; overflow-y: auto; background: var(--bg-card);
+      max-height: 360px; overflow-y: auto; background: var(--bg-card);
       border: 1px solid var(--border-color); border-radius: 6px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.08); z-index: 10;
     }
@@ -2381,8 +2381,19 @@
     .card-insert-after  { box-shadow:  3px 0 0 0 var(--primary-yellow); }
     .card-insert-top    { box-shadow: 0 -3px 0 0 var(--primary-yellow); }
     .card-insert-bottom { box-shadow: 0  3px 0 0 var(--primary-yellow); }
-    .group-insert-before { box-shadow: 0 -3px 0 0 var(--primary-yellow); }
-    .group-insert-after  { box-shadow: 0  3px 0 0 var(--primary-yellow); }
+    .activity-group { position: relative; }
+    .group-insert-before::before,
+    .group-insert-after::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0;
+      height: 3px;
+      background: var(--primary-yellow);
+      border-radius: 2px;
+      z-index: 10;
+    }
+    .group-insert-before::before { top: -4px; }
+    .group-insert-after::after  { bottom: -4px; }
     .activity-group-header[draggable="true"] { cursor: grab; user-select: none; -webkit-user-drag: element; }
     .activity-group-header[draggable="true"] * { pointer-events: none; }
     .activity-group-header[draggable="true"]:active { cursor: grabbing; }
@@ -2405,6 +2416,28 @@
     .activity-card:not(.editing) .activity-card-main { padding-right: 24px; }
 
     /* 드롭다운 인라인 일상 추가 */
+    /* 일상 드롭다운 검색 + 카테고리 필터 */
+    .si-search-row { padding: 8px 10px 4px; position: sticky; top: 0; background: var(--bg-card); z-index: 2; }
+    .si-search-input {
+      width: 100%; box-sizing: border-box;
+      padding: 6px 10px; font-size: 13px; font-family: inherit;
+      border: 1px solid var(--border-color); border-radius: var(--button-radius,6px);
+      background: var(--bg-main); color: var(--text-primary);
+      outline: none;
+    }
+    .si-search-input:focus { border-color: var(--primary-yellow); }
+    .si-cat-filter {
+      display: flex; flex-wrap: wrap; gap: 4px;
+      padding: 4px 10px 6px; border-bottom: 1px solid var(--border-color);
+    }
+    .si-cat-btn {
+      padding: 3px 8px; font-size: 12px; border-radius: 12px;
+      border: 1px solid var(--border-color); background: var(--bg-main);
+      color: var(--text-secondary); cursor: pointer; font-family: inherit;
+      white-space: nowrap; transition: all 0.1s;
+    }
+    .si-cat-btn:hover { border-color: var(--primary-yellow); color: var(--text-primary); }
+    .si-cat-btn.active { background: var(--primary-yellow); color: #000; border-color: var(--primary-yellow); font-weight: 600; }
     .si-add-divider { height: 1px; background: var(--border-color); margin: 2px 0; }
     .si-add-activity-trigger { display: flex; align-items: center; gap: 6px; padding: 9px 12px; font-size: 13px; color: var(--primary-yellow); font-weight: 600; cursor: pointer; }
     .si-add-activity-trigger:hover { background: var(--bg-main); }
