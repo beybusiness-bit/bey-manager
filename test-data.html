@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>테스트 데이터 주입</title>
+<style>
+  body { font-family: 'Noto Sans KR', sans-serif; background: #f5f5f5; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+  .box { background: #fff; border-radius: 16px; padding: 32px 40px; max-width: 480px; width: 90%; box-shadow: 0 4px 24px rgba(0,0,0,0.10); text-align: center; }
+  h2 { margin: 0 0 8px; font-size: 20px; }
+  p { color: #666; font-size: 13px; margin: 0 0 24px; line-height: 1.6; }
+  .btn { display: block; width: 100%; padding: 14px; background: #ffde59; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 10px; transition: opacity 0.15s; }
+  .btn:hover { opacity: 0.85; }
+  .btn.danger { background: #fff0f0; color: #e53e3e; border: 1.5px solid #e53e3e; }
+  .log { margin-top: 20px; background: #f8f8f8; border-radius: 8px; padding: 12px 16px; font-size: 12px; color: #333; text-align: left; max-height: 220px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; display: none; }
+  .done { background: #f0fff4; border: 1.5px solid #56cfb2; border-radius: 10px; padding: 12px 16px; font-size: 13px; font-weight: 600; color: #276749; display: none; margin-top: 12px; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h2>🧪 테스트 데이터 주입</h2>
+  <p>기존 할일(workItems) 데이터를 모두 지우고<br>테스트용 더미 데이터를 주입합니다.<br><br>6가지 날짜 시나리오 + 바구니 12개 아이템</p>
+  <button class="btn" onclick="injectData()">✅ 데이터 주입 후 앱 열기</button>
+  <button class="btn danger" onclick="clearOnly()">🗑 workItems만 초기화</button>
+  <div class="log" id="log"></div>
+  <div class="done" id="done">✅ 완료! 앱으로 이동 중...</div>
+</div>
+
+<script>
+function log(msg) {
+  var el = document.getElementById('log');
+  el.style.display = 'block';
+  el.textContent += msg + '\n';
+}
+
+function injectData() {
+  var d = new Date();
+  var pad = function(n) { return String(n).padStart(2, '0'); };
+  function dateOf(offset) {
+    var t = new Date(d.getFullYear(), d.getMonth(), d.getDate() + offset);
+    return t.getFullYear() + '-' + pad(t.getMonth()+1) + '-' + pad(t.getDate());
+  }
+
+  var TODAY     = dateOf(0);
+  var YESTERDAY = dateOf(-1);
+  var DAY2      = dateOf(-2);
+  var DAY3      = dateOf(-3);
+  var DAY4      = dateOf(-4);
+  var TOMORROW  = dateOf(1);
+
+  var seq = 0;
+  function id() { return 'w' + Date.now().toString(36) + (++seq).toString(36); }
+
+  // =================================================================
+  // 더미 데이터 설계
+  // -----------------------------------------------------------------
+  // TODAY     : 일반 2개 (완료1, 진행중1) → 추가버튼 2개 동시표시
+  // YESTERDAY : 일반 3개 (완료2, 시작전1) + 보너스 1개 → 잠금테스트
+  // DAY2      : 일반 3개 모두 완료 → 보너스 3개 가능
+  // DAY3      : 일반 1개 완료 + 2개 시작전 → 두 버튼 동시
+  // DAY4      : 아이템 없음 (날짜 이동 후 빈 상태 확인)
+  // TOMORROW  : 진행중 1개 (미래 날짜 동작 확인)
+  // null(바구니): 12개 (페이저 테스트)
+  // =================================================================
+
+  var items = [
+    // ── 오늘: 일반 2/3, 완료 1개 ──────────────────────────────────
+    {id:id(), emoji:'💻', color:'#74b9ff', title:'오늘의 코드 리뷰',
+     date:TODAY, status:'done', completed:true, isBonus:false,
+     memo:'PR #142 — 인라인편집 관련', createdAt:TODAY},
+
+    {id:id(), emoji:'📝', color:'#a29bfe', title:'기획서 초안 작성',
+     date:TODAY, status:'in-progress', completed:false, isBonus:false,
+     memo:'3분기 로드맵 포함할 것', createdAt:TODAY},
+
+    // ── 어제: 일반 3/3 (완료 2, 시작전 1) + 보너스 1개 ────────────
+    {id:id(), emoji:'📊', color:'#fdcb6e', title:'주간 보고서 제출',
+     date:YESTERDAY, status:'done', completed:true, isBonus:false,
+     memo:'팀장님께 오후 3시 이전', createdAt:YESTERDAY},
+
+    {id:id(), emoji:'🤝', color:'#ff8e53', title:'협력사 미팅 준비',
+     date:YESTERDAY, status:'done', completed:true, isBonus:false,
+     memo:'PPT 슬라이드 30장', createdAt:YESTERDAY},
+
+    {id:id(), emoji:'📦', color:'#a8e6cf', title:'서버 배포 확인',
+     date:YESTERDAY, status:'pending', completed:false, isBonus:false,
+     memo:'스테이징 → 프로덕션', createdAt:YESTERDAY},
+
+    {id:id(), emoji:'⭐', color:'#ffc045', title:'문서 정리 보너스',
+     date:YESTERDAY, status:'in-progress', completed:false, isBonus:true,
+     memo:'보너스 할일 — 잠금 테스트용', createdAt:YESTERDAY},
+
+    // ── 그저께: 일반 3/3 모두 완료 ────────────────────────────────
+    {id:id(), emoji:'🎯', color:'#56cfb2', title:'OKR 점검 회의',
+     date:DAY2, status:'done', completed:true, isBonus:false,
+     memo:'Q2 달성률 분석', createdAt:DAY2},
+
+    {id:id(), emoji:'🔍', color:'#6c5ce7', title:'버그 원인 분석',
+     date:DAY2, status:'done', completed:true, isBonus:false,
+     memo:'로그인 페이지 CORS 이슈', createdAt:DAY2},
+
+    {id:id(), emoji:'📱', color:'#e84393', title:'모바일 UI 테스트',
+     date:DAY2, status:'done', completed:true, isBonus:false,
+     memo:'Galaxy S24 + iPhone 15', createdAt:DAY2},
+
+    // ── 3일전: 일반 3/3 모두 시작전 (완료 0개) → 버튼 없음 케이스 ─
+    {id:id(), emoji:'🛠️', color:'#ff6b6b', title:'API 엔드포인트 수정',
+     date:DAY3, status:'pending', completed:false, isBonus:false,
+     memo:'v2 마이그레이션', createdAt:DAY3},
+
+    {id:id(), emoji:'📋', color:'#dfe6e9', title:'체크리스트 업데이트',
+     date:DAY3, status:'pending', completed:false, isBonus:false,
+     memo:null, createdAt:DAY3},
+
+    {id:id(), emoji:'📧', color:'#45b7d1', title:'클라이언트 이메일 답변',
+     date:DAY3, status:'in-progress', completed:false, isBonus:false,
+     memo:'견적서 첨부 필수', createdAt:DAY3},
+
+    // ── 내일: 진행중 1개 ───────────────────────────────────────────
+    {id:id(), emoji:'🚀', color:'#fd79a8', title:'신규 기능 데모 준비',
+     date:TOMORROW, status:'in-progress', completed:false, isBonus:false,
+     memo:'화면 녹화 포함', createdAt:TOMORROW},
+
+    // ── 바구니 (date:null) 12개 ────────────────────────────────────
+    {id:id(), emoji:'💡', color:'#ffc045', title:'아이디어 메모',
+     date:null, status:'pending', completed:false, isBonus:false,
+     memo:'제품 방향성 재설정 아이디어', createdAt:TODAY},
+
+    {id:id(), emoji:'📚', color:'#6c5ce7', title:'독서 목록 정리',
+     date:null, status:'pending', completed:false, isBonus:false,
+     memo:'이번 달 읽을 책 5권 선정', createdAt:TODAY},
+
+    {id:id(), emoji:'🎨', color:'#fd79a8', title:'디자인 시스템 문서화',
+     date:null, status:'pending', completed:false, isBonus:false,
+     memo:'컬러·타이포·간격 가이드', createdAt:TODAY},
+
+    {id:id(), emoji:'🔐', color:'#e84393', title:'보안 취약점 점검',
+     date:null, status:'pending', completed:false, isBonus:false,
+     memo:'OWASP Top 10 기준', createdAt:TODAY},
+
+    {id:id(), emoji:'⚡', color:'#fdcb6e', title:'성능 최적화 리서치',
+     date:null, status:'pending', completed:false, isBonus:false,
+     memo:'번들 사이즈 30% 감소 목표', createdAt:TODAY},
+
+    {id:id(), emoji:'🌐', color:'#45b7d1', title:'다국어 지원 기획',
+     date:null, status:'pending', completed:false, isBonus:false,
+     memo:'EN/JA 우선 적용', createdAt:TODAY},
+
+    {id:id(), emoji:'🤖', color:'#a29bfe', title:'AI 기능 MVP 정의',
+     date:null, status:'pending', completed:false, isBonus:false,
+     memo:'챗봇 vs 자동완성 비교', createdAt:TODAY},
+
+    {id:id(), emoji:'📈', color:'#56cfb2', title:'분기 매출 분석',
+     date:null, status:'pending', completed:false, isBonus:false,
+     memo:'GA4 + CRM 데이터 연동', createdAt:TODAY},
+
+    {id:id(), emoji:'🧪', color:'#ff8e53', title:'테스트 커버리지 개선',
+     date:null, status:'pending', completed:false, isBonus:false,
+     memo:'현재 42% → 목표 80%', createdAt:TODAY},
+
+    {id:id(), emoji:'🗂️', color:'#74b9ff', title:'파일 구조 리팩토링',
+     date:null, status:'pending', completed:false, isBonus:false,
+     memo:'모노레포 검토', createdAt:TODAY},
+
+    {id:id(), emoji:'🔔', color:'#ff6b6b', title:'알림 시스템 설계',
+     date:null, status:'pending', completed:false, isBonus:false,
+     memo:'슬랙 연동 우선', createdAt:TODAY},
+
+    {id:id(), emoji:'🌙', color:'#dfe6e9', title:'다크모드 구현',
+     date:null, status:'pending', completed:false, isBonus:false,
+     memo:'CSS 변수 기반 토글', createdAt:TODAY},
+  ];
+
+  localStorage.setItem('workItems', JSON.stringify(items));
+
+  // 날짜별 카운트 로그
+  var byDate = {};
+  items.forEach(function(it) {
+    var k = it.date || '바구니';
+    byDate[k] = (byDate[k] || 0) + 1;
+  });
+
+  log('workItems 주입 완료: ' + items.length + '개');
+  Object.keys(byDate).sort().forEach(function(k) {
+    var label = k === TODAY ? k+' (오늘)' : k === YESTERDAY ? k+' (어제)' : k === DAY2 ? k+' (그저께)' : k === DAY3 ? k+' (3일전)' : k === TOMORROW ? k+' (내일)' : k;
+    log('  ' + label + ': ' + byDate[k] + '개');
+  });
+  log('');
+  log('3초 후 앱으로 이동합니다...');
+
+  document.getElementById('done').style.display = 'block';
+  setTimeout(function() { location.href = 'index.html'; }, 3000);
+}
+
+function clearOnly() {
+  localStorage.removeItem('workItems');
+  log('workItems 초기화 완료');
+  document.getElementById('log').style.display = 'block';
+  document.getElementById('done').style.display = 'block';
+  document.getElementById('done').textContent = '✅ 초기화 완료. 앱을 새로고침하세요.';
+}
+</script>
+</body>
+</html>
