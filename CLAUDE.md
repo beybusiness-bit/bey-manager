@@ -612,101 +612,67 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 
 ## 10. 다음 세션 시작점
 
-> **마지막 세션: 2026-04-26**
+> **마지막 세션: 2026-04-26 (2차)**
 > **⚠️ 방향 전환 중**: 기존 복잡한 설계(시간표 등)는 아카이브 보관하고, **심플 1차 완성**으로 방향을 바꿨습니다.
 
 ### 🔄 현재 진행 상태
 
-- **작업 브랜치**: `main` (배포 중, GitHub Pages 반영됨)
-- **마지막 커밋**: `0f54177 feat: 사이드바 토글 버그 수정 + 일 페이지 오늘/주별/월별 뷰 구현`
-- **파일 라인 수**: app.js 6,668줄 / styles.css 3,150줄 / index.html 741줄
+- **작업 브랜치**: `claude/work-items-page-setup-d8f19` (main에 머지·배포 완료)
+- **마지막 커밋**: `e34e241 fix: 보너스 잠금 — 완료된 할일 삭제 시 거부`
+- **파일 라인 수**: app.js 7,353줄 / styles.css 3,287줄 / index.html 774줄
 
 ### ✅ 이번 세션에서 완료한 작업
 
-1. **사이드바 토글 버그 수정** — `e.composedPath()`로 클릭 원본 경로 추적. `renderSidebar()` 후 DOM 교체돼도 "사이드바 내부 클릭"을 정확히 감지. 토글 여닫을 때 사이드바 닫히지 않음.
-2. **일(업무) 페이지 기본 구조** — 오늘/주별/월별 탭 + 날짜 네비 + 빈 상태 UI (stub 상태)
-3. (직전 세션) **메뉴 설정 전면 재설계** — 대분류/메뉴 CRUD + DnD 순서 변경 + box-shadow 삽입선
-4. (직전 세션) **사이드바 기본값 접힘** — `loadExpandedGroups()`에서 항상 빈 배열 반환
-5. (직전 세션) **조난 구조 중 대분류**에 "일(💼)"·"습관(✅)" 페이지 추가 (one-time 마이그레이션 플래그)
+1. **일 페이지 대개편** — 칸반(시작전/진행중/완료) + HTML5 DnD 상태이동 + 인라인 편집 + 날짜 화살표 + 주별 모바일 세로 + 월별 데스크탑 목록 + 바구니 탭 전환
+2. **UI 개선 패치** — 인라인편집 폼 스타일 통일(`.input-field` CSS 신규), DnD 삽입선 정확한 위치 + 칸반 내 순서 변경, 시작전 컬럼에 추가버튼 이동, 두 버튼 동시 표시
+3. **바구니 전면 개선** — 그리드 카드(auto-fill, 체크박스 카드 안), 컨트롤 행 상하단 배치, 날짜피커 슬림화, 배정 후 바구니 유지(자동 이동 제거), 슬롯 초과 시 전체 거부
+4. **보너스 잠금 완성** — DnD 완료→다른 상태 이동 + 삭제 양쪽 모두 `completedCnt - 1 < bonusUsed` 체크로 거부
+5. **테스트 데이터 주입 페이지** — `test-data.html` (브라우저에서 열면 더미 데이터 주입 + 앱으로 이동)
 
-### 🎯 다음 단계: 일(업무) 페이지 전체 구현 ← **다음 세션 시작 작업**
+### 🎯 다음 단계: 습관(✅) 페이지 구현 ← **다음 세션 시작 작업**
 
-아래 스펙을 3~4단계로 나눠 구현 (세션당 1~2단계):
+베이님이 다음 단계로 넘어가도 된다고 명시적으로 승인함 (2026-04-26).
 
-#### 단계 A: 데이터 모델 + 뷰에 할일 표시
-- `workItems[]` localStorage 저장 (`loadWorkItems` / `saveWorkItems`)
-- 할일 속성: `id, emoji, color, title, date(nullable), completed, duration(min), memo, isBonus, createdAt`
-- 이모지 → 색상 자동 생성: `emojiToWorkColor(emoji)` — 15색 팔레트 해시 배정
-- 오늘뷰·주별뷰·월별뷰에서 실제 할일 카드 렌더링 (이모지/제목/완료여부/소요시간만)
-- 월별뷰: 각 날짜에 색상 dot 표시, 클릭 시 오늘뷰로 이동
-- `loadWorkItems()` 를 app 초기화(`loadCategories()` 근처)에 추가
-
-#### 단계 B: 할일 추가/수정/삭제/상세
-- 슬롯 규칙: 날짜당 일반 3개 상한. 완료된 할일 ≥1개 있으면 보너스 1개 추가 가능
-- `showAddWorkItemModal(dateStr)` — dateStr 없으면 바구니 행
-  - 일반 3개 찬 상태에서 추가 시: 보너스 가능하면 "보너스 할일" 안내 + 모달 오픈, 아예 불가하면 경고
-- `showWorkItemDetail(id)` — 상세 모달 (수정·삭제 버튼 포함)
-- `showEditWorkItemModal(id)` — 수정 모달 (draft 패턴)
-- `deleteWorkItem(id)` — 확인 모달 후 삭제
-- `toggleWorkItemComplete(id)` — 체크박스 토글
-- 모달 HTML 3개 index.html에 추가: `workItemModal` / `workDetailModal` / `workBasketModal`
-
-#### 단계 C: 할일 바구니
-- 날짜 없이 저장된 할일들을 모아두는 모달(`workBasketModal`)
-- 카드 그리드 (이모지+제목), 개별 체크박스 + 전체 선택
-- **오늘 추가** / **날짜 추가** (date picker) 버튼
-- 추가 시 M(선택+기존) > 3 초과 검사:
-  - 단순 초과: 경고
-  - 초과지만 완료된 할일 수 내에서 보너스 가능: 보너스 추가 여부 확인
-- 사이드바·상단에 바구니 아이콘 + 아이템 수 뱃지 표시
-
-#### 단계 D: 검색/필터/정렬
-- 검색바 (제목/메모 키워드)
-- 필터: 완료여부(`all`/`done`/`todo`), 날짜 범위
-- 정렬: 날짜순, 생성순, 제목순
-
-### 🚨 push 방법
-
-```bash
-sh /home/user/bey-manager/.git/push.sh origin main
-```
-- `push.sh`는 `.git/push.sh`에 존재
-- 토큰 파일이 없으면: `echo "ghp_..." > /home/user/bey-manager/.git/GITHUB_TOKEN`
-- **주의**: `.git/GITHUB_TOKEN`은 세션 컨테이너 리셋 시 사라질 수 있음
+**구현 대상 (우선순위 순):**
+- 습관 데이터 모델: `{ id, emoji, color, name, description, targetDays: ['MON',...], createdAt }`
+- 습관 기록 모델: `{ id, habitId, date, done, createdAt }` (별도 배열 `habitLogs`)
+- 오늘 습관 체크 뷰 (메인): 달성/미달성 체크박스 카드
+- 주별 달성률 뷰: 각 습관 × 요일 그리드
+- 월별 캘린더 뷰: 날짜별 달성 dot
+- 습관 CRUD: 추가(이모지+이름+요일선택)/수정/삭제
+- 연속 달성일(streak) 계산 및 표시
 
 ### 🗄️ 아카이브: 구(舊) 설계 우선순위 (참고 보관용)
 
 이전 설계의 미완성 단계들. 현재는 진행하지 않지만 나중에 참고 가능.
 
 - 18단계: 습관 페이지 고도화 (달성률 캘린더 등)
-- 19단계: 별도 할일 페이지 (지금 일 페이지에 통합됨으로써 성격이 바뀜)
+- 19단계: 별도 할일 페이지 (지금 일 페이지에 통합됨)
 - 20단계: 아이디어 페이지
 - 21단계: 레시피 페이지
 - 22단계: 금전 페이지
 - 23단계: 홈 대시보드 위젯
 - R1단계: `USER_EMAIL` → `ALLOWED_EMAILS` 배열 리팩토링
-- 피드백 ②③⑥⑦⑧ (시간표·이모지·모달 z-index 관련) — 시간표 페이지가 현재 저우선순위이므로 같이 보류
-
-### 🔖 적용 대기 피드백 → ✅ 이전 세션에서 모두 해결됨
-
-#### ③ Sheets 미연결 토스트 오류 버그 ✅ 해결됨
-- **증상**: 저장 버튼 눌렀을 때 "⚠️ Sheets 미연결 — 로컬에만 저장됩니다" 토스트가 뜨는데 사이드바엔 "연결됨" 표시됨
-- **해결 방향**: `GS.isConnected()` 체크를 단일 변수 기준으로 통일, 실패 시 미연결 vs API 오류 분기
 
 ### 📌 현재 코드 구조 핵심 메모
 
-- **일 페이지 JS**: app.js 하단 `// 일(업무) 페이지` 섹션 (~6490줄~). `workView`, `workWeekOffset`, `workMonthOffset`, `workSelectedDate` 전역 상태. `getMondayOf`, `addDays`, `formatDateKR` 헬퍼.
-- **메뉴 설정**: `menuDraft[]` draft 패턴. `renderMenuManager()` → `saveMmDraft()`. DnD: `__mmDrag` 모듈 상태, `box-shadow` 삽입선.
-- **사이드바 토글**: `document click` 핸들러에서 `e.composedPath()` 사용 (renderSidebar 후 detached node 대응)
-- **탭 UI**: `.tab-nav` + `.tab-btn` + `#pageId .tab-btn` 스코프 패턴 (전역 충돌 방지)
+- **일 페이지 JS**: app.js `// 일(업무) 페이지` 섹션 (~6506줄~). 전역 상태: `workView`, `workWeekOffset`, `workMonthOffset`, `workSelectedDate`, `workBasketPage`, `workBasketPerPage`, `__workDragId`, `__workDragSrcStatus`, `__workDragTargetId`, `__workDragInsertBefore`.
+- **workItems 데이터 모델**: `{ id, emoji, color, title, date(null=바구니), status:'pending'|'in-progress'|'done', completed(compat), isBonus, memo, createdAt }`
+- **보너스 잠금 로직**: `getCompletedNormalCount(date) - 1 < getBonusUsedCount(date)` 이면 완료→다른상태 DnD + 삭제 모두 거부. `deleteWorkItem`과 `workDrop` 양쪽에 동일 체크 적용.
+- **바구니 배정**: 선택 개수 > `normalSlots + availBonus` 이면 전체 거부. `toBonus.length > 0` 이면 보너스 확인 모달만 표시.
+- **DnD 순서 변경**: 같은 컬럼 내 드롭 시 `workItems` 배열에서 splice 재삽입. `__workDragTargetId` + `__workDragInsertBefore` 상태 사용.
+- **`.input-field` CSS**: styles.css 상단에 정의(`padding:9px 12px`, `border:1.5px solid`, `border-radius:var(--button-radius)`). 모달 외부 인라인 편집 폼에서도 일관된 스타일 유지.
+- **메뉴 설정**: `menuDraft[]` draft 패턴. DnD: `__mmDrag` 모듈 상태, `box-shadow` 삽입선.
+- **사이드바 토글**: `document click` 핸들러에서 `e.composedPath()` 사용.
+- **탭 UI**: `.tab-nav` + `.tab-btn` + `#pageId .tab-btn` 스코프 패턴 (전역 충돌 방지).
 
 ### ⚠️ 다음 세션 유의사항
 
 1. 세션 시작 시 `git log -3 --oneline` + `wc -l app.js styles.css index.html` + CLAUDE.md §10 정독
-2. `.git/GITHUB_TOKEN` 존재 여부 확인 → 없으면 토큰 재발급 요청
+2. `.git/GITHUB_TOKEN` 존재 여부 확인 → 없으면 토큰 요청
 3. 로컬 테스트: `python3 -m http.server 8000` (file:// CORS 불가)
-4. **대용량 코드 작성 시 턴 실패 방지**: 한 턴에 200줄 이상 쓰지 말고 A→B→C 단계로 나눠서 진행
-5. 세션 컨텍스트가 길어지면 새 세션에서 이어갈 것 (CLAUDE.md가 SSOT)
+4. **대용량 코드 작성 시 턴 실패 방지**: 한 턴에 200줄 이상 쓰지 말고 단계로 나눠 진행
+5. 세션 컨텍스트 길어지면 새 세션에서 이어갈 것 (CLAUDE.md가 SSOT)
 
 ### 🚨 push 방법
 
@@ -747,52 +713,6 @@ sh /home/user/bey-manager/.git/push.sh origin main
   - 공통 헬퍼 `bringToFront(modalEl)` 하나 만들어서 각 open 함수에서 호출
 - **CSS 변수로 추출**: 모달 z-index를 하드코드 말고 `--modal-z-base: 1000` 정의 후 JS가 동적으로 늘리는 방식
 
-#### ⑦ 이모지 종류 대폭 확장 (사람·과일·채소·취미) ✅ 해결됨
-- **현재 상황**: `EMOJI_KEYWORDS` 상수에 약 450개 이모지 + 한글/영어 키워드 수동 매핑. 베이님이 이모지를 추가하고 싶을 때 코드 수정 필요 → 노동 집약적.
-- **즉시 조치 (수동 확장)**:
-  - **사람/표정/직업**: 👶👧🧒👦👩👨🧑 + 직업 이모지(👨‍💼👩‍💻👩‍🏫👨‍🍳👩‍🔬 등) + 제스처(🙆🙅🤷 등) 추가
-  - **과일**: 🍎🍐🍊🍋🍌🍉🍇🍓🫐🍈🍒🍑🥭🍍🥥🥝🍅🫒 등 전체
-  - **채소**: 🥑🥦🥬🥒🌶️🫑🌽🥕🫒🧄🧅🥔🍠🫘 등
-  - **취미**: 🎨🎭🎪🎬🎤🎧🎼🎹🥁🎷🎺🎸🪕🎻🎲♟️🧩🪀🪁🧸🪆🏓🎣🎳🎯🎮🕹️📚 등
-  - 각 이모지에 **한글·영어 키워드 3~5개씩** (AND 검색과 호환되도록 다양하게)
-- **장기 조치 (R5단계 — Unicode CLDR 연동)**:
-  - `unicode-emoji-json` CDN 로드 (jsdelivr 경로: `https://cdn.jsdelivr.net/npm/unicode-emoji-json@...`)
-  - 한국어 annotation: `cldr-annotations-full/annotations/ko/annotations.json`
-  - 약 4,000개 이모지 + 한국어 키워드 자동 확보 (200~500KB)
-  - 기존 베이님 커스텀 카테고리("취미", "학습" 등)와 매핑 테이블 별도 작성 필요 (Unicode 공식 카테고리: face, people, animal, food, travel, activity, object, symbol, flag)
-  - 기존 수동 추가분은 **우선순위**로 유지 (검색 시 베이님 커스텀이 상단, CLDR이 하단)
-  - 로드 타이밍: 최초 이모지 피커 open 시 lazy load (앱 시작 시점엔 로드하지 않음)
-
-#### ⑦ 이모지 종류 대폭 확장 (사람·과일·채소·취미) ✅ 해결됨
-- **즉시 조치 (수동 확장)**: 사람/직업 이모지, 과일 전체, 채소, 취미 이모지 + 한글·영어 키워드 3~5개씩
-- **장기 조치 (R5단계)**: `unicode-emoji-json` CDN lazy load → 약 4,000개 이모지 + 한국어 키워드 자동 확보
-
-#### ⑧ 이모지 피커 카테고리 내 스크롤 불가 버그 ✅ 해결됨
-- **증상**: 이모지 분류군 클릭 시 아래쪽 이모지 스크롤 불가
-- **해결 방향**: 이모지 그리드 컨테이너에 `max-height: 60vh` + `overflow-y: auto`
-
-### 📌 설계 결정 누적
-
-- **태그 색상**: `TAG_PALETTE` 10색 상수. `hashTagIndex(text)` — 텍스트 char 합산 % 10. `tagColorOverrides: {tagText: idx}` 전역 → `사용자설정` 시트에 `tagColorOverrides` 키로 저장.
-- **태그 편집**: `openTagEdit(idx)` → `editingTagIdx` 상태 설정 → `renderDraftTagChips()` 재렌더 → 인라인 패널 표시. `applyTagEdit(idx)` — 이름 변경 시 모든 `schedules` 배열 전파 + `scheduleDraft.tags[idx] = newText`. `saveTagColorOverrides()` 별도.
-- **일상 뷰 모드**: `activityViewMode: 'default' | 'grouped'` 전역. `setActivityViewMode(mode)` 호출 → 뷰 버튼 active 갱신 + `renderActivities()`.
-- **드래그 공유 상태**: `var __drag = { type: null, id: null, srcCatId: null }` 모듈 레벨. `__clearDragCss()` 헬퍼. `attachCardDragReorder`(기본 뷰, clientX 기반 좌우 삽입), `attachCardDragReorderGrouped`(그룹 뷰, clientY 기반 상하 삽입, 카테고리 간 이동), `attachGroupDragReorder`(그룹 헤더 DnD).
-- **pointer-events:none + HTML5 DnD**: `.card-dragging`에 `pointer-events:none` 넣으면 네이티브 DnD 깨짐 (Chrome 이슈). 반드시 제거.
-- **그룹 dragover에서 e.preventDefault() 필수**: 소스 그룹 위 hover 때도 항상 호출해야 "드롭 허용" 커서 유지됨.
-- **태그 저장 버그 패턴**: `applyTagEdit`에서 전체 schedules 배열을 업데이트했어도 `scheduleDraft.tags[idx] = newText` 빠지면 현재 편집 중인 draft에 반영 안 됨 → 저장 시 구 이름으로 덮어써짐.
-- **시간표**: Hero 카드 680px(모바일 560px). Others 160px 카드. `attachDragScroll(el)` 헬퍼.
-- **일상 color 필드**: 기본 `#ffde59`. `getActivityCardStyle(color)` — 40% 알파 배경 + WCAG 휘도 자동 텍스트색.
-- **Sheets 연동**: 저장=localStorage+Sheets 동시, 로드=Sheets 우선→localStorage 폴백. `사용자설정` 시트에 profileQuote/designSettings/myEmojis/menus/profilePhoto/tagColorOverrides 저장.
-- **탭 UI 전역 통일**: `.tab-nav` + `.tab-btn` + `.tab-content`. 페이지별 스코프 필수(`#dailyPage .tab-btn` 등).
-- **삭제 확인 모달**: `showConfirm(title, msg, cb, detailHtml)` 4번째 인자로 의존성 목록 표시.
-- **인라인 일상 추가 폼**: `.si-add-activity-form` 2행 구조. `siNewActivityEmoji/Name/CategoryId/Color` 전역 상태.
-
-### ⚠️ 다음 세션 유의사항
-
-1. 세션 시작 시 `git log -5 --oneline` + `wc -l app.js styles.css index.html` + CLAUDE.md §10 정독
-2. `.git/GITHUB_TOKEN` 존재 여부 확인 → 없으면 토큰 요청 (세션 컨테이너 리셋 시 사라짐)
-3. 로컬 테스트는 반드시 `python3 -m http.server 8000` 사용 (file:// CORS 불가)
-4. 세션 컨텍스트 길어지면 스트림 타임아웃 → CLAUDE.md 편집은 짧은 Edit 여러 번으로 분할
 ---
 
 ## 11. 교훈
