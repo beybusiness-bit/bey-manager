@@ -3097,3 +3097,54 @@
       .habit-today-item { padding: 10px 12px; }
       .habit-today-name { font-size: 14px; }
     }
+
+    /* ========================================
+       일(업무) 페이지
+    ======================================== */
+    .work-page { display: flex; flex-direction: column; gap: 0; }
+    .work-today { padding: 0 4px; }
+    .work-today-header { display: flex; align-items: center; gap: 12px; padding: 16px 0 12px; border-bottom: 1px solid var(--border-color); margin-bottom: 16px; }
+    .work-today-date { font-size: 17px; font-weight: 700; color: var(--text-primary); }
+    .work-today-body { padding: 0; }
+
+    .work-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; gap: 10px; color: var(--text-secondary); }
+    .work-empty-icon { font-size: 44px; opacity: 0.4; }
+    .work-empty-text { font-size: 15px; font-weight: 600; color: var(--text-secondary); }
+    .work-empty-sub { font-size: 13px; color: var(--text-secondary); opacity: 0.7; text-align: center; }
+
+    .work-nav { display: flex; align-items: center; gap: 8px; padding: 14px 0 12px; }
+    .work-nav-label { font-size: 16px; font-weight: 700; color: var(--text-primary); flex: 1; text-align: center; }
+    .work-today-btn { font-size: 12px; padding: 4px 10px; border-radius: 6px; background: var(--primary-yellow); color: #000; font-weight: 600; }
+
+    /* 주별 뷰 */
+    .work-week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .work-week-col { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; min-height: 120px; }
+    .work-week-col.is-today { border-color: var(--primary-yellow); border-width: 2px; }
+    .work-week-day-header { display: flex; flex-direction: column; align-items: center; padding: 8px 4px 6px; background: var(--bg-side); border-bottom: 1px solid var(--border-color); gap: 2px; }
+    .work-week-col.is-today .work-week-day-header { background: var(--primary-yellow); }
+    .work-week-day-name { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+    .work-week-col.is-today .work-week-day-name { color: #000; }
+    .work-week-day-num { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+    .work-week-col.is-today .work-week-day-num { color: #000; }
+    .work-week-day-body { padding: 6px 4px; }
+    .work-week-empty { font-size: 11px; color: var(--text-secondary); opacity: 0.4; text-align: center; padding: 8px 0; }
+
+    /* 월별 뷰 */
+    .work-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+    .work-cal-head { text-align: center; font-size: 12px; font-weight: 600; color: var(--text-secondary); padding: 6px 0; }
+    .work-cal-head.weekend { color: #e55; }
+    .work-cal-cell { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; min-height: 56px; padding: 4px 6px; }
+    .work-cal-cell.empty { background: transparent; border-color: transparent; }
+    .work-cal-cell.is-today { border-color: var(--primary-yellow); border-width: 2px; background: #fffbe6; }
+    .work-cal-cell.weekend .work-cal-date { color: #e55; }
+    .work-cal-date { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+    .work-cal-cell.is-today .work-cal-date { color: #a07800; }
+
+    @media (max-width: 768px) {
+      .work-week-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+      .work-week-day-name { font-size: 10px; }
+      .work-week-day-num { font-size: 13px; }
+      .work-week-col { min-height: 90px; }
+      .work-cal-cell { min-height: 44px; padding: 3px 4px; }
+      .work-cal-date { font-size: 11px; }
+    }

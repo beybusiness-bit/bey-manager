@@ -1919,7 +1919,10 @@
       if (isSidebarCollapsed) return;
       const sidebar = document.getElementById('sidebar');
       if (!sidebar) return;
-      if (sidebar.contains(e.target)) return;
+      // composedPath()로 원본 경로 확인 (renderSidebar() 후 e.target이 DOM에서 분리돼도 안전)
+      var path = e.composedPath ? e.composedPath() : [];
+      var inSidebar = path.some(function(el) { return el === sidebar; }) || sidebar.contains(e.target);
+      if (inSidebar) return;
       if (e.target.closest && (e.target.closest('.sidebar-toggle-btn') || e.target.closest('.mobile-top-bar'))) return;
       toggleSidebar();
     });
@@ -1944,6 +1947,7 @@
       updateMobileTopTitle();
 
       if (pageId === 'habit') renderHabitPage();
+      if (pageId === 'work') renderWorkPage();
 
       if (window.innerWidth <= 768) {
         toggleSidebar();
@@ -6479,6 +6483,182 @@
       if (mo > 12) { mo = 1; yr++; }
       habitStatsMonth = yr + '-' + String(mo).padStart(2, '0');
       renderHabitStats();
+    }
+
+    // ========================================
+    // 일(업무) 페이지
+    // ========================================
+    var workView = 'today';
+    var workWeekOffset = 0;
+    var workMonthOffset = 0;
+
+    function getMondayOf(dateStr) {
+      var d = new Date(dateStr + 'T00:00:00');
+      var day = d.getDay();
+      var diff = (day === 0) ? -6 : 1 - day;
+      d.setDate(d.getDate() + diff);
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+
+    function addDays(dateStr, n) {
+      var d = new Date(dateStr + 'T00:00:00');
+      d.setDate(d.getDate() + n);
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+
+    function formatDateKR(dateStr) {
+      var d = new Date(dateStr + 'T00:00:00');
+      var days = ['일','월','화','수','목','금','토'];
+      return (d.getMonth() + 1) + '월 ' + d.getDate() + '일 (' + days[d.getDay()] + ')';
+    }
+
+    function renderWorkPage() {
+      var container = document.getElementById('workPageContent');
+      if (!container) return;
+
+      var html = '<div class="work-page">';
+      html += '<div class="tab-nav" id="workTabNav">';
+      html += '<button class="tab-btn' + (workView === 'today' ? ' active' : '') + '" onclick="switchWorkView(\'today\')">오늘</button>';
+      html += '<button class="tab-btn' + (workView === 'week' ? ' active' : '') + '" onclick="switchWorkView(\'week\')">주별</button>';
+      html += '<button class="tab-btn' + (workView === 'month' ? ' active' : '') + '" onclick="switchWorkView(\'month\')">월별</button>';
+      html += '</div>';
+      html += '<div id="workViewContent"></div>';
+      html += '</div>';
+      container.innerHTML = html;
+
+      renderWorkView();
+    }
+
+    function switchWorkView(view) {
+      workView = view;
+      document.querySelectorAll('#workTabNav .tab-btn').forEach(function(btn) {
+        btn.classList.toggle('active', btn.textContent === ({ today: '오늘', week: '주별', month: '월별' }[view]));
+      });
+      renderWorkView();
+    }
+
+    function renderWorkView() {
+      if (workView === 'today') renderWorkToday();
+      else if (workView === 'week') renderWorkWeek();
+      else renderWorkMonth();
+    }
+
+    function renderWorkToday() {
+      var c = document.getElementById('workViewContent');
+      if (!c) return;
+      var todayStr = today();
+
+      var html = '<div class="work-today">';
+      html += '<div class="work-today-header">';
+      html += '<span class="work-today-date">' + formatDateKR(todayStr) + '</span>';
+      html += '</div>';
+      html += '<div class="work-today-body">';
+      html += '<div class="work-empty-state">';
+      html += '<div class="work-empty-icon">📋</div>';
+      html += '<div class="work-empty-text">오늘의 업무 기록이 없습니다</div>';
+      html += '<div class="work-empty-sub">업무 기록 기능은 곧 추가될 예정이에요</div>';
+      html += '</div>';
+      html += '</div>';
+      html += '</div>';
+      c.innerHTML = html;
+    }
+
+    function renderWorkWeek() {
+      var c = document.getElementById('workViewContent');
+      if (!c) return;
+      var baseMonday = getMondayOf(today());
+      var monday = addDays(baseMonday, workWeekOffset * 7);
+      var sunday = addDays(monday, 6);
+      var todayStr = today();
+      var dayNames = ['월','화','수','목','금','토','일'];
+
+      var html = '<div class="work-week">';
+      html += '<div class="work-nav">';
+      html += '<button class="btn-icon" onclick="workWeekMove(-1)">&#8249;</button>';
+      var mParts = monday.split('-');
+      var sParts = sunday.split('-');
+      html += '<span class="work-nav-label">' + parseInt(mParts[1]) + '/' + parseInt(mParts[2]) + ' – ' + parseInt(sParts[1]) + '/' + parseInt(sParts[2]) + '</span>';
+      if (workWeekOffset !== 0) {
+        html += '<button class="btn-icon work-today-btn" onclick="workWeekMove(0)">오늘</button>';
+      }
+      html += '<button class="btn-icon" onclick="workWeekMove(1)">&#8250;</button>';
+      html += '</div>';
+
+      html += '<div class="work-week-grid">';
+      for (var i = 0; i < 7; i++) {
+        var ds = addDays(monday, i);
+        var isToday = ds === todayStr;
+        html += '<div class="work-week-col' + (isToday ? ' is-today' : '') + '">';
+        html += '<div class="work-week-day-header">';
+        html += '<span class="work-week-day-name">' + dayNames[i] + '</span>';
+        var dp = ds.split('-');
+        html += '<span class="work-week-day-num">' + parseInt(dp[2]) + '</span>';
+        html += '</div>';
+        html += '<div class="work-week-day-body">';
+        html += '<div class="work-week-empty">-</div>';
+        html += '</div>';
+        html += '</div>';
+      }
+      html += '</div>';
+      html += '</div>';
+      c.innerHTML = html;
+    }
+
+    function workWeekMove(delta) {
+      if (delta === 0) { workWeekOffset = 0; }
+      else { workWeekOffset += delta; }
+      renderWorkWeek();
+    }
+
+    function renderWorkMonth() {
+      var c = document.getElementById('workViewContent');
+      if (!c) return;
+      var now = new Date();
+      var yr = now.getFullYear();
+      var mo = now.getMonth() + 1 + workMonthOffset;
+      while (mo > 12) { mo -= 12; yr++; }
+      while (mo < 1)  { mo += 12; yr--; }
+      var todayStr = today();
+      var daysInMonth = new Date(yr, mo, 0).getDate();
+      var firstDay = new Date(yr, mo - 1, 1).getDay();
+      var firstDayKR = (firstDay === 0) ? 6 : firstDay - 1;
+      var monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+      var html = '<div class="work-month">';
+      html += '<div class="work-nav">';
+      html += '<button class="btn-icon" onclick="workMonthMove(-1)">&#8249;</button>';
+      html += '<span class="work-nav-label">' + yr + '년 ' + monthNames[mo - 1] + '</span>';
+      if (workMonthOffset !== 0) {
+        html += '<button class="btn-icon work-today-btn" onclick="workMonthMove(0)">오늘</button>';
+      }
+      html += '<button class="btn-icon" onclick="workMonthMove(1)">&#8250;</button>';
+      html += '</div>';
+
+      html += '<div class="work-cal">';
+      ['월','화','수','목','금','토','일'].forEach(function(d, i) {
+        html += '<div class="work-cal-head' + (i >= 5 ? ' weekend' : '') + '">' + d + '</div>';
+      });
+      for (var blank = 0; blank < firstDayKR; blank++) {
+        html += '<div class="work-cal-cell empty"></div>';
+      }
+      for (var day = 1; day <= daysInMonth; day++) {
+        var ds = yr + '-' + String(mo).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+        var isToday = ds === todayStr;
+        var dow = (firstDayKR + day - 1) % 7;
+        var isWeekend = (dow === 5 || dow === 6);
+        html += '<div class="work-cal-cell' + (isToday ? ' is-today' : '') + (isWeekend ? ' weekend' : '') + '">';
+        html += '<div class="work-cal-date">' + day + '</div>';
+        html += '</div>';
+      }
+      html += '</div>';
+      html += '</div>';
+      c.innerHTML = html;
+    }
+
+    function workMonthMove(delta) {
+      if (delta === 0) { workMonthOffset = 0; }
+      else { workMonthOffset += delta; }
+      renderWorkMonth();
     }
 
     // ========================================
