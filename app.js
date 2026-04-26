@@ -1065,6 +1065,7 @@
 
     // 상태 변수
     let menus = [];
+    let menuDraft = [];
     let favoritePages = [];
     let expandedGroups = [];
     let currentPage = 'home';
@@ -1955,80 +1956,304 @@
     function renderMenuManager() {
       const container = document.getElementById('menuManager');
       if (!container) return;
-      
-      let html = '';
-      
-      const sortedMenus = menus.slice().sort(function(a, b) { return a.order - b.order; });
-      
-      sortedMenus.forEach(function(menu, index) {
-        if (menu.type === 'page') {
-          html += '<div class="menu-item-edit">';
-          html += '  <div class="menu-item-header">';
-          html += '    <input type="text" value="' + menu.icon + '" onchange="updateMenuIcon(\'' + menu.id + '\', this.value)" placeholder="이모지" style="width: 60px;">';
-          html += '    <input type="text" value="' + menu.name + '" onchange="updateMenuName(\'' + menu.id + '\', this.value)" placeholder="메뉴명">';
-          html += '    <input type="text" value="' + menu.slug + '" onchange="updateMenuSlug(\'' + menu.id + '\', this.value)" placeholder="slug" style="width: 120px;">';
-          html += '    <button class="btn-icon" onclick="moveMenuUp(' + index + ')" ' + (index === 0 ? 'disabled' : '') + '>↑</button>';
-          html += '    <button class="btn-icon" onclick="moveMenuDown(' + index + ')" ' + (index === sortedMenus.length - 1 ? 'disabled' : '') + '>↓</button>';
+
+      const sorted = menuDraft.slice().sort(function(a, b) { return a.order - b.order; });
+      let html = '<div class="mm-list" id="mmList">';
+
+      sorted.forEach(function(item) {
+        if (item.type === 'group') {
+          const sortedChildren = (item.children || []).slice().sort(function(a, b) { return a.order - b.order; });
+          html += '<div class="mm-group" draggable="true" data-group-id="' + item.id + '">';
+          html += '  <div class="mm-group-header">';
+          html += '    <span class="mm-drag-handle">⠿</span>';
+          html += '    <button class="mm-emoji-btn" onclick="openMmEmojiPicker(&apos;group&apos;,&apos;' + item.id + '&apos;,&apos;&apos;)">' + renderEmoji(item.icon) + '</button>';
+          html += '    <input class="mm-name-input" value="' + escapeHtml(item.name) + '" oninput="updateMmGroupName(&apos;' + item.id + '&apos;,this.value)" placeholder="대분류명">';
+          html += '    <button class="mm-del-btn" onclick="deleteMmGroup(&apos;' + item.id + '&apos;)" title="삭제">🗑</button>';
+          html += '  </div>';
+          html += '  <div class="mm-children" data-group-id="' + item.id + '">';
+          sortedChildren.forEach(function(child) {
+            html += '    <div class="mm-menu-item" draggable="true" data-menu-id="' + child.id + '" data-group-id="' + item.id + '">';
+            html += '      <span class="mm-drag-handle">⠿</span>';
+            html += '      <button class="mm-emoji-btn mm-emoji-btn-sm" onclick="openMmEmojiPicker(&apos;menu&apos;,&apos;' + item.id + '&apos;,&apos;' + child.id + '&apos;)">' + renderEmoji(child.icon) + '</button>';
+            html += '      <input class="mm-name-input" value="' + escapeHtml(child.name) + '" oninput="updateMmMenuName(&apos;' + item.id + '&apos;,&apos;' + child.id + '&apos;,this.value)" placeholder="메뉴명">';
+            html += '      <button class="mm-del-btn" onclick="deleteMmMenuItem(&apos;' + item.id + '&apos;,&apos;' + child.id + '&apos;)" title="삭제">🗑</button>';
+            html += '    </div>';
+          });
+          html += '    <button class="mm-add-menu-btn" onclick="addMmMenuItem(&apos;' + item.id + '&apos;)">+ 메뉴 추가</button>';
           html += '  </div>';
           html += '</div>';
-        } else if (menu.type === 'group') {
-          html += '<div class="menu-item-edit">';
-          html += '  <div class="menu-item-header">';
-          html += '    <input type="text" value="' + menu.icon + '" onchange="updateMenuIcon(\'' + menu.id + '\', this.value)" placeholder="이모지" style="width: 60px;">';
-          html += '    <input type="text" value="' + menu.name + '" onchange="updateMenuName(\'' + menu.id + '\', this.value)" placeholder="대분류명">';
-          html += '    <button class="btn-icon" onclick="moveMenuUp(' + index + ')" ' + (index === 0 ? 'disabled' : '') + '>↑</button>';
-          html += '    <button class="btn-icon" onclick="moveMenuDown(' + index + ')" ' + (index === sortedMenus.length - 1 ? 'disabled' : '') + '>↓</button>';
-          html += '  </div>';
-          
-          if (menu.children && menu.children.length > 0) {
-            html += '  <div class="menu-children">';
-            const sortedChildren = menu.children.slice().sort(function(a, b) { return a.order - b.order; });
-            sortedChildren.forEach(function(child, childIndex) {
-              html += '    <div class="child-menu-item">';
-              html += '      <input type="text" value="' + child.icon + '" onchange="updateChildIcon(\'' + menu.id + '\', ' + childIndex + ', this.value)" placeholder="이모지" style="width: 50px;">';
-              html += '      <input type="text" value="' + child.name + '" onchange="updateChildName(\'' + menu.id + '\', ' + childIndex + ', this.value)" placeholder="메뉴명">';
-              html += '      <input type="text" value="' + child.slug + '" onchange="updateChildSlug(\'' + menu.id + '\', ' + childIndex + ', this.value)" placeholder="slug" style="width: 100px;">';
-              html += '      <button class="btn-icon" onclick="moveChildUp(\'' + menu.id + '\', ' + childIndex + ')" ' + (childIndex === 0 ? 'disabled' : '') + '>↑</button>';
-              html += '      <button class="btn-icon" onclick="moveChildDown(\'' + menu.id + '\', ' + childIndex + ')" ' + (childIndex === sortedChildren.length - 1 ? 'disabled' : '') + '>↓</button>';
-              html += '    </div>';
-            });
-            html += '  </div>';
-          }
-          
+        } else if (item.type === 'page') {
+          html += '<div class="mm-top-page" data-page-id="' + item.id + '">';
+          html += '  <span class="mm-drag-handle" style="visibility:hidden">⠿</span>';
+          html += '  <button class="mm-emoji-btn" onclick="openMmEmojiPicker(&apos;top&apos;,&apos;' + item.id + '&apos;,&apos;&apos;)">' + renderEmoji(item.icon) + '</button>';
+          html += '  <input class="mm-name-input" value="' + escapeHtml(item.name) + '" oninput="updateMmTopName(&apos;' + item.id + '&apos;,this.value)" placeholder="메뉴명">';
+          html += '  <span class="mm-fixed-badge">고정</span>';
           html += '</div>';
         }
       });
-      
+
+      html += '</div>';
+      html += '<button class="mm-add-group-btn" onclick="addMmGroup()">+ 대분류 추가</button>';
+      html += '<div class="mm-save-row">';
+      html += '  <button class="btn-cancel" onclick="initMenuDraft()">되돌리기</button>';
+      html += '  <button class="btn-confirm" onclick="saveMmDraft()">저장</button>';
+      html += '</div>';
+
       container.innerHTML = html;
+      attachMmDnd(container.querySelector('#mmList'));
+    }
+
+    var __mmDrag = { type: null, id: null, groupId: null };
+
+    function attachMmDnd(list) {
+      if (!list) return;
+
+      list.addEventListener('dragstart', function(e) {
+        var menuItem = e.target.closest('.mm-menu-item');
+        var group    = e.target.closest('.mm-group');
+        if (menuItem && list.contains(menuItem)) {
+          __mmDrag.type = 'menu';
+          __mmDrag.id = menuItem.dataset.menuId;
+          __mmDrag.groupId = menuItem.dataset.groupId;
+          menuItem.classList.add('mm-dragging');
+          e.dataTransfer.effectAllowed = 'move';
+          e.stopPropagation();
+        } else if (group && list.contains(group)) {
+          // only allow drag if starting on header
+          if (!e.target.closest('.mm-group-header')) { e.preventDefault(); return; }
+          __mmDrag.type = 'group';
+          __mmDrag.id = group.dataset.groupId;
+          group.classList.add('mm-dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        }
+      });
+
+      list.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        list.querySelectorAll('.mm-insert-before, .mm-insert-after').forEach(function(el) {
+          el.classList.remove('mm-insert-before', 'mm-insert-after');
+        });
+
+        if (__mmDrag.type === 'group') {
+          var overGroup = e.target.closest('.mm-group');
+          if (!overGroup || overGroup.dataset.groupId === __mmDrag.id) return;
+          var r = overGroup.getBoundingClientRect();
+          if (e.clientY < r.top + r.height / 2) overGroup.classList.add('mm-insert-before');
+          else overGroup.classList.add('mm-insert-after');
+        } else if (__mmDrag.type === 'menu') {
+          var overItem = e.target.closest('.mm-menu-item');
+          if (overItem && overItem.dataset.menuId !== __mmDrag.id) {
+            var r2 = overItem.getBoundingClientRect();
+            if (e.clientY < r2.top + r2.height / 2) overItem.classList.add('mm-insert-before');
+            else overItem.classList.add('mm-insert-after');
+          }
+        }
+      });
+
+      list.addEventListener('dragleave', function(e) {
+        if (!list.contains(e.relatedTarget)) {
+          list.querySelectorAll('.mm-insert-before, .mm-insert-after').forEach(function(el) {
+            el.classList.remove('mm-insert-before', 'mm-insert-after');
+          });
+        }
+      });
+
+      list.addEventListener('drop', function(e) {
+        e.preventDefault();
+        var insertBefore = list.querySelector('.mm-insert-before');
+        var insertAfter  = list.querySelector('.mm-insert-after');
+        list.querySelectorAll('.mm-dragging, .mm-insert-before, .mm-insert-after').forEach(function(el) {
+          el.classList.remove('mm-dragging', 'mm-insert-before', 'mm-insert-after');
+        });
+
+        if (__mmDrag.type === 'group') {
+          var targetEl = insertBefore || insertAfter;
+          if (!targetEl) return;
+          var targetId = targetEl.dataset.groupId;
+          var sorted = menuDraft.slice().sort(function(a, b) { return a.order - b.order; });
+          var fromIdx = sorted.findIndex(function(m) { return m.id === __mmDrag.id; });
+          var toIdx   = sorted.findIndex(function(m) { return m.id === targetId; });
+          if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+          if (insertAfter) toIdx++;
+          if (fromIdx < toIdx) toIdx--;
+          var moved = sorted.splice(fromIdx, 1)[0];
+          sorted.splice(toIdx, 0, moved);
+          sorted.forEach(function(m, i) { m.order = i; });
+          renderMenuManager();
+
+        } else if (__mmDrag.type === 'menu') {
+          var targetItem = insertBefore || insertAfter;
+          if (!targetItem) {
+            // dropped onto a children zone but not on a specific item → append to that group
+            var overChildren = e.target.closest('.mm-children');
+            if (!overChildren) return;
+            var tgtGrpId = overChildren.dataset.groupId;
+            var srcGrp = menuDraft.find(function(m) { return m.id === __mmDrag.groupId; });
+            var tgtGrp = menuDraft.find(function(m) { return m.id === tgtGrpId; });
+            if (!srcGrp || !tgtGrp || srcGrp === tgtGrp) return;
+            var srcIdx = (srcGrp.children || []).findIndex(function(c) { return c.id === __mmDrag.id; });
+            if (srcIdx === -1) return;
+            var movedItem = srcGrp.children.splice(srcIdx, 1)[0];
+            if (!tgtGrp.children) tgtGrp.children = [];
+            tgtGrp.children.push(movedItem);
+            srcGrp.children.forEach(function(c, i) { c.order = i; });
+            tgtGrp.children.forEach(function(c, i) { c.order = i; });
+            renderMenuManager();
+            return;
+          }
+          var targetMenuId = targetItem.dataset.menuId;
+          var targetGrpId  = targetItem.dataset.groupId;
+          var srcGrp2 = menuDraft.find(function(m) { return m.id === __mmDrag.groupId; });
+          var tgtGrp2 = menuDraft.find(function(m) { return m.id === targetGrpId; });
+          if (!srcGrp2 || !tgtGrp2) return;
+          var srcIdx2 = (srcGrp2.children || []).findIndex(function(c) { return c.id === __mmDrag.id; });
+          if (srcIdx2 === -1) return;
+          var movedItem2 = srcGrp2.children.splice(srcIdx2, 1)[0];
+          var sortedTgt = tgtGrp2.children.slice().sort(function(a, b) { return a.order - b.order; });
+          var insertIdx = sortedTgt.findIndex(function(c) { return c.id === targetMenuId; });
+          if (insertAfter) insertIdx++;
+          if (srcGrp2 === tgtGrp2 && srcIdx2 < insertIdx) insertIdx--;
+          tgtGrp2.children.splice(insertIdx, 0, movedItem2);
+          srcGrp2.children.forEach(function(c, i) { c.order = i; });
+          tgtGrp2.children.forEach(function(c, i) { c.order = i; });
+          renderMenuManager();
+        }
+
+        __mmDrag = { type: null, id: null, groupId: null };
+      });
+
+      list.addEventListener('dragend', function() {
+        list.querySelectorAll('.mm-dragging, .mm-insert-before, .mm-insert-after').forEach(function(el) {
+          el.classList.remove('mm-dragging', 'mm-insert-before', 'mm-insert-after');
+        });
+        __mmDrag = { type: null, id: null, groupId: null };
+      });
+    }
+
+    function initMenuDraft() {
+      menuDraft = JSON.parse(JSON.stringify(menus));
+      renderMenuManager();
+    }
+
+    function updateMmGroupName(groupId, name) {
+      var g = menuDraft.find(function(m) { return m.id === groupId; });
+      if (g) g.name = name;
+    }
+
+    function updateMmMenuName(groupId, menuId, name) {
+      var g = menuDraft.find(function(m) { return m.id === groupId; });
+      if (g && g.children) {
+        var c = g.children.find(function(x) { return x.id === menuId; });
+        if (c) c.name = name;
+      }
+    }
+
+    function updateMmTopName(pageId, name) {
+      var p = menuDraft.find(function(m) { return m.id === pageId; });
+      if (p) p.name = name;
+    }
+
+    function openMmEmojiPicker(type, groupId, menuId) {
+      var current = '';
+      if (type === 'group' || type === 'top') {
+        var g = menuDraft.find(function(m) { return m.id === groupId; });
+        if (g) current = g.icon;
+      } else {
+        var grp = menuDraft.find(function(m) { return m.id === groupId; });
+        if (grp && grp.children) {
+          var c = grp.children.find(function(x) { return x.id === menuId; });
+          if (c) current = c.icon;
+        }
+      }
+      openEmojiPicker(current, function(emoji) {
+        if (type === 'group' || type === 'top') {
+          var g2 = menuDraft.find(function(m) { return m.id === groupId; });
+          if (g2) { g2.icon = emoji; renderMenuManager(); }
+        } else {
+          var grp2 = menuDraft.find(function(m) { return m.id === groupId; });
+          if (grp2 && grp2.children) {
+            var c2 = grp2.children.find(function(x) { return x.id === menuId; });
+            if (c2) { c2.icon = emoji; renderMenuManager(); }
+          }
+        }
+      });
+    }
+
+    function addMmGroup() {
+      var newGroup = {
+        id: 'group-' + Date.now(),
+        type: 'group',
+        icon: '📁',
+        name: '새 대분류',
+        order: menuDraft.length,
+        children: []
+      };
+      menuDraft.push(newGroup);
+      renderMenuManager();
+    }
+
+    function deleteMmGroup(groupId) {
+      var g = menuDraft.find(function(m) { return m.id === groupId; });
+      if (!g) return;
+      if (g.children && g.children.length > 0) {
+        showAlert('삭제 불가', '소속된 메뉴가 있어서 삭제할 수 없습니다.<br>메뉴를 모두 다른 대분류로 이동하거나 삭제한 후 시도해주세요.');
+        return;
+      }
+      showConfirm('대분류 삭제', '&quot;' + escapeHtml(g.name) + '&quot; 대분류를 삭제하시겠습니까?', function() {
+        menuDraft = menuDraft.filter(function(m) { return m.id !== groupId; });
+        menuDraft.forEach(function(m, i) { m.order = i; });
+        renderMenuManager();
+      });
+    }
+
+    function addMmMenuItem(groupId) {
+      var g = menuDraft.find(function(m) { return m.id === groupId; });
+      if (!g) return;
+      if (!g.children) g.children = [];
+      g.children.push({
+        id: 'menu-' + Date.now(),
+        type: 'page',
+        icon: '📄',
+        name: '새 메뉴',
+        slug: '',
+        order: g.children.length
+      });
+      renderMenuManager();
+    }
+
+    function deleteMmMenuItem(groupId, menuId) {
+      var g = menuDraft.find(function(m) { return m.id === groupId; });
+      if (!g || !g.children) return;
+      var item = g.children.find(function(c) { return c.id === menuId; });
+      if (!item) return;
+      showConfirm('메뉴 삭제', '&quot;' + escapeHtml(item.name) + '&quot; 메뉴를 삭제하시겠습니까?', function() {
+        g.children = g.children.filter(function(c) { return c.id !== menuId; });
+        g.children.forEach(function(c, i) { c.order = i; });
+        renderMenuManager();
+      });
+    }
+
+    function saveMmDraft() {
+      menus = JSON.parse(JSON.stringify(menuDraft));
+      saveMenus();
+      if (window.GS && GS.isConnected()) GS.syncSheets();
+      renderSidebar();
+      showToast('메뉴 설정 저장 완료');
     }
 
     function updateMenuIcon(menuId, icon) {
       const menu = menus.find(function(m) { return m.id === menuId; });
-      if (menu) {
-        menu.icon = icon;
-        saveMenus();
-        renderSidebar();
-        renderMenuManager();
-      }
+      if (menu) { menu.icon = icon; saveMenus(); renderSidebar(); renderMenuManager(); }
     }
 
     function updateMenuName(menuId, name) {
       const menu = menus.find(function(m) { return m.id === menuId; });
-      if (menu) {
-        menu.name = name;
-        saveMenus();
-        renderSidebar();
-        renderMenuManager();
-      }
+      if (menu) { menu.name = name; saveMenus(); renderSidebar(); renderMenuManager(); }
     }
 
     function updateMenuSlug(menuId, slug) {
       const menu = menus.find(function(m) { return m.id === menuId; });
-      if (menu) {
-        menu.slug = slug;
-        saveMenus();
-        renderMenuManager();
-      }
+      if (menu) { menu.slug = slug; saveMenus(); renderMenuManager(); }
     }
 
     function moveMenuUp(index) {
@@ -2037,9 +2262,7 @@
         const temp = sortedMenus[index].order;
         sortedMenus[index].order = sortedMenus[index - 1].order;
         sortedMenus[index - 1].order = temp;
-        saveMenus();
-        renderSidebar();
-        renderMenuManager();
+        saveMenus(); renderSidebar(); renderMenuManager();
       }
     }
 
@@ -2049,61 +2272,41 @@
         const temp = sortedMenus[index].order;
         sortedMenus[index].order = sortedMenus[index + 1].order;
         sortedMenus[index + 1].order = temp;
-        saveMenus();
-        renderSidebar();
-        renderMenuManager();
+        saveMenus(); renderSidebar(); renderMenuManager();
       }
     }
 
     function updateChildIcon(groupId, childIndex, icon) {
       const group = menus.find(function(m) { return m.id === groupId; });
       if (group && group.children) {
-        const sortedChildren = group.children.slice().sort(function(a, b) { return a.order - b.order; });
-        if (sortedChildren[childIndex]) {
-          sortedChildren[childIndex].icon = icon;
-          saveMenus();
-          renderSidebar();
-          renderMenuManager();
-        }
+        const sc = group.children.slice().sort(function(a, b) { return a.order - b.order; });
+        if (sc[childIndex]) { sc[childIndex].icon = icon; saveMenus(); renderSidebar(); renderMenuManager(); }
       }
     }
 
     function updateChildName(groupId, childIndex, name) {
       const group = menus.find(function(m) { return m.id === groupId; });
       if (group && group.children) {
-        const sortedChildren = group.children.slice().sort(function(a, b) { return a.order - b.order; });
-        if (sortedChildren[childIndex]) {
-          sortedChildren[childIndex].name = name;
-          saveMenus();
-          renderSidebar();
-          renderMenuManager();
-        }
+        const sc = group.children.slice().sort(function(a, b) { return a.order - b.order; });
+        if (sc[childIndex]) { sc[childIndex].name = name; saveMenus(); renderSidebar(); renderMenuManager(); }
       }
     }
 
     function updateChildSlug(groupId, childIndex, slug) {
       const group = menus.find(function(m) { return m.id === groupId; });
       if (group && group.children) {
-        const sortedChildren = group.children.slice().sort(function(a, b) { return a.order - b.order; });
-        if (sortedChildren[childIndex]) {
-          sortedChildren[childIndex].slug = slug;
-          saveMenus();
-          renderMenuManager();
-        }
+        const sc = group.children.slice().sort(function(a, b) { return a.order - b.order; });
+        if (sc[childIndex]) { sc[childIndex].slug = slug; saveMenus(); renderMenuManager(); }
       }
     }
 
     function moveChildUp(groupId, childIndex) {
       const group = menus.find(function(m) { return m.id === groupId; });
       if (group && group.children) {
-        const sortedChildren = group.children.slice().sort(function(a, b) { return a.order - b.order; });
+        const sc = group.children.slice().sort(function(a, b) { return a.order - b.order; });
         if (childIndex > 0) {
-          const temp = sortedChildren[childIndex].order;
-          sortedChildren[childIndex].order = sortedChildren[childIndex - 1].order;
-          sortedChildren[childIndex - 1].order = temp;
-          saveMenus();
-          renderSidebar();
-          renderMenuManager();
+          const temp = sc[childIndex].order; sc[childIndex].order = sc[childIndex-1].order; sc[childIndex-1].order = temp;
+          saveMenus(); renderSidebar(); renderMenuManager();
         }
       }
     }
@@ -2111,14 +2314,10 @@
     function moveChildDown(groupId, childIndex) {
       const group = menus.find(function(m) { return m.id === groupId; });
       if (group && group.children) {
-        const sortedChildren = group.children.slice().sort(function(a, b) { return a.order - b.order; });
-        if (childIndex < sortedChildren.length - 1) {
-          const temp = sortedChildren[childIndex].order;
-          sortedChildren[childIndex].order = sortedChildren[childIndex + 1].order;
-          sortedChildren[childIndex + 1].order = temp;
-          saveMenus();
-          renderSidebar();
-          renderMenuManager();
+        const sc = group.children.slice().sort(function(a, b) { return a.order - b.order; });
+        if (childIndex < sc.length - 1) {
+          const temp = sc[childIndex].order; sc[childIndex].order = sc[childIndex+1].order; sc[childIndex+1].order = temp;
+          saveMenus(); renderSidebar(); renderMenuManager();
         }
       }
     }
@@ -5745,6 +5944,7 @@
       } else if (sectionName === 'menu' && menuItems[1]) {
         menuItems[1].classList.add('active');
         document.getElementById('settingsMenuSection').classList.add('active');
+        initMenuDraft();
       } else if (sectionName === 'design' && menuItems[2]) {
         menuItems[2].classList.add('active');
         document.getElementById('settingsDesignSection').classList.add('active');

@@ -893,32 +893,10 @@
       gap: 12px;
     }
 
-    .menu-item-edit {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 16px;
-    }
-
-    .menu-item-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-
-    .menu-item-header input {
-      flex: 1;
-      padding: 8px 12px;
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      font-size: 14px;
-    }
-
-    .menu-item-header input:focus {
-      outline: none;
-      border-color: var(--primary-yellow);
-    }
+    /* 구 메뉴 에디터 (하위 호환) */
+    .menu-item-edit { display: none; }
+    .menu-children  { display: none; }
+    .child-menu-item { display: none; }
 
     .btn-icon {
       background: transparent;
@@ -929,42 +907,137 @@
       font-size: 14px;
       transition: all 0.2s;
     }
+    .btn-icon:hover { background: var(--bg-hover); }
+    .btn-danger { color: #e53935; border-color: #e53935; }
+    .btn-danger:hover { background: #fff0f0; }
 
-    .btn-icon:hover {
-      background: var(--bg-hover);
-    }
+    /* ===== 새 메뉴 매니저 ===== */
+    .mm-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
 
-    .btn-danger {
-      color: #e53935;
-      border-color: #e53935;
-    }
-
-    .btn-danger:hover {
-      background: #fff0f0;
-    }
-
-    .menu-children {
-      margin-top: 12px;
-      padding-left: 24px;
-      border-left: 2px solid var(--border-color);
-    }
-
-    .child-menu-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px;
-      margin-bottom: 8px;
-      background: var(--bg-hover);
-      border-radius: 6px;
-    }
-
-    .child-menu-item input {
-      flex: 1;
-      padding: 6px 10px;
+    /* 대분류 그룹 */
+    .mm-group {
+      background: var(--bg-card);
       border: 1px solid var(--border-color);
-      border-radius: 4px;
-      font-size: 13px;
+      border-radius: 10px;
+      overflow: hidden;
+      transition: box-shadow 0.15s;
+    }
+    .mm-group.mm-dragging { opacity: 0.4; }
+    .mm-group.mm-insert-before { box-shadow: 0 -3px 0 var(--primary-yellow); }
+    .mm-group.mm-insert-after  { box-shadow: 0  3px 0 var(--primary-yellow); }
+
+    .mm-group-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 12px;
+      background: var(--bg-main);
+      border-bottom: 1px solid var(--border-color);
+      cursor: grab;
+      user-select: none;
+    }
+    .mm-group-header:active { cursor: grabbing; }
+
+    /* 최상위 고정 페이지 (홈, 설정) */
+    .mm-top-page {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+    }
+    .mm-fixed-badge {
+      margin-left: auto;
+      font-size: 11px; color: var(--text-secondary);
+      background: var(--bg-hover);
+      border-radius: 10px; padding: 2px 8px;
+    }
+
+    /* 드래그 핸들 */
+    .mm-drag-handle {
+      color: #bbb; font-size: 16px; cursor: grab; flex-shrink: 0;
+      padding: 0 2px; line-height: 1;
+    }
+
+    /* 이모지 버튼 */
+    .mm-emoji-btn {
+      width: 36px; height: 36px; flex-shrink: 0;
+      font-size: 20px; border: 1px solid var(--border-color);
+      border-radius: var(--button-radius, 6px);
+      background: var(--bg-card); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0;
+    }
+    .mm-emoji-btn:hover { border-color: var(--primary-yellow); }
+    .mm-emoji-btn-sm { width: 30px; height: 30px; font-size: 16px; }
+    .mm-emoji-btn img { width: 24px; height: 24px; object-fit: cover; border-radius: 3px; }
+    .mm-emoji-btn-sm img { width: 20px; height: 20px; }
+
+    /* 이름 입력 */
+    .mm-name-input {
+      flex: 1; min-width: 0;
+      padding: 7px 10px; font-size: 14px; font-family: inherit;
+      border: 1px solid var(--border-color); border-radius: 6px;
+      background: var(--bg-card); color: var(--text-primary);
+    }
+    .mm-name-input:focus { outline: none; border-color: var(--primary-yellow); }
+
+    /* 삭제 버튼 */
+    .mm-del-btn {
+      flex-shrink: 0; width: 30px; height: 30px; padding: 0;
+      border: none; background: transparent; cursor: pointer;
+      font-size: 15px; border-radius: 6px; color: #aaa;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.1s, color 0.1s;
+    }
+    .mm-del-btn:hover { background: #fff0f0; color: #e53935; }
+
+    /* 하위 메뉴 영역 */
+    .mm-children {
+      display: flex; flex-direction: column; gap: 6px;
+      padding: 8px 12px 10px 12px;
+      min-height: 40px;
+    }
+    .mm-children.mm-insert-group {
+      background: color-mix(in srgb, var(--primary-yellow) 10%, transparent);
+    }
+
+    /* 하위 메뉴 아이템 */
+    .mm-menu-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 8px;
+      background: var(--bg-main);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      cursor: grab;
+      transition: box-shadow 0.1s;
+    }
+    .mm-menu-item:active { cursor: grabbing; }
+    .mm-menu-item.mm-dragging { opacity: 0.4; }
+    .mm-menu-item.mm-insert-before { box-shadow: 0 -2px 0 var(--primary-yellow); }
+    .mm-menu-item.mm-insert-after  { box-shadow: 0  2px 0 var(--primary-yellow); }
+
+    /* 메뉴 추가 버튼 */
+    .mm-add-menu-btn {
+      font-size: 12px; color: var(--text-secondary);
+      border: 1px dashed var(--border-color); border-radius: 6px;
+      padding: 5px 10px; background: transparent; cursor: pointer;
+      font-family: inherit; width: 100%; text-align: left;
+    }
+    .mm-add-menu-btn:hover { border-color: var(--primary-yellow); color: var(--text-primary); }
+
+    /* 대분류 추가 버튼 */
+    .mm-add-group-btn {
+      width: 100%; padding: 10px;
+      border: 2px dashed var(--border-color);
+      border-radius: 10px; background: transparent;
+      font-size: 14px; font-weight: 600; color: var(--text-secondary);
+      cursor: pointer; font-family: inherit; margin-bottom: 16px;
+    }
+    .mm-add-group-btn:hover { border-color: var(--primary-yellow); color: var(--text-primary); }
+
+    /* 저장/취소 버튼 행 */
+    .mm-save-row {
+      display: flex; gap: 8px; justify-content: flex-end;
+      padding-top: 4px;
     }
 
     .info-box {
