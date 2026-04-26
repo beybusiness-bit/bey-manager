@@ -1716,11 +1716,11 @@
           var slugs = sosGrp.children.map(function(c) { return c.slug; });
           var added = false;
           if (slugs.indexOf('work') === -1) {
-            sosGrp.children.push({ id: 'work-sos', type: 'page', icon: '💼', name: '일', slug: 'work', order: sosGrp.children.length });
+            sosGrp.children.push({ id: 'work', type: 'page', icon: '💼', name: '일', slug: 'work', order: sosGrp.children.length });
             added = true;
           }
           if (slugs.indexOf('habit') === -1) {
-            sosGrp.children.push({ id: 'habit-sos', type: 'page', icon: '✅', name: '습관', slug: 'habit', order: sosGrp.children.length });
+            sosGrp.children.push({ id: 'habit', type: 'page', icon: '✅', name: '습관', slug: 'habit', order: sosGrp.children.length });
             added = true;
           }
           if (added) {
@@ -1730,6 +1730,18 @@
         }
         localStorage.setItem('menuMig_sosPages', '1');
       }
+
+      // 마이그레이션: work-sos / habit-sos → work / habit ID 수정
+      var idFixNeeded = false;
+      (function fixWrongIds(arr) {
+        if (!arr) return;
+        arr.forEach(function(m) {
+          if (m.id === 'work-sos') { m.id = 'work'; idFixNeeded = true; }
+          if (m.id === 'habit-sos') { m.id = 'habit'; idFixNeeded = true; }
+          fixWrongIds(m.children);
+        });
+      })(menus);
+      if (idFixNeeded) saveMenus();
     }
 
     function saveMenus() {
@@ -1932,6 +1944,10 @@
     // 네비게이션
     // ========================================
     function navigateTo(pageId) {
+      // 잘못 저장된 ID 보정
+      if (pageId === 'work-sos') pageId = 'work';
+      if (pageId === 'habit-sos') pageId = 'habit';
+
       currentPage = pageId;
       sessionStorage.setItem('lastPage', pageId);
 
