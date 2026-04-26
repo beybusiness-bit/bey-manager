@@ -594,26 +594,101 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 
 ## 10. 다음 세션 시작점
 
-> **마지막 세션: 2026-04-25 (이번 세션 — 드래그DnD + 그룹화 보기 + 태그 색상·편집 + 버그 수정 다수)**
+> **마지막 세션: 2026-04-26**
+> **⚠️ 방향 전환 중**: 기존 복잡한 설계(시간표 등)는 아카이브 보관하고, **심플 1차 완성**으로 방향을 바꿨습니다.
 
 ### 🔄 현재 진행 상태
 
-- **작업 브랜치**: `main` (모든 커밋 origin에 푸시 완료)
-- **마지막 커밋**: `03a88b1 fix: 태그 수정 저장 버그(scheduleDraft 미반영) + 썸네일 이모지 크기 축소(10/15/18px)`
-- 직전 커밋들: `a18b2c0` → `8aae305` → `a25d6db` → `ee06098` → `804d4f2` → `0ae675b` → `03afe99`
-- **배포 상태**: main 브랜치 전체 푸시 완료. GitHub Pages 반영됨.
-- **파일 라인 수**: app.js 5,824줄 / styles.css 2,834줄 / index.html 682줄
+- **작업 브랜치**: `main` (배포 중, GitHub Pages 반영됨)
+- **마지막 커밋**: `0f54177 feat: 사이드바 토글 버그 수정 + 일 페이지 오늘/주별/월별 뷰 구현`
+- **파일 라인 수**: app.js 6,668줄 / styles.css 3,150줄 / index.html 741줄
 
-### 🎯 다음 단계 (재정렬된 우선순위)
+### ✅ 이번 세션에서 완료한 작업
 
-1. **18단계: 습관 페이지** ← **다음 작업** — 습관 목록 + 오늘 체크 + 달성률 캘린더
-2. **19단계: 할일 페이지** — To-do 리스트 + 완료 체크 + 날짜 필터
-3. **20단계: 아이디어 페이지** — 메모 카드 + 태그 + 검색
-4. **21단계: 레시피 페이지** — 레시피 카드 + 재료/단계
-5. **22단계: 금전 페이지** — 수입/지출 기록 + 월별 집계
-6. **23단계: 업무 페이지** — 업무 시간 기록 + 프로젝트별 집계
-7. **17단계: 홈 대시보드** — 마지막에 (다른 페이지 데이터 쌓인 후 위젯 알참)
-8. **R1단계**: `USER_EMAIL` → `ALLOWED_EMAILS` 배열 리팩토링 (후순위)
+1. **사이드바 토글 버그 수정** — `e.composedPath()`로 클릭 원본 경로 추적. `renderSidebar()` 후 DOM 교체돼도 "사이드바 내부 클릭"을 정확히 감지. 토글 여닫을 때 사이드바 닫히지 않음.
+2. **일(업무) 페이지 기본 구조** — 오늘/주별/월별 탭 + 날짜 네비 + 빈 상태 UI (stub 상태)
+3. (직전 세션) **메뉴 설정 전면 재설계** — 대분류/메뉴 CRUD + DnD 순서 변경 + box-shadow 삽입선
+4. (직전 세션) **사이드바 기본값 접힘** — `loadExpandedGroups()`에서 항상 빈 배열 반환
+5. (직전 세션) **조난 구조 중 대분류**에 "일(💼)"·"습관(✅)" 페이지 추가 (one-time 마이그레이션 플래그)
+
+### 🎯 다음 단계: 일(업무) 페이지 전체 구현 ← **다음 세션 시작 작업**
+
+아래 스펙을 3~4단계로 나눠 구현 (세션당 1~2단계):
+
+#### 단계 A: 데이터 모델 + 뷰에 할일 표시
+- `workItems[]` localStorage 저장 (`loadWorkItems` / `saveWorkItems`)
+- 할일 속성: `id, emoji, color, title, date(nullable), completed, duration(min), memo, isBonus, createdAt`
+- 이모지 → 색상 자동 생성: `emojiToWorkColor(emoji)` — 15색 팔레트 해시 배정
+- 오늘뷰·주별뷰·월별뷰에서 실제 할일 카드 렌더링 (이모지/제목/완료여부/소요시간만)
+- 월별뷰: 각 날짜에 색상 dot 표시, 클릭 시 오늘뷰로 이동
+- `loadWorkItems()` 를 app 초기화(`loadCategories()` 근처)에 추가
+
+#### 단계 B: 할일 추가/수정/삭제/상세
+- 슬롯 규칙: 날짜당 일반 3개 상한. 완료된 할일 ≥1개 있으면 보너스 1개 추가 가능
+- `showAddWorkItemModal(dateStr)` — dateStr 없으면 바구니 행
+  - 일반 3개 찬 상태에서 추가 시: 보너스 가능하면 "보너스 할일" 안내 + 모달 오픈, 아예 불가하면 경고
+- `showWorkItemDetail(id)` — 상세 모달 (수정·삭제 버튼 포함)
+- `showEditWorkItemModal(id)` — 수정 모달 (draft 패턴)
+- `deleteWorkItem(id)` — 확인 모달 후 삭제
+- `toggleWorkItemComplete(id)` — 체크박스 토글
+- 모달 HTML 3개 index.html에 추가: `workItemModal` / `workDetailModal` / `workBasketModal`
+
+#### 단계 C: 할일 바구니
+- 날짜 없이 저장된 할일들을 모아두는 모달(`workBasketModal`)
+- 카드 그리드 (이모지+제목), 개별 체크박스 + 전체 선택
+- **오늘 추가** / **날짜 추가** (date picker) 버튼
+- 추가 시 M(선택+기존) > 3 초과 검사:
+  - 단순 초과: 경고
+  - 초과지만 완료된 할일 수 내에서 보너스 가능: 보너스 추가 여부 확인
+- 사이드바·상단에 바구니 아이콘 + 아이템 수 뱃지 표시
+
+#### 단계 D: 검색/필터/정렬
+- 검색바 (제목/메모 키워드)
+- 필터: 완료여부(`all`/`done`/`todo`), 날짜 범위
+- 정렬: 날짜순, 생성순, 제목순
+
+### 🚨 push 방법
+
+```bash
+sh /home/user/bey-manager/.git/push.sh origin main
+```
+- `push.sh`는 `.git/push.sh`에 존재
+- 토큰 파일이 없으면: `echo "ghp_..." > /home/user/bey-manager/.git/GITHUB_TOKEN`
+- **주의**: `.git/GITHUB_TOKEN`은 세션 컨테이너 리셋 시 사라질 수 있음
+
+### 🗄️ 아카이브: 구(舊) 설계 우선순위 (참고 보관용)
+
+이전 설계의 미완성 단계들. 현재는 진행하지 않지만 나중에 참고 가능.
+
+- 18단계: 습관 페이지 고도화 (달성률 캘린더 등)
+- 19단계: 별도 할일 페이지 (지금 일 페이지에 통합됨으로써 성격이 바뀜)
+- 20단계: 아이디어 페이지
+- 21단계: 레시피 페이지
+- 22단계: 금전 페이지
+- 23단계: 홈 대시보드 위젯
+- R1단계: `USER_EMAIL` → `ALLOWED_EMAILS` 배열 리팩토링
+- 피드백 ②③⑥⑦⑧ (시간표·이모지·모달 z-index 관련) — 시간표 페이지가 현재 저우선순위이므로 같이 보류
+
+### 🔖 적용 대기 피드백 (미구현)
+
+#### ③ Sheets 미연결 토스트 오류 버그
+- **증상**: 저장 버튼 눌렀을 때 "⚠️ Sheets 미연결 — 로컬에만 저장됩니다" 토스트가 뜨는데 사이드바엔 "연결됨" 표시됨
+- **해결 방향**: `GS.isConnected()` 체크를 단일 변수 기준으로 통일, 실패 시 미연결 vs API 오류 분기
+
+### 📌 현재 코드 구조 핵심 메모
+
+- **일 페이지 JS**: app.js 하단 `// 일(업무) 페이지` 섹션 (~6490줄~). `workView`, `workWeekOffset`, `workMonthOffset`, `workSelectedDate` 전역 상태. `getMondayOf`, `addDays`, `formatDateKR` 헬퍼.
+- **메뉴 설정**: `menuDraft[]` draft 패턴. `renderMenuManager()` → `saveMmDraft()`. DnD: `__mmDrag` 모듈 상태, `box-shadow` 삽입선.
+- **사이드바 토글**: `document click` 핸들러에서 `e.composedPath()` 사용 (renderSidebar 후 detached node 대응)
+- **탭 UI**: `.tab-nav` + `.tab-btn` + `#pageId .tab-btn` 스코프 패턴 (전역 충돌 방지)
+
+### ⚠️ 다음 세션 유의사항
+
+1. 세션 시작 시 `git log -3 --oneline` + `wc -l app.js styles.css index.html` + CLAUDE.md §10 정독
+2. `.git/GITHUB_TOKEN` 존재 여부 확인 → 없으면 토큰 재발급 요청
+3. 로컬 테스트: `python3 -m http.server 8000` (file:// CORS 불가)
+4. **대용량 코드 작성 시 턴 실패 방지**: 한 턴에 200줄 이상 쓰지 말고 A→B→C 단계로 나눠서 진행
+5. 세션 컨텍스트가 길어지면 새 세션에서 이어갈 것 (CLAUDE.md가 SSOT)
 
 ### 🚨 push 방법
 
