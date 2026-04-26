@@ -2355,16 +2355,16 @@
     }
 
     .emoji-edit-btn {
-      width: 44px;
-      height: 44px;
-      border: 2px solid var(--border-color);
-      border-radius: 6px;
-      font-size: 24px;
+      width: 40px;
+      height: 40px;
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--button-radius, 8px);
+      font-size: 22px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      background: white;
+      background: var(--bg-card);
       user-select: none;
       flex-shrink: 0;
     }
@@ -3035,8 +3035,8 @@
 
     /* 오늘로 이동 공통 버튼 (주별/월별 하단) */
     .today-jump-row { text-align: center; margin: -4px 0 8px; }
-    .today-jump-btn { font-size: 12px; color: var(--text-secondary); background: none; border: 1px solid var(--border-color); border-radius: 20px; cursor: pointer; padding: 3px 14px; transition: all 0.15s; }
-    .today-jump-btn:hover { background: var(--primary-yellow); border-color: var(--primary-yellow); color: #000; }
+    .today-jump-btn { font-size: 11px; color: var(--text-secondary); background: none; border: none; cursor: pointer; padding: 2px 6px; transition: color 0.15s; }
+    .today-jump-btn:hover { color: var(--text-primary); }
 
     /* 습관 목록 그리드 */
     .habit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 12px; }

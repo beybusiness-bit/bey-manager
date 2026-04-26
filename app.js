@@ -6181,8 +6181,15 @@
     var habitMonthOffset = 0;
     var habitDraft = null;
     var habitListSelected = [];
+    var habitListPage = 1;
+    var habitListPerPage = 12;
+    var habitListSearch = '';
+    var habitListSort = 'order';
     var habitMemoHabitId = null;
     var habitMemoDateStr = null;
+    var habitMemosHabitId = null;
+    var habitMemosPage = 1;
+    var habitMemosPerPage = 6;
 
     function loadHabits() {
       try { habits = JSON.parse(localStorage.getItem('habits') || '[]'); } catch(e) { habits = []; }
@@ -6473,24 +6480,55 @@
       var c = document.getElementById('habitViewContent');
       if (!c) return;
       var selCount = habitListSelected.length;
+
+      var filtered = habits.filter(function(h) {
+        if (!habitListSearch) return true;
+        var q = habitListSearch.toLowerCase();
+        return h.name.toLowerCase().indexOf(q) >= 0;
+      });
+      if (habitListSort === 'name') filtered.sort(function(a, b) { return a.name > b.name ? 1 : -1; });
+      else if (habitListSort === 'streak') filtered.sort(function(a, b) { return calcHabitStreak(b) - calcHabitStreak(a); });
+      else filtered.sort(function(a, b) { return (a.order || 0) - (b.order || 0); });
+
+      var total = filtered.length;
+      var totalPages = Math.max(1, Math.ceil(total / habitListPerPage));
+      if (habitListPage > totalPages) habitListPage = totalPages;
+      var start = (habitListPage - 1) * habitListPerPage;
+      var pageItems = filtered.slice(start, start + habitListPerPage);
+      var allPageIds = pageItems.map(function(h) { return h.id; });
+      var allSel = allPageIds.length > 0 && allPageIds.every(function(id) { return habitListSelected.indexOf(id) >= 0; });
+
       var html = '<div class="habit-list-wrap">';
 
-      html += '<div class="basket-controls-row">';
-      if (selCount === 0) {
-        html += '<button class="btn-primary" onclick="openHabitForm(null)">+ 습관 추가</button>';
-      } else {
+      /* ── 컨트롤 바 (검색/정렬 + 추가 버튼) ── */
+      html += '<div class="work-list-controls" style="margin-bottom:10px;">';
+      html += '<input class="input-field" style="flex:1;min-width:0;height:34px;padding:6px 10px;font-size:13px;" placeholder="습관 검색..." value="' + escapeHtml(habitListSearch) + '" oninput="habitListSetSearch(this.value)">';
+      html += '<select class="input-field" style="width:auto;height:34px;padding:4px 8px;font-size:13px;" onchange="habitListSetSort(this.value)">';
+      html += '<option value="order"' + (habitListSort==='order'?' selected':'') + '>등록순</option>';
+      html += '<option value="name"' + (habitListSort==='name'?' selected':'') + '>이름순</option>';
+      html += '<option value="streak"' + (habitListSort==='streak'?' selected':'') + '>연속일순</option>';
+      html += '</select>';
+      html += '<button class="btn-primary" style="white-space:nowrap;height:34px;padding:0 12px;font-size:13px;" onclick="openHabitForm(null)">+ 습관 추가</button>';
+      html += '</div>';
+
+      /* ── 선택 바 ── */
+      html += '<div class="basket-select-bar" style="margin-bottom:8px;">';
+      html += '<label class="basket-select-all-label"><input type="checkbox" id="habitSelectAll"' + (allSel ? ' checked' : '') + ' onchange="habitListToggleAll(this.checked)"> 전체 선택</label>';
+      if (selCount > 0) {
         html += '<span class="basket-selected-count">' + selCount + '개 선택</span>';
-        if (selCount === 1) html += '<button class="btn-cancel" onclick="habitListEditSelected()">✏️ 수정</button>';
-        html += '<button class="btn-cancel" style="color:#e53e3e;" onclick="habitListDeleteSelected()">🗑 삭제</button>';
-        html += '<button class="btn-cancel" onclick="habitListClearSelect()">취소</button>';
+        if (selCount === 1) html += '<button class="btn-cancel" style="padding:3px 8px;font-size:12px;" onclick="habitListEditSelected()">✏️ 수정</button>';
+        html += '<button class="btn-cancel" style="padding:3px 8px;font-size:12px;color:#e53e3e;" onclick="habitListDeleteSelected()">🗑 삭제</button>';
+        html += '<button class="btn-cancel" style="padding:3px 8px;font-size:12px;" onclick="habitListClearSelect()">취소</button>';
       }
       html += '</div>';
 
       if (habits.length === 0) {
         html += '<div class="empty-state"><p>아직 등록된 습관이 없습니다.</p></div>';
+      } else if (pageItems.length === 0) {
+        html += '<div class="empty-state"><p>검색 결과가 없습니다.</p></div>';
       } else {
         html += '<div class="habit-grid">';
-        habits.forEach(function(h) {
+        pageItems.forEach(function(h) {
           var wdLabels = (h.weekdays && h.weekdays.length > 0 && h.weekdays.length < 7)
             ? h.weekdays.map(function(w) { return WEEKDAYS_KR[WEEKDAYS_EN.indexOf(w)]; }).join(' ')
             : '매일';
@@ -6498,11 +6536,11 @@
           var memoCount = habitLogs.filter(function(l) { return l.habitId === h.id && l.memo; }).length;
           var isSel = habitListSelected.indexOf(h.id) >= 0;
           html += '<div class="habit-grid-card' + (isSel ? ' selected' : '') + '" onclick="habitGridToggleSelect(\'' + h.id + '\')">';
-          html += '<input type="checkbox" class="basket-grid-check" value="' + h.id + '"' + (isSel ? ' checked' : '') + ' onclick="event.stopPropagation()" onchange="habitListUpdateCheck(this)">';
+          html += '<input type="checkbox" class="habit-list-check" value="' + h.id + '"' + (isSel ? ' checked' : '') + ' onclick="event.stopPropagation()" onchange="habitListUpdateCheck(this)">';
           html += '<div class="habit-grid-emoji">' + renderEmoji(h.emoji) + '</div>';
           html += '<div class="habit-grid-name">' + h.name + '</div>';
           html += '<div class="habit-grid-meta"><span>' + wdLabels + '</span>';
-          if (streak > 0) html += '<span>🔥' + streak + '일</span>';
+          if (streak > 0) html += '<span>&#128293;' + streak + '일</span>';
           html += '</div>';
           if (memoCount > 0) html += '<button class="habit-memo-badge" onclick="event.stopPropagation();openHabitMemos(\'' + h.id + '\')">&#9998; 메모 ' + memoCount + '</button>';
           html += '<div class="habit-grid-color-bar" style="background:' + (h.color || '#ffde59') + '"></div>';
@@ -6510,8 +6548,57 @@
         });
         html += '</div>';
       }
+
+      if (totalPages > 1) {
+        html += buildGenericPagerBar({
+          total: total, page: habitListPage, perPage: habitListPerPage,
+          perPageOpts: [8, 12, 20, 40],
+          goFn: 'goHabitListPage', setPerPageFn: 'setHabitListPerPage'
+        });
+      }
+
       html += '</div>';
       c.innerHTML = html;
+    }
+
+    function habitListSetSearch(val) {
+      habitListSearch = val;
+      habitListPage = 1;
+      renderHabitList();
+    }
+
+    function habitListSetSort(val) {
+      habitListSort = val;
+      habitListPage = 1;
+      renderHabitList();
+    }
+
+    function habitListToggleAll(checked) {
+      var c = document.getElementById('habitViewContent');
+      if (!c) return;
+      c.querySelectorAll('.habit-list-check').forEach(function(cb) {
+        cb.checked = checked;
+        var id = cb.value;
+        var idx = habitListSelected.indexOf(id);
+        if (checked && idx < 0) habitListSelected.push(id);
+        else if (!checked && idx >= 0) habitListSelected.splice(idx, 1);
+      });
+      renderHabitList();
+    }
+
+    function goHabitListPage(page) {
+      var total = habits.length;
+      var totalPages = Math.max(1, Math.ceil(total / habitListPerPage));
+      page = parseInt(page, 10);
+      if (isNaN(page) || page < 1 || page > totalPages) return;
+      habitListPage = page;
+      renderHabitList();
+    }
+
+    function setHabitListPerPage(val) {
+      habitListPerPage = parseInt(val, 10) || 12;
+      habitListPage = 1;
+      renderHabitList();
     }
 
     function habitGridToggleSelect(id) {
@@ -6607,29 +6694,68 @@
 
     // ---- 메모 목록 모달 ----
     function openHabitMemos(habitId) {
+      habitMemosHabitId = habitId;
+      habitMemosPage = 1;
       var h = habits.find(function(x) { return x.id === habitId; });
       if (!h) return;
-      var memoLogs = habitLogs.filter(function(l) { return l.habitId === habitId && l.memo; });
-      memoLogs.sort(function(a, b) { return b.date > a.date ? 1 : -1; });
       document.getElementById('habitMemosTitle').textContent = (h.emoji || '') + ' ' + h.name + ' 메모';
-      var content = document.getElementById('habitMemosContent');
-      if (memoLogs.length === 0) {
-        content.innerHTML = '<div class="empty-state" style="padding:16px 0;"><p>메모가 없습니다.</p></div>';
-      } else {
-        content.innerHTML = memoLogs.map(function(l) {
-          return '<div class="habit-memos-item">'
-            + '<div class="habit-memos-date">' + formatDateKR(l.date) + (l.done ? ' ✅' : '') + '</div>'
-            + '<div class="habit-memos-text">' + escapeHtml(l.memo) + '</div>'
-            + '</div>';
-        }).join('');
-      }
+      renderHabitMemosList();
       var modal = document.getElementById('habitMemosModal');
       modal.style.display = 'flex';
       bringModalToFront(modal);
     }
 
+    function renderHabitMemosList() {
+      var content = document.getElementById('habitMemosContent');
+      if (!content) return;
+      var h = habits.find(function(x) { return x.id === habitMemosHabitId; });
+      var memoLogs = habitMemosHabitId
+        ? habitLogs.filter(function(l) { return l.habitId === habitMemosHabitId && l.memo; })
+        : [];
+      memoLogs.sort(function(a, b) { return b.date > a.date ? 1 : -1; });
+      var total = memoLogs.length;
+      if (total === 0) {
+        content.innerHTML = '<div class="empty-state" style="padding:16px 0;"><p>메모가 없습니다.</p></div>';
+        return;
+      }
+      var totalPages = Math.max(1, Math.ceil(total / habitMemosPerPage));
+      if (habitMemosPage > totalPages) habitMemosPage = totalPages;
+      var start = (habitMemosPage - 1) * habitMemosPerPage;
+      var pageItems = memoLogs.slice(start, start + habitMemosPerPage);
+      var html = pageItems.map(function(l) {
+        return '<div class="habit-memos-item">'
+          + '<div class="habit-memos-date">' + formatDateKR(l.date) + (l.done ? ' &#9989;' : '') + '</div>'
+          + '<div class="habit-memos-text">' + escapeHtml(l.memo) + '</div>'
+          + '</div>';
+      }).join('');
+      if (totalPages > 1) {
+        html += buildGenericPagerBar({
+          total: total, page: habitMemosPage, perPage: habitMemosPerPage,
+          perPageOpts: [4, 6, 10],
+          goFn: 'goHabitMemosPage', setPerPageFn: 'setHabitMemosPerPage'
+        });
+      }
+      content.innerHTML = html;
+    }
+
+    function goHabitMemosPage(page) {
+      var total = habitLogs.filter(function(l) { return l.habitId === habitMemosHabitId && l.memo; }).length;
+      var totalPages = Math.max(1, Math.ceil(total / habitMemosPerPage));
+      page = parseInt(page, 10);
+      if (isNaN(page) || page < 1 || page > totalPages) return;
+      habitMemosPage = page;
+      renderHabitMemosList();
+    }
+
+    function setHabitMemosPerPage(val) {
+      habitMemosPerPage = parseInt(val, 10) || 6;
+      habitMemosPage = 1;
+      renderHabitMemosList();
+    }
+
     function closeHabitMemos() {
       document.getElementById('habitMemosModal').style.display = 'none';
+      habitMemosHabitId = null;
     }
 
     function calcHabitStreak(h) {
@@ -6743,6 +6869,8 @@
     var workSelectedDate = today();
     var workBasketPage = 1;
     var workBasketPerPage = 12;
+    var workBasketSearch = '';
+    var workBasketSort = 'default';
     var __workDragId = null;
     var __workDragSrcStatus = null;
     var __workDragTargetId = null;
@@ -7420,6 +7548,16 @@
       var c = document.getElementById('workViewContent');
       if (!c) return;
       var allBasket = workItems.filter(function(it) { return !it.date; });
+
+      /* 검색 */
+      if (workBasketSearch) {
+        var q = workBasketSearch.toLowerCase();
+        allBasket = allBasket.filter(function(it) { return it.title.toLowerCase().indexOf(q) >= 0 || (it.memo || '').toLowerCase().indexOf(q) >= 0; });
+      }
+      /* 정렬 */
+      if (workBasketSort === 'title') allBasket.sort(function(a, b) { return a.title > b.title ? 1 : -1; });
+      else if (workBasketSort === 'created') allBasket.sort(function(a, b) { return b.createdAt > a.createdAt ? 1 : -1; });
+
       var total = allBasket.length;
       var totalPages = Math.max(1, Math.ceil(total / workBasketPerPage));
       if (workBasketPage > totalPages) workBasketPage = totalPages;
@@ -7438,7 +7576,18 @@
 
       var html = '<div class="work-basket-tab">';
 
-      if (total === 0) {
+      /* 검색/정렬 바 — 항상 표시 */
+      html += '<div class="work-list-controls" style="margin-bottom:10px;">';
+      html += '<input class="input-field" style="flex:1;min-width:0;height:34px;padding:6px 10px;font-size:13px;" placeholder="할일 검색..." value="' + escapeHtml(workBasketSearch) + '" oninput="basketSetSearch(this.value)">';
+      html += '<select class="input-field" style="width:auto;height:34px;padding:4px 8px;font-size:13px;" onchange="basketSetSort(this.value)">';
+      html += '<option value="default"' + (workBasketSort==='default'?' selected':'') + '>기본순</option>';
+      html += '<option value="title"' + (workBasketSort==='title'?' selected':'') + '>제목순</option>';
+      html += '<option value="created"' + (workBasketSort==='created'?' selected':'') + '>최신순</option>';
+      html += '</select>';
+      html += '</div>';
+
+      var rawTotal = workItems.filter(function(it) { return !it.date; }).length;
+      if (rawTotal === 0) {
         html += '<div class="work-empty-state"><div class="work-empty-icon">🧺</div><div class="work-empty-text">바구니가 비어있습니다</div></div>';
         html += '<button class="basket-add-new-btn" style="margin-top:16px;width:100%;" onclick="openBasketNewItem()">+ 할일 추가</button>';
       } else {
@@ -7449,17 +7598,21 @@
         html += '<span class="basket-selected-count" id="basketSelectedCount">0개 선택</span>';
         html += '</div>';
 
-        html += '<div class="basket-grid">';
-        basketItems.forEach(function(item) {
-          var status = getWorkStatus(item);
-          html += '<div class="basket-grid-card" onclick="workToggleInlineEdit(\'' + item.id + '\')">';
-          html += '<input type="checkbox" class="basket-item-check basket-grid-check" value="' + item.id + '" onclick="event.stopPropagation()" onchange="basketUpdateSelection()">';
-          html += '<div class="basket-grid-emoji">' + (item.emoji || '📋') + '</div>';
-          html += '<div class="basket-grid-title' + (status === 'done' ? ' done' : '') + '">' + escapeHtml(item.title) + '</div>';
-          if (item.memo) html += '<div class="basket-grid-memo">' + escapeHtml(item.memo.substring(0, 24)) + (item.memo.length > 24 ? '…' : '') + '</div>';
+        if (basketItems.length === 0) {
+          html += '<div class="empty-state"><p>검색 결과가 없습니다.</p></div>';
+        } else {
+          html += '<div class="basket-grid">';
+          basketItems.forEach(function(item) {
+            var status = getWorkStatus(item);
+            html += '<div class="basket-grid-card" onclick="workToggleInlineEdit(\'' + item.id + '\')">';
+            html += '<input type="checkbox" class="basket-item-check basket-grid-check" value="' + item.id + '" onclick="event.stopPropagation()" onchange="basketUpdateSelection()">';
+            html += '<div class="basket-grid-emoji">' + (item.emoji || '📋') + '</div>';
+            html += '<div class="basket-grid-title' + (status === 'done' ? ' done' : '') + '">' + escapeHtml(item.title) + '</div>';
+            if (item.memo) html += '<div class="basket-grid-memo">' + escapeHtml(item.memo.substring(0, 24)) + (item.memo.length > 24 ? '…' : '') + '</div>';
+            html += '</div>';
+          });
           html += '</div>';
-        });
-        html += '</div>';
+        }
 
         if (totalPages > 1) {
           html += buildGenericPagerBar({
@@ -7474,7 +7627,19 @@
 
       html += '</div>';
       c.innerHTML = html;
-      if (total > 0) basketUpdateSelection();
+      if (rawTotal > 0) basketUpdateSelection();
+    }
+
+    function basketSetSearch(val) {
+      workBasketSearch = val;
+      workBasketPage = 1;
+      renderWorkBasketTab();
+    }
+
+    function basketSetSort(val) {
+      workBasketSort = val;
+      workBasketPage = 1;
+      renderWorkBasketTab();
     }
 
     function goBasketPage(page) {
