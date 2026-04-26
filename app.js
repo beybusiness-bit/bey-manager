@@ -6180,6 +6180,9 @@
     var habitWeekOffset = 0;
     var habitMonthOffset = 0;
     var habitDraft = null;
+    var habitListSelected = [];
+    var habitMemoHabitId = null;
+    var habitMemoDateStr = null;
 
     function loadHabits() {
       try { habits = JSON.parse(localStorage.getItem('habits') || '[]'); } catch(e) { habits = []; }
@@ -6305,10 +6308,15 @@
         activeHabits.forEach(function(h) {
           var done = isHabitDone(h.id, habitSelectedDate);
           var color = h.color || '#ffde59';
-          html += '<div class="habit-today-item' + (done ? ' done' : '') + '" onclick="toggleHabitDone(\'' + h.id + '\',\'' + habitSelectedDate + '\')">';
-          html += '<div class="habit-today-check">' + habitCheckSVG(done, color, 22) + '</div>';
-          html += '<span class="habit-today-emoji">' + renderEmoji(h.emoji) + '</span>';
-          html += '<div class="habit-today-info"><div class="habit-today-name">' + h.name + '</div></div>';
+          var log = habitLogs.find(function(l) { return l.habitId === h.id && l.date === habitSelectedDate; });
+          html += '<div class="habit-today-item' + (done ? ' done' : '') + '">';
+          html += '<div class="habit-today-check" onclick="toggleHabitDone(\'' + h.id + '\',\'' + habitSelectedDate + '\')">' + habitCheckSVG(done, color, 22) + '</div>';
+          html += '<span class="habit-today-emoji" onclick="openHabitMemoModal(\'' + h.id + '\',\'' + habitSelectedDate + '\')">' + renderEmoji(h.emoji) + '</span>';
+          html += '<div class="habit-today-info" onclick="openHabitMemoModal(\'' + h.id + '\',\'' + habitSelectedDate + '\')">';
+          html += '<div class="habit-today-name">' + h.name + '</div>';
+          if (log && log.memo) html += '<div class="habit-today-memo-preview">' + escapeHtml(log.memo.substring(0, 32)) + (log.memo.length > 32 ? '…' : '') + '</div>';
+          html += '</div>';
+          html += '<button class="habit-memo-btn' + (log && log.memo ? ' has-memo' : '') + '" onclick="event.stopPropagation();openHabitMemoModal(\'' + h.id + '\',\'' + habitSelectedDate + '\')">&#9998;</button>';
           html += '</div>';
         });
         html += '</div>';
@@ -6336,9 +6344,9 @@
       var mParts = monday.split('-');
       var sParts = sunday.split('-');
       html += '<span class="work-nav-label">' + parseInt(mParts[1]) + '/' + parseInt(mParts[2]) + ' – ' + parseInt(sParts[1]) + '/' + parseInt(sParts[2]) + '</span>';
-      if (habitWeekOffset !== 0) html += '<button class="btn-icon work-today-btn" onclick="habitWeekMove(0)">오늘</button>';
       html += '<button class="btn-icon" onclick="habitWeekMove(1)">&#8250;</button>';
       html += '</div>';
+      if (habitWeekOffset !== 0) html += '<div class="today-jump-row"><button class="today-jump-btn" onclick="habitWeekMove(0)">오늘로 이동</button></div>';
 
       html += '<div class="habit-week-grid">';
       for (var i = 0; i < 7; i++) {
@@ -6410,9 +6418,9 @@
       html += '<div class="work-nav">';
       html += '<button class="btn-icon" onclick="habitMonthMove(-1)">&#8249;</button>';
       html += '<span class="work-nav-label">' + yr + '년 ' + monthNames[mo - 1] + '</span>';
-      if (habitMonthOffset !== 0) html += '<button class="btn-icon work-today-btn" onclick="habitMonthMove(0)">오늘</button>';
       html += '<button class="btn-icon" onclick="habitMonthMove(1)">&#8250;</button>';
       html += '</div>';
+      if (habitMonthOffset !== 0) html += '<div class="today-jump-row"><button class="today-jump-btn" onclick="habitMonthMove(0)">오늘로 이동</button></div>';
 
       html += '<div class="work-cal">';
       ['월','화','수','목','금','토','일'].forEach(function(d, i) {
@@ -6439,16 +6447,14 @@
         html += '<div class="' + cellClass + '" style="' + bg + '" onclick="habitGoToDate(\'' + ds + '\')">';
         html += '<div class="work-cal-date">' + day + '</div>';
         if (!isFuture && scheduled.length > 0) {
-          html += '<div class="habit-cal-dots">';
-          doneH.slice(0, 4).forEach(function(h) {
-            html += '<span class="habit-cal-dot" style="background:' + (h.color || '#ffde59') + '"></span>';
+          html += '<div class="work-dots" style="justify-content:center;flex-wrap:wrap;">';
+          scheduled.slice(0, 5).forEach(function(h) {
+            var done = isHabitDone(h.id, ds);
+            var color = done ? (h.color || '#ffde59') : 'var(--border-color)';
+            html += '<span class="work-dot-lg" style="background:' + color + '">' + (done ? '&#10003;' : '') + '</span>';
           });
-          var undoneCount = scheduled.length - doneH.length;
-          for (var u = 0; u < Math.min(undoneCount, 4 - Math.min(doneH.length, 4)); u++) {
-            html += '<span class="habit-cal-dot empty"></span>';
-          }
+          if (scheduled.length > 5) html += '<span class="work-dot-more">+' + (scheduled.length - 5) + '</span>';
           html += '</div>';
-          html += '<div class="habit-cal-count">' + doneH.length + '/' + scheduled.length + '</div>';
         }
         html += '</div>';
       }
@@ -6466,32 +6472,164 @@
     function renderHabitList() {
       var c = document.getElementById('habitViewContent');
       if (!c) return;
+      var selCount = habitListSelected.length;
       var html = '<div class="habit-list-wrap">';
-      html += '<div class="habit-list-header"><button class="btn-primary" onclick="openHabitForm(null)">+ 습관 추가</button></div>';
+
+      html += '<div class="basket-controls-row">';
+      if (selCount === 0) {
+        html += '<button class="btn-primary" onclick="openHabitForm(null)">+ 습관 추가</button>';
+      } else {
+        html += '<span class="basket-selected-count">' + selCount + '개 선택</span>';
+        if (selCount === 1) html += '<button class="btn-cancel" onclick="habitListEditSelected()">✏️ 수정</button>';
+        html += '<button class="btn-cancel" style="color:#e53e3e;" onclick="habitListDeleteSelected()">🗑 삭제</button>';
+        html += '<button class="btn-cancel" onclick="habitListClearSelect()">취소</button>';
+      }
+      html += '</div>';
+
       if (habits.length === 0) {
         html += '<div class="empty-state"><p>아직 등록된 습관이 없습니다.</p></div>';
       } else {
-        html += '<div class="habit-card-list">';
+        html += '<div class="habit-grid">';
         habits.forEach(function(h) {
           var wdLabels = (h.weekdays && h.weekdays.length > 0 && h.weekdays.length < 7)
             ? h.weekdays.map(function(w) { return WEEKDAYS_KR[WEEKDAYS_EN.indexOf(w)]; }).join(' ')
             : '매일';
           var streak = calcHabitStreak(h);
-          html += '<div class="habit-card">';
-          html += '<div class="habit-card-color-bar" style="background:' + (h.color || '#ffde59') + '"></div>';
-          html += '<span class="habit-card-emoji">' + renderEmoji(h.emoji) + '</span>';
-          html += '<div class="habit-card-info">';
-          html += '<div class="habit-card-name">' + h.name + '</div>';
-          html += '<div class="habit-card-days">' + wdLabels + '</div>';
-          if (streak > 0) html += '<div class="habit-card-streak">🔥 ' + streak + '일 연속</div>';
+          var memoCount = habitLogs.filter(function(l) { return l.habitId === h.id && l.memo; }).length;
+          var isSel = habitListSelected.indexOf(h.id) >= 0;
+          html += '<div class="habit-grid-card' + (isSel ? ' selected' : '') + '" onclick="habitGridToggleSelect(\'' + h.id + '\')">';
+          html += '<input type="checkbox" class="basket-grid-check" value="' + h.id + '"' + (isSel ? ' checked' : '') + ' onclick="event.stopPropagation()" onchange="habitListUpdateCheck(this)">';
+          html += '<div class="habit-grid-emoji">' + renderEmoji(h.emoji) + '</div>';
+          html += '<div class="habit-grid-name">' + h.name + '</div>';
+          html += '<div class="habit-grid-meta"><span>' + wdLabels + '</span>';
+          if (streak > 0) html += '<span>🔥' + streak + '일</span>';
           html += '</div>';
-          html += '<div class="habit-card-actions"><button class="btn-icon" onclick="openHabitForm(\'' + h.id + '\')">✏️</button><button class="btn-icon" onclick="deleteHabit(\'' + h.id + '\')">🗑️</button></div>';
+          if (memoCount > 0) html += '<button class="habit-memo-badge" onclick="event.stopPropagation();openHabitMemos(\'' + h.id + '\')">&#9998; 메모 ' + memoCount + '</button>';
+          html += '<div class="habit-grid-color-bar" style="background:' + (h.color || '#ffde59') + '"></div>';
           html += '</div>';
         });
         html += '</div>';
       }
       html += '</div>';
       c.innerHTML = html;
+    }
+
+    function habitGridToggleSelect(id) {
+      var idx = habitListSelected.indexOf(id);
+      if (idx >= 0) habitListSelected.splice(idx, 1);
+      else habitListSelected.push(id);
+      renderHabitList();
+    }
+
+    function habitListUpdateCheck(cb) {
+      var id = cb.value;
+      var idx = habitListSelected.indexOf(id);
+      if (cb.checked && idx < 0) habitListSelected.push(id);
+      else if (!cb.checked && idx >= 0) habitListSelected.splice(idx, 1);
+      renderHabitList();
+    }
+
+    function habitListClearSelect() {
+      habitListSelected = [];
+      renderHabitList();
+    }
+
+    function habitListEditSelected() {
+      if (habitListSelected.length !== 1) return;
+      openHabitForm(habitListSelected[0]);
+    }
+
+    function habitListDeleteSelected() {
+      if (habitListSelected.length === 0) return;
+      var names = habitListSelected.map(function(id) {
+        var h = habits.find(function(x) { return x.id === id; });
+        return h ? h.name : id;
+      }).join(', ');
+      showConfirm('습관 삭제', habitListSelected.length + '개 습관을 삭제하시겠습니까? 관련 기록도 모두 삭제됩니다.', function(ok) {
+        if (!ok) return;
+        habitListSelected.forEach(function(id) {
+          habits = habits.filter(function(h) { return h.id !== id; });
+          habitLogs = habitLogs.filter(function(l) { return l.habitId !== id; });
+        });
+        habitListSelected = [];
+        saveHabits();
+        saveHabitLogs();
+        renderHabitList();
+        showToast('습관을 삭제했습니다.');
+      });
+    }
+
+    // ---- 메모 모달 ----
+    function openHabitMemoModal(habitId, dateStr) {
+      var h = habits.find(function(x) { return x.id === habitId; });
+      if (!h) return;
+      var log = habitLogs.find(function(l) { return l.habitId === habitId && l.date === dateStr; });
+      habitMemoHabitId = habitId;
+      habitMemoDateStr = dateStr;
+      document.getElementById('habitMemoHabitName').textContent = (h.emoji || '') + ' ' + h.name;
+      document.getElementById('habitMemoDate').textContent = formatDateKR(dateStr);
+      document.getElementById('habitMemoCheck').checked = !!log;
+      document.getElementById('habitMemoInput').value = (log && log.memo) ? log.memo : '';
+      var modal = document.getElementById('habitMemoModal');
+      modal.style.display = 'flex';
+      bringModalToFront(modal);
+      setTimeout(function() { document.getElementById('habitMemoInput').focus(); }, 80);
+    }
+
+    function closeHabitMemoModal() {
+      document.getElementById('habitMemoModal').style.display = 'none';
+      habitMemoHabitId = null;
+      habitMemoDateStr = null;
+    }
+
+    function saveHabitMemo() {
+      if (!habitMemoHabitId || !habitMemoDateStr) return;
+      var isDone = document.getElementById('habitMemoCheck').checked;
+      var memo = document.getElementById('habitMemoInput').value.trim();
+      var existingIdx = -1;
+      for (var i = 0; i < habitLogs.length; i++) {
+        if (habitLogs[i].habitId === habitMemoHabitId && habitLogs[i].date === habitMemoDateStr) { existingIdx = i; break; }
+      }
+      if (isDone || memo) {
+        if (existingIdx >= 0) {
+          habitLogs[existingIdx].done = isDone;
+          habitLogs[existingIdx].memo = memo;
+        } else {
+          habitLogs.push({ id: generateId(), habitId: habitMemoHabitId, date: habitMemoDateStr, done: isDone, memo: memo });
+        }
+      } else {
+        if (existingIdx >= 0) habitLogs.splice(existingIdx, 1);
+      }
+      saveHabitLogs();
+      closeHabitMemoModal();
+      renderHabitView();
+    }
+
+    // ---- 메모 목록 모달 ----
+    function openHabitMemos(habitId) {
+      var h = habits.find(function(x) { return x.id === habitId; });
+      if (!h) return;
+      var memoLogs = habitLogs.filter(function(l) { return l.habitId === habitId && l.memo; });
+      memoLogs.sort(function(a, b) { return b.date > a.date ? 1 : -1; });
+      document.getElementById('habitMemosTitle').textContent = (h.emoji || '') + ' ' + h.name + ' 메모';
+      var content = document.getElementById('habitMemosContent');
+      if (memoLogs.length === 0) {
+        content.innerHTML = '<div class="empty-state" style="padding:16px 0;"><p>메모가 없습니다.</p></div>';
+      } else {
+        content.innerHTML = memoLogs.map(function(l) {
+          return '<div class="habit-memos-item">'
+            + '<div class="habit-memos-date">' + formatDateKR(l.date) + (l.done ? ' ✅' : '') + '</div>'
+            + '<div class="habit-memos-text">' + escapeHtml(l.memo) + '</div>'
+            + '</div>';
+        }).join('');
+      }
+      var modal = document.getElementById('habitMemosModal');
+      modal.style.display = 'flex';
+      bringModalToFront(modal);
+    }
+
+    function closeHabitMemos() {
+      document.getElementById('habitMemosModal').style.display = 'none';
     }
 
     function calcHabitStreak(h) {
@@ -6518,6 +6656,8 @@
       document.getElementById('habitEmojiBtn').innerHTML = renderEmoji(habitDraft.emoji);
       document.getElementById('habitNameInput').value = habitDraft.name;
       document.getElementById('habitColorInput').value = habitDraft.color;
+      var swatchEl = document.getElementById('habitColorSwatch');
+      if (swatchEl) swatchEl.style.background = habitDraft.color;
       renderHabitWeekdayToggles();
       var modal = document.getElementById('habitFormModal');
       modal.style.display = 'flex';
@@ -7168,9 +7308,9 @@
       var mParts = monday.split('-');
       var sParts = sunday.split('-');
       html += '<span class="work-nav-label">' + parseInt(mParts[1]) + '/' + parseInt(mParts[2]) + ' – ' + parseInt(sParts[1]) + '/' + parseInt(sParts[2]) + '</span>';
-      if (workWeekOffset !== 0) html += '<button class="btn-icon work-today-btn" onclick="workWeekMove(0)">오늘</button>';
       html += '<button class="btn-icon" onclick="workWeekMove(1)">&#8250;</button>';
       html += '</div>';
+      if (workWeekOffset !== 0) html += '<div class="today-jump-row"><button class="today-jump-btn" onclick="workWeekMove(0)">오늘로 이동</button></div>';
 
       html += '<div class="work-week-grid">';
       for (var i = 0; i < 7; i++) {
@@ -7220,8 +7360,8 @@
       var html = '<div class="work-month">';
       html += '<div class="work-nav"><button class="btn-icon" onclick="workMonthMove(-1)">&#8249;</button>';
       html += '<span class="work-nav-label">' + yr + '년 ' + monthNames[mo - 1] + '</span>';
-      if (workMonthOffset !== 0) html += '<button class="btn-icon work-today-btn" onclick="workMonthMove(0)">오늘</button>';
       html += '<button class="btn-icon" onclick="workMonthMove(1)">&#8250;</button></div>';
+      if (workMonthOffset !== 0) html += '<div class="today-jump-row"><button class="today-jump-btn" onclick="workMonthMove(0)">오늘로 이동</button></div>';
 
       html += '<div class="work-cal">';
       ['월','화','수','목','금','토','일'].forEach(function(d, i) {
