@@ -6501,14 +6501,14 @@
       var html = '<div class="habit-list-wrap">';
 
       /* ── 컨트롤 바 (검색/정렬 + 추가 버튼) ── */
-      html += '<div class="work-list-controls" style="margin-bottom:10px;">';
+      html += '<div class="work-list-controls" style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">';
       html += '<input class="input-field" style="flex:1;min-width:0;height:34px;padding:6px 10px;font-size:13px;" placeholder="습관 검색..." value="' + escapeHtml(habitListSearch) + '" oninput="habitListSetSearch(this.value)">';
       html += '<select class="input-field" style="width:auto;height:34px;padding:4px 8px;font-size:13px;" onchange="habitListSetSort(this.value)">';
       html += '<option value="order"' + (habitListSort==='order'?' selected':'') + '>등록순</option>';
       html += '<option value="name"' + (habitListSort==='name'?' selected':'') + '>이름순</option>';
       html += '<option value="streak"' + (habitListSort==='streak'?' selected':'') + '>연속일순</option>';
       html += '</select>';
-      html += '<button class="btn-primary" style="white-space:nowrap;height:34px;padding:0 12px;font-size:13px;" onclick="openHabitForm(null)">+ 습관 추가</button>';
+      html += '<button class="btn-confirm" style="white-space:nowrap;flex-shrink:0;" onclick="openHabitForm(null)">+ 습관 추가</button>';
       html += '</div>';
 
       /* ── 선택 바 ── */
@@ -6549,13 +6549,11 @@
         html += '</div>';
       }
 
-      if (totalPages > 1) {
-        html += buildGenericPagerBar({
-          total: total, page: habitListPage, perPage: habitListPerPage,
-          perPageOpts: [8, 12, 20, 40],
-          goFn: 'goHabitListPage', setPerPageFn: 'setHabitListPerPage'
-        });
-      }
+      html += buildGenericPagerBar({
+        total: total, page: habitListPage, perPage: habitListPerPage,
+        perPageOpts: [8, 12, 20, 40],
+        goFn: 'goHabitListPage', setPerPageFn: 'setHabitListPerPage'
+      });
 
       html += '</div>';
       c.innerHTML = html;
@@ -7577,7 +7575,7 @@
       var html = '<div class="work-basket-tab">';
 
       /* 검색/정렬 바 — 항상 표시 */
-      html += '<div class="work-list-controls" style="margin-bottom:10px;">';
+      html += '<div class="work-list-controls" style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">';
       html += '<input class="input-field" style="flex:1;min-width:0;height:34px;padding:6px 10px;font-size:13px;" placeholder="할일 검색..." value="' + escapeHtml(workBasketSearch) + '" oninput="basketSetSearch(this.value)">';
       html += '<select class="input-field" style="width:auto;height:34px;padding:4px 8px;font-size:13px;" onchange="basketSetSort(this.value)">';
       html += '<option value="default"' + (workBasketSort==='default'?' selected':'') + '>기본순</option>';
@@ -7614,13 +7612,11 @@
           html += '</div>';
         }
 
-        if (totalPages > 1) {
-          html += buildGenericPagerBar({
-            total: total, page: workBasketPage, perPage: workBasketPerPage,
-            perPageOpts: [8, 12, 20, 40],
-            goFn: 'goBasketPage', setPerPageFn: 'setBasketPerPage'
-          });
-        }
+        html += buildGenericPagerBar({
+          total: total, page: workBasketPage, perPage: workBasketPerPage,
+          perPageOpts: [8, 12, 20, 40],
+          goFn: 'goBasketPage', setPerPageFn: 'setBasketPerPage'
+        });
 
         html += controlsRow('bot');
       }
