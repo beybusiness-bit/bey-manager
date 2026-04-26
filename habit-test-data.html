@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>습관 테스트 데이터</title>
+<style>
+  body { font-family: 'Noto Sans KR', sans-serif; background: #f5f5f5; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+  .box { background: #fff; border-radius: 16px; padding: 32px 40px; max-width: 520px; width: 90%; box-shadow: 0 4px 24px rgba(0,0,0,0.10); text-align: center; }
+  h2 { margin: 0 0 8px; font-size: 20px; }
+  p { color: #666; font-size: 13px; margin: 0 0 24px; line-height: 1.6; text-align: left; }
+  .btn { display: block; width: 100%; padding: 14px; background: #ffde59; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 10px; transition: opacity 0.15s; }
+  .btn:hover { opacity: 0.85; }
+  .btn.danger { background: #fff0f0; color: #e53e3e; border: 1.5px solid #e53e3e; }
+  .log { margin-top: 20px; background: #f8f8f8; border-radius: 8px; padding: 12px 16px; font-size: 12px; color: #333; text-align: left; max-height: 260px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; display: none; }
+  .done { background: #f0fff4; border: 1.5px solid #56cfb2; border-radius: 10px; padding: 12px 16px; font-size: 13px; font-weight: 600; color: #276749; display: none; margin-top: 12px; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h2>🧪 습관 테스트 데이터</h2>
+  <p>
+    <strong>주입되는 습관 (5개):</strong><br>
+    🏃 아침 달리기 — 매일, 🔥7일 연속 달성<br>
+    📚 독서 30분 — 평일(월~금), 🔥4일 연속<br>
+    💊 영양제 먹기 — 매일, 중간에 빠진 날 있음<br>
+    🧘 명상 10분 — 주말(토/일), 이번 주 달성<br>
+    💪 홈트레이닝 — 월/수/금, 일부만 달성<br><br>
+    기록 범위: 오늘로부터 14일치 과거 로그
+  </p>
+  <button class="btn" onclick="injectData()">✅ 데이터 주입 후 앱 열기</button>
+  <button class="btn danger" onclick="clearOnly()">🗑 habits/habitLogs만 초기화</button>
+  <div class="log" id="log"></div>
+  <div class="done" id="done">✅ 완료! 앱으로 이동 중...</div>
+</div>
+
+<script>
+function log(msg) {
+  var el = document.getElementById('log');
+  el.style.display = 'block';
+  el.textContent += msg + '\n';
+}
+
+function injectData() {
+  var d = new Date();
+  var pad = function(n) { return String(n).padStart(2, '0'); };
+  function dateOf(offset) {
+    var t = new Date(d.getFullYear(), d.getMonth(), d.getDate() + offset);
+    return t.getFullYear() + '-' + pad(t.getMonth()+1) + '-' + pad(t.getDate());
+  }
+  function dayName(dateStr) {
+    var days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+    var t = new Date(dateStr + 'T12:00:00');
+    return days[t.getDay()];
+  }
+
+  var seq = 0;
+  function id() { return 'h' + Date.now().toString(36) + (++seq).toString(36); }
+
+  var TODAY = dateOf(0);
+
+  // ── 습관 5개 ────────────────────────────────────────────────────────
+  var habits = [
+    {
+      id: 'h_run', emoji: '🏃', name: '아침 달리기',
+      weekdays: ['MON','TUE','WED','THU','FRI','SAT','SUN'],
+      color: '#74b9ff', active: true, order: 0, createdAt: dateOf(-20)
+    },
+    {
+      id: 'h_read', emoji: '📚', name: '독서 30분',
+      weekdays: ['MON','TUE','WED','THU','FRI'],
+      color: '#a29bfe', active: true, order: 1, createdAt: dateOf(-20)
+    },
+    {
+      id: 'h_vit', emoji: '💊', name: '영양제 먹기',
+      weekdays: ['MON','TUE','WED','THU','FRI','SAT','SUN'],
+      color: '#56cfb2', active: true, order: 2, createdAt: dateOf(-20)
+    },
+    {
+      id: 'h_med', emoji: '🧘', name: '명상 10분',
+      weekdays: ['SAT','SUN'],
+      color: '#fd79a8', active: true, order: 3, createdAt: dateOf(-20)
+    },
+    {
+      id: 'h_gym', emoji: '💪', name: '홈트레이닝',
+      weekdays: ['MON','WED','FRI'],
+      color: '#fdcb6e', active: true, order: 4, createdAt: dateOf(-20)
+    }
+  ];
+
+  // ── habitLogs: 14일치 ────────────────────────────────────────────────
+  // 스케줄:
+  // 🏃 아침 달리기: 오늘 포함 최근 7일 모두 완료 → 🔥7일 연속
+  // 📚 독서 30분:   평일만, 최근 4 평일 완료 → 🔥4일 연속 (주말 건너뜀)
+  // 💊 영양제:      매일, 8일전 빠짐 → 연속 아님
+  // 🧘 명상:        주말만, 최근 주말 2회 완료
+  // 💪 홈트:        월/수/금, 일부만 (완료 50%)
+
+  var logs = [];
+  var lseq = 0;
+  function lid() { return 'l' + Date.now().toString(36) + (++lseq).toString(36); }
+
+  function isScheduled(habit, dateStr) {
+    return habit.weekdays.indexOf(dayName(dateStr)) >= 0;
+  }
+
+  function addLog(habitId, dateStr) {
+    logs.push({ id: lid(), habitId: habitId, date: dateStr, done: true });
+  }
+
+  for (var offset = -13; offset <= 0; offset++) {
+    var ds = dateOf(offset);
+    var dn = dayName(ds);
+
+    // 🏃 아침 달리기: 최근 7일(offset -6~0) 완료, 그 전은 안 함
+    if (offset >= -6) addLog('h_run', ds);
+
+    // 📚 독서 30분: 평일이면서 최근 4 평일 완료
+    // 평일 카운트: offset 0,-1,-2,-3는 평일/주말 따라 다름
+    // 대신 규칙: 오늘 포함 최근 4개 평일만 완료
+    if (isScheduled(habits[1], ds) && offset >= -5) {
+      // 마지막 4 평일 완료 (offset -5부터는 주말 포함해서 4 평일 커버)
+      addLog('h_read', ds);
+    }
+
+    // 💊 영양제: 매일, -8일만 빠짐
+    if (offset !== -8) addLog('h_vit', ds);
+
+    // 🧘 명상: 주말만 → 최근 2주 주말 모두 완료
+    if (isScheduled(habits[3], ds)) addLog('h_med', ds);
+
+    // 💪 홈트: 월/수/금 중 offset이 짝수(-12,-10,-8,-6,-4,-2,0)만 완료 (절반)
+    if (isScheduled(habits[4], ds) && offset % 2 === 0) addLog('h_gym', ds);
+  }
+
+  localStorage.setItem('habits', JSON.stringify(habits));
+  localStorage.setItem('habitLogs', JSON.stringify(logs));
+
+  log('habits 주입: ' + habits.length + '개');
+  log('habitLogs 주입: ' + logs.length + '개');
+  log('');
+  habits.forEach(function(h) {
+    var cnt = logs.filter(function(l) { return l.habitId === h.id; }).length;
+    log('  ' + h.emoji + ' ' + h.name + ': ' + cnt + '개 기록');
+  });
+  log('');
+  log('3초 후 앱으로 이동합니다...');
+
+  document.getElementById('done').style.display = 'block';
+  setTimeout(function() { location.href = 'index.html'; }, 3000);
+}
+
+function clearOnly() {
+  localStorage.removeItem('habits');
+  localStorage.removeItem('habitLogs');
+  log('habits / habitLogs 초기화 완료');
+  document.getElementById('log').style.display = 'block';
+  document.getElementById('done').style.display = 'block';
+  document.getElementById('done').textContent = '✅ 초기화 완료. 앱을 새로고침하세요.';
+}
+</script>
+</body>
+</html>

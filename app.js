@@ -6175,8 +6175,10 @@
     // ========================================
     var habits = [];
     var habitLogs = [];
-    var habitCurrentTab = 'today';
-    var habitStatsMonth = '';
+    var habitView = 'today';
+    var habitSelectedDate = today();
+    var habitWeekOffset = 0;
+    var habitMonthOffset = 0;
     var habitDraft = null;
 
     function loadHabits() {
@@ -6194,21 +6196,40 @@
       localStorage.setItem('habitLogs', JSON.stringify(habitLogs));
     }
 
-    function switchHabitTab(tab) {
-      habitCurrentTab = tab;
-      document.querySelectorAll('#habitPage .tab-btn').forEach(function(btn) {
-        btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
-      });
-      document.querySelectorAll('#habitPage .tab-content').forEach(function(el) {
-        el.classList.toggle('active', el.getAttribute('data-tab') === tab);
-      });
-      renderHabitPage();
+    function renderHabitPage() {
+      var container = document.getElementById('habitPageContent');
+      if (!container) return;
+      var html = '<div class="habit-page">';
+      html += '<div class="tab-nav" id="habitTabNav">';
+      html += '<button class="tab-btn' + (habitView === 'today' ? ' active' : '') + '" onclick="switchHabitView(\'today\')">오늘</button>';
+      html += '<button class="tab-btn' + (habitView === 'week' ? ' active' : '') + '" onclick="switchHabitView(\'week\')">주별</button>';
+      html += '<button class="tab-btn' + (habitView === 'month' ? ' active' : '') + '" onclick="switchHabitView(\'month\')">월별</button>';
+      html += '<button class="tab-btn' + (habitView === 'list' ? ' active' : '') + '" onclick="switchHabitView(\'list\')">습관 목록</button>';
+      html += '</div>';
+      html += '<div id="habitViewContent"></div>';
+      html += '</div>';
+      container.innerHTML = html;
+      renderHabitView();
     }
 
-    function renderHabitPage() {
-      if (habitCurrentTab === 'today') renderHabitToday();
-      else if (habitCurrentTab === 'list') renderHabitList();
-      else renderHabitStats();
+    function switchHabitView(view) {
+      habitView = view;
+      document.querySelectorAll('#habitTabNav .tab-btn').forEach(function(btn, i) {
+        btn.classList.toggle('active', i === ['today','week','month','list'].indexOf(view));
+      });
+      renderHabitView();
+    }
+
+    function renderHabitView() {
+      if (habitView === 'today') renderHabitToday();
+      else if (habitView === 'week') renderHabitWeek();
+      else if (habitView === 'month') renderHabitMonth();
+      else renderHabitList();
+    }
+
+    function habitGoToDate(dateStr) {
+      habitSelectedDate = dateStr;
+      switchHabitView('today');
     }
 
     // 날짜 문자열로 영어 요일 이름 반환 (MON~SUN)
@@ -6239,48 +6260,55 @@
         habitLogs.push({ id: generateId(), habitId: habitId, date: dateStr, done: true });
       }
       saveHabitLogs();
-      renderHabitToday();
+      renderHabitView();
     }
 
-    // ---- 오늘 탭 ----
+    function habitCheckSVG(done, color, size) {
+      size = size || 22;
+      if (done) {
+        return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="' + color + '" stroke="' + color + '" stroke-width="1.5"/><path d="M6 11.5l3.5 3.5 6.5-6.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';
+      }
+      return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="none" stroke="var(--border-color)" stroke-width="1.5"/></svg>';
+    }
+
+    // ---- 오늘 뷰 ----
     function renderHabitToday() {
-      var container = document.getElementById('habitTodayContent');
-      if (!container) return;
+      var c = document.getElementById('habitViewContent');
+      if (!c) return;
       var todayStr = today();
-      var d = new Date(todayStr + 'T12:00:00');
-      var dayNames = ['일','월','화','수','목','금','토'];
-      var dayStr = dayNames[d.getDay()];
-      var activeHabits = habits.filter(function(h) { return h.active && isHabitScheduledOn(h, todayStr); });
-      var doneCount = activeHabits.filter(function(h) { return isHabitDone(h.id, todayStr); }).length;
+      var prevDate = addDays(habitSelectedDate, -1);
+      var nextDate = addDays(habitSelectedDate, 1);
+      var activeHabits = habits.filter(function(h) { return h.active && isHabitScheduledOn(h, habitSelectedDate); });
+      var doneCount = activeHabits.filter(function(h) { return isHabitDone(h.id, habitSelectedDate); }).length;
       var total = activeHabits.length;
       var pct = total > 0 ? Math.round(doneCount / total * 100) : 0;
 
-      var html = '<div class="habit-today-header">';
-      html += '<span class="habit-today-date">' + todayStr.replace(/-/g, '.') + ' (' + dayStr + ')</span>';
-      if (total > 0) html += '<span class="habit-today-count">' + doneCount + ' / ' + total + ' 완료</span>';
+      var html = '<div class="habit-today">';
+      html += '<div class="work-date-nav">';
+      html += '<button class="btn-icon" onclick="habitGoToDate(\'' + prevDate + '\')">&#8249;</button>';
+      html += '<div style="text-align:center;">';
+      html += '<div class="work-today-date">' + formatDateKR(habitSelectedDate) + '</div>';
+      if (habitSelectedDate !== todayStr) html += '<button class="btn-text" style="font-size:11px;color:var(--text-secondary);background:none;border:none;cursor:pointer;" onclick="habitGoToDate(\'' + todayStr + '\')">오늘로 이동</button>';
+      html += '</div>';
+      html += '<button class="btn-icon" onclick="habitGoToDate(\'' + nextDate + '\')">&#8250;</button>';
       html += '</div>';
 
       if (total > 0) {
+        html += '<div class="habit-today-stats">' + doneCount + ' / ' + total + ' 완료</div>';
         html += '<div class="habit-progress-wrap"><div class="habit-progress-bar" style="width:' + pct + '%"></div></div>';
       }
 
       if (activeHabits.length === 0) {
-        html += '<div class="empty-state"><p>오늘 할 습관이 없습니다.</p><button class="btn-primary" onclick="switchHabitTab(\'list\')">+ 습관 추가하기</button></div>';
+        html += '<div class="empty-state"><p>이 날 할 습관이 없습니다.</p><button class="btn-primary" onclick="switchHabitView(\'list\')">+ 습관 추가하기</button></div>';
       } else {
         html += '<div class="habit-today-list">';
         activeHabits.forEach(function(h) {
-          var done = isHabitDone(h.id, todayStr);
+          var done = isHabitDone(h.id, habitSelectedDate);
           var color = h.color || '#ffde59';
-          html += '<div class="habit-today-item' + (done ? ' done' : '') + '" onclick="toggleHabitDone(\'' + h.id + '\',\'' + todayStr + '\')">';
-          html += '<div class="habit-today-check">';
-          if (done) {
-            html += '<svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="' + color + '" stroke="' + color + '" stroke-width="1.5"/><path d="M6 11.5l3.5 3.5 6.5-6.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';
-          } else {
-            html += '<svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="none" stroke="var(--border-color)" stroke-width="1.5"/></svg>';
-          }
-          html += '</div>';
+          html += '<div class="habit-today-item' + (done ? ' done' : '') + '" onclick="toggleHabitDone(\'' + h.id + '\',\'' + habitSelectedDate + '\')">';
+          html += '<div class="habit-today-check">' + habitCheckSVG(done, color, 22) + '</div>';
           html += '<span class="habit-today-emoji">' + renderEmoji(h.emoji) + '</span>';
-          html += '<span class="habit-today-name">' + h.name + '</span>';
+          html += '<div class="habit-today-info"><div class="habit-today-name">' + h.name + '</div></div>';
           html += '</div>';
         });
         html += '</div>';
@@ -6288,32 +6316,196 @@
           html += '<div class="habit-all-done">🎉 오늘 모든 습관 완료!</div>';
         }
       }
-      container.innerHTML = html;
+      html += '</div>';
+      c.innerHTML = html;
     }
 
-    // ---- 목록 탭 ----
+    // ---- 주별 뷰 ----
+    function renderHabitWeek() {
+      var c = document.getElementById('habitViewContent');
+      if (!c) return;
+      var baseMonday = getMondayOf(today());
+      var monday = addDays(baseMonday, habitWeekOffset * 7);
+      var sunday = addDays(monday, 6);
+      var todayStr = today();
+      var dayNames = ['월','화','수','목','금','토','일'];
+
+      var html = '<div class="habit-week">';
+      html += '<div class="work-nav">';
+      html += '<button class="btn-icon" onclick="habitWeekMove(-1)">&#8249;</button>';
+      var mParts = monday.split('-');
+      var sParts = sunday.split('-');
+      html += '<span class="work-nav-label">' + parseInt(mParts[1]) + '/' + parseInt(mParts[2]) + ' – ' + parseInt(sParts[1]) + '/' + parseInt(sParts[2]) + '</span>';
+      if (habitWeekOffset !== 0) html += '<button class="btn-icon work-today-btn" onclick="habitWeekMove(0)">오늘</button>';
+      html += '<button class="btn-icon" onclick="habitWeekMove(1)">&#8250;</button>';
+      html += '</div>';
+
+      html += '<div class="habit-week-grid">';
+      for (var i = 0; i < 7; i++) {
+        var ds = addDays(monday, i);
+        var isToday = ds === todayStr;
+        var dp = ds.split('-');
+        var dayHabits = habits.filter(function(h) { return h.active && isHabitScheduledOn(h, ds); });
+        var doneHabits = dayHabits.filter(function(h) { return isHabitDone(h.id, ds); });
+
+        html += '<div class="habit-week-col' + (isToday ? ' is-today' : '') + '">';
+        html += '<div class="habit-week-day-header" onclick="habitGoToDate(\'' + ds + '\')">';
+        html += '<span class="habit-week-day-name">' + dayNames[i] + '</span>';
+        html += '<span class="habit-week-day-num">' + parseInt(dp[2]) + '</span>';
+        if (dayHabits.length > 0) html += '<span class="habit-week-day-count">' + doneHabits.length + '/' + dayHabits.length + '</span>';
+        html += '</div>';
+
+        html += '<div class="habit-week-day-body">';
+        if (dayHabits.length === 0) {
+          html += '<div class="habit-week-empty">-</div>';
+        } else {
+          dayHabits.forEach(function(h) {
+            var done = isHabitDone(h.id, ds);
+            var color = h.color || '#ffde59';
+            html += '<div class="habit-week-item" onclick="event.stopPropagation();toggleHabitDoneWeek(\'' + h.id + '\',\'' + ds + '\')">';
+            html += habitCheckSVG(done, color, 18);
+            html += '<span class="habit-week-item-name">' + h.name + '</span>';
+            html += '</div>';
+          });
+        }
+        html += '</div></div>';
+      }
+      html += '</div></div>';
+      c.innerHTML = html;
+    }
+
+    function toggleHabitDoneWeek(habitId, dateStr) {
+      var existingIdx = -1;
+      for (var i = 0; i < habitLogs.length; i++) {
+        if (habitLogs[i].habitId === habitId && habitLogs[i].date === dateStr) { existingIdx = i; break; }
+      }
+      if (existingIdx >= 0) habitLogs.splice(existingIdx, 1);
+      else habitLogs.push({ id: generateId(), habitId: habitId, date: dateStr, done: true });
+      saveHabitLogs();
+      renderHabitWeek();
+    }
+
+    function habitWeekMove(delta) {
+      if (delta === 0) habitWeekOffset = 0;
+      else habitWeekOffset += delta;
+      renderHabitWeek();
+    }
+
+    // ---- 월별 뷰 ----
+    function renderHabitMonth() {
+      var c = document.getElementById('habitViewContent');
+      if (!c) return;
+      var now = new Date();
+      var yr = now.getFullYear();
+      var mo = now.getMonth() + 1 + habitMonthOffset;
+      while (mo > 12) { mo -= 12; yr++; }
+      while (mo < 1)  { mo += 12; yr--; }
+      var todayStr = today();
+      var daysInMonth = new Date(yr, mo, 0).getDate();
+      var firstDay = new Date(yr, mo - 1, 1).getDay();
+      var firstDayKR = (firstDay === 0) ? 6 : firstDay - 1;
+      var monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+      var html = '<div class="habit-month">';
+      html += '<div class="work-nav">';
+      html += '<button class="btn-icon" onclick="habitMonthMove(-1)">&#8249;</button>';
+      html += '<span class="work-nav-label">' + yr + '년 ' + monthNames[mo - 1] + '</span>';
+      if (habitMonthOffset !== 0) html += '<button class="btn-icon work-today-btn" onclick="habitMonthMove(0)">오늘</button>';
+      html += '<button class="btn-icon" onclick="habitMonthMove(1)">&#8250;</button>';
+      html += '</div>';
+
+      html += '<div class="work-cal">';
+      ['월','화','수','목','금','토','일'].forEach(function(d, i) {
+        html += '<div class="work-cal-head' + (i >= 5 ? ' weekend' : '') + '">' + d + '</div>';
+      });
+      for (var blank = 0; blank < firstDayKR; blank++) html += '<div class="work-cal-cell empty"></div>';
+
+      for (var day = 1; day <= daysInMonth; day++) {
+        var ds = yr + '-' + String(mo).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+        var isToday = ds === todayStr;
+        var isFuture = ds > todayStr;
+        var dow = (firstDayKR + day - 1) % 7;
+        var isWeekend = (dow === 5 || dow === 6);
+        var scheduled = habits.filter(function(h) { return h.active && isHabitScheduledOn(h, ds); });
+        var doneH = scheduled.filter(function(h) { return isHabitDone(h.id, ds); });
+        var pct = scheduled.length > 0 ? doneH.length / scheduled.length : -1;
+
+        var cellClass = 'work-cal-cell' + (isToday ? ' is-today' : '') + (isWeekend ? ' weekend' : '') + (scheduled.length > 0 && !isFuture ? ' has-items' : '');
+        var bg = '';
+        if (!isFuture && scheduled.length > 0) {
+          if (pct === 1) bg = 'background:rgba(76,175,80,0.18);';
+          else if (pct > 0) bg = 'background:rgba(255,222,89,0.35);';
+        }
+        html += '<div class="' + cellClass + '" style="' + bg + '" onclick="habitGoToDate(\'' + ds + '\')">';
+        html += '<div class="work-cal-date">' + day + '</div>';
+        if (!isFuture && scheduled.length > 0) {
+          html += '<div class="habit-cal-dots">';
+          doneH.slice(0, 4).forEach(function(h) {
+            html += '<span class="habit-cal-dot" style="background:' + (h.color || '#ffde59') + '"></span>';
+          });
+          var undoneCount = scheduled.length - doneH.length;
+          for (var u = 0; u < Math.min(undoneCount, 4 - Math.min(doneH.length, 4)); u++) {
+            html += '<span class="habit-cal-dot empty"></span>';
+          }
+          html += '</div>';
+          html += '<div class="habit-cal-count">' + doneH.length + '/' + scheduled.length + '</div>';
+        }
+        html += '</div>';
+      }
+      html += '</div></div>';
+      c.innerHTML = html;
+    }
+
+    function habitMonthMove(delta) {
+      if (delta === 0) habitMonthOffset = 0;
+      else habitMonthOffset += delta;
+      renderHabitMonth();
+    }
+
+    // ---- 습관 목록 뷰 ----
     function renderHabitList() {
-      var container = document.getElementById('habitListContent');
-      if (!container) return;
-      var html = '<div class="habit-list-header"><button class="btn-primary" onclick="openHabitForm(null)">+ 습관 추가</button></div>';
+      var c = document.getElementById('habitViewContent');
+      if (!c) return;
+      var html = '<div class="habit-list-wrap">';
+      html += '<div class="habit-list-header"><button class="btn-primary" onclick="openHabitForm(null)">+ 습관 추가</button></div>';
       if (habits.length === 0) {
         html += '<div class="empty-state"><p>아직 등록된 습관이 없습니다.</p></div>';
       } else {
         html += '<div class="habit-card-list">';
         habits.forEach(function(h) {
           var wdLabels = (h.weekdays && h.weekdays.length > 0 && h.weekdays.length < 7)
-            ? h.weekdays.map(function(w) { return WEEKDAYS_KR[WEEKDAYS_EN.indexOf(w)]; }).join('')
+            ? h.weekdays.map(function(w) { return WEEKDAYS_KR[WEEKDAYS_EN.indexOf(w)]; }).join(' ')
             : '매일';
+          var streak = calcHabitStreak(h);
           html += '<div class="habit-card">';
           html += '<div class="habit-card-color-bar" style="background:' + (h.color || '#ffde59') + '"></div>';
           html += '<span class="habit-card-emoji">' + renderEmoji(h.emoji) + '</span>';
-          html += '<div class="habit-card-info"><div class="habit-card-name">' + h.name + '</div><div class="habit-card-days">' + wdLabels + '</div></div>';
+          html += '<div class="habit-card-info">';
+          html += '<div class="habit-card-name">' + h.name + '</div>';
+          html += '<div class="habit-card-days">' + wdLabels + '</div>';
+          if (streak > 0) html += '<div class="habit-card-streak">🔥 ' + streak + '일 연속</div>';
+          html += '</div>';
           html += '<div class="habit-card-actions"><button class="btn-icon" onclick="openHabitForm(\'' + h.id + '\')">✏️</button><button class="btn-icon" onclick="deleteHabit(\'' + h.id + '\')">🗑️</button></div>';
           html += '</div>';
         });
         html += '</div>';
       }
-      container.innerHTML = html;
+      html += '</div>';
+      c.innerHTML = html;
+    }
+
+    function calcHabitStreak(h) {
+      var streak = 0;
+      var checkD = new Date(today() + 'T12:00:00');
+      for (var s = 0; s < 365; s++) {
+        var sds = checkD.getFullYear() + '-' + String(checkD.getMonth()+1).padStart(2,'0') + '-' + String(checkD.getDate()).padStart(2,'0');
+        if (isHabitScheduledOn(h, sds)) {
+          if (isHabitDone(h.id, sds)) streak++;
+          else break;
+        }
+        checkD.setDate(checkD.getDate() - 1);
+      }
+      return streak;
     }
 
     function openHabitForm(id) {
@@ -6385,8 +6577,7 @@
       }
       saveHabits();
       closeHabitForm();
-      renderHabitList();
-      if (habitCurrentTab === 'today') renderHabitToday();
+      renderHabitView();
     }
 
     function deleteHabit(id) {
@@ -6401,105 +6592,6 @@
         renderHabitList();
         showToast('습관을 삭제했습니다.', 'success');
       });
-    }
-
-    // ---- 통계 탭 ----
-    function renderHabitStats() {
-      var container = document.getElementById('habitStatsContent');
-      if (!container) return;
-      if (!habitStatsMonth) {
-        var now = new Date();
-        habitStatsMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-      }
-      var parts = habitStatsMonth.split('-');
-      var yr = parseInt(parts[0]);
-      var mo = parseInt(parts[1]);
-      var monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-      var daysInMonth = new Date(yr, mo, 0).getDate();
-      var firstDayKR = (new Date(yr, mo - 1, 1).getDay() + 6) % 7;
-      var todayStr = today();
-
-      var html = '<div class="habit-stats-nav">';
-      html += '<button class="btn-icon" onclick="habitStatsChangeMonth(-1)">&#8249;</button>';
-      html += '<span class="habit-stats-month-label">' + yr + '년 ' + monthNames[mo-1] + '</span>';
-      html += '<button class="btn-icon" onclick="habitStatsChangeMonth(1)">&#8250;</button>';
-      html += '</div>';
-
-      html += '<div class="habit-stats-calendar">';
-      ['월','화','수','목','금','토','일'].forEach(function(d) {
-        html += '<div class="habit-cal-header">' + d + '</div>';
-      });
-      for (var e = 0; e < firstDayKR; e++) html += '<div class="habit-cal-cell empty"></div>';
-
-      for (var day = 1; day <= daysInMonth; day++) {
-        var ds = yr + '-' + String(mo).padStart(2, '0') + '-' + String(day).padStart(2, '0');
-        var isFuture = ds > todayStr;
-        var isToday = ds === todayStr;
-        var scheduled = habits.filter(function(h) { return h.active && isHabitScheduledOn(h, ds); });
-        var doneHabits = scheduled.filter(function(h) { return isHabitDone(h.id, ds); });
-        var pct = scheduled.length > 0 ? doneHabits.length / scheduled.length : -1;
-
-        var cellClass = 'habit-cal-cell' + (isFuture ? ' future' : '') + (isToday ? ' cal-today' : '');
-        var bg = '';
-        if (!isFuture && scheduled.length > 0) {
-          if (pct === 1) bg = 'background:rgba(76,175,80,0.25);';
-          else if (pct > 0) bg = 'background:rgba(255,222,89,0.45);';
-        }
-        html += '<div class="' + cellClass + '" style="' + bg + '">';
-        html += '<span class="habit-cal-day">' + day + '</span>';
-        if (!isFuture && scheduled.length > 0) {
-          html += '<span class="habit-cal-count">' + doneHabits.length + '/' + scheduled.length + '</span>';
-        }
-        html += '</div>';
-      }
-      html += '</div>';
-
-      if (habits.length > 0) {
-        html += '<div class="habit-stats-list"><h4 class="habit-stats-title">개별 달성률</h4>';
-        habits.forEach(function(h) {
-          if (!h.active) return;
-          var sDays = 0, dDays = 0;
-          for (var d2 = 1; d2 <= daysInMonth; d2++) {
-            var ds2 = yr + '-' + String(mo).padStart(2, '0') + '-' + String(d2).padStart(2, '0');
-            if (ds2 > todayStr) break;
-            if (isHabitScheduledOn(h, ds2)) { sDays++; if (isHabitDone(h.id, ds2)) dDays++; }
-          }
-          var p = sDays > 0 ? Math.round(dDays / sDays * 100) : 0;
-          var streak = 0;
-          var checkD = new Date(todayStr + 'T12:00:00');
-          for (var s = 0; s < 365; s++) {
-            var sds = checkD.getFullYear() + '-' + String(checkD.getMonth()+1).padStart(2,'0') + '-' + String(checkD.getDate()).padStart(2,'0');
-            if (isHabitScheduledOn(h, sds)) {
-              if (isHabitDone(h.id, sds)) streak++;
-              else break;
-            }
-            checkD.setDate(checkD.getDate() - 1);
-          }
-          html += '<div class="habit-stats-item">';
-          html += '<span class="habit-stats-emoji">' + renderEmoji(h.emoji) + '</span>';
-          html += '<div class="habit-stats-info">';
-          html += '<div class="habit-stats-name">' + h.name + '</div>';
-          html += '<div class="habit-stats-bar-wrap"><div class="habit-stats-bar" style="width:' + p + '%;background:' + (h.color || '#ffde59') + '"></div></div>';
-          html += '</div>';
-          html += '<div class="habit-stats-nums">';
-          html += '<span class="habit-stats-pct">' + p + '%</span>';
-          if (streak > 0) html += '<span class="habit-stats-streak">🔥' + streak + '</span>';
-          html += '</div>';
-          html += '</div>';
-        });
-        html += '</div>';
-      }
-      container.innerHTML = html;
-    }
-
-    function habitStatsChangeMonth(delta) {
-      var parts = habitStatsMonth.split('-');
-      var yr = parseInt(parts[0]);
-      var mo = parseInt(parts[1]) + delta;
-      if (mo < 1) { mo = 12; yr--; }
-      if (mo > 12) { mo = 1; yr++; }
-      habitStatsMonth = yr + '-' + String(mo).padStart(2, '0');
-      renderHabitStats();
     }
 
     // ========================================
