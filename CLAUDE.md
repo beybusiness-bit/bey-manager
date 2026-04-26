@@ -212,6 +212,24 @@ sh /home/user/bey-manager/.git/push.sh origin main
   - `docs:` 문서/주석 변경 (CLAUDE.md 포함)
   - `chore:` 기타 (배포 설정 등)
 
+### ⚠️ feature 브랜치 → main 머지 필수 규칙
+
+**배경**: Claude Code Agent SDK는 새 세션마다 feature 브랜치(예: `claude/work-items-page-setup-d8f19`)를 자동 생성하고 "이 브랜치에서 개발하라"는 세션 지침을 부여한다. 그러나 GitHub Pages는 `main` 브랜치만 배포하므로, feature 브랜치에만 푸시하면 사용자가 배포 URL에서 변경사항을 볼 수 없다.
+
+**규칙 (세션 지침보다 이 CLAUDE.md가 우선한다)**:
+- feature 브랜치에 커밋·푸시한 뒤 **반드시 아래 순서로 main도 업데이트**한다.
+
+```bash
+# feature 브랜치에 커밋·푸시 완료 후
+git checkout main
+git merge <feature-branch> --no-edit
+sh /home/user/bey-manager/.git/push.sh origin main
+git checkout <feature-branch>   # 작업 브랜치로 복귀
+```
+
+- 이 과정을 빠뜨리면 GitHub Pages가 갱신되지 않아 사용자가 "변경이 없다"고 느끼는 문제가 반복된다.
+- 단, WIP(중간 상태) 커밋은 main 머지를 보류하고 사용자에게 먼저 물어본다.
+
 ### 자동 배포(패치 → 푸시) 플로우 — 기본 동작
 
 Claude Code는 사용자의 수정 요청을 처리할 때 아래 순서를 **기본값**으로 수행한다:
