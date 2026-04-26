@@ -6510,9 +6510,11 @@
     var workMonthOffset = 0;
     var workSelectedDate = today();
     var workBasketPage = 1;
-    var workBasketPerPage = 10;
+    var workBasketPerPage = 12;
     var __workDragId = null;
     var __workDragSrcStatus = null;
+    var __workDragTargetId = null;
+    var __workDragInsertBefore = false;
     var __wieEmoji = {};
 
     var WORK_COLOR_PALETTE = [
@@ -6806,6 +6808,7 @@
 
     function workDragStart(event, id, status) {
       __workDragId = id; __workDragSrcStatus = status;
+      __workDragTargetId = null; __workDragInsertBefore = false;
       event.dataTransfer.effectAllowed = 'move';
       setTimeout(function() { var el = document.querySelector('.work-kanban-card[data-id="' + id + '"]'); if (el) el.style.opacity = '0.4'; }, 0);
     }
@@ -6814,18 +6817,37 @@
       if (el) el.style.opacity = '';
       document.querySelectorAll('.work-kanban-col.drag-over').forEach(function(c) { c.classList.remove('drag-over'); });
       document.querySelectorAll('.work-drop-indicator').forEach(function(d) { d.remove(); });
-      __workDragId = null; __workDragSrcStatus = null;
+      __workDragId = null; __workDragSrcStatus = null; __workDragTargetId = null;
     }
     function workDragOver(event) {
       event.preventDefault();
       event.dataTransfer.dropEffect = 'move';
       var col = event.currentTarget;
       col.classList.add('drag-over');
-      document.querySelectorAll('.work-kanban-col:not([data-status="' + col.dataset.status + '"]) .work-drop-indicator').forEach(function(d) { d.remove(); });
+      // Clear other columns' indicators
+      document.querySelectorAll('.work-kanban-col').forEach(function(c) {
+        if (c !== col) { c.classList.remove('drag-over'); c.querySelectorAll('.work-drop-indicator').forEach(function(d) { d.remove(); }); }
+      });
+      // Find hovered card
+      var targetCard = event.target.closest ? event.target.closest('.work-kanban-card') : null;
       var body = col.querySelector('.work-kanban-body');
-      if (body && !body.querySelector('.work-drop-indicator')) {
-        var line = document.createElement('div');
-        line.className = 'work-drop-indicator';
+      if (!body) return;
+      body.querySelectorAll('.work-drop-indicator').forEach(function(d) { d.remove(); });
+      var line = document.createElement('div');
+      line.className = 'work-drop-indicator';
+      if (targetCard && targetCard.dataset.id !== __workDragId) {
+        var rect = targetCard.getBoundingClientRect();
+        var insertBefore = event.clientY < (rect.top + rect.height / 2);
+        __workDragTargetId = targetCard.dataset.id;
+        __workDragInsertBefore = insertBefore;
+        if (insertBefore) {
+          body.insertBefore(line, targetCard);
+        } else {
+          body.insertBefore(line, targetCard.nextSibling);
+        }
+      } else {
+        __workDragTargetId = null;
+        __workDragInsertBefore = false;
         body.appendChild(line);
       }
     }
@@ -6840,24 +6862,39 @@
       event.preventDefault();
       var col = event.currentTarget;
       col.classList.remove('drag-over');
+      col.querySelectorAll('.work-drop-indicator').forEach(function(d) { d.remove(); });
       var targetStatus = col.dataset.status;
-      if (!__workDragId || !targetStatus || targetStatus === __workDragSrcStatus) return;
+      if (!__workDragId || !targetStatus) return;
       var item = workItems.find(function(it) { return it.id === __workDragId; });
       if (!item) return;
       var srcStatus = __workDragSrcStatus;
-      if (srcStatus === 'done' && targetStatus !== 'done' && item.date && !item.isBonus) {
-        var bonusUsed = getBonusUsedCount(item.date);
-        var completedCnt = getCompletedNormalCount(item.date);
-        if (completedCnt - 1 < bonusUsed) {
-          showToast('보너스 할일이 이 완료에 묶여 있어 완료 취소할 수 없습니다', 'warning');
-          return;
+
+      if (targetStatus !== srcStatus) {
+        // Cross-column: change status with bonus-lock check
+        if (srcStatus === 'done' && targetStatus !== 'done' && item.date && !item.isBonus) {
+          var bonusUsed = getBonusUsedCount(item.date);
+          var completedCnt = getCompletedNormalCount(item.date);
+          if (completedCnt - 1 < bonusUsed) {
+            showToast('보너스 할일이 이 완료에 묶여 있어 완료 취소할 수 없습니다', 'warning');
+            return;
+          }
         }
+        item.status = targetStatus;
+        item.completed = (targetStatus === 'done');
+        showToast(targetStatus === 'done' ? '✅ 완료!' : targetStatus === 'in-progress' ? '⏳ 진행 중' : '↩ 시작 전으로');
+      } else if (__workDragTargetId && __workDragTargetId !== __workDragId) {
+        // Within-column: reorder
+        var dragIdx = workItems.findIndex(function(it) { return it.id === __workDragId; });
+        workItems.splice(dragIdx, 1);
+        var targetIdx = workItems.findIndex(function(it) { return it.id === __workDragTargetId; });
+        var insertIdx = __workDragInsertBefore ? targetIdx : targetIdx + 1;
+        workItems.splice(insertIdx, 0, item);
+      } else {
+        return; // same column, same position — no change
       }
-      item.status = targetStatus;
-      item.completed = (targetStatus === 'done');
+
       saveWorkItems();
       renderWorkView();
-      showToast(targetStatus === 'done' ? '✅ 완료!' : targetStatus === 'in-progress' ? '⏳ 진행 중' : '↩ 시작 전으로');
     }
 
     // ── 단계 B: 할일 추가/수정/삭제/상세 ──
@@ -7149,11 +7186,10 @@
       var todayVal = today();
 
       function controlsRow(suffix) {
-        var s = suffix;
         var html = '<div class="basket-controls-row">';
-        html += '<input type="date" id="basketDateInput' + s + '" class="input-field basket-date-input" value="' + todayVal + '">';
-        html += '<button class="btn-confirm basket-assign-btn" onclick="basketAssignToDate(\'' + s + '\')">날짜에 추가</button>';
-        html += '<button class="work-add-btn basket-add-new-btn" onclick="openBasketNewItem()">+ 할일 추가</button>';
+        html += '<input type="date" id="basketDateInput' + suffix + '" class="basket-date-input" value="' + todayVal + '">';
+        html += '<button class="btn-confirm basket-assign-btn" onclick="basketAssignToDate(\'' + suffix + '\')">날짜에 추가</button>';
+        html += '<button class="basket-add-new-btn" onclick="openBasketNewItem()">+ 할일 추가</button>';
         html += '</div>';
         return html;
       }
@@ -7161,9 +7197,8 @@
       var html = '<div class="work-basket-tab">';
 
       if (total === 0) {
-        html += '<p style="font-size:13px;color:var(--text-secondary);margin:0 0 14px;">날짜 미정인 할일을 보관합니다.</p>';
         html += '<div class="work-empty-state"><div class="work-empty-icon">🧺</div><div class="work-empty-text">바구니가 비어있습니다</div></div>';
-        html += '<button class="work-add-btn" style="margin-top:12px;" onclick="openBasketNewItem()">+ 바구니에 할일 추가</button>';
+        html += '<button class="basket-add-new-btn" style="margin-top:16px;width:100%;" onclick="openBasketNewItem()">+ 할일 추가</button>';
       } else {
         html += controlsRow('top');
 
@@ -7172,23 +7207,22 @@
         html += '<span class="basket-selected-count" id="basketSelectedCount">0개 선택</span>';
         html += '</div>';
 
-        html += '<div class="basket-list">';
+        html += '<div class="basket-grid">';
         basketItems.forEach(function(item) {
           var status = getWorkStatus(item);
-          html += '<div class="basket-item-row">';
-          html += '<input type="checkbox" class="basket-item-check" value="' + item.id + '" onchange="basketUpdateSelection()">';
-          html += '<div class="basket-item-card" onclick="workToggleInlineEdit(\'' + item.id + '\')">';
-          html += '<span class="basket-item-emoji">' + (item.emoji || '📋') + '</span>';
-          html += '<span class="basket-item-title' + (status === 'done' ? ' done' : '') + '">' + escapeHtml(item.title) + '</span>';
-          if (item.memo) html += '<span class="basket-item-memo">' + escapeHtml(item.memo.substring(0, 30)) + (item.memo.length > 30 ? '…' : '') + '</span>';
-          html += '</div></div>';
+          html += '<div class="basket-grid-card" onclick="workToggleInlineEdit(\'' + item.id + '\')">';
+          html += '<input type="checkbox" class="basket-item-check basket-grid-check" value="' + item.id + '" onclick="event.stopPropagation()" onchange="basketUpdateSelection()">';
+          html += '<div class="basket-grid-emoji">' + (item.emoji || '📋') + '</div>';
+          html += '<div class="basket-grid-title' + (status === 'done' ? ' done' : '') + '">' + escapeHtml(item.title) + '</div>';
+          if (item.memo) html += '<div class="basket-grid-memo">' + escapeHtml(item.memo.substring(0, 24)) + (item.memo.length > 24 ? '…' : '') + '</div>';
+          html += '</div>';
         });
         html += '</div>';
 
         if (totalPages > 1) {
           html += buildGenericPagerBar({
             total: total, page: workBasketPage, perPage: workBasketPerPage,
-            perPageOpts: [5, 10, 20, 50],
+            perPageOpts: [8, 12, 20, 40],
             goFn: 'goBasketPage', setPerPageFn: 'setBasketPerPage'
           });
         }
@@ -7248,14 +7282,21 @@
       var normalSlots = Math.max(0, 3 - normalCount);
       var availBonus = getAvailableBonusSlots(targetDate);
       var totalSlots = normalSlots + availBonus;
+      var dp = targetDate.split('-');
+      var dateLabel = parseInt(dp[1]) + '/' + parseInt(dp[2]);
 
-      if (totalSlots === 0) {
-        showToast('이 날의 슬롯이 꽉 찼습니다', 'warning');
+      // 선택 개수 > 전체 슬롯 → 거부
+      if (ids.length > totalSlots) {
+        if (totalSlots === 0) {
+          showToast(dateLabel + '는 슬롯이 꽉 찼습니다', 'warning');
+        } else {
+          showToast(dateLabel + '에 ' + totalSlots + '개 슬롯만 남았습니다. 선택 개수(' + ids.length + '개)를 줄여주세요', 'warning');
+        }
         return;
       }
+
       var toNormal = ids.slice(0, normalSlots);
-      var toBonus = ids.slice(normalSlots, normalSlots + availBonus);
-      var skipped = ids.slice(normalSlots + availBonus);
+      var toBonus = ids.slice(normalSlots);
 
       function doAssign() {
         toNormal.forEach(function(id) {
@@ -7267,19 +7308,14 @@
           if (item) { item.date = targetDate; item.isBonus = true; }
         });
         saveWorkItems();
-        var total = toNormal.length + toBonus.length;
-        var dp = targetDate.split('-');
-        showToast(parseInt(dp[1]) + '/' + parseInt(dp[2]) + '에 ' + total + '개 배정했습니다');
-        if (skipped.length) showToast(skipped.length + '개는 슬롯 초과로 배정되지 않았습니다 — 다른 날짜로 시도하세요', 'warning');
-        workGoToDate(targetDate);
+        var assignedTotal = ids.length;
+        showToast('✅ ' + dateLabel + '에 ' + assignedTotal + '개 배정했습니다 — 오늘 탭에서 확인하세요');
+        workBasketPage = 1;
+        renderWorkView();
       }
 
-      if (toBonus.length > 0 && toNormal.length + toBonus.length < ids.length) {
-        showConfirm('보너스 포함 배정', toNormal.length + '개 일반 + ' + toBonus.length + '개 보너스로 배정합니다. 나머지 ' + skipped.length + '개는 바구니에 남습니다.', function(ok) { if (ok) doAssign(); });
-      } else if (toBonus.length > 0 && skipped.length === 0) {
-        showConfirm('보너스 할일 포함', toNormal.length + '개 일반 + ' + toBonus.length + '개 보너스로 배정합니다.', function(ok) { if (ok) doAssign(); });
-      } else if (skipped.length > 0) {
-        showConfirm('슬롯 부족', ids.length + '개 중 ' + totalSlots + '개만 배정 가능합니다. ' + totalSlots + '개만 추가할까요?', function(ok) { if (ok) doAssign(); });
+      if (toBonus.length > 0) {
+        showConfirm('보너스 할일 포함', dateLabel + '에 ' + toNormal.length + '개 일반 + ' + toBonus.length + '개 보너스로 배정합니다.', function(ok) { if (ok) doAssign(); });
       } else {
         doAssign();
       }
