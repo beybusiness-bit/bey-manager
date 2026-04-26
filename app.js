@@ -1301,7 +1301,7 @@
       const detailEl = document.getElementById('confirmDetail');
 
       titleEl.textContent = title;
-      messageEl.textContent = message;
+      messageEl.innerHTML = message;
       if (detailEl) {
         if (detailHtml) { detailEl.innerHTML = detailHtml; detailEl.style.display = ''; }
         else { detailEl.innerHTML = ''; detailEl.style.display = 'none'; }
@@ -1329,7 +1329,7 @@
       const messageEl = document.getElementById('alertMessage');
 
       titleEl.textContent = title;
-      messageEl.textContent = message;
+      messageEl.innerHTML = message;
       modal.classList.add('show');
       bringModalToFront(modal);
     }
@@ -1963,8 +1963,8 @@
       sorted.forEach(function(item) {
         if (item.type === 'group') {
           const sortedChildren = (item.children || []).slice().sort(function(a, b) { return a.order - b.order; });
-          html += '<div class="mm-group" draggable="true" data-group-id="' + item.id + '">';
-          html += '  <div class="mm-group-header">';
+          html += '<div class="mm-group" data-group-id="' + item.id + '">';
+          html += '  <div class="mm-group-header" draggable="true" data-group-id="' + item.id + '">';
           html += '    <span class="mm-drag-handle">⠿</span>';
           html += '    <button class="mm-emoji-btn" onclick="openMmEmojiPicker(&apos;group&apos;,&apos;' + item.id + '&apos;,&apos;&apos;)">' + renderEmoji(item.icon) + '</button>';
           html += '    <input class="mm-name-input" value="' + escapeHtml(item.name) + '" oninput="updateMmGroupName(&apos;' + item.id + '&apos;,this.value)" placeholder="대분류명">';
@@ -2009,21 +2009,22 @@
       if (!list) return;
 
       list.addEventListener('dragstart', function(e) {
-        var menuItem = e.target.closest('.mm-menu-item');
-        var group    = e.target.closest('.mm-group');
+        var origin = e.composedPath ? e.composedPath()[0] : e.target;
+        var menuItem    = e.target.closest('.mm-menu-item[draggable]');
+        var groupHeader = e.target.closest('.mm-group-header[draggable]');
         if (menuItem && list.contains(menuItem)) {
+          if (origin.tagName === 'INPUT') { e.preventDefault(); return; }
           __mmDrag.type = 'menu';
           __mmDrag.id = menuItem.dataset.menuId;
           __mmDrag.groupId = menuItem.dataset.groupId;
           menuItem.classList.add('mm-dragging');
           e.dataTransfer.effectAllowed = 'move';
           e.stopPropagation();
-        } else if (group && list.contains(group)) {
-          // only allow drag if starting on header
-          if (!e.target.closest('.mm-group-header')) { e.preventDefault(); return; }
+        } else if (groupHeader && list.contains(groupHeader)) {
+          if (origin.tagName === 'INPUT') { e.preventDefault(); return; }
           __mmDrag.type = 'group';
-          __mmDrag.id = group.dataset.groupId;
-          group.classList.add('mm-dragging');
+          __mmDrag.id = groupHeader.dataset.groupId;
+          groupHeader.closest('.mm-group').classList.add('mm-dragging');
           e.dataTransfer.effectAllowed = 'move';
         }
       });
@@ -2196,10 +2197,10 @@
       var g = menuDraft.find(function(m) { return m.id === groupId; });
       if (!g) return;
       if (g.children && g.children.length > 0) {
-        showAlert('삭제 불가', '소속된 메뉴가 있어서 삭제할 수 없습니다.<br>메뉴를 모두 다른 대분류로 이동하거나 삭제한 후 시도해주세요.');
+        showAlert('삭제 불가', '소속된 메뉴가 있어서 삭제할 수 없습니다.<br>메뉴를 모두 다른 대분류로 이동하거나 삭제한 후 시도해 주세요.');
         return;
       }
-      showConfirm('대분류 삭제', '&quot;' + escapeHtml(g.name) + '&quot; 대분류를 삭제하시겠습니까?', function() {
+      showConfirm('대분류 삭제', '"' + escapeHtml(g.name) + '" 대분류를 삭제하시겠습니까?', function() {
         menuDraft = menuDraft.filter(function(m) { return m.id !== groupId; });
         menuDraft.forEach(function(m, i) { m.order = i; });
         renderMenuManager();
@@ -2226,7 +2227,7 @@
       if (!g || !g.children) return;
       var item = g.children.find(function(c) { return c.id === menuId; });
       if (!item) return;
-      showConfirm('메뉴 삭제', '&quot;' + escapeHtml(item.name) + '&quot; 메뉴를 삭제하시겠습니까?', function() {
+      showConfirm('메뉴 삭제', '"' + escapeHtml(item.name) + '" 메뉴를 삭제하시겠습니까?', function() {
         g.children = g.children.filter(function(c) { return c.id !== menuId; });
         g.children.forEach(function(c, i) { c.order = i; });
         renderMenuManager();
