@@ -7029,12 +7029,22 @@
     function deleteWorkItem(id) {
       var item = workItems.find(function(it) { return it.id === id; });
       if (!item) return;
+      // 완료된 일반 할일 삭제 시 보너스 잠금 체크
+      if (item.date && !item.isBonus && getWorkStatus(item) === 'done') {
+        var bonusUsed = getBonusUsedCount(item.date);
+        var completedCnt = getCompletedNormalCount(item.date);
+        if (completedCnt - 1 < bonusUsed) {
+          showToast('보너스 할일이 이 완료에 묶여 있어 삭제할 수 없습니다', 'warning');
+          return;
+        }
+      }
       showConfirm('할일 삭제', '&quot;' + escapeHtml(item.title) + '&quot;을(를) 삭제하시겠습니까?', function(ok) {
         if (!ok) return;
         workItems = workItems.filter(function(it) { return it.id !== id; });
         saveWorkItems();
         closeWorkDetailModal();
         closeWorkItemModal();
+        workCloseInlineEdit();
         renderWorkView();
         showToast('할일을 삭제했습니다');
       });
