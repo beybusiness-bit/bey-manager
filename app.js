@@ -6509,6 +6509,8 @@
     var workWeekOffset = 0;
     var workMonthOffset = 0;
     var workSelectedDate = today();
+    var workBasketPage = 1;
+    var workBasketPerPage = 10;
     var __workDragId = null;
     var __workDragSrcStatus = null;
     var __wieEmoji = {};
@@ -6617,7 +6619,7 @@
       html += '<button class="tab-btn' + (workView === 'today' ? ' active' : '') + '" onclick="switchWorkView(\'today\')">오늘</button>';
       html += '<button class="tab-btn' + (workView === 'week' ? ' active' : '') + '" onclick="switchWorkView(\'week\')">주별</button>';
       html += '<button class="tab-btn' + (workView === 'month' ? ' active' : '') + '" onclick="switchWorkView(\'month\')">월별</button>';
-      html += '<button class="tab-btn' + (workView === 'basket' ? ' active' : '') + '" onclick="switchWorkView(\'basket\')">🧺 바구니' + (basketCount > 0 ? ' <span class="work-basket-tab-count">' + basketCount + '</span>' : '') + '</button>';
+      html += '<button class="tab-btn' + (workView === 'basket' ? ' active' : '') + '" onclick="switchWorkView(\'basket\')">🧺 할일 바구니' + (basketCount > 0 ? ' <span class="work-basket-tab-count">' + basketCount + '</span>' : '') + '</button>';
       html += '</div>';
       html += '<div id="workViewContent"></div>';
       html += '</div>';
@@ -6716,16 +6718,14 @@
         html += '<div class="work-kanban-body">';
         col.items.forEach(function(item) { html += renderWorkKanbanCard(item); });
         if (col.items.length === 0) html += '<div class="work-kanban-empty">없음</div>';
+        if (col.status === 'pending') {
+          if (canAddNormal) html += '<button class="work-add-btn" onclick="showAddWorkItemModal(\'' + workSelectedDate + '\')">+ 할일 추가</button>';
+          if (availBonus > 0) html += '<button class="work-add-btn work-add-bonus-btn" onclick="showAddBonusWorkItem(\'' + workSelectedDate + '\')">⭐ 보너스 할일 추가 (' + availBonus + '개)</button>';
+        }
         html += '</div>';
         html += '</div>';
       });
       html += '</div>';
-
-      if (canAddNormal) {
-        html += '<button class="work-add-btn" onclick="showAddWorkItemModal(\'' + workSelectedDate + '\')">+ 할일 추가</button>';
-      } else if (availBonus > 0) {
-        html += '<button class="work-add-btn" style="border-color:#fdcb6e;color:#b8860b;" onclick="showAddWorkItemModal(\'' + workSelectedDate + '\')">⭐ 보너스 할일 추가 (' + availBonus + '개 가능)</button>';
-      }
       html += '</div>';
       c.innerHTML = html;
     }
@@ -6749,17 +6749,17 @@
       var cardEl = document.querySelector('.work-kanban-card[data-id="' + id + '"]');
       if (!cardEl) return;
       var editHtml = '<div class="work-inline-edit" data-edit-id="' + id + '">'
-        + '<div style="display:flex;gap:8px;margin-bottom:10px;">'
-        + '<button class="work-form-emoji-btn" style="font-size:20px;width:40px;height:40px;flex-shrink:0;" onclick="event.stopPropagation();workInlinePickEmoji(\'' + id + '\')" id="wieEBtn_' + id + '">' + (item.emoji || '📋') + '</button>'
-        + '<input class="input-field" style="flex:1;height:40px;" id="wieTitle_' + id + '" value="' + escapeHtml(item.title) + '"'
+        + '<div class="work-form-row" style="margin-bottom:8px;">'
+        + '<button class="work-form-emoji-btn" onclick="event.stopPropagation();workInlinePickEmoji(\'' + id + '\')" id="wieEBtn_' + id + '">' + (item.emoji || '📋') + '</button>'
+        + '<input class="input-field work-form-input" id="wieTitle_' + id + '" placeholder="할일 제목" value="' + escapeHtml(item.title) + '"'
         + ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();workSaveInlineEdit(\'' + id + '\');}if(event.key===\'Escape\')workCloseInlineEdit()">'
         + '</div>'
-        + '<textarea class="input-field" style="width:100%;box-sizing:border-box;resize:none;font-size:12px;min-height:54px;" rows="2" id="wieMemo_' + id + '" placeholder="메모">' + escapeHtml(item.memo || '') + '</textarea>'
-        + '<div style="display:flex;gap:8px;margin-top:8px;justify-content:space-between;flex-wrap:wrap;">'
-        + '<button class="btn-cancel work-delete-btn" style="padding:6px 10px;font-size:12px;" onclick="deleteWorkItem(\'' + id + '\')">삭제</button>'
+        + '<textarea class="input-field" style="width:100%;box-sizing:border-box;resize:none;min-height:52px;" rows="2" id="wieMemo_' + id + '" placeholder="메모 (선택)">' + escapeHtml(item.memo || '') + '</textarea>'
+        + '<div class="work-form-row" style="margin-top:10px;justify-content:space-between;">'
+        + '<button class="btn-cancel work-delete-btn" onclick="deleteWorkItem(\'' + id + '\')">삭제</button>'
         + '<div style="display:flex;gap:6px;">'
-        + '<button class="btn-cancel" style="padding:6px 10px;font-size:12px;" onclick="workCloseInlineEdit()">취소</button>'
-        + '<button class="btn-confirm" style="padding:6px 10px;font-size:12px;" onclick="workSaveInlineEdit(\'' + id + '\')">저장</button>'
+        + '<button class="btn-cancel" onclick="workCloseInlineEdit()">취소</button>'
+        + '<button class="btn-confirm" onclick="workSaveInlineEdit(\'' + id + '\')">저장</button>'
         + '</div></div></div>';
       var tmp = document.createElement('div');
       tmp.innerHTML = editHtml;
@@ -6813,15 +6813,28 @@
       var el = document.querySelector('.work-kanban-card[data-id="' + __workDragId + '"]');
       if (el) el.style.opacity = '';
       document.querySelectorAll('.work-kanban-col.drag-over').forEach(function(c) { c.classList.remove('drag-over'); });
+      document.querySelectorAll('.work-drop-indicator').forEach(function(d) { d.remove(); });
       __workDragId = null; __workDragSrcStatus = null;
     }
     function workDragOver(event) {
       event.preventDefault();
       event.dataTransfer.dropEffect = 'move';
-      event.currentTarget.classList.add('drag-over');
+      var col = event.currentTarget;
+      col.classList.add('drag-over');
+      document.querySelectorAll('.work-kanban-col:not([data-status="' + col.dataset.status + '"]) .work-drop-indicator').forEach(function(d) { d.remove(); });
+      var body = col.querySelector('.work-kanban-body');
+      if (body && !body.querySelector('.work-drop-indicator')) {
+        var line = document.createElement('div');
+        line.className = 'work-drop-indicator';
+        body.appendChild(line);
+      }
     }
     function workDragLeave(event) {
-      event.currentTarget.classList.remove('drag-over');
+      var col = event.currentTarget;
+      if (!col.contains(event.relatedTarget)) {
+        col.classList.remove('drag-over');
+        col.querySelectorAll('.work-drop-indicator').forEach(function(d) { d.remove(); });
+      }
     }
     function workDrop(event) {
       event.preventDefault();
@@ -6867,6 +6880,10 @@
         }
       }
       openWorkItemModal(targetDate, false);
+    }
+
+    function showAddBonusWorkItem(dateStr) {
+      openWorkItemModal(dateStr, true);
     }
 
     function openWorkItemModal(dateStr, isBonus) {
@@ -7123,43 +7140,80 @@
     function renderWorkBasketTab() {
       var c = document.getElementById('workViewContent');
       if (!c) return;
-      var basketItems = workItems.filter(function(it) { return !it.date; });
+      var allBasket = workItems.filter(function(it) { return !it.date; });
+      var total = allBasket.length;
+      var totalPages = Math.max(1, Math.ceil(total / workBasketPerPage));
+      if (workBasketPage > totalPages) workBasketPage = totalPages;
+      var start = (workBasketPage - 1) * workBasketPerPage;
+      var basketItems = allBasket.slice(start, start + workBasketPerPage);
+      var todayVal = today();
 
-      var html = '<div class="work-basket-tab">';
-      html += '<p style="font-size:13px;color:var(--text-secondary);margin:0 0 14px;">날짜 미정인 할일을 보관합니다. 날짜에 추가 버튼으로 배정하세요.</p>';
-
-      if (basketItems.length === 0) {
-        html += '<div class="work-empty-state"><div class="work-empty-icon">🧺</div><div class="work-empty-text">바구니가 비어있습니다</div></div>';
-      } else {
-        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
-        html += '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">';
-        html += '<input type="checkbox" id="basketSelectAll" onchange="basketToggleAll(this.checked)"> 전체 선택</label>';
-        html += '<span style="font-size:12px;color:var(--text-secondary);margin-left:auto;" id="basketSelectedCount">0개 선택</span>';
+      function controlsRow(suffix) {
+        var s = suffix;
+        var html = '<div class="basket-controls-row">';
+        html += '<input type="date" id="basketDateInput' + s + '" class="input-field basket-date-input" value="' + todayVal + '">';
+        html += '<button class="btn-confirm basket-assign-btn" onclick="basketAssignToDate(\'' + s + '\')">날짜에 추가</button>';
+        html += '<button class="work-add-btn basket-add-new-btn" onclick="openBasketNewItem()">+ 할일 추가</button>';
         html += '</div>';
-        html += '<div>';
-        basketItems.forEach(function(item) {
-          html += '<div class="basket-item-row">';
-          html += '<input type="checkbox" class="basket-item-check" value="' + item.id + '" onchange="basketUpdateSelection()">';
-          html += '<div class="work-kanban-card" style="flex:1;margin:0;cursor:pointer;" onclick="workToggleInlineEdit(\'' + item.id + '\')">';
-          html += '<div style="display:flex;align-items:center;gap:8px;">';
-          html += '<span style="font-size:20px;">' + (item.emoji || '📋') + '</span>';
-          html += '<div style="flex:1;min-width:0;"><div class="work-kanban-title">' + escapeHtml(item.title) + '</div>';
-          if (item.memo) html += '<div class="work-kanban-memo">' + escapeHtml(item.memo.substring(0, 40)) + (item.memo.length > 40 ? '…' : '') + '</div>';
-          html += '</div></div></div></div>';
-        });
-        html += '</div>';
+        return html;
       }
 
-      html += '<div class="work-basket-assign" id="basketAssignArea"' + (basketItems.length === 0 ? ' style="display:none"' : '') + '>';
-      html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">';
-      html += '<input type="date" id="basketDateInput" class="input-field" style="height:36px;flex:1;min-width:120px;" value="' + today() + '">';
-      html += '<button class="btn-confirm" style="padding:8px 16px;" onclick="basketAssignToDate()">날짜에 추가</button>';
-      html += '</div></div>';
+      var html = '<div class="work-basket-tab">';
 
-      html += '<button class="work-add-btn" style="margin-top:12px;" onclick="openBasketNewItem()">+ 바구니에 할일 추가</button>';
+      if (total === 0) {
+        html += '<p style="font-size:13px;color:var(--text-secondary);margin:0 0 14px;">날짜 미정인 할일을 보관합니다.</p>';
+        html += '<div class="work-empty-state"><div class="work-empty-icon">🧺</div><div class="work-empty-text">바구니가 비어있습니다</div></div>';
+        html += '<button class="work-add-btn" style="margin-top:12px;" onclick="openBasketNewItem()">+ 바구니에 할일 추가</button>';
+      } else {
+        html += controlsRow('top');
+
+        html += '<div class="basket-select-bar">';
+        html += '<label class="basket-select-all-label"><input type="checkbox" id="basketSelectAll" onchange="basketToggleAll(this.checked)"> 전체 선택</label>';
+        html += '<span class="basket-selected-count" id="basketSelectedCount">0개 선택</span>';
+        html += '</div>';
+
+        html += '<div class="basket-list">';
+        basketItems.forEach(function(item) {
+          var status = getWorkStatus(item);
+          html += '<div class="basket-item-row">';
+          html += '<input type="checkbox" class="basket-item-check" value="' + item.id + '" onchange="basketUpdateSelection()">';
+          html += '<div class="basket-item-card" onclick="workToggleInlineEdit(\'' + item.id + '\')">';
+          html += '<span class="basket-item-emoji">' + (item.emoji || '📋') + '</span>';
+          html += '<span class="basket-item-title' + (status === 'done' ? ' done' : '') + '">' + escapeHtml(item.title) + '</span>';
+          if (item.memo) html += '<span class="basket-item-memo">' + escapeHtml(item.memo.substring(0, 30)) + (item.memo.length > 30 ? '…' : '') + '</span>';
+          html += '</div></div>';
+        });
+        html += '</div>';
+
+        if (totalPages > 1) {
+          html += buildGenericPagerBar({
+            total: total, page: workBasketPage, perPage: workBasketPerPage,
+            perPageOpts: [5, 10, 20, 50],
+            goFn: 'goBasketPage', setPerPageFn: 'setBasketPerPage'
+          });
+        }
+
+        html += controlsRow('bot');
+      }
+
       html += '</div>';
       c.innerHTML = html;
-      if (basketItems.length > 0) basketUpdateSelection();
+      if (total > 0) basketUpdateSelection();
+    }
+
+    function goBasketPage(page) {
+      var total = workItems.filter(function(it) { return !it.date; }).length;
+      var totalPages = Math.max(1, Math.ceil(total / workBasketPerPage));
+      page = parseInt(page, 10);
+      if (isNaN(page) || page < 1 || page > totalPages) return;
+      workBasketPage = page;
+      renderWorkBasketTab();
+    }
+
+    function setBasketPerPage(val) {
+      workBasketPerPage = parseInt(val, 10) || 10;
+      workBasketPage = 1;
+      renderWorkBasketTab();
     }
 
     function basketToggleAll(checked) {
@@ -7183,8 +7237,9 @@
       return ids;
     }
 
-    function basketAssignToDate() {
-      var dateInput = document.getElementById('basketDateInput');
+    function basketAssignToDate(suffix) {
+      var sfx = suffix || 'top';
+      var dateInput = document.getElementById('basketDateInput' + sfx);
       if (!dateInput || !dateInput.value) { showToast('날짜를 선택하세요', 'warning'); return; }
       var ids = basketGetSelectedIds();
       if (!ids.length) { showToast('배정할 항목을 선택하세요', 'warning'); return; }
@@ -7196,7 +7251,7 @@
 
       if (totalSlots === 0) {
         showToast('이 날의 슬롯이 꽉 찼습니다', 'warning');
-        return; // 선택 유지
+        return;
       }
       var toNormal = ids.slice(0, normalSlots);
       var toBonus = ids.slice(normalSlots, normalSlots + availBonus);
@@ -7212,11 +7267,11 @@
           if (item) { item.date = targetDate; item.isBonus = true; }
         });
         saveWorkItems();
-        renderWorkView();
         var total = toNormal.length + toBonus.length;
         var dp = targetDate.split('-');
         showToast(parseInt(dp[1]) + '/' + parseInt(dp[2]) + '에 ' + total + '개 배정했습니다');
         if (skipped.length) showToast(skipped.length + '개는 슬롯 초과로 배정되지 않았습니다 — 다른 날짜로 시도하세요', 'warning');
+        workGoToDate(targetDate);
       }
 
       if (toBonus.length > 0 && toNormal.length + toBonus.length < ids.length) {
