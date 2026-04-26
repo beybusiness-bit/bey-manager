@@ -923,17 +923,8 @@
       transition: box-shadow 0.15s;
     }
     .mm-group.mm-dragging { opacity: 0.4; }
-    .mm-group.mm-insert-before::before,
-    .mm-group.mm-insert-after::after {
-      content: '';
-      display: block;
-      height: 3px;
-      background: var(--primary-yellow);
-      border-radius: 2px;
-      margin: 0 4px;
-    }
-    .mm-group.mm-insert-before::before { margin-bottom: 6px; }
-    .mm-group.mm-insert-after::after   { margin-top: 6px; }
+    .mm-group.mm-insert-before { box-shadow: 0 -4px 0 0 var(--primary-yellow); }
+    .mm-group.mm-insert-after  { box-shadow: 0  4px 0 0 var(--primary-yellow); }
 
     .mm-group-header {
       display: flex; align-items: center; gap: 8px;
@@ -1025,17 +1016,8 @@
     }
     .mm-menu-item:active { cursor: grabbing; }
     .mm-menu-item.mm-dragging { opacity: 0.4; }
-    .mm-menu-item.mm-insert-before::before,
-    .mm-menu-item.mm-insert-after::after {
-      content: '';
-      display: block;
-      height: 2px;
-      background: var(--primary-yellow);
-      border-radius: 2px;
-      margin: 0 2px;
-    }
-    .mm-menu-item.mm-insert-before::before { margin-bottom: 4px; }
-    .mm-menu-item.mm-insert-after::after   { margin-top: 4px; }
+    .mm-menu-item.mm-insert-before { box-shadow: 0 -3px 0 0 var(--primary-yellow); }
+    .mm-menu-item.mm-insert-after  { box-shadow: 0  3px 0 0 var(--primary-yellow); }
 
     /* 메뉴 추가 버튼 */
     .mm-add-menu-btn {

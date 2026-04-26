@@ -1706,6 +1706,29 @@
       }
       walkRename(menus);
       if (migrated) saveMenus();
+
+      // 마이그레이션: "조난 구조 중" 그룹에 "일"·"습관" 페이지 추가 (1회)
+      if (!localStorage.getItem('menuMig_sosPages')) {
+        var sosGrp = menus.find(function(m) { return m.type === 'group' && m.name === '조난 구조 중'; });
+        if (sosGrp) {
+          if (!sosGrp.children) sosGrp.children = [];
+          var slugs = sosGrp.children.map(function(c) { return c.slug; });
+          var added = false;
+          if (slugs.indexOf('work') === -1) {
+            sosGrp.children.push({ id: 'work-sos', type: 'page', icon: '💼', name: '일', slug: 'work', order: sosGrp.children.length });
+            added = true;
+          }
+          if (slugs.indexOf('habit') === -1) {
+            sosGrp.children.push({ id: 'habit-sos', type: 'page', icon: '✅', name: '습관', slug: 'habit', order: sosGrp.children.length });
+            added = true;
+          }
+          if (added) {
+            sosGrp.children.forEach(function(c, i) { c.order = i; });
+            saveMenus();
+          }
+        }
+        localStorage.setItem('menuMig_sosPages', '1');
+      }
     }
 
     function saveMenus() {
@@ -1725,14 +1748,7 @@
     }
 
     function loadExpandedGroups() {
-      const saved = localStorage.getItem('expandedGroups');
-      if (saved) {
-        try {
-          expandedGroups = JSON.parse(saved);
-        } catch (e) {
-          expandedGroups = [];
-        }
-      }
+      expandedGroups = []; // 항상 접힌 상태로 시작
     }
 
     function loadSidebarState() {
@@ -1862,7 +1878,7 @@
       } else {
         expandedGroups.push(groupId);
       }
-      localStorage.setItem('expandedGroups', JSON.stringify(expandedGroups));
+      // expandedGroups는 세션 내 메모리만 유지 — 새로고침 시 항상 접힌 상태로 시작
       renderSidebar();
     }
 
