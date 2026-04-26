@@ -6508,6 +6508,8 @@
     }
 
     var workItems = [];
+    var workItemDraft = null;
+    var workItemEditId = null;
 
     function loadWorkItems() {
       try { workItems = JSON.parse(localStorage.getItem('workItems') || '[]'); }
@@ -6630,6 +6632,15 @@
         bonusItems.forEach(function(item) { html += renderWorkItemCard(item); });
         html += '</div>';
       }
+
+      // "+ 할일 추가" 버튼
+      var canAdd = normalItems.length < 3;
+      var canBonus = !canAdd && bonusItems.length === 0 &&
+        workItems.filter(function(it) { return it.date === workSelectedDate && it.completed; }).length > 0;
+      if (canAdd || canBonus) {
+        html += '<button class="work-add-btn" onclick="showAddWorkItemModal(\'' + workSelectedDate + '\')">'
+          + (canBonus ? '⭐ 보너스 할일 추가' : '+ 할일 추가') + '</button>';
+      }
       html += '</div>';
       c.innerHTML = html;
     }
@@ -6648,8 +6659,164 @@
       showToast(item.completed ? '✅ 완료 처리했습니다' : '↩ 완료 취소했습니다');
     }
 
+    // ── 단계 B: 할일 추가/수정/삭제/상세 ──
+
+    function showAddWorkItemModal(dateStr) {
+      var targetDate = dateStr || null;
+      if (targetDate) {
+        var normalItems = workItems.filter(function(it) { return it.date === targetDate && !it.isBonus; });
+        if (normalItems.length >= 3) {
+          var completedCount = workItems.filter(function(it) { return it.date === targetDate && it.completed; }).length;
+          if (completedCount === 0) {
+            showToast('이 날의 할일이 꽉 찼습니다 (최대 3개)', 'warning');
+            return;
+          }
+          var bonusItems = workItems.filter(function(it) { return it.date === targetDate && it.isBonus; });
+          if (bonusItems.length >= 1) {
+            showToast('보너스 할일도 이미 추가되어 있습니다', 'warning');
+            return;
+          }
+          showConfirm('보너스 할일', '3개가 모두 찼지만 완료한 할일이 있어서 보너스 할일을 1개 더 추가할 수 있습니다.', function(ok) {
+            if (!ok) return;
+            openWorkItemModal(targetDate, true);
+          });
+          return;
+        }
+      }
+      openWorkItemModal(targetDate, false);
+    }
+
+    function openWorkItemModal(dateStr, isBonus) {
+      workItemDraft = { emoji: '📋', color: null, isBonus: !!isBonus, date: dateStr || null };
+      workItemEditId = null;
+      var modal = document.getElementById('workItemModal');
+      document.getElementById('workItemModalTitle').textContent = isBonus ? '⭐ 보너스 할일 추가' : '할일 추가';
+      document.getElementById('workEmojiBtn').innerHTML = '📋';
+      document.getElementById('workTitleInput').value = '';
+      document.getElementById('workDurationInput').value = '';
+      document.getElementById('workMemoInput').value = '';
+      modal.style.display = 'flex';
+      bringModalToFront(modal);
+      setTimeout(function() { document.getElementById('workTitleInput').focus(); }, 50);
+    }
+
+    function showEditWorkItemModal(id) {
+      var item = workItems.find(function(it) { return it.id === id; });
+      if (!item) return;
+      workItemDraft = JSON.parse(JSON.stringify(item));
+      workItemEditId = id;
+      var modal = document.getElementById('workItemModal');
+      document.getElementById('workItemModalTitle').textContent = '할일 수정';
+      document.getElementById('workEmojiBtn').innerHTML = renderEmoji(item.emoji || '📋');
+      document.getElementById('workTitleInput').value = item.title || '';
+      document.getElementById('workDurationInput').value = item.duration || '';
+      document.getElementById('workMemoInput').value = item.memo || '';
+      closeWorkDetailModal();
+      modal.style.display = 'flex';
+      bringModalToFront(modal);
+      setTimeout(function() { document.getElementById('workTitleInput').focus(); }, 50);
+    }
+
+    function closeWorkItemModal() {
+      var modal = document.getElementById('workItemModal');
+      if (modal) modal.style.display = 'none';
+      workItemDraft = null;
+      workItemEditId = null;
+    }
+
+    function saveWorkItem() {
+      var title = document.getElementById('workTitleInput').value.trim();
+      if (!title) { showToast('할일 제목을 입력해주세요', 'warning'); return; }
+      var duration = parseInt(document.getElementById('workDurationInput').value) || null;
+      var memo = document.getElementById('workMemoInput').value.trim();
+      if (workItemEditId) {
+        var item = workItems.find(function(it) { return it.id === workItemEditId; });
+        if (item) {
+          item.title = title;
+          item.emoji = workItemDraft ? (workItemDraft.emoji || '📋') : item.emoji;
+          item.color = emojiToWorkColor(item.emoji);
+          item.duration = duration;
+          item.memo = memo;
+        }
+        showToast('할일을 수정했습니다');
+      } else {
+        var newItem = {
+          id: 'w' + Date.now(),
+          emoji: workItemDraft ? (workItemDraft.emoji || '📋') : '📋',
+          color: null,
+          title: title,
+          date: workItemDraft ? workItemDraft.date : null,
+          completed: false,
+          duration: duration,
+          memo: memo,
+          isBonus: workItemDraft ? !!workItemDraft.isBonus : false,
+          createdAt: today()
+        };
+        newItem.color = emojiToWorkColor(newItem.emoji);
+        workItems.push(newItem);
+        showToast('할일을 추가했습니다');
+      }
+      saveWorkItems();
+      closeWorkItemModal();
+      renderWorkView();
+    }
+
     function showWorkItemDetail(id) {
-      // Stage B에서 구현
+      var item = workItems.find(function(it) { return it.id === id; });
+      if (!item) return;
+      var html = '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">';
+      html += '<div style="font-size:38px;line-height:1;">' + renderEmoji(item.emoji || '📋') + '</div>';
+      html += '<div style="flex:1;min-width:0;">';
+      if (item.isBonus) html += '<div style="font-size:11px;color:#fdcb6e;font-weight:700;margin-bottom:3px;">⭐ 보너스</div>';
+      html += '<div style="font-size:16px;font-weight:700;word-break:break-word;' + (item.completed ? 'text-decoration:line-through;opacity:.55;' : '') + '">' + escapeHtml(item.title) + '</div>';
+      if (item.date) html += '<div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">' + formatDateKR(item.date) + '</div>';
+      html += '</div></div>';
+      if (item.duration) html += '<div style="margin-bottom:10px;font-size:13px;"><span style="color:var(--text-secondary);">⏱ 소요 시간</span>&nbsp; ' + item.duration + '분</div>';
+      if (item.memo) html += '<div style="background:var(--bg-main);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.65;white-space:pre-wrap;">' + escapeHtml(item.memo) + '</div>';
+      var detailDiv = document.getElementById('workDetailContent');
+      if (detailDiv) detailDiv.innerHTML = html;
+      var toggleBtn = document.getElementById('workDetailToggleBtn');
+      if (toggleBtn) {
+        toggleBtn.textContent = item.completed ? '↩ 완료 취소' : '✅ 완료';
+        toggleBtn.onclick = function() { toggleWorkItemComplete(id); closeWorkDetailModal(); };
+      }
+      var editBtn = document.getElementById('workDetailEditBtn');
+      if (editBtn) editBtn.onclick = function() { showEditWorkItemModal(id); };
+      var delBtn = document.getElementById('workDetailDeleteBtn');
+      if (delBtn) delBtn.onclick = function() { deleteWorkItem(id); };
+      var modal = document.getElementById('workDetailModal');
+      modal.style.display = 'flex';
+      bringModalToFront(modal);
+    }
+
+    function closeWorkDetailModal() {
+      var modal = document.getElementById('workDetailModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function deleteWorkItem(id) {
+      var item = workItems.find(function(it) { return it.id === id; });
+      if (!item) return;
+      showConfirm('할일 삭제', '&quot;' + escapeHtml(item.title) + '&quot;을(를) 삭제하시겠습니까?', function(ok) {
+        if (!ok) return;
+        workItems = workItems.filter(function(it) { return it.id !== id; });
+        saveWorkItems();
+        closeWorkDetailModal();
+        closeWorkItemModal();
+        renderWorkView();
+        showToast('할일을 삭제했습니다');
+      });
+    }
+
+    function openWorkEmojiPicker() {
+      if (!workItemDraft) return;
+      openEmojiPicker(workItemDraft.emoji || '', function(emoji) {
+        if (!emoji) return;
+        workItemDraft.emoji = emoji;
+        workItemDraft.color = emojiToWorkColor(emoji);
+        var btn = document.getElementById('workEmojiBtn');
+        if (btn) btn.innerHTML = renderEmoji(emoji);
+      });
     }
 
     function renderWorkWeek() {
@@ -6678,17 +6845,19 @@
         var ds = addDays(monday, i);
         var isToday = ds === todayStr;
         var dayItems = workItems.filter(function(it) { return it.date === ds; });
-        html += '<div class="work-week-col' + (isToday ? ' is-today' : '') + '" onclick="workGoToDate(\'' + ds + '\')">';
-        html += '<div class="work-week-day-header">';
+        html += '<div class="work-week-col' + (isToday ? ' is-today' : '') + '">';
+        html += '<div class="work-week-day-header" onclick="workGoToDate(\'' + ds + '\')">';
         html += '<span class="work-week-day-name">' + dayNames[i] + '</span>';
         var dp = ds.split('-');
         html += '<span class="work-week-day-num">' + parseInt(dp[2]) + '</span>';
         html += '</div>';
         html += '<div class="work-week-day-body">';
         if (dayItems.length === 0) {
-          html += '<div class="work-week-empty">-</div>';
+          html += '<div class="work-week-empty" onclick="showAddWorkItemModal(\'' + ds + '\')">+</div>';
         } else {
           dayItems.forEach(function(it) { html += renderWorkWeekMiniCard(it); });
+          var normalCnt = dayItems.filter(function(it){ return !it.isBonus; }).length;
+          if (normalCnt < 3) html += '<div class="work-week-add" onclick="event.stopPropagation();showAddWorkItemModal(\'' + ds + '\')">+</div>';
         }
         html += '</div>';
         html += '</div>';

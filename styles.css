@@ -3173,6 +3173,29 @@
     .work-dot.done { opacity: 0.35; }
     .work-dot-more { font-size: 9px; color: var(--text-secondary); line-height: 7px; }
 
+    /* 오늘뷰 + 할일 추가 버튼 */
+    .work-add-btn { display: block; width: 100%; margin-top: 12px; padding: 11px; background: transparent; border: 1.5px dashed var(--border-color); border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all 0.15s; text-align: center; }
+    .work-add-btn:hover { background: var(--bg-hover); border-color: var(--primary-yellow); color: var(--text-primary); }
+
+    /* 주별뷰 + 버튼 */
+    .work-week-empty { font-size: 14px; color: var(--text-secondary); opacity: 0.35; text-align: center; padding: 8px 0; cursor: pointer; transition: opacity 0.15s; }
+    .work-week-empty:hover { opacity: 0.7; }
+    .work-week-add { font-size: 13px; color: var(--text-secondary); opacity: 0.4; text-align: center; padding: 4px 0; cursor: pointer; transition: opacity 0.15s; }
+    .work-week-add:hover { opacity: 0.8; }
+    .work-week-day-header { cursor: pointer; }
+
+    /* 할일 추가/수정 폼 */
+    .work-form-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .work-form-row-col { flex-direction: column; align-items: stretch; gap: 6px; }
+    .work-form-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+    .work-form-emoji-btn { width: 44px; height: 44px; border: 2px solid var(--border-color); border-radius: 8px; font-size: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); flex-shrink: 0; transition: border-color 0.15s; }
+    .work-form-emoji-btn:hover { border-color: var(--primary-yellow); }
+    .work-form-input { height: 44px; flex: 1; }
+
+    /* 삭제 버튼 */
+    .work-delete-btn { color: #e53e3e !important; border-color: #e53e3e !important; }
+    .work-delete-btn:hover { background: #fff5f5 !important; }
+
     @media (max-width: 768px) {
       .work-week-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
       .work-week-day-name { font-size: 10px; }

@@ -736,6 +736,43 @@
     </div>
   </div>
 
+  <!-- 할일 추가/수정 모달 -->
+  <div id="workItemModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeWorkItemModal()">
+    <div class="modal-box" style="max-width:400px;width:100%;">
+      <h3 id="workItemModalTitle" style="margin:0 0 16px;font-size:16px;font-weight:700;">할일 추가</h3>
+      <div class="work-form-row">
+        <button class="work-form-emoji-btn" id="workEmojiBtn" onclick="openWorkEmojiPicker()">📋</button>
+        <input class="input-field work-form-input" id="workTitleInput" placeholder="할일 제목"
+          onkeydown="if(event.key==='Enter')saveWorkItem();if(event.key==='Escape')closeWorkItemModal()">
+      </div>
+      <div class="work-form-row work-form-row-col">
+        <div class="work-form-label">소요 시간 (분, 선택)</div>
+        <input class="input-field" id="workDurationInput" type="number" placeholder="예) 30" min="1" style="width:120px;">
+      </div>
+      <div class="work-form-row work-form-row-col">
+        <div class="work-form-label">메모 (선택)</div>
+        <textarea class="input-field" id="workMemoInput" placeholder="메모를 입력하세요" rows="2" style="resize:none;width:100%;box-sizing:border-box;"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn-cancel" style="flex:1;padding:10px;" onclick="closeWorkItemModal()">취소</button>
+        <button class="btn-confirm" style="flex:1;padding:10px;" onclick="saveWorkItem()">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 할일 상세 모달 -->
+  <div id="workDetailModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeWorkDetailModal()">
+    <div class="modal-box" style="max-width:400px;width:100%;">
+      <div id="workDetailContent"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
+        <button class="btn-cancel" style="flex:1;min-width:80px;padding:10px;" id="workDetailToggleBtn" onclick="">완료</button>
+        <button class="btn-cancel" style="flex:1;min-width:80px;padding:10px;" id="workDetailEditBtn" onclick="">수정</button>
+        <button class="btn-cancel work-delete-btn" style="flex:1;min-width:80px;padding:10px;" id="workDetailDeleteBtn" onclick="">삭제</button>
+        <button class="btn-confirm" style="flex:1;min-width:80px;padding:10px;" onclick="closeWorkDetailModal()">닫기</button>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
