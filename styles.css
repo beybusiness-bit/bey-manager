@@ -3139,6 +3139,39 @@
     .work-cal-cell.weekend .work-cal-date { color: #e55; }
     .work-cal-date { font-size: 12px; font-weight: 600; color: var(--text-primary); }
     .work-cal-cell.is-today .work-cal-date { color: #a07800; }
+    .work-cal-cell { cursor: pointer; }
+    .work-cal-cell.has-items { cursor: pointer; }
+
+    /* work-today count badge */
+    .work-today-count { font-size: 12px; font-weight: 600; color: var(--text-secondary); background: var(--bg-side); border-radius: 20px; padding: 2px 10px; margin-left: auto; }
+
+    /* work item cards */
+    .work-slots { display: flex; flex-direction: column; gap: 10px; padding: 14px 0; }
+    .work-item-card { display: flex; align-items: center; gap: 10px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 14px; cursor: pointer; transition: box-shadow 0.15s; }
+    .work-item-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .work-item-card.completed { opacity: 0.65; }
+    .work-item-card.bonus { background: #fffde7; }
+    .work-item-emoji { font-size: 22px; flex-shrink: 0; line-height: 1; }
+    .work-item-info { flex: 1; min-width: 0; }
+    .work-item-title { font-size: 14px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .work-item-title.done { text-decoration: line-through; color: var(--text-secondary); }
+    .work-item-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    .work-bonus-badge { font-size: 12px; }
+    .work-item-check { flex-shrink: 0; cursor: pointer; display: flex; align-items: center; padding: 4px; }
+
+    /* week mini cards */
+    .work-week-col { cursor: pointer; }
+    .work-week-mini-card { display: flex; align-items: center; gap: 4px; font-size: 11px; background: var(--bg-side); border-radius: 5px; padding: 4px 5px; margin-bottom: 3px; cursor: pointer; overflow: hidden; }
+    .work-week-mini-card.done { opacity: 0.5; }
+    .work-week-mini-card.done .work-mini-title { text-decoration: line-through; }
+    .work-mini-emoji { font-size: 13px; flex-shrink: 0; }
+    .work-mini-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary); font-size: 11px; }
+
+    /* month dots */
+    .work-dots { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+    .work-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .work-dot.done { opacity: 0.35; }
+    .work-dot-more { font-size: 9px; color: var(--text-secondary); line-height: 7px; }
 
     @media (max-width: 768px) {
       .work-week-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
@@ -3147,4 +3180,7 @@
       .work-week-col { min-height: 90px; }
       .work-cal-cell { min-height: 44px; padding: 3px 4px; }
       .work-cal-date { font-size: 11px; }
+      .work-item-card { padding: 10px 12px; gap: 8px; }
+      .work-item-emoji { font-size: 20px; }
+      .work-dot { width: 6px; height: 6px; }
     }

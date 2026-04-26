@@ -1666,6 +1666,7 @@
       loadTagColorOverrides();
       loadActivities();
       loadSchedules();
+      loadWorkItems();
       loadHabits();
       loadHabitLogs();
       loadProfile();
@@ -6491,6 +6492,31 @@
     var workView = 'today';
     var workWeekOffset = 0;
     var workMonthOffset = 0;
+    var workSelectedDate = today();
+
+    var WORK_COLOR_PALETTE = [
+      '#ff6b6b','#ff8e53','#ffc045','#a8e6cf','#56cfb2',
+      '#4ecdc4','#45b7d1','#74b9ff','#6c5ce7','#a29bfe',
+      '#fd79a8','#e84393','#00b894','#fdcb6e','#dfe6e9'
+    ];
+
+    function emojiToWorkColor(emoji) {
+      var s = emoji || '📋';
+      var hash = 0;
+      for (var i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) | 0;
+      return WORK_COLOR_PALETTE[Math.abs(hash) % WORK_COLOR_PALETTE.length];
+    }
+
+    var workItems = [];
+
+    function loadWorkItems() {
+      try { workItems = JSON.parse(localStorage.getItem('workItems') || '[]'); }
+      catch(e) { workItems = []; }
+    }
+
+    function saveWorkItems() {
+      localStorage.setItem('workItems', JSON.stringify(workItems));
+    }
 
     function getMondayOf(dateStr) {
       var d = new Date(dateStr + 'T00:00:00');
@@ -6543,24 +6569,87 @@
       else renderWorkMonth();
     }
 
+    function renderWorkItemCard(item) {
+      var color = item.color || emojiToWorkColor(item.emoji || '📋');
+      var html = '<div class="work-item-card' + (item.completed ? ' completed' : '') + (item.isBonus ? ' bonus' : '') + '"';
+      html += ' style="border-left:3px solid ' + color + '"';
+      html += ' onclick="showWorkItemDetail(\'' + item.id + '\')">';
+      html += '<div class="work-item-emoji">' + (item.emoji || '📋') + '</div>';
+      html += '<div class="work-item-info">';
+      html += '<div class="work-item-title' + (item.completed ? ' done' : '') + '">';
+      if (item.isBonus) html += '<span class="work-bonus-badge">⭐</span> ';
+      html += escapeHtml(item.title);
+      html += '</div>';
+      if (item.duration) html += '<div class="work-item-meta">' + item.duration + '분</div>';
+      html += '</div>';
+      html += '<div class="work-item-check" onclick="event.stopPropagation();toggleWorkItemComplete(\'' + item.id + '\')">';
+      if (item.completed) {
+        html += '<svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="#56cfb2"/><polyline points="6,10 9,13 14,7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      } else {
+        html += '<svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="none" stroke="#ccc" stroke-width="1.5"/></svg>';
+      }
+      html += '</div>';
+      html += '</div>';
+      return html;
+    }
+
+    function renderWorkWeekMiniCard(item) {
+      var color = item.color || emojiToWorkColor(item.emoji || '📋');
+      return '<div class="work-week-mini-card' + (item.completed ? ' done' : '') + '"'
+        + ' style="border-left:2px solid ' + color + '"'
+        + ' onclick="event.stopPropagation();workGoToDate(\'' + item.date + '\')"'
+        + ' title="' + escapeHtml(item.title) + '">'
+        + '<span class="work-mini-emoji">' + (item.emoji || '📋') + '</span>'
+        + '<span class="work-mini-title">' + escapeHtml(item.title) + '</span>'
+        + '</div>';
+    }
+
     function renderWorkToday() {
       var c = document.getElementById('workViewContent');
       if (!c) return;
-      var todayStr = today();
+      var dateItems = workItems.filter(function(it) { return it.date === workSelectedDate; });
+      var normalItems = dateItems.filter(function(it) { return !it.isBonus; });
+      var bonusItems = dateItems.filter(function(it) { return it.isBonus; });
 
       var html = '<div class="work-today">';
       html += '<div class="work-today-header">';
-      html += '<span class="work-today-date">' + formatDateKR(todayStr) + '</span>';
+      html += '<span class="work-today-date">' + formatDateKR(workSelectedDate) + '</span>';
+      html += '<span class="work-today-count">' + normalItems.length + '/3';
+      if (bonusItems.length > 0) html += ' ⭐' + bonusItems.length;
+      html += '</span>';
       html += '</div>';
-      html += '<div class="work-today-body">';
-      html += '<div class="work-empty-state">';
-      html += '<div class="work-empty-icon">📋</div>';
-      html += '<div class="work-empty-text">오늘의 업무 기록이 없습니다</div>';
-      html += '<div class="work-empty-sub">업무 기록 기능은 곧 추가될 예정이에요</div>';
-      html += '</div>';
-      html += '</div>';
+
+      if (dateItems.length === 0) {
+        html += '<div class="work-empty-state">';
+        html += '<div class="work-empty-icon">📋</div>';
+        html += '<div class="work-empty-text">이 날의 할일이 없습니다</div>';
+        html += '</div>';
+      } else {
+        html += '<div class="work-slots">';
+        normalItems.forEach(function(item) { html += renderWorkItemCard(item); });
+        bonusItems.forEach(function(item) { html += renderWorkItemCard(item); });
+        html += '</div>';
+      }
       html += '</div>';
       c.innerHTML = html;
+    }
+
+    function workGoToDate(dateStr) {
+      workSelectedDate = dateStr;
+      switchWorkView('today');
+    }
+
+    function toggleWorkItemComplete(id) {
+      var item = workItems.find(function(it) { return it.id === id; });
+      if (!item) return;
+      item.completed = !item.completed;
+      saveWorkItems();
+      renderWorkView();
+      showToast(item.completed ? '✅ 완료 처리했습니다' : '↩ 완료 취소했습니다');
+    }
+
+    function showWorkItemDetail(id) {
+      // Stage B에서 구현
     }
 
     function renderWorkWeek() {
@@ -6588,14 +6677,19 @@
       for (var i = 0; i < 7; i++) {
         var ds = addDays(monday, i);
         var isToday = ds === todayStr;
-        html += '<div class="work-week-col' + (isToday ? ' is-today' : '') + '">';
+        var dayItems = workItems.filter(function(it) { return it.date === ds; });
+        html += '<div class="work-week-col' + (isToday ? ' is-today' : '') + '" onclick="workGoToDate(\'' + ds + '\')">';
         html += '<div class="work-week-day-header">';
         html += '<span class="work-week-day-name">' + dayNames[i] + '</span>';
         var dp = ds.split('-');
         html += '<span class="work-week-day-num">' + parseInt(dp[2]) + '</span>';
         html += '</div>';
         html += '<div class="work-week-day-body">';
-        html += '<div class="work-week-empty">-</div>';
+        if (dayItems.length === 0) {
+          html += '<div class="work-week-empty">-</div>';
+        } else {
+          dayItems.forEach(function(it) { html += renderWorkWeekMiniCard(it); });
+        }
         html += '</div>';
         html += '</div>';
       }
@@ -6646,8 +6740,18 @@
         var isToday = ds === todayStr;
         var dow = (firstDayKR + day - 1) % 7;
         var isWeekend = (dow === 5 || dow === 6);
-        html += '<div class="work-cal-cell' + (isToday ? ' is-today' : '') + (isWeekend ? ' weekend' : '') + '">';
+        var dayItems = workItems.filter(function(it) { return it.date === ds; });
+        html += '<div class="work-cal-cell' + (isToday ? ' is-today' : '') + (isWeekend ? ' weekend' : '') + (dayItems.length > 0 ? ' has-items' : '') + '" onclick="workGoToDate(\'' + ds + '\')">';
         html += '<div class="work-cal-date">' + day + '</div>';
+        if (dayItems.length > 0) {
+          html += '<div class="work-dots">';
+          dayItems.slice(0, 4).forEach(function(it) {
+            var dotColor = it.color || emojiToWorkColor(it.emoji || '📋');
+            html += '<span class="work-dot' + (it.completed ? ' done' : '') + '" style="background:' + dotColor + '"></span>';
+          });
+          if (dayItems.length > 4) html += '<span class="work-dot-more">+' + (dayItems.length - 4) + '</span>';
+          html += '</div>';
+        }
         html += '</div>';
       }
       html += '</div>';
