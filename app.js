@@ -6514,10 +6514,12 @@
     function loadWorkItems() {
       try { workItems = JSON.parse(localStorage.getItem('workItems') || '[]'); }
       catch(e) { workItems = []; }
+      updateWorkBasketBadge();
     }
 
     function saveWorkItems() {
       localStorage.setItem('workItems', JSON.stringify(workItems));
+      updateWorkBasketBadge();
     }
 
     function getMondayOf(dateStr) {
@@ -6541,6 +6543,7 @@
     }
 
     function renderWorkPage() {
+      updateWorkBasketBadge();
       var container = document.getElementById('workPageContent');
       if (!container) return;
 
@@ -6932,6 +6935,177 @@
       if (delta === 0) { workMonthOffset = 0; }
       else { workMonthOffset += delta; }
       renderWorkMonth();
+    }
+
+    // ── 단계 C: 할일 바구니 ──
+
+    function updateWorkBasketBadge() {
+      var count = workItems.filter(function(it) { return !it.date; }).length;
+      var badge = document.getElementById('workBasketBadge');
+      if (!badge) return;
+      if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = 'inline-flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    function openWorkBasket() {
+      var modal = document.getElementById('workBasketModal');
+      if (!modal) return;
+      modal.style.display = 'flex';
+      bringModalToFront(modal);
+      renderWorkBasket();
+      // 오늘 날짜를 기본값으로
+      var dateInput = document.getElementById('basketDateInput');
+      if (dateInput) dateInput.value = today();
+    }
+
+    function closeWorkBasket() {
+      var modal = document.getElementById('workBasketModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function renderWorkBasket() {
+      var list = document.getElementById('workBasketList');
+      var actionsDiv = document.getElementById('workBasketActions');
+      if (!list) return;
+      var basketItems = workItems.filter(function(it) { return !it.date; });
+      if (basketItems.length === 0) {
+        list.innerHTML = '<div class="work-empty-state" style="padding:24px 0;">'
+          + '<div class="work-empty-icon">🗂️</div>'
+          + '<div class="work-empty-text">바구니가 비어있습니다</div>'
+          + '</div>';
+        if (actionsDiv) actionsDiv.style.display = 'none';
+        return;
+      }
+      var html = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
+      html += '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">';
+      html += '<input type="checkbox" id="basketSelectAll" onchange="basketToggleAll(this.checked)">';
+      html += '<span>전체 선택</span></label>';
+      html += '<span style="font-size:12px;color:var(--text-secondary);margin-left:auto;" id="basketSelectedCount">0개 선택</span>';
+      html += '</div>';
+      html += '<div class="work-slots">';
+      basketItems.forEach(function(item) {
+        html += '<div class="basket-item-row" data-id="' + item.id + '">';
+        html += '<input type="checkbox" class="basket-item-check" value="' + item.id + '" onchange="basketUpdateSelection()">';
+        html += '<div class="work-item-card" style="flex:1;margin:0;cursor:pointer;" onclick="showWorkItemDetail(\'' + item.id + '\')">';
+        html += '<div class="work-item-emoji" style="font-size:22px;min-width:28px;text-align:center;">' + renderEmoji(item.emoji || '📋') + '</div>';
+        html += '<div class="work-item-info">';
+        html += '<div class="work-item-title' + (item.completed ? ' done' : '') + '">' + escapeHtml(item.title) + '</div>';
+        if (item.memo) html += '<div class="work-item-meta">' + escapeHtml(item.memo.substring(0, 30)) + (item.memo.length > 30 ? '…' : '') + '</div>';
+        html += '</div>';
+        html += '<div class="work-item-check" onclick="event.stopPropagation();toggleWorkItemComplete(\'' + item.id + '\');renderWorkBasket();">';
+        if (item.completed) {
+          html += '<svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="#56cfb2"/><polyline points="6,10 9,13 14,7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        } else {
+          html += '<svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="none" stroke="#ccc" stroke-width="1.5"/></svg>';
+        }
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+      list.innerHTML = html;
+      if (actionsDiv) actionsDiv.style.display = 'flex';
+      basketUpdateSelection();
+    }
+
+    function basketToggleAll(checked) {
+      document.querySelectorAll('.basket-item-check').forEach(function(cb) { cb.checked = checked; });
+      basketUpdateSelection();
+    }
+
+    function basketUpdateSelection() {
+      var checked = document.querySelectorAll('.basket-item-check:checked');
+      var all = document.querySelectorAll('.basket-item-check');
+      var countEl = document.getElementById('basketSelectedCount');
+      var selectAll = document.getElementById('basketSelectAll');
+      if (countEl) countEl.textContent = checked.length + '개 선택';
+      if (selectAll) selectAll.checked = (all.length > 0 && checked.length === all.length);
+    }
+
+    function basketGetSelectedIds() {
+      var ids = [];
+      document.querySelectorAll('.basket-item-check:checked').forEach(function(cb) { ids.push(cb.value); });
+      return ids;
+    }
+
+    function basketCheckSlot(targetDate, ids) {
+      // 선택된 아이템들을 targetDate에 배정 가능한지 검사
+      var existing = workItems.filter(function(it) { return it.date === targetDate && !it.isBonus; });
+      var completedOnDate = workItems.filter(function(it) { return it.date === targetDate && it.completed; }).length;
+      var bonusOnDate = workItems.filter(function(it) { return it.date === targetDate && it.isBonus; }).length;
+      var available = 3 - existing.length;
+      var canBonus = bonusOnDate === 0 && completedOnDate > 0;
+
+      if (ids.length === 0) { showToast('배정할 항목을 선택하세요', 'warning'); return false; }
+      if (available <= 0 && !canBonus) { showToast('이 날의 슬롯이 꽉 찼습니다 (최대 3개)', 'warning'); return false; }
+      return { available: available, canBonus: canBonus };
+    }
+
+    function basketAssignItems(targetDate, ids) {
+      if (!ids.length) { showToast('배정할 항목을 선택하세요', 'warning'); return; }
+      var existing = workItems.filter(function(it) { return it.date === targetDate && !it.isBonus; });
+      var completedOnDate = workItems.filter(function(it) { return it.date === targetDate && it.completed; }).length;
+      var bonusOnDate = workItems.filter(function(it) { return it.date === targetDate && it.isBonus; }).length;
+      var normalSlots = 3 - existing.length;
+      var canBonus = bonusOnDate === 0 && completedOnDate > 0;
+
+      var assigned = 0;
+      var bonusUsed = 0;
+      ids.forEach(function(id) {
+        var item = workItems.find(function(it) { return it.id === id; });
+        if (!item) return;
+        if (assigned < normalSlots) {
+          item.date = targetDate;
+          item.isBonus = false;
+          assigned++;
+        } else if (canBonus && bonusUsed === 0) {
+          item.date = targetDate;
+          item.isBonus = true;
+          bonusUsed++;
+        }
+      });
+      var total = assigned + bonusUsed;
+      saveWorkItems();
+      updateWorkBasketBadge();
+      renderWorkBasket();
+      renderWorkView();
+      if (total === 0) {
+        showToast('슬롯이 꽉 차서 배정할 수 없습니다', 'warning');
+      } else {
+        var dp = targetDate.split('-');
+        showToast(parseInt(dp[1]) + '/' + parseInt(dp[2]) + '에 ' + total + '개 배정했습니다');
+        if (ids.length > total) showToast('슬롯 초과로 ' + (ids.length - total) + '개는 배정되지 않았습니다', 'warning');
+      }
+    }
+
+    function basketAssignToToday() {
+      var ids = basketGetSelectedIds();
+      basketAssignItems(today(), ids);
+    }
+
+    function basketAssignToDate() {
+      var dateInput = document.getElementById('basketDateInput');
+      if (!dateInput || !dateInput.value) { showToast('날짜를 선택하세요', 'warning'); return; }
+      var ids = basketGetSelectedIds();
+      basketAssignItems(dateInput.value, ids);
+    }
+
+    function openBasketNewItem() {
+      workItemDraft = { emoji: '📋', color: null, isBonus: false, date: null };
+      workItemEditId = null;
+      var modal = document.getElementById('workItemModal');
+      document.getElementById('workItemModalTitle').textContent = '바구니에 할일 추가';
+      document.getElementById('workEmojiBtn').innerHTML = '📋';
+      document.getElementById('workTitleInput').value = '';
+      document.getElementById('workDurationInput').value = '';
+      document.getElementById('workMemoInput').value = '';
+      modal.style.display = 'flex';
+      bringModalToFront(modal);
+      setTimeout(function() { document.getElementById('workTitleInput').focus(); }, 50);
     }
 
     // ========================================
