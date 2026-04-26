@@ -1671,6 +1671,10 @@
       loadHabitLogs();
       loadProfile();
       loadDesignSettings();
+      loadPomodoroSettings();
+      loadNotificationSettings();
+      /* 뽀모도로 초기 상태 설정 */
+      initPomodoroPhase('work');
       renderSidebar();
       renderMenuManager();
       updateActiveMenu();
@@ -5987,9 +5991,78 @@
         menuItems[2].classList.add('active');
         document.getElementById('settingsDesignSection').classList.add('active');
         renderDesignSettings();
+      } else if (sectionName === 'notify' && menuItems[3]) {
+        menuItems[3].classList.add('active');
+        document.getElementById('settingsNotifySection').classList.add('active');
+        renderNotifySettings();
       }
 
       updateProfileDisplay();
+    }
+
+    function renderNotifySettings() {
+      /* 권한 상태 */
+      var statusEl = document.getElementById('notifyPermStatus');
+      if (statusEl) {
+        if (!('Notification' in window)) {
+          statusEl.textContent = '이 브라우저는 알림을 지원하지 않습니다.';
+        } else if (Notification.permission === 'granted') {
+          statusEl.textContent = '✅ 알림 허용됨';
+          statusEl.style.color = '#56cfb2';
+        } else if (Notification.permission === 'denied') {
+          statusEl.textContent = '❌ 알림 차단됨 (브라우저 설정에서 변경)';
+          statusEl.style.color = '#e53e3e';
+        } else {
+          statusEl.textContent = '⚠️ 권한 미설정';
+          statusEl.style.color = 'var(--text-secondary)';
+        }
+      }
+      /* 뽀모도로 설정값 채우기 */
+      var f = function(id, val) { var el = document.getElementById(id); if (el) el.value = val; };
+      f('pomoWorkMin', pomodoroSettings.workMin);
+      f('pomoBreakMin', pomodoroSettings.breakMin);
+      f('pomoLongBreakMin', pomodoroSettings.longBreakMin);
+      f('pomoCyclesBeforeLong', pomodoroSettings.cyclesBeforeLong);
+      var notifyChk = document.getElementById('pomoNotifyEnabled');
+      if (notifyChk) notifyChk.checked = pomodoroSettings.notifyEnabled;
+      /* 습관 리마인더 */
+      var hrChk = document.getElementById('habitReminderEnabled');
+      if (hrChk) hrChk.checked = notificationSettings.habitReminderEnabled;
+      var hrTime = document.getElementById('habitReminderTime');
+      if (hrTime) hrTime.value = notificationSettings.habitReminderTime;
+      var hrRow = document.getElementById('habitReminderTimeRow');
+      if (hrRow) hrRow.style.display = notificationSettings.habitReminderEnabled ? '' : 'none';
+    }
+
+    function updatePomodoroSetting(key, val) {
+      pomodoroSettings[key] = val;
+      savePomodoroSettings();
+      /* 실행 중인 타이머가 없을 때만 total 재계산 */
+      if (!pomodoroState.running) {
+        pomodoroState.total = pomodoroPhaseSeconds(pomodoroState.phase);
+        pomodoroState.remaining = pomodoroState.total;
+        renderPomodoroUI();
+      }
+    }
+
+    function updateNotifySetting(key, val) {
+      notificationSettings[key] = val;
+      saveNotificationSettings();
+      var hrRow = document.getElementById('habitReminderTimeRow');
+      if (hrRow) hrRow.style.display = notificationSettings.habitReminderEnabled ? '' : 'none';
+      if (key === 'habitReminderEnabled' && val) {
+        requestNotificationPermission(function(granted) {
+          renderNotifySettings();
+        });
+      }
+    }
+
+    function requestNotifyPermission() {
+      requestNotificationPermission(function(granted) {
+        renderNotifySettings();
+        if (granted) showAlert('알림 허용됨', '브라우저 알림이 허용되었습니다.');
+        else showAlert('알림 차단', '브라우저 설정에서 이 사이트의 알림을 허용해 주세요.');
+      });
     }
 
     // ========================================
@@ -7737,6 +7810,280 @@
       modal.style.display = 'flex';
       bringModalToFront(modal);
       setTimeout(function() { document.getElementById('workTitleInput').focus(); }, 50);
+    }
+
+    // ========================================
+    // 뽀모도로 타이머
+    // ========================================
+
+    var pomodoroSettings = {
+      workMin: 25,
+      breakMin: 5,
+      longBreakMin: 15,
+      cyclesBeforeLong: 4,
+      notifyEnabled: true
+    };
+
+    var pomodoroState = {
+      phase: 'work',       // 'work' | 'break' | 'longbreak'
+      running: false,
+      remaining: 0,        // seconds
+      total: 0,            // seconds for current phase
+      cycle: 0,            // completed work cycles (0-indexed)
+      taskId: null,
+      taskTitle: '',
+      intervalId: null
+    };
+
+    function loadPomodoroSettings() {
+      try {
+        var saved = JSON.parse(localStorage.getItem('pomodoroSettings') || 'null');
+        if (saved) {
+          pomodoroSettings.workMin = saved.workMin || 25;
+          pomodoroSettings.breakMin = saved.breakMin || 5;
+          pomodoroSettings.longBreakMin = saved.longBreakMin || 15;
+          pomodoroSettings.cyclesBeforeLong = saved.cyclesBeforeLong || 4;
+          if (typeof saved.notifyEnabled === 'boolean') pomodoroSettings.notifyEnabled = saved.notifyEnabled;
+        }
+      } catch(e) {}
+    }
+
+    function savePomodoroSettings() {
+      localStorage.setItem('pomodoroSettings', JSON.stringify(pomodoroSettings));
+    }
+
+    function togglePomodoroPanel() {
+      var panel = document.getElementById('pomodoroPanel');
+      var isOpen = panel.classList.contains('open');
+      if (isOpen) {
+        panel.classList.remove('open');
+      } else {
+        panel.classList.add('open');
+        refreshPomodoroTaskList();
+        renderPomodoroUI();
+      }
+    }
+
+    function refreshPomodoroTaskList() {
+      var sel = document.getElementById('pomodoroTaskSelect');
+      if (!sel) return;
+      var todayStr = today();
+      var todayItems = workItems.filter(function(it) {
+        return it.date === todayStr && it.status !== 'done';
+      });
+      sel.innerHTML = '<option value="">— 할일 선택 (선택) —</option>';
+      todayItems.forEach(function(it) {
+        var opt = document.createElement('option');
+        opt.value = it.id;
+        opt.textContent = (it.emoji || '📋') + ' ' + it.title;
+        if (it.id === pomodoroState.taskId) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      sel.onchange = function() {
+        pomodoroState.taskId = this.value || null;
+        var selected = workItems.find(function(it) { return it.id === pomodoroState.taskId; });
+        pomodoroState.taskTitle = selected ? ((selected.emoji || '📋') + ' ' + selected.title) : '';
+      };
+    }
+
+    function pomodoroPhaseSeconds(phase) {
+      if (phase === 'break') return pomodoroSettings.breakMin * 60;
+      if (phase === 'longbreak') return pomodoroSettings.longBreakMin * 60;
+      return pomodoroSettings.workMin * 60;
+    }
+
+    function initPomodoroPhase(phase) {
+      pomodoroState.phase = phase;
+      pomodoroState.total = pomodoroPhaseSeconds(phase);
+      pomodoroState.remaining = pomodoroState.total;
+      pomodoroState.running = false;
+      stopPomodoroTick();
+    }
+
+    function togglePomodoroTimer() {
+      if (pomodoroState.remaining === 0) {
+        initPomodoroPhase(pomodoroState.phase);
+      }
+      if (pomodoroState.running) {
+        stopPomodoroTick();
+        pomodoroState.running = false;
+      } else {
+        if (pomodoroState.remaining === pomodoroState.total) {
+          // 새 사이클 시작 — total 초기화
+          pomodoroState.total = pomodoroPhaseSeconds(pomodoroState.phase);
+          pomodoroState.remaining = pomodoroState.total;
+        }
+        pomodoroState.running = true;
+        startPomodoroTick();
+      }
+      renderPomodoroUI();
+    }
+
+    function startPomodoroTick() {
+      stopPomodoroTick();
+      pomodoroState.intervalId = setInterval(function() {
+        pomodoroState.remaining--;
+        renderPomodoroUI();
+        updatePageTitle();
+        if (pomodoroState.remaining <= 0) {
+          pomodoroState.running = false;
+          stopPomodoroTick();
+          onPomodoroPhaseEnd();
+        }
+      }, 1000);
+    }
+
+    function stopPomodoroTick() {
+      if (pomodoroState.intervalId) {
+        clearInterval(pomodoroState.intervalId);
+        pomodoroState.intervalId = null;
+      }
+    }
+
+    function onPomodoroPhaseEnd() {
+      var wasWork = (pomodoroState.phase === 'work');
+      if (wasWork) {
+        pomodoroState.cycle++;
+        var title = '집중 완료! 🎉';
+        var body = pomodoroSettings.workMin + '분 집중 완료. 잠시 쉬어가세요.';
+        if (pomodoroState.taskTitle) body = pomodoroState.taskTitle + ' — ' + body;
+        sendNotification(title, body);
+        var isLong = (pomodoroState.cycle % pomodoroSettings.cyclesBeforeLong === 0);
+        initPomodoroPhase(isLong ? 'longbreak' : 'break');
+      } else {
+        sendNotification('휴식 종료 ⏰', '다시 집중할 시간이에요!');
+        initPomodoroPhase('work');
+      }
+      updatePageTitle();
+      renderPomodoroUI();
+    }
+
+    function skipPomodoro() {
+      stopPomodoroTick();
+      pomodoroState.running = false;
+      onPomodoroPhaseEnd();
+    }
+
+    function resetPomodoro() {
+      stopPomodoroTick();
+      pomodoroState.cycle = 0;
+      initPomodoroPhase('work');
+      updatePageTitle();
+      renderPomodoroUI();
+    }
+
+    function formatPomodoroTime(sec) {
+      var m = Math.floor(sec / 60);
+      var s = sec % 60;
+      return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    }
+
+    function renderPomodoroUI() {
+      var display = document.getElementById('pomodoroTimerDisplay');
+      var ring = document.getElementById('pomodoroRingFg');
+      var label = document.getElementById('pomodoroPhaseLabel');
+      var startBtn = document.getElementById('pomodoroStartBtn');
+      var fab = document.getElementById('pomodoroFab');
+
+      if (!display) return;
+
+      var sec = pomodoroState.remaining;
+      display.textContent = formatPomodoroTime(sec);
+
+      var isBreak = (pomodoroState.phase !== 'work');
+      var phaseName = pomodoroState.phase === 'work' ? '집중'
+        : pomodoroState.phase === 'break' ? '짧은 휴식' : '긴 휴식';
+
+      label.textContent = phaseName;
+      label.classList.toggle('break', isBreak);
+
+      if (ring) {
+        var circumference = 314;
+        var ratio = pomodoroState.total > 0 ? pomodoroState.remaining / pomodoroState.total : 1;
+        ring.style.strokeDashoffset = circumference * (1 - ratio);
+        ring.classList.toggle('break', isBreak);
+      }
+
+      if (startBtn) {
+        startBtn.textContent = pomodoroState.running ? '⏸ 일시정지' : '▶ 시작';
+        startBtn.classList.toggle('paused', pomodoroState.running);
+      }
+
+      if (fab) {
+        fab.classList.toggle('pomo-running', pomodoroState.running);
+      }
+
+      /* 사이클 도트 */
+      var dotsEl = document.getElementById('pomodoroCycleDots');
+      if (dotsEl) {
+        var dotsHtml = '';
+        for (var i = 0; i < pomodoroSettings.cyclesBeforeLong; i++) {
+          var cls = i < pomodoroState.cycle % pomodoroSettings.cyclesBeforeLong
+            ? 'done'
+            : (i === pomodoroState.cycle % pomodoroSettings.cyclesBeforeLong && pomodoroState.phase === 'work' ? 'active' : '');
+          dotsHtml += '<span class="pomo-cycle-dot ' + cls + '"></span>';
+        }
+        dotsEl.innerHTML = dotsHtml;
+      }
+    }
+
+    function updatePageTitle() {
+      if (pomodoroState.running) {
+        document.title = '⏱ ' + formatPomodoroTime(pomodoroState.remaining) + ' | 베이 관리자';
+      } else {
+        document.title = '베이 관리자';
+      }
+    }
+
+    // ========================================
+    // 알림 (Notification API)
+    // ========================================
+
+    var notificationSettings = {
+      pomodoroEnabled: true,
+      habitReminderEnabled: false,
+      habitReminderTime: '09:00'
+    };
+
+    function loadNotificationSettings() {
+      try {
+        var saved = JSON.parse(localStorage.getItem('notificationSettings') || 'null');
+        if (saved) {
+          if (typeof saved.pomodoroEnabled === 'boolean') notificationSettings.pomodoroEnabled = saved.pomodoroEnabled;
+          if (typeof saved.habitReminderEnabled === 'boolean') notificationSettings.habitReminderEnabled = saved.habitReminderEnabled;
+          if (saved.habitReminderTime) notificationSettings.habitReminderTime = saved.habitReminderTime;
+        }
+      } catch(e) {}
+    }
+
+    function saveNotificationSettings() {
+      localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings));
+    }
+
+    function sendNotification(title, body) {
+      if (!notificationSettings.pomodoroEnabled) return;
+      if (!('Notification' in window)) return;
+      if (Notification.permission === 'granted') {
+        new Notification(title, { body: body, icon: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><text y=%2226%22 font-size=%2228%22>⏱</text></svg>' });
+      } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(function(perm) {
+          if (perm === 'granted') new Notification(title, { body: body });
+        });
+      }
+    }
+
+    function requestNotificationPermission(cb) {
+      if (!('Notification' in window)) {
+        if (cb) cb(false);
+        return;
+      }
+      if (Notification.permission === 'granted') {
+        if (cb) cb(true);
+        return;
+      }
+      Notification.requestPermission().then(function(perm) {
+        if (cb) cb(perm === 'granted');
+      });
     }
 
     // ========================================

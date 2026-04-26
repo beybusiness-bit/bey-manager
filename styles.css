@@ -3284,3 +3284,135 @@
       .work-item-card { padding: 10px 12px; gap: 8px; }
       .work-item-emoji { font-size: 20px; }
     }
+
+    /* ═══════════════════════════════════════════════
+       뽀모도로 타이머 플로팅 위젯
+    ═══════════════════════════════════════════════ */
+    #pomodoroFab {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--primary-yellow);
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+      z-index: 1200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    #pomodoroFab:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(0,0,0,0.22); }
+    #pomodoroFab.pomo-running { animation: pomo-pulse 2s infinite; }
+    @keyframes pomo-pulse {
+      0%,100% { box-shadow: 0 4px 16px rgba(0,0,0,0.18); }
+      50% { box-shadow: 0 4px 24px rgba(255,80,80,0.45); }
+    }
+
+    #pomodoroPanel {
+      position: fixed;
+      bottom: 86px;
+      right: 24px;
+      width: 280px;
+      background: var(--card-bg, #fff);
+      border: 1.5px solid var(--border-color);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.14);
+      z-index: 1199;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #pomodoroPanel.open { display: flex; }
+
+    #pomodoroPanelHeader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px 8px;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    #pomodoroPhaseLabel { font-size: 13px; font-weight: 700; }
+    #pomodoroPhaseLabel.break { color: #56cfb2; }
+
+    .pomo-btn-icon {
+      background: none;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      padding: 2px 6px;
+      border-radius: 6px;
+      transition: background 0.12s;
+    }
+    .pomo-btn-icon:hover { background: var(--border-color); }
+
+    #pomodoroRingWrap {
+      position: relative;
+      width: 130px;
+      height: 130px;
+      margin: 0 auto 8px;
+    }
+    #pomodoroRingSvg { width: 130px; height: 130px; transform: rotate(-90deg); }
+    .pomo-ring-bg { fill: none; stroke: var(--border-color); stroke-width: 8; }
+    .pomo-ring-fg {
+      fill: none;
+      stroke: var(--primary-yellow);
+      stroke-width: 8;
+      stroke-linecap: round;
+      stroke-dasharray: 314;
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset 1s linear, stroke 0.4s;
+    }
+    .pomo-ring-fg.break { stroke: #56cfb2; }
+    #pomodoroTimerDisplay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 28px;
+      font-weight: 700;
+      font-family: 'DM Mono', monospace;
+      letter-spacing: -1px;
+    }
+
+    #pomodoroCycleDots {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .pomo-cycle-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border-color);
+      transition: background 0.3s;
+    }
+    .pomo-cycle-dot.done { background: var(--primary-yellow); }
+    .pomo-cycle-dot.active { background: #ff6b6b; }
+
+    #pomodoroControls {
+      display: flex;
+      gap: 8px;
+      padding: 0 14px 14px;
+    }
+    .pomo-ctrl-btn {
+      flex: 1;
+      padding: 9px 0;
+      border: none;
+      border-radius: var(--button-radius, 8px);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--primary-yellow);
+      transition: opacity 0.15s;
+    }
+    .pomo-ctrl-btn:hover { opacity: 0.85; }
+    .pomo-ctrl-btn.paused { background: var(--border-color); }
+    .pomo-skip-btn { flex: 0 0 42px; background: var(--border-color); font-size: 16px; }
