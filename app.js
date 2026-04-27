@@ -1667,6 +1667,7 @@
       loadActivities();
       loadSchedules();
       loadWorkItems();
+      loadWorkItemLogs();
       loadHabits();
       loadHabitLogs();
       loadPomodoroLogs();
@@ -3525,7 +3526,8 @@
         '할일':      ['id','emoji','color','title','date','status','isBonus','memo','focusTime','createdAt'],
         '습관':      ['id','emoji','name','color','weekdays','active','createdAt'],
         '습관기록':  ['id','habitId','date','done','memo'],
-        '뽀모도로기록': ['id','date','eventType','phase','taskId','taskTitle','timestamp','cycle']
+        '뽀모도로기록': ['id','date','eventType','phase','taskId','taskTitle','timestamp','cycle'],
+        '할일기록':    ['id','date','eventType','taskId','taskTitle','oldValue','newValue','timestamp']
       };
 
       function colLetter(n) {
@@ -3677,6 +3679,10 @@
             return pomodoroLogs.map(function(l) {
               return [l.id, l.date||'', l.eventType||'', l.phase||'', l.taskId||'', l.taskTitle||'', l.timestamp||'', String(l.cycle||0)];
             });
+          case '할일기록':
+            return workItemLogs.map(function(l) {
+              return [l.id, l.date||'', l.eventType||'', l.taskId||'', l.taskTitle||'', l.oldValue||'', l.newValue||'', l.timestamp||''];
+            });
           default: return [];
         }
       }
@@ -3794,6 +3800,14 @@
           });
           localStorage.setItem('pomodoroLogs', JSON.stringify(pomodoroLogs));
         } else { await _writeSheet('뽀모도로기록'); }
+
+        // 할일기록
+        if (results['할일기록'] && results['할일기록'].length > 0) {
+          workItemLogs = results['할일기록'].map(function(r) {
+            return { id:r[0], date:r[1]||'', eventType:r[2]||'', taskId:r[3]||'', taskTitle:r[4]||'', oldValue:r[5]||'', newValue:r[6]||'', timestamp:r[7]||'' };
+          });
+          localStorage.setItem('workItemLogs', JSON.stringify(workItemLogs));
+        } else { await _writeSheet('할일기록'); }
 
         console.log('[GS] ✅ 전체 로드 완료');
         _updateUI('ok', '연결됨');
@@ -7194,6 +7208,7 @@
       }
       item.status = newStatus;
       item.completed = (newStatus === 'done');
+      logWorkEvent('status_changed', item, oldStatus, newStatus);
       saveWorkItems();
       renderWorkView();
       showToast(newStatus === 'done' ? '✅ 완료!' : newStatus === 'in-progress' ? '⏳ 진행 중' : '↩ 시작 전으로');
@@ -7211,6 +7226,32 @@
       workItems.forEach(function(it) {
         if (!it.status) it.status = it.completed ? 'done' : 'pending';
       });
+    }
+
+    var workItemLogs = [];
+
+    function loadWorkItemLogs() {
+      try { workItemLogs = JSON.parse(localStorage.getItem('workItemLogs') || '[]'); } catch(e) { workItemLogs = []; }
+      if (!Array.isArray(workItemLogs)) workItemLogs = [];
+    }
+
+    function saveWorkItemLogs() {
+      localStorage.setItem('workItemLogs', JSON.stringify(workItemLogs));
+      if (window.GS && GS.isConnected()) GS.syncSheets(['할일기록']);
+    }
+
+    function logWorkEvent(eventType, item, oldValue, newValue) {
+      workItemLogs.push({
+        id: 'wlog-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        date: today(),
+        eventType: eventType,
+        taskId: item.id,
+        taskTitle: item.title || '',
+        oldValue: oldValue !== undefined ? String(oldValue) : '',
+        newValue: newValue !== undefined ? String(newValue) : '',
+        timestamp: new Date().toISOString()
+      });
+      saveWorkItemLogs();
     }
 
     function saveWorkItems() {
@@ -7508,6 +7549,7 @@
         }
         item.status = targetStatus;
         item.completed = (targetStatus === 'done');
+        logWorkEvent('status_changed', item, srcStatus, targetStatus);
         showToast(targetStatus === 'done' ? '✅ 완료!' : targetStatus === 'in-progress' ? '⏳ 진행 중' : '↩ 시작 전으로');
       } else if (__workDragTargetId && __workDragTargetId !== __workDragId) {
         // Within-column: reorder
@@ -7618,6 +7660,7 @@
         };
         newItem.color = emojiToWorkColor(newItem.emoji);
         workItems.push(newItem);
+        logWorkEvent('created', newItem, '', newItem.date || 'basket');
         showToast('할일을 추가했습니다');
       }
       saveWorkItems();
@@ -7690,6 +7733,7 @@
       }
       showConfirm('할일 삭제', '&quot;' + escapeHtml(item.title) + '&quot;을(를) 삭제하시겠습니까?', function(ok) {
         if (!ok) return;
+        logWorkEvent('deleted', item, item.status, '');
         workItems = workItems.filter(function(it) { return it.id !== id; });
         saveWorkItems();
         closeWorkDetailModal();
@@ -7996,11 +8040,11 @@
       function doAssign() {
         toNormal.forEach(function(id) {
           var item = workItems.find(function(it) { return it.id === id; });
-          if (item) { item.date = targetDate; item.isBonus = false; }
+          if (item) { logWorkEvent('date_changed', item, item.date || 'basket', targetDate); item.date = targetDate; item.isBonus = false; }
         });
         toBonus.forEach(function(id) {
           var item = workItems.find(function(it) { return it.id === id; });
-          if (item) { item.date = targetDate; item.isBonus = true; }
+          if (item) { logWorkEvent('date_changed', item, item.date || 'basket', targetDate + '(bonus)'); item.date = targetDate; item.isBonus = true; }
         });
         saveWorkItems();
         var assignedTotal = ids.length;
