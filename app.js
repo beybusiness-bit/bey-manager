@@ -8347,6 +8347,7 @@
         pomodoroState.sessionStart = null;
         initPomodoroPhase('work');
         _stopPomoMediaSession();
+        _resetFavicon();
         renderPomodoroUI();
         showToast('타이머를 중단했습니다');
       });
@@ -8362,7 +8363,7 @@
       stopPomodoroTick();
       pomodoroState.cycle = 0;
       initPomodoroPhase('work');
-      updatePageTitle();
+      _resetFavicon();
       renderPomodoroUI();
     }
 
@@ -8427,9 +8428,66 @@
       }
     }
 
+    /* ── 파비콘 타이머 ── */
+    var _faviconImg = null;
+    var _faviconCanvas = null;
+    var _faviconLink = null;
+
+    function _initFaviconAssets() {
+      if (_faviconImg) return;
+      _faviconCanvas = document.createElement('canvas');
+      _faviconCanvas.width = 64;
+      _faviconCanvas.height = 64;
+      _faviconImg = new Image();
+      _faviconImg.src = './icon-192.png';
+      _faviconLink = document.querySelector("link[rel*='icon']");
+      if (!_faviconLink) {
+        _faviconLink = document.createElement('link');
+        _faviconLink.rel = 'icon';
+        document.head.appendChild(_faviconLink);
+      }
+    }
+
+    function _updateFavicon(remaining, total, phase) {
+      _initFaviconAssets();
+      var ctx = _faviconCanvas.getContext('2d');
+      ctx.clearRect(0, 0, 64, 64);
+      ctx.drawImage(_faviconImg, 0, 0, 64, 64);
+
+      var progress = 1 - remaining / total;
+      var color = phase === 'work' ? '#ff4040' : '#34c759';
+      var ringW = 7;
+      var r = 29;
+      /* 배경 링 */
+      ctx.beginPath();
+      ctx.arc(32, 32, r, 0, 2 * Math.PI);
+      ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+      ctx.lineWidth = ringW;
+      ctx.stroke();
+      /* 진행 링 */
+      ctx.beginPath();
+      ctx.arc(32, 32, r, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * progress);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = ringW;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      _faviconLink.type = 'image/png';
+      _faviconLink.href = _faviconCanvas.toDataURL('image/png');
+    }
+
+    function _resetFavicon() {
+      _initFaviconAssets();
+      _faviconLink.type = 'image/png';
+      _faviconLink.href = './icon-192.png';
+      document.title = '베이 관리자';
+    }
+
     function updatePageTitle() {
       if (pomodoroState.running) {
-        document.title = '⏱ ' + formatPomodoroTime(pomodoroState.remaining) + ' | 베이 관리자';
+        var phase = pomodoroState.phase === 'work' ? '집중' : '휴식';
+        document.title = '⏱ ' + formatPomodoroTime(pomodoroState.remaining) + ' ' + phase + ' | 베이 관리자';
+        _updateFavicon(pomodoroState.remaining, pomodoroState.total, pomodoroState.phase);
       } else {
         document.title = '베이 관리자';
       }
