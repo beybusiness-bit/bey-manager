@@ -7357,10 +7357,12 @@
         });
         html += '</div>';
       }
-      /* 연결 할일 추가 버튼 */
-      html += '<div class="work-connect-row" onclick="event.stopPropagation()">';
-      html += '<button class="work-connect-btn" onclick="addConnectedTask(\'' + item.id + '\')">+ 연결 할일</button>';
-      html += '</div>';
+      /* 연결 할일 추가 버튼 — 완료 상태이고 상위 할일이 아닌 경우만 표시 */
+      if (isDone && !item.parentId) {
+        html += '<div class="work-connect-row" onclick="event.stopPropagation()">';
+        html += '<button class="work-connect-btn" onclick="addConnectedTask(\'' + item.id + '\')">+ 연결 할일</button>';
+        html += '</div>';
+      }
       html += '</div>';
       return html;
     }
@@ -7673,12 +7675,10 @@
         return;
       }
       list.innerHTML = bItems.map(function(it) {
-        var cs = getWorkStatus(it);
         return '<div class="work-basket-pick-item' + (it.id === _workModalBasketSelectedId ? ' selected' : '') + '"'
           + ' onclick="selectBasketItemForModal(\'' + it.id + '\')">'
           + '<span class="work-basket-pick-emoji">' + (it.emoji || '📋') + '</span>'
           + '<span class="work-basket-pick-title">' + escapeHtml(it.title) + '</span>'
-          + '<span class="work-basket-pick-status">' + workStatusSVG(cs, 14) + '</span>'
           + '</div>';
       }).join('');
     }
