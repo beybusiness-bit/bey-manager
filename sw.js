@@ -27,7 +27,7 @@ messaging.onBackgroundMessage(function(payload) {
 });
 
 /* ── 캐싱 전략 ── */
-var CACHE = 'bey-v2';
+var CACHE = 'bey-v3';
 var ASSETS = ['./','./index.html','./styles.css','./app.js','./manifest.json','./icon-192.png','./icon-512.png'];
 
 self.addEventListener('install', function(e) {
