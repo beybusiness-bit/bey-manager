@@ -3416,3 +3416,25 @@
     .pomo-ctrl-btn:hover { opacity: 0.85; }
     .pomo-ctrl-btn.paused { background: var(--border-color); }
     .pomo-skip-btn { flex: 0 0 42px; background: var(--border-color); font-size: 16px; }
+
+    /* 커스텀 알림 목록 */
+    .cn-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--button-radius, 8px); margin-bottom: 8px; }
+    .cn-item-main { flex: 1; min-width: 0; }
+    .cn-item-title { font-size: 13px; font-weight: 700; }
+    .cn-item-meta { font-size: 11px; color: var(--text-secondary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cn-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .cn-toggle { position: relative; display: inline-block; width: 36px; height: 20px; flex-shrink: 0; }
+    .cn-toggle input { opacity: 0; width: 0; height: 0; }
+    .cn-toggle-slider { position: absolute; inset: 0; background: var(--border-color); border-radius: 20px; transition: background 0.2s; cursor: pointer; }
+    .cn-toggle-slider::before { content: ''; position: absolute; width: 14px; height: 14px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: transform 0.2s; }
+    .cn-toggle input:checked + .cn-toggle-slider { background: var(--primary-yellow); }
+    .cn-toggle input:checked + .cn-toggle-slider::before { transform: translateX(16px); }
+
+    /* 한 일의 전당 */
+    .work-hall-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-bottom: 12px; }
+    .work-hall-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--button-radius, 8px); padding: 14px 12px 12px; cursor: pointer; transition: all 0.15s; }
+    .work-hall-card:hover { border-color: var(--primary-yellow); box-shadow: 0 2px 8px rgba(0,0,0,0.07); transform: translateY(-1px); }
+    .work-hall-emoji { font-size: 26px; margin-bottom: 6px; line-height: 1; }
+    .work-hall-title { font-size: 12px; font-weight: 700; word-break: break-word; line-height: 1.4; text-decoration: line-through; opacity: 0.7; }
+    .work-hall-meta { font-size: 11px; color: var(--text-secondary); margin-top: 6px; display: flex; flex-direction: column; gap: 2px; }
+    .work-hall-focus { font-size: 11px; color: var(--primary-pink, #ffaade); font-weight: 600; margin-top: 4px; }

@@ -1675,6 +1675,7 @@
       loadNotificationSettings();
       /* 뽀모도로 초기 상태 설정 */
       initPomodoroPhase('work');
+      startNotifyScheduler();
       renderSidebar();
       renderMenuManager();
       updateActiveMenu();
@@ -5991,13 +5992,25 @@
         menuItems[2].classList.add('active');
         document.getElementById('settingsDesignSection').classList.add('active');
         renderDesignSettings();
-      } else if (sectionName === 'notify' && menuItems[3]) {
+      } else if (sectionName === 'pomodoro' && menuItems[3]) {
         menuItems[3].classList.add('active');
+        document.getElementById('settingsPomodoroSection').classList.add('active');
+        renderPomodoroSettingsSection();
+      } else if (sectionName === 'notify' && menuItems[4]) {
+        menuItems[4].classList.add('active');
         document.getElementById('settingsNotifySection').classList.add('active');
         renderNotifySettings();
       }
 
       updateProfileDisplay();
+    }
+
+    function renderPomodoroSettingsSection() {
+      var f = function(id, val) { var el = document.getElementById(id); if (el) el.value = val; };
+      f('pomoWorkMin', pomodoroSettings.workMin);
+      f('pomoBreakMin', pomodoroSettings.breakMin);
+      f('pomoLongBreakMin', pomodoroSettings.longBreakMin);
+      f('pomoCyclesBeforeLong', pomodoroSettings.cyclesBeforeLong);
     }
 
     function renderNotifySettings() {
@@ -6017,43 +6030,22 @@
           statusEl.style.color = 'var(--text-secondary)';
         }
       }
-      /* 뽀모도로 설정값 채우기 */
-      var f = function(id, val) { var el = document.getElementById(id); if (el) el.value = val; };
-      f('pomoWorkMin', pomodoroSettings.workMin);
-      f('pomoBreakMin', pomodoroSettings.breakMin);
-      f('pomoLongBreakMin', pomodoroSettings.longBreakMin);
-      f('pomoCyclesBeforeLong', pomodoroSettings.cyclesBeforeLong);
-      var notifyChk = document.getElementById('pomoNotifyEnabled');
-      if (notifyChk) notifyChk.checked = pomodoroSettings.notifyEnabled;
-      /* 습관 리마인더 */
-      var hrChk = document.getElementById('habitReminderEnabled');
-      if (hrChk) hrChk.checked = notificationSettings.habitReminderEnabled;
-      var hrTime = document.getElementById('habitReminderTime');
-      if (hrTime) hrTime.value = notificationSettings.habitReminderTime;
-      var hrRow = document.getElementById('habitReminderTimeRow');
-      if (hrRow) hrRow.style.display = notificationSettings.habitReminderEnabled ? '' : 'none';
+      /* 뽀모도로 알림 체크박스 */
+      var we = document.getElementById('pomoNotifyWorkEnd');
+      if (we) we.checked = pomodoroSettings.notifyWorkEnd;
+      var be = document.getElementById('pomoNotifyBreakEnd');
+      if (be) be.checked = pomodoroSettings.notifyBreakEnd;
+      /* 커스텀 알림 목록 */
+      renderCustomNotifyList();
     }
 
     function updatePomodoroSetting(key, val) {
       pomodoroSettings[key] = val;
       savePomodoroSettings();
-      /* 실행 중인 타이머가 없을 때만 total 재계산 */
       if (!pomodoroState.running) {
         pomodoroState.total = pomodoroPhaseSeconds(pomodoroState.phase);
         pomodoroState.remaining = pomodoroState.total;
         renderPomodoroUI();
-      }
-    }
-
-    function updateNotifySetting(key, val) {
-      notificationSettings[key] = val;
-      saveNotificationSettings();
-      var hrRow = document.getElementById('habitReminderTimeRow');
-      if (hrRow) hrRow.style.display = notificationSettings.habitReminderEnabled ? '' : 'none';
-      if (key === 'habitReminderEnabled' && val) {
-        requestNotificationPermission(function(granted) {
-          renderNotifySettings();
-        });
       }
     }
 
@@ -6063,6 +6055,132 @@
         if (granted) showAlert('알림 허용됨', '브라우저 알림이 허용되었습니다.');
         else showAlert('알림 차단', '브라우저 설정에서 이 사이트의 알림을 허용해 주세요.');
       });
+    }
+
+    /* ─── 커스텀 알림 CRUD ─── */
+    var __cnDraft = null;
+    var WEEKDAYS_FOR_CN = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+    var WEEKDAYS_KR_CN = ['월','화','수','목','금','토','일'];
+
+    function renderCustomNotifyList() {
+      var el = document.getElementById('customNotifyList');
+      if (!el) return;
+      if (customNotifications.length === 0) {
+        el.innerHTML = '<div style="font-size:13px;color:var(--text-secondary);padding:12px 0;">아직 등록된 알림이 없습니다.</div>';
+        return;
+      }
+      el.innerHTML = customNotifications.map(function(cn) {
+        var wdStr = cn.weekdays && cn.weekdays.length > 0
+          ? cn.weekdays.map(function(w) { return WEEKDAYS_KR_CN[WEEKDAYS_FOR_CN.indexOf(w)]; }).join(' ')
+          : '매일';
+        return '<div class="cn-item">'
+          + '<div class="cn-item-main">'
+          + '<div class="cn-item-title">' + escapeHtml(cn.title) + '</div>'
+          + '<div class="cn-item-meta">' + wdStr + ' · ' + cn.time + (cn.body ? ' · ' + escapeHtml(cn.body.substring(0, 20)) : '') + '</div>'
+          + '</div>'
+          + '<div class="cn-item-actions">'
+          + '<label class="cn-toggle"><input type="checkbox"' + (cn.enabled ? ' checked' : '') + ' onchange="toggleCustomNotify(\'' + cn.id + '\',this.checked)"><span class="cn-toggle-slider"></span></label>'
+          + '<button class="pomo-btn-icon" onclick="openCustomNotifyForm(\'' + cn.id + '\')">✏️</button>'
+          + '<button class="pomo-btn-icon" onclick="deleteCustomNotify(\'' + cn.id + '\')">🗑</button>'
+          + '</div>'
+          + '</div>';
+      }).join('');
+    }
+
+    function openCustomNotifyForm(id) {
+      var existing = id ? customNotifications.find(function(cn) { return cn.id === id; }) : null;
+      __cnDraft = existing
+        ? { id: existing.id, title: existing.title, body: existing.body || '', weekdays: existing.weekdays.slice(), time: existing.time, enabled: existing.enabled }
+        : { id: null, title: '', body: '', weekdays: ['MON','TUE','WED','THU','FRI','SAT','SUN'], time: '09:00', enabled: true };
+      document.getElementById('customNotifyFormTitle').textContent = id ? '알림 수정' : '알림 추가';
+      document.getElementById('cnTitle').value = __cnDraft.title;
+      document.getElementById('cnBody').value = __cnDraft.body;
+      document.getElementById('cnTime').value = __cnDraft.time;
+      /* 요일 버튼 */
+      var btns = document.getElementById('cnWeekdayBtns');
+      btns.innerHTML = WEEKDAYS_FOR_CN.map(function(w, i) {
+        var sel = __cnDraft.weekdays.indexOf(w) >= 0;
+        return '<button class="habit-wd-btn' + (sel ? ' selected' : '') + '" onclick="cnToggleWd(\'' + w + '\')" data-wd="' + w + '">' + WEEKDAYS_KR_CN[i] + '</button>';
+      }).join('');
+      var modal = document.getElementById('customNotifyModal');
+      modal.style.display = 'flex';
+      bringModalToFront(modal);
+      setTimeout(function() { var t = document.getElementById('cnTitle'); if (t) t.focus(); }, 50);
+    }
+
+    function cnToggleWd(wd) {
+      if (!__cnDraft) return;
+      var idx = __cnDraft.weekdays.indexOf(wd);
+      if (idx >= 0) __cnDraft.weekdays.splice(idx, 1);
+      else __cnDraft.weekdays.push(wd);
+      document.querySelectorAll('#cnWeekdayBtns .habit-wd-btn').forEach(function(btn) {
+        btn.classList.toggle('selected', __cnDraft.weekdays.indexOf(btn.dataset.wd) >= 0);
+      });
+    }
+
+    function saveCustomNotifyForm() {
+      if (!__cnDraft) return;
+      var title = document.getElementById('cnTitle').value.trim();
+      if (!title) { showAlert('입력 오류', '알림 제목을 입력해주세요.'); return; }
+      __cnDraft.title = title;
+      __cnDraft.body = document.getElementById('cnBody').value.trim();
+      __cnDraft.time = document.getElementById('cnTime').value;
+      if (__cnDraft.weekdays.length === 0) __cnDraft.weekdays = WEEKDAYS_FOR_CN.slice();
+      if (__cnDraft.id) {
+        var idx = customNotifications.findIndex(function(cn) { return cn.id === __cnDraft.id; });
+        if (idx >= 0) customNotifications[idx] = __cnDraft;
+      } else {
+        __cnDraft.id = 'cn' + Date.now().toString(36);
+        customNotifications.push(__cnDraft);
+      }
+      saveCustomNotifications();
+      closeCustomNotifyForm();
+      renderCustomNotifyList();
+    }
+
+    function closeCustomNotifyForm() {
+      document.getElementById('customNotifyModal').style.display = 'none';
+      __cnDraft = null;
+    }
+
+    function toggleCustomNotify(id, enabled) {
+      var cn = customNotifications.find(function(x) { return x.id === id; });
+      if (cn) { cn.enabled = enabled; saveCustomNotifications(); }
+    }
+
+    function deleteCustomNotify(id) {
+      showConfirm('알림 삭제', '이 알림을 삭제하시겠습니까?', function(ok) {
+        if (!ok) return;
+        customNotifications = customNotifications.filter(function(cn) { return cn.id !== id; });
+        saveCustomNotifications();
+        renderCustomNotifyList();
+      });
+    }
+
+    /* ─── 알림 스케줄러 ─── */
+    var __notifyLastFired = {};  // id+YYYY-MM-DD-HH:MM → true
+
+    function startNotifyScheduler() {
+      setInterval(function() {
+        if (customNotifications.length === 0) return;
+        var now = new Date();
+        var days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+        var currentDay = days[now.getDay()];
+        var hh = String(now.getHours()).padStart(2, '0');
+        var mm = String(now.getMinutes()).padStart(2, '0');
+        var currentTime = hh + ':' + mm;
+        var todayStr = today();
+        customNotifications.forEach(function(cn) {
+          if (!cn.enabled) return;
+          var wds = cn.weekdays && cn.weekdays.length > 0 ? cn.weekdays : WEEKDAYS_FOR_CN;
+          if (wds.indexOf(currentDay) < 0) return;
+          if (cn.time !== currentTime) return;
+          var key = cn.id + '-' + todayStr + '-' + currentTime;
+          if (__notifyLastFired[key]) return;
+          __notifyLastFired[key] = true;
+          sendNotification(cn.title, cn.body || '');
+        });
+      }, 30000); // 30초마다 체크
     }
 
     // ========================================
@@ -6942,6 +7060,10 @@
     var workBasketPerPage = 12;
     var workBasketSearch = '';
     var workBasketSort = 'default';
+    var workHallPage = 1;
+    var workHallPerPage = 12;
+    var workHallSearch = '';
+    var workHallSort = 'newest';
     var __workDragId = null;
     var __workDragSrcStatus = null;
     var __workDragTargetId = null;
@@ -7053,6 +7175,7 @@
       html += '<button class="tab-btn' + (workView === 'week' ? ' active' : '') + '" onclick="switchWorkView(\'week\')">주별</button>';
       html += '<button class="tab-btn' + (workView === 'month' ? ' active' : '') + '" onclick="switchWorkView(\'month\')">월별</button>';
       html += '<button class="tab-btn' + (workView === 'basket' ? ' active' : '') + '" onclick="switchWorkView(\'basket\')">🧺 할일 바구니' + (basketCount > 0 ? ' <span class="work-basket-tab-count">' + basketCount + '</span>' : '') + '</button>';
+      html += '<button class="tab-btn' + (workView === 'hall' ? ' active' : '') + '" onclick="switchWorkView(\'hall\')">🏆 한 일의 전당</button>';
       html += '</div>';
       html += '<div id="workViewContent"></div>';
       html += '</div>';
@@ -7062,9 +7185,8 @@
 
     function switchWorkView(view) {
       workView = view;
-      var labels = { today: '오늘', week: '주별', month: '월별' };
       document.querySelectorAll('#workTabNav .tab-btn').forEach(function(btn, i) {
-        btn.classList.toggle('active', i === ['today','week','month','basket'].indexOf(view));
+        btn.classList.toggle('active', i === ['today','week','month','basket','hall'].indexOf(view));
       });
       renderWorkView();
     }
@@ -7073,6 +7195,7 @@
       if (workView === 'today') renderWorkToday();
       else if (workView === 'week') renderWorkWeek();
       else if (workView === 'basket') renderWorkBasketTab();
+      else if (workView === 'hall') renderWorkHall();
       else renderWorkMonth();
     }
 
@@ -7086,7 +7209,7 @@
         + ' draggable="true"'
         + ' ondragstart="workDragStart(event,\'' + item.id + '\',\'' + status + '\')"'
         + ' ondragend="workDragEnd(event)"'
-        + ' onclick="workToggleInlineEdit(\'' + item.id + '\')">';
+        + ' onclick="showWorkItemDetail(\'' + item.id + '\')">';
       html += '<div style="display:flex;align-items:flex-start;gap:8px;">';
       html += '<span style="font-size:20px;min-width:24px;text-align:center;flex-shrink:0;">' + (item.emoji || '📋') + '</span>';
       html += '<div style="flex:1;min-width:0;">';
@@ -7429,17 +7552,40 @@
       renderWorkView();
     }
 
+    function formatFocusTime(seconds) {
+      if (!seconds || seconds <= 0) return null;
+      var min = Math.floor(seconds / 60);
+      return formatDurationMin(min);
+    }
+
     function showWorkItemDetail(id) {
       var item = workItems.find(function(it) { return it.id === id; });
       if (!item) return;
       var status = getWorkStatus(item);
+      var statusLabels = { 'pending': '시작 전', 'in-progress': '진행 중', 'done': '완료' };
       var html = '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">';
       html += '<div style="font-size:36px;line-height:1;">' + renderEmoji(item.emoji || '📋') + '</div>';
       html += '<div style="flex:1;min-width:0;">';
       if (item.isBonus) html += '<div style="font-size:11px;color:#fdcb6e;font-weight:700;margin-bottom:3px;">⭐ 보너스</div>';
       html += '<div style="font-size:16px;font-weight:700;word-break:break-word;">' + escapeHtml(item.title) + '</div>';
-      if (!item.date) html += '<div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">날짜 미정 (바구니)</div>';
       html += '</div></div>';
+      html += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">';
+      html += '<div style="display:flex;gap:8px;align-items:center;font-size:13px;">';
+      html += '<span style="color:var(--text-secondary);min-width:60px;">상태</span>';
+      html += '<span style="font-weight:600;">' + (statusLabels[status] || status) + '</span>';
+      html += '</div>';
+      html += '<div style="display:flex;gap:8px;align-items:center;font-size:13px;">';
+      html += '<span style="color:var(--text-secondary);min-width:60px;">날짜</span>';
+      html += '<span>' + (item.date ? formatDateKR(item.date) : '날짜 미정 (바구니)') + '</span>';
+      html += '</div>';
+      var focusStr = formatFocusTime(item.focusTime);
+      if (focusStr) {
+        html += '<div style="display:flex;gap:8px;align-items:center;font-size:13px;">';
+        html += '<span style="color:var(--text-secondary);min-width:60px;">집중 시간</span>';
+        html += '<span style="color:var(--primary-pink,#ffaade);font-weight:600;">⏱ ' + focusStr + '</span>';
+        html += '</div>';
+      }
+      html += '</div>';
       if (item.memo) html += '<div style="background:var(--bg-main);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.65;white-space:pre-wrap;">' + escapeHtml(item.memo) + '</div>';
       var detailDiv = document.getElementById('workDetailContent');
       if (detailDiv) detailDiv.innerHTML = html;
@@ -7675,7 +7821,7 @@
           html += '<div class="basket-grid">';
           basketItems.forEach(function(item) {
             var status = getWorkStatus(item);
-            html += '<div class="basket-grid-card" onclick="workToggleInlineEdit(\'' + item.id + '\')">';
+            html += '<div class="basket-grid-card" onclick="showWorkItemDetail(\'' + item.id + '\')">';
             html += '<input type="checkbox" class="basket-item-check basket-grid-check" value="' + item.id + '" onclick="event.stopPropagation()" onchange="basketUpdateSelection()">';
             html += '<div class="basket-grid-emoji">' + (item.emoji || '📋') + '</div>';
             html += '<div class="basket-grid-title' + (status === 'done' ? ' done' : '') + '">' + escapeHtml(item.title) + '</div>';
@@ -7813,6 +7959,81 @@
     }
 
     // ========================================
+    // 한 일의 전당
+    // ========================================
+
+    function renderWorkHall() {
+      var c = document.getElementById('workViewContent');
+      if (!c) return;
+
+      var doneItems = workItems.filter(function(it) { return getWorkStatus(it) === 'done'; });
+
+      var q = workHallSearch.toLowerCase();
+      if (q) doneItems = doneItems.filter(function(it) { return it.title.toLowerCase().indexOf(q) >= 0; });
+
+      if (workHallSort === 'newest') {
+        doneItems.sort(function(a, b) { return (b.date || '').localeCompare(a.date || ''); });
+      } else if (workHallSort === 'oldest') {
+        doneItems.sort(function(a, b) { return (a.date || '').localeCompare(b.date || ''); });
+      } else if (workHallSort === 'focus') {
+        doneItems.sort(function(a, b) { return (b.focusTime || 0) - (a.focusTime || 0); });
+      }
+
+      var total = doneItems.length;
+      var totalPages = Math.max(1, Math.ceil(total / workHallPerPage));
+      if (workHallPage > totalPages) workHallPage = totalPages;
+      var start = (workHallPage - 1) * workHallPerPage;
+      var pageItems = doneItems.slice(start, start + workHallPerPage);
+
+      var html = '<div class="work-basket-tab">';
+      html += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">';
+      html += '<input class="input-field" style="flex:1;min-width:120px;" placeholder="검색..." value="' + escapeHtml(workHallSearch) + '" oninput="hallSetSearch(this.value)">';
+      html += '<select class="input-field" style="width:auto;" onchange="hallSetSort(this.value)">';
+      ['newest','oldest','focus'].forEach(function(s) {
+        var label = s === 'newest' ? '최신순' : s === 'oldest' ? '오래된순' : '집중시간순';
+        html += '<option value="' + s + '"' + (workHallSort === s ? ' selected' : '') + '>' + label + '</option>';
+      });
+      html += '</select>';
+      html += '</div>';
+
+      if (total === 0) {
+        html += '<div class="empty-state"><p>완료된 할일이 없습니다.</p></div>';
+      } else {
+        html += buildGenericPagerBar({ total: total, page: workHallPage, perPage: workHallPerPage, perPageOpts: [8,12,20,40], goFn: 'goHallPage', setPerPageFn: 'setHallPerPage' });
+        html += '<div class="work-hall-grid">';
+        pageItems.forEach(function(item) {
+          var focusStr = formatFocusTime(item.focusTime);
+          html += '<div class="work-hall-card" onclick="showWorkItemDetail(\'' + item.id + '\')">';
+          html += '<div class="work-hall-emoji">' + renderEmoji(item.emoji || '📋') + '</div>';
+          html += '<div class="work-hall-title">' + escapeHtml(item.title) + '</div>';
+          html += '<div class="work-hall-meta">';
+          if (item.date) html += '<span>' + formatDateKR(item.date) + '</span>';
+          if (item.isBonus) html += '<span style="color:#fdcb6e;font-weight:600;">⭐ 보너스</span>';
+          html += '</div>';
+          if (focusStr) html += '<div class="work-hall-focus">⏱ ' + focusStr + '</div>';
+          html += '</div>';
+        });
+        html += '</div>';
+        html += buildGenericPagerBar({ total: total, page: workHallPage, perPage: workHallPerPage, perPageOpts: [8,12,20,40], goFn: 'goHallPage', setPerPageFn: 'setHallPerPage' });
+      }
+
+      html += '</div>';
+      c.innerHTML = html;
+    }
+
+    function hallSetSearch(val) { workHallSearch = val; workHallPage = 1; renderWorkHall(); }
+    function hallSetSort(val) { workHallSort = val; workHallPage = 1; renderWorkHall(); }
+    function goHallPage(page) {
+      var total = workItems.filter(function(it) { return getWorkStatus(it) === 'done'; }).length;
+      var tp = Math.max(1, Math.ceil(total / workHallPerPage));
+      page = parseInt(page, 10);
+      if (isNaN(page) || page < 1 || page > tp) return;
+      workHallPage = page;
+      renderWorkHall();
+    }
+    function setHallPerPage(val) { workHallPerPage = parseInt(val, 10) || 12; workHallPage = 1; renderWorkHall(); }
+
+    // ========================================
     // 뽀모도로 타이머
     // ========================================
 
@@ -7821,7 +8042,8 @@
       breakMin: 5,
       longBreakMin: 15,
       cyclesBeforeLong: 4,
-      notifyEnabled: true
+      notifyWorkEnd: true,
+      notifyBreakEnd: true
     };
 
     var pomodoroState = {
@@ -7832,6 +8054,7 @@
       cycle: 0,            // completed work cycles (0-indexed)
       taskId: null,
       taskTitle: '',
+      sessionStart: null,  // Date.now() when current work session started
       intervalId: null
     };
 
@@ -7839,11 +8062,12 @@
       try {
         var saved = JSON.parse(localStorage.getItem('pomodoroSettings') || 'null');
         if (saved) {
-          pomodoroSettings.workMin = saved.workMin || 25;
-          pomodoroSettings.breakMin = saved.breakMin || 5;
-          pomodoroSettings.longBreakMin = saved.longBreakMin || 15;
-          pomodoroSettings.cyclesBeforeLong = saved.cyclesBeforeLong || 4;
-          if (typeof saved.notifyEnabled === 'boolean') pomodoroSettings.notifyEnabled = saved.notifyEnabled;
+          if (saved.workMin) pomodoroSettings.workMin = saved.workMin;
+          if (saved.breakMin) pomodoroSettings.breakMin = saved.breakMin;
+          if (saved.longBreakMin) pomodoroSettings.longBreakMin = saved.longBreakMin;
+          if (saved.cyclesBeforeLong) pomodoroSettings.cyclesBeforeLong = saved.cyclesBeforeLong;
+          if (typeof saved.notifyWorkEnd === 'boolean') pomodoroSettings.notifyWorkEnd = saved.notifyWorkEnd;
+          if (typeof saved.notifyBreakEnd === 'boolean') pomodoroSettings.notifyBreakEnd = saved.notifyBreakEnd;
         }
       } catch(e) {}
     }
@@ -7905,14 +8129,21 @@
         initPomodoroPhase(pomodoroState.phase);
       }
       if (pomodoroState.running) {
+        /* 일시정지: 집중 구간이면 경과 시간 기록 */
+        if (pomodoroState.phase === 'work' && pomodoroState.taskId && pomodoroState.sessionStart) {
+          var elapsed = Math.floor((Date.now() - pomodoroState.sessionStart) / 1000);
+          var item = workItems.find(function(it) { return it.id === pomodoroState.taskId; });
+          if (item) { item.focusTime = (item.focusTime || 0) + elapsed; saveWorkItems(); }
+        }
+        pomodoroState.sessionStart = null;
         stopPomodoroTick();
         pomodoroState.running = false;
       } else {
         if (pomodoroState.remaining === pomodoroState.total) {
-          // 새 사이클 시작 — total 초기화
           pomodoroState.total = pomodoroPhaseSeconds(pomodoroState.phase);
           pomodoroState.remaining = pomodoroState.total;
         }
+        if (pomodoroState.phase === 'work') pomodoroState.sessionStart = Date.now();
         pomodoroState.running = true;
         startPomodoroTick();
       }
@@ -7943,15 +8174,24 @@
     function onPomodoroPhaseEnd() {
       var wasWork = (pomodoroState.phase === 'work');
       if (wasWork) {
+        /* 수행 시간 기록 */
+        if (pomodoroState.taskId && pomodoroState.sessionStart) {
+          var elapsed = Math.floor((Date.now() - pomodoroState.sessionStart) / 1000);
+          var item = workItems.find(function(it) { return it.id === pomodoroState.taskId; });
+          if (item) { item.focusTime = (item.focusTime || 0) + elapsed; saveWorkItems(); }
+        }
+        pomodoroState.sessionStart = null;
         pomodoroState.cycle++;
-        var title = '집중 완료! 🎉';
-        var body = pomodoroSettings.workMin + '분 집중 완료. 잠시 쉬어가세요.';
-        if (pomodoroState.taskTitle) body = pomodoroState.taskTitle + ' — ' + body;
-        sendNotification(title, body);
+        if (pomodoroSettings.notifyWorkEnd) {
+          var title = '집중 완료! 🎉';
+          var body = pomodoroSettings.workMin + '분 집중 완료. 잠시 쉬어가세요.';
+          if (pomodoroState.taskTitle) body = pomodoroState.taskTitle + ' — ' + body;
+          sendNotification(title, body);
+        }
         var isLong = (pomodoroState.cycle % pomodoroSettings.cyclesBeforeLong === 0);
         initPomodoroPhase(isLong ? 'longbreak' : 'break');
       } else {
-        sendNotification('휴식 종료 ⏰', '다시 집중할 시간이에요!');
+        if (pomodoroSettings.notifyBreakEnd) sendNotification('휴식 종료 ⏰', '다시 집중할 시간이에요!');
         initPomodoroPhase('work');
       }
       updatePageTitle();
@@ -8040,24 +8280,31 @@
     // ========================================
 
     var notificationSettings = {
-      pomodoroEnabled: true,
-      habitReminderEnabled: false,
-      habitReminderTime: '09:00'
+      pomodoroWorkEnd: true,
+      pomodoroBreakEnd: true
     };
+    var customNotifications = [];  // [{ id, title, body, weekdays, time, enabled }]
 
     function loadNotificationSettings() {
       try {
         var saved = JSON.parse(localStorage.getItem('notificationSettings') || 'null');
         if (saved) {
-          if (typeof saved.pomodoroEnabled === 'boolean') notificationSettings.pomodoroEnabled = saved.pomodoroEnabled;
-          if (typeof saved.habitReminderEnabled === 'boolean') notificationSettings.habitReminderEnabled = saved.habitReminderEnabled;
-          if (saved.habitReminderTime) notificationSettings.habitReminderTime = saved.habitReminderTime;
+          if (typeof saved.pomodoroWorkEnd === 'boolean') notificationSettings.pomodoroWorkEnd = saved.pomodoroWorkEnd;
+          if (typeof saved.pomodoroBreakEnd === 'boolean') notificationSettings.pomodoroBreakEnd = saved.pomodoroBreakEnd;
         }
       } catch(e) {}
+      try {
+        var cn = JSON.parse(localStorage.getItem('customNotifications') || '[]');
+        customNotifications = Array.isArray(cn) ? cn : [];
+      } catch(e) { customNotifications = []; }
     }
 
     function saveNotificationSettings() {
       localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings));
+    }
+
+    function saveCustomNotifications() {
+      localStorage.setItem('customNotifications', JSON.stringify(customNotifications));
     }
 
     function sendNotification(title, body) {
