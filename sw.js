@@ -1,5 +1,33 @@
 /* 베이 관리자 Service Worker */
-var CACHE = 'bey-v1';
+
+/* Firebase Messaging (백그라운드 푸시 수신) */
+importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey: "AIzaSyC8uy09XOeEYIs1m3Rga5BMqd7gS7o3roI",
+  authDomain: "beyhome-admin.firebaseapp.com",
+  projectId: "beyhome-admin",
+  storageBucket: "beyhome-admin.firebasestorage.app",
+  messagingSenderId: "849320781553",
+  appId: "1:849320781553:web:5a78f9c2bd936b60aa2b50"
+});
+
+var messaging = firebase.messaging();
+
+/* 앱이 닫혀있을 때 수신한 FCM 메시지를 OS 알림으로 표시 */
+messaging.onBackgroundMessage(function(payload) {
+  var title = (payload.notification && payload.notification.title) || '베이 관리자';
+  var body  = (payload.notification && payload.notification.body)  || '';
+  self.registration.showNotification(title, {
+    body: body,
+    icon: './icon-192.png',
+    badge: './icon-192.png'
+  });
+});
+
+/* ── 캐싱 전략 ── */
+var CACHE = 'bey-v2';
 var ASSETS = ['./','./index.html','./styles.css','./app.js','./manifest.json','./icon-192.png','./icon-512.png'];
 
 self.addEventListener('install', function(e) {
@@ -16,7 +44,7 @@ self.addEventListener('activate', function(e) {
   self.clients.claim();
 });
 
-/* 네트워크 우선, 실패 시 캐시 폴백 (앱 업데이트 즉시 반영) */
+/* 네트워크 우선, 실패 시 캐시 폴백 */
 self.addEventListener('fetch', function(e) {
   if (e.request.method !== 'GET') return;
   e.respondWith(
@@ -30,21 +58,6 @@ self.addEventListener('fetch', function(e) {
       return caches.match(e.request);
     })
   );
-});
-
-/* 향후 Firebase 푸시 알림용 (현재는 빈 핸들러) */
-self.addEventListener('push', function(e) {
-  if (!e.data) return;
-  try {
-    var data = e.data.json();
-    e.waitUntil(
-      self.registration.showNotification(data.title || '베이 관리자', {
-        body: data.body || '',
-        icon: './icon-192.png',
-        badge: './icon-192.png'
-      })
-    );
-  } catch(err) {}
 });
 
 self.addEventListener('notificationclick', function(e) {

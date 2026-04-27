@@ -1689,6 +1689,10 @@
         navigateTo(lastPage);
       }
       updateMobileTopTitle();
+      /* 알림 권한 이미 허용된 경우 → FCM 토큰 자동 등록 */
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        setTimeout(registerFCMToken, 2000);
+      }
     }
 
     function loadMenus() {
@@ -6052,8 +6056,12 @@
     function requestNotifyPermission() {
       requestNotificationPermission(function(granted) {
         renderNotifySettings();
-        if (granted) showAlert('알림 허용됨', '브라우저 알림이 허용되었습니다.');
-        else showAlert('알림 차단', '브라우저 설정에서 이 사이트의 알림을 허용해 주세요.');
+        if (granted) {
+          registerFCMToken();
+          showAlert('알림 허용됨', '브라우저 알림이 허용되었습니다.<br>모바일 푸시 알림도 자동 등록됩니다.');
+        } else {
+          showAlert('알림 차단', '브라우저 설정에서 이 사이트의 알림을 허용해 주세요.');
+        }
       });
     }
 
@@ -8379,6 +8387,62 @@
     }
 
     // ========================================
+    // Firebase FCM 연동
+    // ========================================
+
+    var FCM_VAPID_KEY = 'BLpTPaiCZH5PSBT79BPafN9RTepmj5RZe76COo8qZLSNrwr9Y4xyDod9UDIGV6e4jMbqVv7gEsCo7z5nHfKIStY';
+    var _fcmToken = null;
+    var _fbApp = null;
+
+    function _initFirebase() {
+      if (_fbApp) return;
+      if (typeof firebase === 'undefined') return;
+      try {
+        _fbApp = firebase.initializeApp({
+          apiKey: "AIzaSyC8uy09XOeEYIs1m3Rga5BMqd7gS7o3roI",
+          authDomain: "beyhome-admin.firebaseapp.com",
+          projectId: "beyhome-admin",
+          storageBucket: "beyhome-admin.firebasestorage.app",
+          messagingSenderId: "849320781553",
+          appId: "1:849320781553:web:5a78f9c2bd936b60aa2b50"
+        });
+      } catch(e) {
+        try { _fbApp = firebase.app(); } catch(e2) {}
+      }
+    }
+
+    function registerFCMToken() {
+      if (typeof firebase === 'undefined' || !('serviceWorker' in navigator)) return;
+      _initFirebase();
+      navigator.serviceWorker.ready.then(function(reg) {
+        return firebase.messaging().getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: reg });
+      }).then(function(token) {
+        if (!token) return;
+        _fcmToken = token;
+        firebase.firestore().collection('bey-manager').doc('config').set({
+          fcmToken: token, updatedAt: new Date().toISOString()
+        }).catch(function() {});
+        syncFCMSchedules();
+        /* 앱이 열려있을 때 수신한 FCM 메시지 → 기존 sendNotification으로 처리 */
+        firebase.messaging().onMessage(function(payload) {
+          var t = payload.notification && payload.notification.title || '베이 관리자';
+          var b = payload.notification && payload.notification.body || '';
+          new Notification(t, { body: b, icon: './icon-192.png' });
+        });
+      }).catch(function() {});
+    }
+
+    function syncFCMSchedules() {
+      if (!_fcmToken || typeof firebase === 'undefined') return;
+      var enabled = customNotifications.filter(function(n) { return n.enabled; });
+      firebase.firestore().collection('bey-manager').doc('notifications').set({
+        token: _fcmToken,
+        schedules: enabled,
+        syncedAt: new Date().toISOString()
+      }).catch(function() {});
+    }
+
+    // ========================================
     // 알림 (Notification API)
     // ========================================
 
@@ -8408,6 +8472,7 @@
 
     function saveCustomNotifications() {
       localStorage.setItem('customNotifications', JSON.stringify(customNotifications));
+      syncFCMSchedules();
     }
 
     function sendNotification(title, body) {
