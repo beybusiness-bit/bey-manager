@@ -3415,6 +3415,8 @@
     }
     .pomo-ctrl-btn:hover { opacity: 0.85; }
     .pomo-ctrl-btn.paused { background: var(--border-color); }
+    .pomo-stop-btn { flex: 0 0 60px; background: #ff6b6b; color: white; font-size: 12px; }
+    .pomo-stop-btn:hover { background: #e55555; }
     .pomo-skip-btn { flex: 0 0 42px; background: var(--border-color); font-size: 16px; }
 
     /* 커스텀 알림 목록 */
@@ -3435,6 +3437,6 @@
     .work-hall-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--button-radius, 8px); padding: 14px 12px 12px; cursor: pointer; transition: all 0.15s; }
     .work-hall-card:hover { border-color: var(--primary-yellow); box-shadow: 0 2px 8px rgba(0,0,0,0.07); transform: translateY(-1px); }
     .work-hall-emoji { font-size: 26px; margin-bottom: 6px; line-height: 1; }
-    .work-hall-title { font-size: 12px; font-weight: 700; word-break: break-word; line-height: 1.4; text-decoration: line-through; opacity: 0.7; }
+    .work-hall-title { font-size: 12px; font-weight: 700; word-break: break-word; line-height: 1.4; opacity: 0.8; }
     .work-hall-meta { font-size: 11px; color: var(--text-secondary); margin-top: 6px; display: flex; flex-direction: column; gap: 2px; }
     .work-hall-focus { font-size: 11px; color: var(--primary-pink, #ffaade); font-weight: 600; margin-top: 4px; }

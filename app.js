@@ -6100,7 +6100,7 @@
       var btns = document.getElementById('cnWeekdayBtns');
       btns.innerHTML = WEEKDAYS_FOR_CN.map(function(w, i) {
         var sel = __cnDraft.weekdays.indexOf(w) >= 0;
-        return '<button class="habit-wd-btn' + (sel ? ' selected' : '') + '" onclick="cnToggleWd(\'' + w + '\')" data-wd="' + w + '">' + WEEKDAYS_KR_CN[i] + '</button>';
+        return '<button class="habit-wd-btn' + (sel ? ' active' : '') + '" onclick="cnToggleWd(\'' + w + '\')" data-wd="' + w + '">' + WEEKDAYS_KR_CN[i] + '</button>';
       }).join('');
       var modal = document.getElementById('customNotifyModal');
       modal.style.display = 'flex';
@@ -6114,7 +6114,7 @@
       if (idx >= 0) __cnDraft.weekdays.splice(idx, 1);
       else __cnDraft.weekdays.push(wd);
       document.querySelectorAll('#cnWeekdayBtns .habit-wd-btn').forEach(function(btn) {
-        btn.classList.toggle('selected', __cnDraft.weekdays.indexOf(btn.dataset.wd) >= 0);
+        btn.classList.toggle('active', __cnDraft.weekdays.indexOf(btn.dataset.wd) >= 0);
       });
     }
 
@@ -7063,7 +7063,7 @@
     var workHallPage = 1;
     var workHallPerPage = 12;
     var workHallSearch = '';
-    var workHallSort = 'newest';
+    var workHallSort = 'newest';  // newest | oldest | focus_desc | focus_asc | title_asc | title_desc
     var __workDragId = null;
     var __workDragSrcStatus = null;
     var __workDragTargetId = null;
@@ -7975,8 +7975,14 @@
         doneItems.sort(function(a, b) { return (b.date || '').localeCompare(a.date || ''); });
       } else if (workHallSort === 'oldest') {
         doneItems.sort(function(a, b) { return (a.date || '').localeCompare(b.date || ''); });
-      } else if (workHallSort === 'focus') {
+      } else if (workHallSort === 'focus_desc') {
         doneItems.sort(function(a, b) { return (b.focusTime || 0) - (a.focusTime || 0); });
+      } else if (workHallSort === 'focus_asc') {
+        doneItems.sort(function(a, b) { return (a.focusTime || 0) - (b.focusTime || 0); });
+      } else if (workHallSort === 'title_asc') {
+        doneItems.sort(function(a, b) { return a.title.localeCompare(b.title, 'ko'); });
+      } else if (workHallSort === 'title_desc') {
+        doneItems.sort(function(a, b) { return b.title.localeCompare(a.title, 'ko'); });
       }
 
       var total = doneItems.length;
@@ -7989,9 +7995,8 @@
       html += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">';
       html += '<input class="input-field" style="flex:1;min-width:120px;" placeholder="검색..." value="' + escapeHtml(workHallSearch) + '" oninput="hallSetSearch(this.value)">';
       html += '<select class="input-field" style="width:auto;" onchange="hallSetSort(this.value)">';
-      ['newest','oldest','focus'].forEach(function(s) {
-        var label = s === 'newest' ? '최신순' : s === 'oldest' ? '오래된순' : '집중시간순';
-        html += '<option value="' + s + '"' + (workHallSort === s ? ' selected' : '') + '>' + label + '</option>';
+      [['newest','최신순'],['oldest','오래된순'],['focus_desc','집중시간 많은순'],['focus_asc','집중시간 적은순'],['title_asc','가나다순'],['title_desc','가나다 역순']].forEach(function(pair) {
+        html += '<option value="' + pair[0] + '"' + (workHallSort === pair[0] ? ' selected' : '') + '>' + pair[1] + '</option>';
       });
       html += '</select>';
       html += '</div>';
@@ -8198,6 +8203,25 @@
       renderPomodoroUI();
     }
 
+    function stopPomodoro() {
+      var isActive = pomodoroState.running || (pomodoroState.remaining > 0 && pomodoroState.remaining < pomodoroState.total);
+      if (!isActive) return;
+      showConfirm('타이머 중단', '뽀모도로를 중단하시겠습니까?<br>지금까지의 집중 시간은 저장됩니다.', function(ok) {
+        if (!ok) return;
+        if (pomodoroState.phase === 'work' && pomodoroState.taskId && pomodoroState.sessionStart) {
+          var elapsed = Math.floor((Date.now() - pomodoroState.sessionStart) / 1000);
+          var item = workItems.find(function(it) { return it.id === pomodoroState.taskId; });
+          if (item) { item.focusTime = (item.focusTime || 0) + elapsed; saveWorkItems(); }
+        }
+        stopPomodoroTick();
+        pomodoroState.running = false;
+        pomodoroState.sessionStart = null;
+        initPomodoroPhase('work');
+        renderPomodoroUI();
+        showToast('타이머를 중단했습니다');
+      });
+    }
+
     function skipPomodoro() {
       stopPomodoroTick();
       pomodoroState.running = false;
@@ -8244,9 +8268,15 @@
         ring.classList.toggle('break', isBreak);
       }
 
+      var isPaused = !pomodoroState.running && pomodoroState.remaining > 0 && pomodoroState.remaining < pomodoroState.total;
       if (startBtn) {
-        startBtn.textContent = pomodoroState.running ? '⏸ 일시정지' : '▶ 시작';
+        startBtn.textContent = pomodoroState.running ? '⏸ 일시정지' : (isPaused ? '▶ 재개' : '▶ 시작');
         startBtn.classList.toggle('paused', pomodoroState.running);
+      }
+      var stopBtn = document.getElementById('pomodoroStopBtn');
+      if (stopBtn) {
+        var showStop = pomodoroState.running || isPaused;
+        stopBtn.style.display = showStop ? '' : 'none';
       }
 
       if (fab) {
