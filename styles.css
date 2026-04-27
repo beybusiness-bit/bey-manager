@@ -3450,7 +3450,7 @@
     .work-sub-title.done { text-decoration:line-through;opacity:0.6; }
     .work-connect-row { margin-top:6px;text-align:right; }
     .work-connect-btn { font-size:11px;color:var(--text-secondary);background:none;border:1px dashed var(--border-color);border-radius:4px;padding:2px 7px;cursor:pointer;transition:all 0.15s; }
-    .work-connect-btn:hover { border-color:var(--primary-yellow);color:#666; }
+    .work-connect-btn:hover { border-color:var(--primary-yellow);border-style:solid;background:rgba(255,222,89,0.22);color:#333;box-shadow:0 1px 4px rgba(0,0,0,0.12);transform:scale(1.04); }
     .work-kanban-card.linked { border-left-style:dashed !important; }
 
     /* 바구니에서 선택 피커 */
