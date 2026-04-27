@@ -8039,6 +8039,73 @@
     function setHallPerPage(val) { workHallPerPage = parseInt(val, 10) || 12; workHallPage = 1; renderWorkHall(); }
 
     // ========================================
+    // Media Session API (브라우저 미디어 컨트롤)
+    // ========================================
+
+    var _pomoAudioEl = null;
+
+    function _initPomoAudio() {
+      if (_pomoAudioEl) return;
+      /* 1초 무음 WAV를 JS로 생성해 audio 요소에 연결 */
+      var rate = 8000, nSamples = rate;
+      var buf = new ArrayBuffer(44 + nSamples);
+      var dv = new DataView(buf);
+      function ws(off, s) { for (var i = 0; i < s.length; i++) dv.setUint8(off + i, s.charCodeAt(i)); }
+      ws(0,'RIFF'); dv.setUint32(4, 36 + nSamples, true);
+      ws(8,'WAVE'); ws(12,'fmt ');
+      dv.setUint32(16,16,true); dv.setUint16(20,1,true); dv.setUint16(22,1,true);
+      dv.setUint32(24,rate,true); dv.setUint32(28,rate,true);
+      dv.setUint16(32,1,true); dv.setUint16(34,8,true);
+      ws(36,'data'); dv.setUint32(40,nSamples,true);
+      for (var i = 0; i < nSamples; i++) dv.setUint8(44+i, 128); // silence
+      var blob = new Blob([buf], { type:'audio/wav' });
+      _pomoAudioEl = document.createElement('audio');
+      _pomoAudioEl.src = URL.createObjectURL(blob);
+      _pomoAudioEl.loop = true;
+      _pomoAudioEl.volume = 0.001;
+      document.body.appendChild(_pomoAudioEl);
+    }
+
+    function _updateMediaSession() {
+      if (!('mediaSession' in navigator)) return;
+      var phaseName = pomodoroState.phase === 'work' ? '집중 중'
+        : pomodoroState.phase === 'break' ? '짧은 휴식' : '긴 휴식';
+      var timeStr = formatPomodoroTime(pomodoroState.remaining);
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: timeStr + ' — ' + phaseName,
+        artist: pomodoroState.taskTitle || '뽀모도로',
+        album: '베이 관리자',
+        artwork: [
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' }
+        ]
+      });
+      navigator.mediaSession.playbackState = pomodoroState.running ? 'playing' : 'paused';
+      navigator.mediaSession.setActionHandler('play', function() { if (!pomodoroState.running) togglePomodoroTimer(); });
+      navigator.mediaSession.setActionHandler('pause', function() { if (pomodoroState.running) togglePomodoroTimer(); });
+      navigator.mediaSession.setActionHandler('stop', function() { stopPomodoro(); });
+    }
+
+    function _startPomoMediaSession() {
+      _initPomoAudio();
+      if (_pomoAudioEl) _pomoAudioEl.play().catch(function() {});
+      _updateMediaSession();
+    }
+
+    function _pausePomoMediaSession() {
+      if (_pomoAudioEl) _pomoAudioEl.pause();
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    }
+
+    function _stopPomoMediaSession() {
+      if (_pomoAudioEl) { _pomoAudioEl.pause(); _pomoAudioEl.currentTime = 0; }
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'none';
+        navigator.mediaSession.metadata = null;
+      }
+    }
+
+    // ========================================
     // 뽀모도로 타이머
     // ========================================
 
@@ -8143,6 +8210,7 @@
         pomodoroState.sessionStart = null;
         stopPomodoroTick();
         pomodoroState.running = false;
+        _pausePomoMediaSession();
       } else {
         if (pomodoroState.remaining === pomodoroState.total) {
           pomodoroState.total = pomodoroPhaseSeconds(pomodoroState.phase);
@@ -8151,6 +8219,7 @@
         if (pomodoroState.phase === 'work') pomodoroState.sessionStart = Date.now();
         pomodoroState.running = true;
         startPomodoroTick();
+        _startPomoMediaSession();
       }
       renderPomodoroUI();
     }
@@ -8161,6 +8230,7 @@
         pomodoroState.remaining--;
         renderPomodoroUI();
         updatePageTitle();
+        _updateMediaSession();
         if (pomodoroState.remaining <= 0) {
           pomodoroState.running = false;
           stopPomodoroTick();
@@ -8195,9 +8265,11 @@
         }
         var isLong = (pomodoroState.cycle % pomodoroSettings.cyclesBeforeLong === 0);
         initPomodoroPhase(isLong ? 'longbreak' : 'break');
+        _startPomoMediaSession(); // 휴식 단계도 미디어 세션 유지
       } else {
         if (pomodoroSettings.notifyBreakEnd) sendNotification('휴식 종료 ⏰', '다시 집중할 시간이에요!');
         initPomodoroPhase('work');
+        _updateMediaSession();
       }
       updatePageTitle();
       renderPomodoroUI();
@@ -8217,6 +8289,7 @@
         pomodoroState.running = false;
         pomodoroState.sessionStart = null;
         initPomodoroPhase('work');
+        _stopPomoMediaSession();
         renderPomodoroUI();
         showToast('타이머를 중단했습니다');
       });
