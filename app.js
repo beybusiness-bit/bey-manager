@@ -8440,7 +8440,7 @@
       if (!sel) return;
       var todayStr = today();
       var todayItems = workItems.filter(function(it) {
-        return it.date === todayStr && it.status !== 'done';
+        return it.date === todayStr && it.status === 'in-progress';
       });
       sel.innerHTML = '<option value="">— 할일 선택 (선택) —</option>';
       todayItems.forEach(function(it) {
