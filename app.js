@@ -7205,6 +7205,61 @@
     function getAvailableBonusSlots(dateStr) {
       return Math.max(0, getCompletedNormalCount(dateStr) - getBonusUsedCount(dateStr));
     }
+
+    /* 미결 할일 날짜 이동 공통 헬퍼 (바구니 배정과 동일 슬롯 규칙) */
+    function _movePendingTasksToDate(sourceDate, targetDate, labelFrom, labelTo) {
+      var eligible = workItems.filter(function(it) {
+        return it.date === sourceDate && !it.parentId &&
+               (getWorkStatus(it) === 'pending' || getWorkStatus(it) === 'in-progress');
+      });
+      if (eligible.length === 0) {
+        showToast(labelFrom + '에 이동할 미결 할일이 없습니다', 'warning');
+        return;
+      }
+      var normalCount = workItems.filter(function(it) { return it.date === targetDate && !it.isBonus; }).length;
+      var normalSlots = Math.max(0, 3 - normalCount);
+      var availBonus  = getAvailableBonusSlots(targetDate);
+      var totalSlots  = normalSlots + availBonus;
+      if (eligible.length > totalSlots) {
+        if (totalSlots === 0) {
+          showToast(labelTo + '는 슬롯이 꽉 찼습니다', 'warning');
+        } else {
+          showToast(labelTo + '에 슬롯이 ' + totalSlots + '개만 남았습니다. 미결 할일이 ' + eligible.length + '개입니다', 'warning');
+        }
+        return;
+      }
+      var toNormal = eligible.slice(0, normalSlots);
+      var toBonus  = eligible.slice(normalSlots);
+      var msg = eligible.length + '개 미결 할일을 ' + labelTo + '로 이동합니다.';
+      if (toBonus.length > 0) msg += '\n(' + toNormal.length + '개 일반 + ' + toBonus.length + '개 보너스)';
+      showConfirm('할일 이동', msg, function(ok) {
+        if (!ok) return;
+        toNormal.forEach(function(item) {
+          logWorkEvent('date_changed', item, item.date, targetDate);
+          item.date = targetDate; item.isBonus = false; item.status = 'pending';
+        });
+        toBonus.forEach(function(item) {
+          logWorkEvent('date_changed', item, item.date, targetDate + '(bonus)');
+          item.date = targetDate; item.isBonus = true; item.status = 'pending';
+        });
+        saveWorkItems();
+        showToast('✅ ' + eligible.length + '개를 ' + labelTo + '로 이동했습니다');
+        renderWorkView();
+      });
+    }
+
+    function moveTasksToTomorrow() {
+      var todayStr    = today();
+      var tomorrowStr = addDays(todayStr, 1);
+      var dp = tomorrowStr.split('-');
+      _movePendingTasksToDate(todayStr, tomorrowStr, '오늘', parseInt(dp[1]) + '/' + parseInt(dp[2]));
+    }
+
+    function movePastTasksToToday(dateStr) {
+      var todayStr = today();
+      var dp = dateStr.split('-');
+      _movePendingTasksToDate(dateStr, todayStr, parseInt(dp[1]) + '/' + parseInt(dp[2]) + '일', '오늘');
+    }
     function setWorkItemStatus(id, newStatus) {
       var item = workItems.find(function(it) { return it.id === id; });
       if (!item) return;
@@ -7419,6 +7474,14 @@
       html += '</div>';
       html += '<div class="work-today-stats">' + normalItems.length + '/3';
       if (bonusItems.length > 0) html += ' &nbsp;⭐' + bonusItems.length;
+      /* 내일로 버튼: 오늘 날짜 + 오후 10시 이후 */
+      if (workSelectedDate === todayStr && new Date().getHours() >= 22) {
+        html += '&nbsp;<button class="btn-text" style="font-size:11px;color:var(--text-secondary);background:none;border:1px solid var(--border-color);border-radius:6px;padding:2px 8px;cursor:pointer;" onclick="moveTasksToTomorrow()">내일로 →</button>';
+      }
+      /* 오늘로 버튼: 과거 날짜 */
+      if (workSelectedDate < todayStr) {
+        html += '&nbsp;<button class="btn-text" style="font-size:11px;color:var(--text-secondary);background:none;border:1px solid var(--border-color);border-radius:6px;padding:2px 8px;cursor:pointer;" onclick="movePastTasksToToday(\'' + workSelectedDate + '\')">오늘로 →</button>';
+      }
       html += '</div>';
 
       html += '<div class="work-kanban">';
