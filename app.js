@@ -8443,6 +8443,15 @@
     var _fcmToken = null;
     var _fbApp = null;
 
+    function _getDeviceId() {
+      var id = localStorage.getItem('deviceId');
+      if (!id) {
+        id = 'dev-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
+        localStorage.setItem('deviceId', id);
+      }
+      return id;
+    }
+
     function _initFirebase() {
       if (_fbApp) return;
       if (typeof firebase === 'undefined') return;
@@ -8468,9 +8477,10 @@
       }).then(function(token) {
         if (!token) return;
         _fcmToken = token;
-        firebase.firestore().collection('bey-manager').doc('config').set({
-          fcmToken: token, updatedAt: new Date().toISOString()
-        }).catch(function() {});
+        var deviceId = _getDeviceId();
+        var update = { updatedAt: new Date().toISOString() };
+        update['tokens.' + deviceId] = token;
+        firebase.firestore().collection('bey-manager').doc('config').set(update, { merge: true }).catch(function() {});
         syncFCMSchedules();
         /* 앱이 열려있을 때 수신한 FCM 메시지 → 기존 sendNotification으로 처리 */
         firebase.messaging().onMessage(function(payload) {
