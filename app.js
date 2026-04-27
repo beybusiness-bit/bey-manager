@@ -3515,6 +3515,7 @@
       var _tokenExpiry = 0;
       var _tokenClient = null;
       var _syncing = false;
+      var _pendingSyncNames = [];  // 싱크 중 들어온 요청을 큐에 쌓아 완료 후 재실행
       var BASE = 'https://sheets.googleapis.com/v4/spreadsheets/' + AUTH.SHEET_ID;
 
       var SHEETS_DEF = {
@@ -3830,7 +3831,11 @@
             }
             _updateUI('ok', '연결됨');
           }
-          if (_syncing) return;
+          if (_syncing) {
+            /* 현재 싱크 중 — 요청된 시트 이름을 큐에 추가하고 대기 */
+            names.forEach(function(n) { if (_pendingSyncNames.indexOf(n) < 0) _pendingSyncNames.push(n); });
+            return;
+          }
           _syncing = true;
           _updateUI('sync', '저장 중...');
           try {
@@ -3840,7 +3845,15 @@
             console.error('[GS] sync 오류:', e);
             showToast('Sheets 동기화 실패: ' + e.message, 'error');
             _updateUI('ok', '연결됨 (동기화 오류)');
-          } finally { _syncing = false; }
+          } finally {
+            _syncing = false;
+            /* 큐에 쌓인 요청이 있으면 한 번 더 실행 */
+            if (_pendingSyncNames.length > 0) {
+              var pending = _pendingSyncNames.slice();
+              _pendingSyncNames = [];
+              GS.syncSheets(pending);
+            }
+          }
         },
 
         init: function(onDone) {
