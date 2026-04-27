@@ -1911,6 +1911,7 @@
         favoritePages.push(pageId);
       }
       localStorage.setItem('favoritePages', JSON.stringify(favoritePages));
+      if (window.GS && GS.isConnected()) GS.syncSheets(['사용자설정']);
       renderSidebar();
     }
 
@@ -3653,7 +3654,8 @@
               ['tagColorOverrides', JSON.stringify(tagColorOverrides || {})],
               ['customNotifications', JSON.stringify(customNotifications || [])],
               ['pomodoroSettings', JSON.stringify(pomodoroSettings || {})],
-              ['notificationSettings', JSON.stringify(notificationSettings || {})]
+              ['notificationSettings', JSON.stringify(notificationSettings || {})],
+              ['favoritePages', JSON.stringify(favoritePages || [])]
             ];
             if (profilePhoto && profilePhoto.length < 45000) pairs.push(['profilePhoto', profilePhoto]);
             return pairs;
@@ -3752,6 +3754,7 @@
           if (sm['customNotifications']) { try { customNotifications = JSON.parse(sm['customNotifications']); localStorage.setItem('customNotifications', JSON.stringify(customNotifications)); } catch(e) { customNotifications = []; } }
           if (sm['pomodoroSettings']) { try { var ps = JSON.parse(sm['pomodoroSettings']); Object.assign(pomodoroSettings, ps); localStorage.setItem('pomodoroSettings', JSON.stringify(pomodoroSettings)); } catch(e) {} }
           if (sm['notificationSettings']) { try { var ns = JSON.parse(sm['notificationSettings']); Object.assign(notificationSettings, ns); localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings)); } catch(e) {} }
+          if (sm['favoritePages']) { try { favoritePages = JSON.parse(sm['favoritePages']); localStorage.setItem('favoritePages', JSON.stringify(favoritePages)); } catch(e) { favoritePages = []; } }
         } else { await _writeSheet('사용자설정'); }
 
         // 할일
