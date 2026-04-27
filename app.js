@@ -3519,7 +3519,10 @@
         '시간표_일정': ['id','scheduleId','activityId','weekdays','startTime','endTime','createdAt'],
         '카테고리':  ['id','emoji','name','active','createdAt'],
         '일상종류':  ['id','categoryId','emoji','name','color','active','createdAt'],
-        '사용자설정': ['key','value']
+        '사용자설정': ['key','value'],
+        '할일':      ['id','emoji','color','title','date','status','isBonus','memo','focusTime','createdAt'],
+        '습관':      ['id','emoji','name','color','weekdays','active','createdAt'],
+        '습관기록':  ['id','habitId','date','done','memo']
       };
 
       function colLetter(n) {
@@ -3647,10 +3650,25 @@
               ['designSettings', JSON.stringify(designSettings || {})],
               ['myEmojis', JSON.stringify(myEmojis || [])],
               ['menus', JSON.stringify(menus || [])],
-              ['tagColorOverrides', JSON.stringify(tagColorOverrides || {})]
+              ['tagColorOverrides', JSON.stringify(tagColorOverrides || {})],
+              ['customNotifications', JSON.stringify(customNotifications || [])],
+              ['pomodoroSettings', JSON.stringify(pomodoroSettings || {})],
+              ['notificationSettings', JSON.stringify(notificationSettings || {})]
             ];
             if (profilePhoto && profilePhoto.length < 45000) pairs.push(['profilePhoto', profilePhoto]);
             return pairs;
+          case '할일':
+            return workItems.map(function(w) {
+              return [w.id, w.emoji||'📋', w.color||'', w.title||'', w.date||'', w.status||'pending', w.isBonus?'TRUE':'FALSE', w.memo||'', String(w.focusTime||0), w.createdAt||''];
+            });
+          case '습관':
+            return habits.map(function(h) {
+              return [h.id, h.emoji||'', h.name||'', h.color||'', (h.weekdays||[]).join(','), h.active!==false?'TRUE':'FALSE', h.createdAt||''];
+            });
+          case '습관기록':
+            return habitLogs.map(function(l) {
+              return [l.id, l.habitId, l.date||'', l.done?'TRUE':'FALSE', l.memo||''];
+            });
           default: return [];
         }
       }
@@ -3731,7 +3749,34 @@
           if (sm['menus']) { try { menus = JSON.parse(sm['menus']); localStorage.setItem('menus', JSON.stringify(menus)); renderSidebar(); } catch(e) {} }
           if (sm['profilePhoto']) { profilePhoto = sm['profilePhoto']; localStorage.setItem('profilePhoto', profilePhoto); }
           if (sm['tagColorOverrides']) { try { tagColorOverrides = JSON.parse(sm['tagColorOverrides']); localStorage.setItem('tagColorOverrides', JSON.stringify(tagColorOverrides)); } catch(e) { tagColorOverrides = {}; } }
+          if (sm['customNotifications']) { try { customNotifications = JSON.parse(sm['customNotifications']); localStorage.setItem('customNotifications', JSON.stringify(customNotifications)); } catch(e) { customNotifications = []; } }
+          if (sm['pomodoroSettings']) { try { var ps = JSON.parse(sm['pomodoroSettings']); Object.assign(pomodoroSettings, ps); localStorage.setItem('pomodoroSettings', JSON.stringify(pomodoroSettings)); } catch(e) {} }
+          if (sm['notificationSettings']) { try { var ns = JSON.parse(sm['notificationSettings']); Object.assign(notificationSettings, ns); localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings)); } catch(e) {} }
         } else { await _writeSheet('사용자설정'); }
+
+        // 할일
+        if (results['할일'] && results['할일'].length > 0) {
+          workItems = results['할일'].map(function(r) {
+            return { id:r[0], emoji:r[1]||'📋', color:r[2]||null, title:r[3]||'', date:r[4]||null, status:r[5]||'pending', isBonus:r[6]==='TRUE', memo:r[7]||'', focusTime:parseInt(r[8],10)||0, createdAt:r[9]||today() };
+          });
+          localStorage.setItem('workItems', JSON.stringify(workItems));
+        } else { await _writeSheet('할일'); }
+
+        // 습관
+        if (results['습관'] && results['습관'].length > 0) {
+          habits = results['습관'].map(function(r) {
+            return { id:r[0], emoji:r[1]||'', name:r[2]||'', color:r[3]||'#ffde59', weekdays:r[4]?r[4].split(',').filter(Boolean):[], active:r[5]!=='FALSE', createdAt:r[6]||today() };
+          });
+          localStorage.setItem('habits', JSON.stringify(habits));
+        } else { await _writeSheet('습관'); }
+
+        // 습관기록
+        if (results['습관기록'] && results['습관기록'].length > 0) {
+          habitLogs = results['습관기록'].map(function(r) {
+            return { id:r[0], habitId:r[1], date:r[2]||'', done:r[3]==='TRUE', memo:r[4]||'' };
+          });
+          localStorage.setItem('habitLogs', JSON.stringify(habitLogs));
+        } else { await _writeSheet('습관기록'); }
 
         console.log('[GS] ✅ 전체 로드 완료');
         _updateUI('ok', '연결됨');
@@ -6396,6 +6441,7 @@
     }
     function saveHabits() {
       localStorage.setItem('habits', JSON.stringify(habits));
+      if (window.GS && GS.isConnected()) GS.syncSheets(['습관']);
     }
     function loadHabitLogs() {
       try { habitLogs = JSON.parse(localStorage.getItem('habitLogs') || '[]'); } catch(e) { habitLogs = []; }
@@ -6403,6 +6449,7 @@
     }
     function saveHabitLogs() {
       localStorage.setItem('habitLogs', JSON.stringify(habitLogs));
+      if (window.GS && GS.isConnected()) GS.syncSheets(['습관기록']);
     }
 
     function renderHabitPage() {
@@ -7151,6 +7198,7 @@
 
     function saveWorkItems() {
       localStorage.setItem('workItems', JSON.stringify(workItems));
+      if (window.GS && GS.isConnected()) GS.syncSheets(['할일']);
     }
 
     function getMondayOf(dateStr) {
@@ -8154,6 +8202,7 @@
 
     function savePomodoroSettings() {
       localStorage.setItem('pomodoroSettings', JSON.stringify(pomodoroSettings));
+      if (window.GS && GS.isConnected()) GS.syncSheets(['사용자설정']);
     }
 
     function togglePomodoroPanel() {
@@ -8468,11 +8517,13 @@
 
     function saveNotificationSettings() {
       localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings));
+      if (window.GS && GS.isConnected()) GS.syncSheets(['사용자설정']);
     }
 
     function saveCustomNotifications() {
       localStorage.setItem('customNotifications', JSON.stringify(customNotifications));
       syncFCMSchedules();
+      if (window.GS && GS.isConnected()) GS.syncSheets(['사용자설정']);
     }
 
     function sendNotification(title, body) {
