@@ -1669,6 +1669,7 @@
       loadWorkItems();
       loadHabits();
       loadHabitLogs();
+      loadPomodoroLogs();
       loadProfile();
       loadDesignSettings();
       loadPomodoroSettings();
@@ -3523,7 +3524,8 @@
         '사용자설정': ['key','value'],
         '할일':      ['id','emoji','color','title','date','status','isBonus','memo','focusTime','createdAt'],
         '습관':      ['id','emoji','name','color','weekdays','active','createdAt'],
-        '습관기록':  ['id','habitId','date','done','memo']
+        '습관기록':  ['id','habitId','date','done','memo'],
+        '뽀모도로기록': ['id','date','eventType','phase','taskId','taskTitle','timestamp','cycle']
       };
 
       function colLetter(n) {
@@ -3671,6 +3673,10 @@
             return habitLogs.map(function(l) {
               return [l.id, l.habitId, l.date||'', l.done?'TRUE':'FALSE', l.memo||''];
             });
+          case '뽀모도로기록':
+            return pomodoroLogs.map(function(l) {
+              return [l.id, l.date||'', l.eventType||'', l.phase||'', l.taskId||'', l.taskTitle||'', l.timestamp||'', String(l.cycle||0)];
+            });
           default: return [];
         }
       }
@@ -3780,6 +3786,14 @@
           });
           localStorage.setItem('habitLogs', JSON.stringify(habitLogs));
         } else { await _writeSheet('습관기록'); }
+
+        // 뽀모도로기록
+        if (results['뽀모도로기록'] && results['뽀모도로기록'].length > 0) {
+          pomodoroLogs = results['뽀모도로기록'].map(function(r) {
+            return { id:r[0], date:r[1]||'', eventType:r[2]||'', phase:r[3]||'', taskId:r[4]||'', taskTitle:r[5]||'', timestamp:r[6]||'', cycle:parseInt(r[7],10)||0 };
+          });
+          localStorage.setItem('pomodoroLogs', JSON.stringify(pomodoroLogs));
+        } else { await _writeSheet('뽀모도로기록'); }
 
         console.log('[GS] ✅ 전체 로드 완료');
         _updateUI('ok', '연결됨');
@@ -8185,6 +8199,33 @@
       notifyBreakEnd: true
     };
 
+    var pomodoroLogs = [];  // [{ id, date, eventType, phase, taskId, taskTitle, timestamp, cycle }]
+
+    function loadPomodoroLogs() {
+      try { pomodoroLogs = JSON.parse(localStorage.getItem('pomodoroLogs') || '[]'); } catch(e) { pomodoroLogs = []; }
+      if (!Array.isArray(pomodoroLogs)) pomodoroLogs = [];
+    }
+
+    function savePomodoroLogs() {
+      localStorage.setItem('pomodoroLogs', JSON.stringify(pomodoroLogs));
+      if (window.GS && GS.isConnected()) GS.syncSheets(['뽀모도로기록']);
+    }
+
+    function logPomoEvent(eventType) {
+      var entry = {
+        id: 'plog-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        date: today(),
+        eventType: eventType,
+        phase: pomodoroState.phase,
+        taskId: pomodoroState.taskId || '',
+        taskTitle: pomodoroState.taskTitle || '',
+        timestamp: new Date().toISOString(),
+        cycle: pomodoroState.cycle
+      };
+      pomodoroLogs.push(entry);
+      savePomodoroLogs();
+    }
+
     var pomodoroState = {
       phase: 'work',       // 'work' | 'break' | 'longbreak'
       running: false,
@@ -8269,7 +8310,7 @@
         initPomodoroPhase(pomodoroState.phase);
       }
       if (pomodoroState.running) {
-        /* 일시정지: 집중 구간이면 경과 시간 기록 */
+        /* 일시정지 */
         if (pomodoroState.phase === 'work' && pomodoroState.taskId && pomodoroState.sessionStart) {
           var elapsed = Math.floor((Date.now() - pomodoroState.sessionStart) / 1000);
           var item = workItems.find(function(it) { return it.id === pomodoroState.taskId; });
@@ -8279,8 +8320,10 @@
         stopPomodoroTick();
         pomodoroState.running = false;
         _pausePomoMediaSession();
+        logPomoEvent(pomodoroState.phase === 'work' ? 'work_pause' : 'break_pause');
       } else {
-        if (pomodoroState.remaining === pomodoroState.total) {
+        var isFresh = (pomodoroState.remaining === pomodoroState.total);
+        if (isFresh) {
           pomodoroState.total = pomodoroPhaseSeconds(pomodoroState.phase);
           pomodoroState.remaining = pomodoroState.total;
         }
@@ -8288,6 +8331,11 @@
         pomodoroState.running = true;
         startPomodoroTick();
         _startPomoMediaSession();
+        if (pomodoroState.phase === 'work') {
+          logPomoEvent(isFresh ? 'work_start' : 'work_resume');
+        } else {
+          logPomoEvent(isFresh ? 'break_start' : 'break_resume');
+        }
       }
       renderPomodoroUI();
     }
@@ -8317,7 +8365,7 @@
     function onPomodoroPhaseEnd() {
       var wasWork = (pomodoroState.phase === 'work');
       if (wasWork) {
-        /* 수행 시간 기록 */
+        logPomoEvent('work_complete');
         if (pomodoroState.taskId && pomodoroState.sessionStart) {
           var elapsed = Math.floor((Date.now() - pomodoroState.sessionStart) / 1000);
           var item = workItems.find(function(it) { return it.id === pomodoroState.taskId; });
@@ -8333,8 +8381,10 @@
         }
         var isLong = (pomodoroState.cycle % pomodoroSettings.cyclesBeforeLong === 0);
         initPomodoroPhase(isLong ? 'longbreak' : 'break');
-        _startPomoMediaSession(); // 휴식 단계도 미디어 세션 유지
+        logPomoEvent(isLong ? 'longbreak_start' : 'break_start');
+        _startPomoMediaSession();
       } else {
+        logPomoEvent(pomodoroState.phase === 'longbreak' ? 'longbreak_complete' : 'break_complete');
         if (pomodoroSettings.notifyBreakEnd) sendNotification('휴식 종료 ⏰', '다시 집중할 시간이에요!');
         initPomodoroPhase('work');
         _updateMediaSession();
@@ -8348,6 +8398,7 @@
       if (!isActive) return;
       showConfirm('타이머 중단', '뽀모도로를 중단하시겠습니까?<br>지금까지의 집중 시간은 저장됩니다.', function(ok) {
         if (!ok) return;
+        logPomoEvent(pomodoroState.phase === 'work' ? 'work_stop' : 'break_stop');
         if (pomodoroState.phase === 'work' && pomodoroState.taskId && pomodoroState.sessionStart) {
           var elapsed = Math.floor((Date.now() - pomodoroState.sessionStart) / 1000);
           var item = workItems.find(function(it) { return it.id === pomodoroState.taskId; });
@@ -8365,6 +8416,7 @@
     }
 
     function skipPomodoro() {
+      logPomoEvent(pomodoroState.phase === 'work' ? 'work_skip' : 'break_skip');
       stopPomodoroTick();
       pomodoroState.running = false;
       onPomodoroPhaseEnd();
