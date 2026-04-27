@@ -8124,22 +8124,30 @@
 
     function _updateMediaSession() {
       if (!('mediaSession' in navigator)) return;
-      var phaseName = pomodoroState.phase === 'work' ? '집중 중'
-        : pomodoroState.phase === 'break' ? '짧은 휴식' : '긴 휴식';
-      var timeStr = formatPomodoroTime(pomodoroState.remaining);
+      var phaseEmoji = pomodoroState.phase === 'work' ? '🍅' : pomodoroState.phase === 'break' ? '☕' : '🌙';
+      var phaseName  = pomodoroState.phase === 'work' ? '집중 중' : pomodoroState.phase === 'break' ? '짧은 휴식' : '긴 휴식';
+      var timeStr    = formatPomodoroTime(pomodoroState.remaining);
+      /* artwork에는 절대 URL 필요 (macOS Now Playing이 외부에서 이미지를 로드) */
+      var base = window.location.href.replace(/[^/]*$/, '');
       navigator.mediaSession.metadata = new MediaMetadata({
-        title: timeStr + ' — ' + phaseName,
-        artist: pomodoroState.taskTitle || '뽀모도로',
-        album: '베이 관리자',
+        title:  timeStr + '  ' + phaseEmoji + ' ' + phaseName,
+        artist: pomodoroState.taskTitle || '할일 없음',
+        album:  '베이 관리자',
         artwork: [
-          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' }
+          { src: base + 'icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: base + 'icon-512.png', sizes: '512x512', type: 'image/png' }
         ]
       });
       navigator.mediaSession.playbackState = pomodoroState.running ? 'playing' : 'paused';
-      navigator.mediaSession.setActionHandler('play', function() { if (!pomodoroState.running) togglePomodoroTimer(); });
-      navigator.mediaSession.setActionHandler('pause', function() { if (pomodoroState.running) togglePomodoroTimer(); });
-      navigator.mediaSession.setActionHandler('stop', function() { stopPomodoro(); });
+      /* 일시정지 / 재개 */
+      navigator.mediaSession.setActionHandler('play',  function() { if (!pomodoroState.running) togglePomodoroTimer(); });
+      navigator.mediaSession.setActionHandler('pause', function() { if (pomodoroState.running)  togglePomodoroTimer(); });
+      /* ◀◀ → 중단,  ▶▶ → 다음 단계 넘기기 */
+      navigator.mediaSession.setActionHandler('previoustrack', function() { stopPomodoro(); });
+      navigator.mediaSession.setActionHandler('nexttrack',     function() { skipPomodoro(); });
+      /* seekbackward / seekforward 는 타이머에 무의미 — 핸들러 제거 */
+      try { navigator.mediaSession.setActionHandler('seekbackward', null); } catch(e) {}
+      try { navigator.mediaSession.setActionHandler('seekforward',  null); } catch(e) {}
     }
 
     function _startPomoMediaSession() {
