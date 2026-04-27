@@ -3440,3 +3440,24 @@
     .work-hall-title { font-size: 12px; font-weight: 700; word-break: break-word; line-height: 1.4; opacity: 0.8; }
     .work-hall-meta { font-size: 11px; color: var(--text-secondary); margin-top: 6px; display: flex; flex-direction: column; gap: 2px; }
     .work-hall-focus { font-size: 11px; color: var(--primary-pink, #ffaade); font-weight: 600; margin-top: 4px; }
+
+    /* 연결 할일 */
+    .work-parent-link { font-size:11px;color:var(--text-secondary);margin-bottom:5px;padding:2px 6px;background:var(--card-bg);border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .work-sub-list { margin-top:7px;border-top:1px solid var(--border-color);padding-top:5px;display:flex;flex-direction:column;gap:3px; }
+    .work-sub-item { display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-secondary); }
+    .work-sub-emoji { font-size:12px; }
+    .work-sub-title { white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .work-sub-title.done { text-decoration:line-through;opacity:0.6; }
+    .work-connect-row { margin-top:6px;text-align:right; }
+    .work-connect-btn { font-size:11px;color:var(--text-secondary);background:none;border:1px dashed var(--border-color);border-radius:4px;padding:2px 7px;cursor:pointer;transition:all 0.15s; }
+    .work-connect-btn:hover { border-color:var(--primary-yellow);color:#666; }
+    .work-kanban-card.linked { border-left-style:dashed !important; }
+
+    /* 바구니에서 선택 피커 */
+    .work-basket-picker { max-height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:4px; }
+    .work-basket-pick-item { display:flex;align-items:center;gap:8px;padding:8px 10px;border:1.5px solid var(--border-color);border-radius:8px;cursor:pointer;transition:all 0.15s; }
+    .work-basket-pick-item:hover { border-color:var(--primary-yellow); }
+    .work-basket-pick-item.selected { border-color:var(--primary-yellow);background:rgba(255,222,89,0.18); }
+    .work-basket-pick-emoji { font-size:18px;flex-shrink:0; }
+    .work-basket-pick-title { flex:1;font-size:13px;font-weight:500; }
+    .work-basket-pick-status { flex-shrink:0; }

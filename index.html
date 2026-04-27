@@ -843,19 +843,36 @@
   <div id="workItemModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeWorkItemModal()">
     <div class="modal-box" style="max-width:400px;width:100%;">
       <h3 id="workItemModalTitle" style="margin:0 0 4px;font-size:16px;font-weight:700;">할일 추가</h3>
-      <div id="workItemDateDisplay" style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;"></div>
-      <div class="work-form-row">
-        <button class="work-form-emoji-btn" id="workEmojiBtn" onclick="openWorkEmojiPicker()">📋</button>
-        <input class="input-field work-form-input" id="workTitleInput" placeholder="할일 제목"
-          onkeydown="if(event.key==='Enter')saveWorkItem();if(event.key==='Escape')closeWorkItemModal()">
+      <div id="workItemDateDisplay" style="font-size:13px;color:var(--text-secondary);margin-bottom:6px;"></div>
+      <div id="workModalParentInfo" style="display:none;font-size:12px;color:var(--text-secondary);margin-bottom:10px;padding:5px 8px;background:var(--card-bg);border:1px solid var(--border-color);border-radius:6px;"></div>
+      <!-- 탭 -->
+      <div class="tab-nav" id="workModalTabNav" style="margin-bottom:14px;">
+        <button class="tab-btn active" onclick="switchWorkModalTab('new')">새로 만들기</button>
+        <button class="tab-btn" onclick="switchWorkModalTab('basket')">바구니에서 선택</button>
       </div>
-      <div class="work-form-row work-form-row-col">
-        <div class="work-form-label">메모 (선택)</div>
-        <textarea class="input-field" id="workMemoInput" placeholder="메모를 입력하세요" rows="3" style="resize:none;width:100%;box-sizing:border-box;"></textarea>
+      <!-- 새로 만들기 탭 -->
+      <div id="workModalNewTab">
+        <div class="work-form-row">
+          <button class="work-form-emoji-btn" id="workEmojiBtn" onclick="openWorkEmojiPicker()">📋</button>
+          <input class="input-field work-form-input" id="workTitleInput" placeholder="할일 제목"
+            onkeydown="if(event.key==='Enter')saveWorkItem();if(event.key==='Escape')closeWorkItemModal()">
+        </div>
+        <div class="work-form-row work-form-row-col">
+          <div class="work-form-label">메모 (선택)</div>
+          <textarea class="input-field" id="workMemoInput" placeholder="메모를 입력하세요" rows="3" style="resize:none;width:100%;box-sizing:border-box;"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:16px;">
+          <button class="btn-cancel" style="flex:1;padding:10px;" onclick="closeWorkItemModal()">취소</button>
+          <button class="btn-confirm" style="flex:1;padding:10px;" onclick="saveWorkItem()">저장</button>
+        </div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:16px;">
-        <button class="btn-cancel" style="flex:1;padding:10px;" onclick="closeWorkItemModal()">취소</button>
-        <button class="btn-confirm" style="flex:1;padding:10px;" onclick="saveWorkItem()">저장</button>
+      <!-- 바구니에서 선택 탭 -->
+      <div id="workModalBasketTab" style="display:none;">
+        <div id="workModalBasketList" class="work-basket-picker"></div>
+        <div style="display:flex;gap:8px;margin-top:16px;">
+          <button class="btn-cancel" style="flex:1;padding:10px;" onclick="closeWorkItemModal()">취소</button>
+          <button class="btn-confirm" style="flex:1;padding:10px;" id="workModalBasketConfirmBtn" onclick="assignBasketItemFromModal()" disabled>가져오기</button>
+        </div>
       </div>
     </div>
   </div>

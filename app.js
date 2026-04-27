@@ -3523,7 +3523,7 @@
         '카테고리':  ['id','emoji','name','active','createdAt'],
         '일상종류':  ['id','categoryId','emoji','name','color','active','createdAt'],
         '사용자설정': ['key','value'],
-        '할일':      ['id','emoji','color','title','date','status','isBonus','memo','focusTime','createdAt'],
+        '할일':      ['id','emoji','color','title','date','status','isBonus','memo','focusTime','parentId','createdAt'],
         '습관':      ['id','emoji','name','color','weekdays','active','createdAt'],
         '습관기록':  ['id','habitId','date','done','memo'],
         '뽀모도로기록': ['id','date','eventType','phase','taskId','taskTitle','timestamp','cycle'],
@@ -3665,7 +3665,7 @@
             return pairs;
           case '할일':
             return workItems.map(function(w) {
-              return [w.id, w.emoji||'📋', w.color||'', w.title||'', w.date||'', w.status||'pending', w.isBonus?'TRUE':'FALSE', w.memo||'', String(w.focusTime||0), w.createdAt||''];
+              return [w.id, w.emoji||'📋', w.color||'', w.title||'', w.date||'', w.status||'pending', w.isBonus?'TRUE':'FALSE', w.memo||'', String(w.focusTime||0), w.parentId||'', w.createdAt||''];
             });
           case '습관':
             return habits.map(function(h) {
@@ -3772,7 +3772,7 @@
         // 할일
         if (results['할일'] && results['할일'].length > 0) {
           workItems = results['할일'].map(function(r) {
-            return { id:r[0], emoji:r[1]||'📋', color:r[2]||null, title:r[3]||'', date:r[4]||null, status:r[5]||'pending', isBonus:r[6]==='TRUE', memo:r[7]||'', focusTime:parseInt(r[8],10)||0, createdAt:r[9]||today() };
+            return { id:r[0], emoji:r[1]||'📋', color:r[2]||null, title:r[3]||'', date:r[4]||null, status:r[5]||'pending', isBonus:r[6]==='TRUE', memo:r[7]||'', focusTime:parseInt(r[8],10)||0, parentId:r[9]||null, createdAt:r[10]||today() };
           });
           localStorage.setItem('workItems', JSON.stringify(workItems));
         } else { await _writeSheet('할일'); }
@@ -7228,6 +7228,14 @@
       });
     }
 
+    function getChildTasks(parentId) {
+      return workItems.filter(function(it) { return it.parentId === parentId; });
+    }
+    function getParentTask(item) {
+      if (!item || !item.parentId) return null;
+      return workItems.find(function(it) { return it.id === item.parentId; }) || null;
+    }
+
     var workItemLogs = [];
 
     function loadWorkItemLogs() {
@@ -7317,13 +7325,19 @@
       var color = item.color || emojiToWorkColor(item.emoji || '📋');
       var status = getWorkStatus(item);
       var isDone = status === 'done';
-      var html = '<div class="work-kanban-card' + (isDone ? ' done' : '') + (item.isBonus ? ' bonus' : '') + '"'
+      var children = getChildTasks(item.id);
+      var parent = getParentTask(item);
+      var html = '<div class="work-kanban-card' + (isDone ? ' done' : '') + (item.isBonus ? ' bonus' : '') + (item.parentId ? ' linked' : '') + '"'
         + ' data-id="' + item.id + '"'
         + ' style="border-left:3px solid ' + color + '"'
         + ' draggable="true"'
         + ' ondragstart="workDragStart(event,\'' + item.id + '\',\'' + status + '\')"'
         + ' ondragend="workDragEnd(event)"'
         + ' onclick="showWorkItemDetail(\'' + item.id + '\')">';
+      /* 상위 할일 링크 */
+      if (parent) {
+        html += '<div class="work-parent-link">↗ ' + escapeHtml(parent.emoji || '📋') + ' ' + escapeHtml(parent.title) + '</div>';
+      }
       html += '<div style="display:flex;align-items:flex-start;gap:8px;">';
       html += '<span style="font-size:20px;min-width:24px;text-align:center;flex-shrink:0;">' + (item.emoji || '📋') + '</span>';
       html += '<div style="flex:1;min-width:0;">';
@@ -7331,6 +7345,21 @@
       html += '<div class="work-kanban-title' + (isDone ? ' done' : '') + '">' + escapeHtml(item.title) + '</div>';
       if (item.memo) html += '<div class="work-kanban-memo">' + escapeHtml(item.memo.substring(0, 50)) + (item.memo.length > 50 ? '…' : '') + '</div>';
       html += '</div>';
+      html += '</div>';
+      /* 연결된 하위 할일 목록 */
+      if (children.length > 0) {
+        html += '<div class="work-sub-list">';
+        children.forEach(function(child) {
+          var cs = getWorkStatus(child);
+          html += '<div class="work-sub-item">' + workStatusSVG(cs, 12)
+            + ' <span class="work-sub-emoji">' + (child.emoji || '📋') + '</span>'
+            + ' <span class="work-sub-title' + (cs === 'done' ? ' done' : '') + '">' + escapeHtml(child.title) + '</span></div>';
+        });
+        html += '</div>';
+      }
+      /* 연결 할일 추가 버튼 */
+      html += '<div class="work-connect-row" onclick="event.stopPropagation()">';
+      html += '<button class="work-connect-btn" onclick="addConnectedTask(\'' + item.id + '\')">+ 연결 할일</button>';
       html += '</div>';
       html += '</div>';
       return html;
@@ -7592,19 +7621,97 @@
       openWorkItemModal(dateStr, true);
     }
 
-    function openWorkItemModal(dateStr, isBonus) {
-      workItemDraft = { emoji: '📋', color: null, isBonus: !!isBonus, date: dateStr || null };
+    var _workModalBasketSelectedId = null;
+
+    function openWorkItemModal(dateStr, isBonus, parentId) {
+      workItemDraft = { emoji: '📋', color: null, isBonus: !!isBonus, date: dateStr || null, parentId: parentId || null };
       workItemEditId = null;
+      _workModalBasketSelectedId = null;
       var modal = document.getElementById('workItemModal');
-      document.getElementById('workItemModalTitle').textContent = isBonus ? '⭐ 보너스 할일 추가' : '할일 추가';
+      var titleText = parentId ? '연결 할일 추가' : (isBonus ? '⭐ 보너스 할일 추가' : '할일 추가');
+      document.getElementById('workItemModalTitle').textContent = titleText;
       var dateEl = document.getElementById('workItemDateDisplay');
       if (dateEl) dateEl.textContent = dateStr ? formatDateKR(dateStr) : '날짜 미정 (바구니)';
       document.getElementById('workEmojiBtn').innerHTML = '📋';
       document.getElementById('workTitleInput').value = '';
       document.getElementById('workMemoInput').value = '';
+      /* 상위 할일 표시 */
+      var parentInfoEl = document.getElementById('workModalParentInfo');
+      if (parentInfoEl) {
+        if (parentId) {
+          var par = workItems.find(function(it) { return it.id === parentId; });
+          parentInfoEl.style.display = '';
+          parentInfoEl.innerHTML = '↗ ' + escapeHtml(par ? ((par.emoji||'📋') + ' ' + par.title) : parentId) + '의 연결 할일';
+        } else {
+          parentInfoEl.style.display = 'none';
+        }
+      }
+      /* 항상 새로 만들기 탭부터 */
+      switchWorkModalTab('new');
       modal.style.display = 'flex';
       bringModalToFront(modal);
       setTimeout(function() { document.getElementById('workTitleInput').focus(); }, 50);
+    }
+
+    function switchWorkModalTab(tab) {
+      var newTab = document.getElementById('workModalNewTab');
+      var bskTab = document.getElementById('workModalBasketTab');
+      document.querySelectorAll('#workModalTabNav .tab-btn').forEach(function(b, i) {
+        b.classList.toggle('active', (tab === 'new' && i === 0) || (tab === 'basket' && i === 1));
+      });
+      if (newTab) newTab.style.display = tab === 'new' ? '' : 'none';
+      if (bskTab) bskTab.style.display = tab === 'basket' ? '' : 'none';
+      if (tab === 'basket') renderWorkModalBasketList();
+    }
+
+    function renderWorkModalBasketList() {
+      var list = document.getElementById('workModalBasketList');
+      if (!list) return;
+      var bItems = workItems.filter(function(it) { return !it.date; });
+      if (bItems.length === 0) {
+        list.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:20px;font-size:13px;">바구니가 비어있습니다</div>';
+        return;
+      }
+      list.innerHTML = bItems.map(function(it) {
+        var cs = getWorkStatus(it);
+        return '<div class="work-basket-pick-item' + (it.id === _workModalBasketSelectedId ? ' selected' : '') + '"'
+          + ' onclick="selectBasketItemForModal(\'' + it.id + '\')">'
+          + '<span class="work-basket-pick-emoji">' + (it.emoji || '📋') + '</span>'
+          + '<span class="work-basket-pick-title">' + escapeHtml(it.title) + '</span>'
+          + '<span class="work-basket-pick-status">' + workStatusSVG(cs, 14) + '</span>'
+          + '</div>';
+      }).join('');
+    }
+
+    function selectBasketItemForModal(id) {
+      _workModalBasketSelectedId = id;
+      renderWorkModalBasketList();
+      var btn = document.getElementById('workModalBasketConfirmBtn');
+      if (btn) btn.disabled = false;
+    }
+
+    function assignBasketItemFromModal() {
+      if (!_workModalBasketSelectedId) return;
+      var bItem = workItems.find(function(it) { return it.id === _workModalBasketSelectedId; });
+      if (!bItem) return;
+      var targetDate = workItemDraft ? workItemDraft.date : null;
+      var parentId   = workItemDraft ? (workItemDraft.parentId || null) : null;
+      var isBonus    = workItemDraft ? !!workItemDraft.isBonus : false;
+      var oldDate = bItem.date || null;
+      logWorkEvent('date_changed', bItem, oldDate || 'basket', targetDate || 'basket');
+      bItem.date = targetDate;
+      bItem.isBonus = isBonus;
+      if (parentId) { bItem.parentId = parentId; logWorkEvent('linked', bItem, '', parentId); }
+      saveWorkItems();
+      closeWorkItemModal();
+      renderWorkView();
+      showToast('바구니에서 할일을 가져왔습니다');
+    }
+
+    function addConnectedTask(parentId) {
+      var parent = workItems.find(function(it) { return it.id === parentId; });
+      if (!parent) return;
+      openWorkItemModal(parent.date, false, parentId);
     }
 
     function showEditWorkItemModal(id) {
@@ -7656,6 +7763,7 @@
           status: 'pending',
           memo: memo,
           isBonus: workItemDraft ? !!workItemDraft.isBonus : false,
+          parentId: workItemDraft ? (workItemDraft.parentId || null) : null,
           createdAt: today()
         };
         newItem.color = emojiToWorkColor(newItem.emoji);
@@ -8125,7 +8233,10 @@
         html += '<div class="work-hall-grid">';
         pageItems.forEach(function(item) {
           var focusStr = formatFocusTime(item.focusTime);
+          var par = getParentTask(item);
+          var children = getChildTasks(item.id).filter(function(c) { return getWorkStatus(c) === 'done'; });
           html += '<div class="work-hall-card" onclick="showWorkItemDetail(\'' + item.id + '\')">';
+          if (par) html += '<div class="work-parent-link">↗ ' + escapeHtml(par.emoji||'📋') + ' ' + escapeHtml(par.title) + '</div>';
           html += '<div class="work-hall-emoji">' + renderEmoji(item.emoji || '📋') + '</div>';
           html += '<div class="work-hall-title">' + escapeHtml(item.title) + '</div>';
           html += '<div class="work-hall-meta">';
@@ -8133,6 +8244,13 @@
           if (item.isBonus) html += '<span style="color:#fdcb6e;font-weight:600;">⭐ 보너스</span>';
           html += '</div>';
           if (focusStr) html += '<div class="work-hall-focus">⏱ ' + focusStr + '</div>';
+          if (children.length > 0) {
+            html += '<div class="work-sub-list" style="margin-top:6px;">';
+            children.forEach(function(c) {
+              html += '<div class="work-sub-item">' + (c.emoji||'📋') + ' <span class="done">' + escapeHtml(c.title) + '</span></div>';
+            });
+            html += '</div>';
+          }
           html += '</div>';
         });
         html += '</div>';
