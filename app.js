@@ -8720,6 +8720,80 @@
       } else {
         document.title = '베이 관리자';
       }
+      _updatePiP();
+    }
+
+    /* ── Picture-in-Picture 타이머 창 ── */
+    var _pipWindow = null;
+
+    function _pipSupported() {
+      return typeof window.documentPictureInPicture !== 'undefined';
+    }
+
+    async function togglePomodoroPoP() {
+      if (!_pipSupported()) {
+        showToast('이 브라우저는 PiP 기능을 지원하지 않습니다 (Chrome 116+ 필요)', 'warning');
+        return;
+      }
+      if (_pipWindow && !_pipWindow.closed) {
+        _pipWindow.close();
+        _pipWindow = null;
+        return;
+      }
+      try {
+        _pipWindow = await window.documentPictureInPicture.requestWindow({ width: 260, height: 220 });
+        _injectPiPContent();
+        _pipWindow.addEventListener('pagehide', function() { _pipWindow = null; });
+      } catch(e) {
+        showToast('PiP 창을 열 수 없습니다: ' + e.message, 'warning');
+      }
+    }
+
+    function _injectPiPContent() {
+      if (!_pipWindow) return;
+      var doc = _pipWindow.document;
+      var isBreak = pomodoroState.phase !== 'work';
+      var accent = isBreak ? '#c1ff72' : '#ff6b6b';
+      doc.head.innerHTML = '<style>' +
+        'body{margin:0;background:#1a1a1a;color:#fff;font-family:"DM Mono",monospace;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:4px;user-select:none;}' +
+        '.pip-phase{font-size:12px;opacity:0.6;letter-spacing:1px;text-transform:uppercase;}' +
+        '.pip-time{font-size:52px;font-weight:700;line-height:1;letter-spacing:2px;color:' + accent + ';}' +
+        '.pip-task{font-size:11px;opacity:0.5;max-width:220px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin-top:2px;}' +
+        '.pip-ring{margin:8px 0 4px;}' +
+        '.pip-btns{display:flex;gap:6px;margin-top:8px;}' +
+        'button{background:rgba(255,255,255,0.12);border:none;color:#fff;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;transition:background 0.15s;}' +
+        'button:hover{background:rgba(255,255,255,0.25);}' +
+        '#pip-playbtn{background:' + accent + ';color:#1a1a1a;font-weight:700;}' +
+        '#pip-playbtn:hover{opacity:0.85;}' +
+        '</style>';
+      doc.body.innerHTML =
+        '<div class="pip-phase" id="pip-phase"></div>' +
+        '<div class="pip-time" id="pip-time">--:--</div>' +
+        '<div class="pip-task" id="pip-task"></div>' +
+        '<div class="pip-btns">' +
+          '<button id="pip-playbtn" onclick="window.opener.togglePomodoroTimer()"></button>' +
+          '<button onclick="window.opener.skipPomodoro()">⏭ 스킵</button>' +
+          '<button onclick="window.opener.stopPomodoro()">⏹ 중단</button>' +
+        '</div>';
+      _updatePiP();
+    }
+
+    function _updatePiP() {
+      if (!_pipWindow || _pipWindow.closed) return;
+      var doc = _pipWindow.document;
+      var phaseEl = doc.getElementById('pip-phase');
+      var timeEl  = doc.getElementById('pip-time');
+      var taskEl  = doc.getElementById('pip-task');
+      var playBtn = doc.getElementById('pip-playbtn');
+      if (!timeEl) { _injectPiPContent(); return; }
+      var phaseName = pomodoroState.phase === 'work' ? '🍅 집중' : pomodoroState.phase === 'break' ? '☕ 짧은 휴식' : '🌙 긴 휴식';
+      if (phaseEl) phaseEl.textContent = phaseName;
+      if (timeEl)  timeEl.textContent  = formatPomodoroTime(pomodoroState.remaining);
+      if (taskEl)  taskEl.textContent  = pomodoroState.taskTitle || '';
+      if (playBtn) {
+        var isPaused = !pomodoroState.running && pomodoroState.remaining > 0 && pomodoroState.remaining < pomodoroState.total;
+        playBtn.textContent = pomodoroState.running ? '⏸ 일시정지' : (isPaused ? '▶ 재개' : '▶ 시작');
+      }
     }
 
     // ========================================
