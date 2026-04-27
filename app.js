@@ -7630,14 +7630,15 @@
       workItemEditId = null;
       _workModalBasketSelectedId = null;
       var modal = document.getElementById('workItemModal');
-      var titleText = parentId ? '연결 할일 추가' : (isBonus ? '⭐ 보너스 할일 추가' : '할일 추가');
+      /* 제목 */
+      var titleText = parentId ? '연결 할일 추가' : (isBonus ? '⭐ 보너스 할일 추가' : (dateStr ? '할일 추가' : '바구니에 할일 추가'));
       document.getElementById('workItemModalTitle').textContent = titleText;
       var dateEl = document.getElementById('workItemDateDisplay');
       if (dateEl) dateEl.textContent = dateStr ? formatDateKR(dateStr) : '날짜 미정 (바구니)';
       document.getElementById('workEmojiBtn').innerHTML = '📋';
       document.getElementById('workTitleInput').value = '';
       document.getElementById('workMemoInput').value = '';
-      /* 상위 할일 표시 */
+      /* 상위 할일 표시 — 반드시 명시적으로 숨기거나 채움 */
       var parentInfoEl = document.getElementById('workModalParentInfo');
       if (parentInfoEl) {
         if (parentId) {
@@ -7646,8 +7647,12 @@
           parentInfoEl.innerHTML = '↗ ' + escapeHtml(par ? ((par.emoji||'📋') + ' ' + par.title) : parentId) + '의 연결 할일';
         } else {
           parentInfoEl.style.display = 'none';
+          parentInfoEl.innerHTML = '';
         }
       }
+      /* 바구니 모드(날짜 없음)에서는 "바구니에서 선택" 탭 숨김 */
+      var tabNav = document.getElementById('workModalTabNav');
+      if (tabNav) tabNav.style.display = dateStr ? '' : 'none';
       /* 항상 새로 만들기 탭부터 */
       switchWorkModalTab('new');
       modal.style.display = 'flex';
@@ -8011,7 +8016,7 @@
         var html = '<div class="basket-controls-row">';
         html += '<input type="date" id="basketDateInput' + suffix + '" class="basket-date-input" value="' + todayVal + '">';
         html += '<button class="btn-confirm basket-assign-btn" onclick="basketAssignToDate(\'' + suffix + '\')">날짜에 추가</button>';
-        html += '<button class="basket-add-new-btn" onclick="openBasketNewItem()">+ 할일 추가</button>';
+        html += '<button class="basket-add-new-btn" onclick="openWorkItemModal(null, false)">+ 할일 추가</button>';
         html += '</div>';
         return html;
       }
@@ -8031,7 +8036,7 @@
       var rawTotal = workItems.filter(function(it) { return !it.date; }).length;
       if (rawTotal === 0) {
         html += '<div class="work-empty-state"><div class="work-empty-icon">🧺</div><div class="work-empty-text">바구니가 비어있습니다</div></div>';
-        html += '<button class="basket-add-new-btn" style="margin-top:16px;width:100%;" onclick="openBasketNewItem()">+ 할일 추가</button>';
+        html += '<button class="basket-add-new-btn" style="margin-top:16px;width:100%;" onclick="openWorkItemModal(null, false)">+ 할일 추가</button>';
       } else {
         html += controlsRow('top');
 
@@ -8168,20 +8173,6 @@
       }
     }
 
-    function openBasketNewItem() {
-      workItemDraft = { emoji: '📋', color: null, isBonus: false, date: null };
-      workItemEditId = null;
-      var modal = document.getElementById('workItemModal');
-      document.getElementById('workItemModalTitle').textContent = '바구니에 할일 추가';
-      var dateEl = document.getElementById('workItemDateDisplay');
-      if (dateEl) dateEl.textContent = '날짜 미정 (바구니)';
-      document.getElementById('workEmojiBtn').innerHTML = '📋';
-      document.getElementById('workTitleInput').value = '';
-      document.getElementById('workMemoInput').value = '';
-      modal.style.display = 'flex';
-      bringModalToFront(modal);
-      setTimeout(function() { document.getElementById('workTitleInput').focus(); }, 50);
-    }
 
     // ========================================
     // 한 일의 전당
