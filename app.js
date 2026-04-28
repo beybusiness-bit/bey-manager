@@ -8925,7 +8925,7 @@
     var _pipWindow = null;
     var _pipViewMode = 'full'; // 'full' | 'line' | 'mini'
 
-    var _PIP_SIZES = { full: [260, 210], line: [400, 48], mini: [44, 44] };
+    var _PIP_SIZES = { full: [260, 210], line: [400, 48], mini: [52, 64] };
     var _PIP_VIEW_LABELS = { full: '전체', line: '한줄', mini: '최소' };
     var _PIP_VIEW_NEXT  = { full: 'line', line: 'mini', mini: 'full' };
 
@@ -9027,21 +9027,29 @@
           '<button onclick="window.opener.stopPomodoro()">⏹</button>';
 
       } else {
-        /* mini: SVG 원형 링 + 이모지 */
+        /* mini: SVG 원형 링 + 이모지 + 뷰 전환 버튼 */
         var circ = (2 * Math.PI * 17).toFixed(2);
         doc.head.innerHTML = '<style>' +
           '*{box-sizing:border-box;margin:0;padding:0}' +
-          'body{background:#1a1a1a;display:flex;align-items:center;justify-content:center;width:44px;height:44px;overflow:hidden;user-select:none;}' +
-          'svg{display:block;cursor:pointer;}' +
+          'body{background:#1a1a1a;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100vw;height:100vh;gap:3px;overflow:hidden;user-select:none;}' +
+          '#m-svg{display:block;cursor:pointer;flex-shrink:0;}' +
+          '#m-emoji{transition:opacity .12s;}' +
+          '#m-overlay{pointer-events:none;opacity:0;transition:opacity .12s;}' +
+          '#m-svg:hover #m-emoji{opacity:0;}' +
+          '#m-svg:hover #m-overlay{opacity:1;}' +
+          '#m-switch{background:none;border:none;color:#888;font-size:9px;cursor:pointer;padding:1px 4px;line-height:1;letter-spacing:.5px;}' +
+          '#m-switch:hover{color:#fff;}' +
           '</style>';
         doc.body.innerHTML =
-          '<svg id="m-ring" viewBox="0 0 44 44" width="44" height="44" onclick="window.opener.switchPiPView()">' +
+          '<svg id="m-svg" viewBox="0 0 44 44" width="44" height="44" onclick="window.opener.togglePomodoroTimer()">' +
             '<circle cx="22" cy="22" r="17" fill="none" stroke="#333" stroke-width="4"/>' +
             '<circle id="m-arc" cx="22" cy="22" r="17" fill="none" stroke="' + key + '" stroke-width="4"' +
               ' stroke-linecap="round" stroke-dasharray="' + circ + '" stroke-dashoffset="' + circ + '"' +
               ' transform="rotate(-90 22 22)"/>' +
-            '<text id="m-emoji" x="22" y="28" text-anchor="middle" font-size="18" style="user-select:none"></text>' +
-          '</svg>';
+            '<text id="m-emoji" x="22" y="28" text-anchor="middle" font-size="18"></text>' +
+            '<text id="m-overlay" x="22" y="28" text-anchor="middle" font-size="16" fill="rgba(255,255,255,0.95)"></text>' +
+          '</svg>' +
+          '<button id="m-switch" onclick="window.opener.switchPiPView()">≡ 뷰 전환</button>';
       }
       _updatePiP();
     }
@@ -9066,8 +9074,19 @@
         var lpp = doc.getElementById('lp');      if (lpp) lpp.textContent = playIcon;
       } else {
         var me  = doc.getElementById('m-emoji');
+        var mo  = doc.getElementById('m-overlay');
         var arc = doc.getElementById('m-arc');
-        if (me) me.textContent = phaseEmoji;
+        /* 이모지: 집중=연결된 할일 이모지, 휴식=☕/🌙 */
+        var miniEmoji;
+        if (pomodoroState.phase === 'work') {
+          var tItem = pomodoroState.taskId ? workItems.find(function(it) { return it.id === pomodoroState.taskId; }) : null;
+          miniEmoji = (tItem && tItem.emoji) ? tItem.emoji : '🍅';
+        } else {
+          miniEmoji = pomodoroState.phase === 'longbreak' ? '🌙' : '☕';
+        }
+        if (me) me.textContent = miniEmoji;
+        /* 호버 오버레이: 현재 상태 반대 아이콘 표시 */
+        if (mo) mo.textContent = pomodoroState.running ? '⏸' : '▶';
         if (arc) {
           var progress = pomodoroState.total > 0
             ? (pomodoroState.total - pomodoroState.remaining) / pomodoroState.total : 0;
