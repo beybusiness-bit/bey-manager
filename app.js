@@ -1680,6 +1680,26 @@
       loadNotificationSettings();
       /* 뽀모도로 초기 상태 설정 */
       initPomodoroPhase('work');
+      _restorePomodoroState();
+      /* 화면 복귀 시 실시간 시계 기준으로 타이머 보정 */
+      document.addEventListener('visibilitychange', function() {
+        if (!document.hidden && pomodoroState.running && _lastTickTime) {
+          var now = Date.now();
+          var elapsed = Math.floor((now - _lastTickTime) / 1000);
+          if (elapsed > 2) {
+            _lastTickTime = now;
+            pomodoroState.remaining = Math.max(0, pomodoroState.remaining - elapsed);
+            if (pomodoroState.remaining <= 0) {
+              pomodoroState.running = false;
+              stopPomodoroTick();
+              onPomodoroPhaseEnd();
+            } else {
+              renderPomodoroUI();
+              updatePageTitle();
+            }
+          }
+        }
+      });
       startNotifyScheduler();
       renderSidebar();
       renderMenuManager();
@@ -8492,6 +8512,46 @@
       intervalId: null
     };
 
+    var _lastTickTime = 0;
+
+    function _savePomodoroState() {
+      try {
+        var isFresh = !pomodoroState.running && pomodoroState.remaining === pomodoroState.total
+          && pomodoroState.cycle === 0 && pomodoroState.phase === 'work';
+        if (isFresh) { localStorage.removeItem('_pomo_state'); return; }
+        localStorage.setItem('_pomo_state', JSON.stringify({
+          phase: pomodoroState.phase,
+          remaining: pomodoroState.remaining,
+          total: pomodoroState.total,
+          running: pomodoroState.running,
+          cycle: pomodoroState.cycle,
+          taskId: pomodoroState.taskId || null,
+          taskTitle: pomodoroState.taskTitle || '',
+          savedAt: Date.now()
+        }));
+      } catch(e) {}
+    }
+
+    function _restorePomodoroState() {
+      try {
+        var s = JSON.parse(localStorage.getItem('_pomo_state') || 'null');
+        if (!s || !s.savedAt) return;
+        localStorage.removeItem('_pomo_state');
+        var elapsed = Math.floor((Date.now() - s.savedAt) / 1000);
+        var remaining = s.running ? Math.max(0, s.remaining - elapsed) : s.remaining;
+        if (remaining <= 0) return;
+        pomodoroState.phase = s.phase || 'work';
+        pomodoroState.remaining = remaining;
+        pomodoroState.total = s.total || pomodoroPhaseSeconds(pomodoroState.phase);
+        pomodoroState.cycle = s.cycle || 0;
+        pomodoroState.taskId = s.taskId || null;
+        pomodoroState.taskTitle = s.taskTitle || '';
+        pomodoroState.running = false;
+        var lbl = pomodoroState.phase === 'work' ? '집중' : pomodoroState.phase === 'break' ? '짧은 휴식' : '긴 휴식';
+        showToast('⏱ 타이머 복원: ' + formatPomodoroTime(remaining) + ' 남음 · ' + lbl);
+      } catch(e) {}
+    }
+
     function loadPomodoroSettings() {
       try {
         var saved = JSON.parse(localStorage.getItem('pomodoroSettings') || 'null');
@@ -8574,6 +8634,7 @@
         stopPomodoroTick();
         pomodoroState.running = false;
         logPomoEvent(pomodoroState.phase === 'work' ? 'work_pause' : 'break_pause');
+        _savePomodoroState();
       } else {
         var isFresh = (pomodoroState.remaining === pomodoroState.total);
         if (isFresh) {
@@ -8588,14 +8649,20 @@
         } else {
           logPomoEvent(isFresh ? 'break_start' : 'break_resume');
         }
+        _savePomodoroState();
       }
       renderPomodoroUI();
     }
 
     function startPomodoroTick() {
       stopPomodoroTick();
+      _lastTickTime = Date.now();
       pomodoroState.intervalId = setInterval(function() {
-        pomodoroState.remaining--;
+        var now = Date.now();
+        var elapsed = Math.max(1, Math.round((now - _lastTickTime) / 1000));
+        _lastTickTime = now;
+        pomodoroState.remaining = Math.max(0, pomodoroState.remaining - elapsed);
+        _savePomodoroState();
         renderPomodoroUI();
         updatePageTitle();
         if (pomodoroState.remaining <= 0) {
@@ -8614,6 +8681,7 @@
     }
 
     function onPomodoroPhaseEnd() {
+      localStorage.removeItem('_pomo_state');
       var wasWork = (pomodoroState.phase === 'work');
       if (wasWork) {
         logPomoEvent('work_complete');
@@ -8657,6 +8725,7 @@
         pomodoroState.running = false;
         pomodoroState.sessionStart = null;
         initPomodoroPhase('work');
+        localStorage.removeItem('_pomo_state');
         _resetFavicon();
         renderPomodoroUI();
         showToast('타이머를 중단했습니다');
