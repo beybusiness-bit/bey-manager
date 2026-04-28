@@ -7470,7 +7470,7 @@
       html += '<div style="flex:1;min-width:0;">';
       if (item.isBonus) html += '<span style="font-size:10px;color:#fdcb6e;font-weight:700;">⭐ 보너스 </span>';
       html += '<div class="work-kanban-title' + (isDone ? ' done' : '') + '">' + escapeHtml(item.title) + '</div>';
-      if (item.memo) html += '<div class="work-kanban-memo">' + escapeHtml(item.memo.substring(0, 50)) + (item.memo.length > 50 ? '…' : '') + '</div>';
+      if (item.memo) html += '<div class="work-kanban-memo">' + escapeHtml(item.memo) + '</div>';
       html += '</div>';
       html += '</div>';
       /* 연결된 하위 할일 목록 */

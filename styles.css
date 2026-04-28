@@ -3223,7 +3223,7 @@
     .work-kanban-card.done { opacity: 0.6; }
     .work-kanban-title { font-size: 13px; font-weight: 600; word-break: break-word; }
     .work-kanban-title.done { text-decoration: line-through; opacity: 0.6; }
-    .work-kanban-memo { font-size: 11px; color: var(--text-secondary); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .work-kanban-memo { font-size: 11px; color: var(--text-secondary); margin-top: 4px; white-space: pre-wrap; word-break: break-word; line-height: 1.5; }
     .work-kanban-empty { font-size: 12px; color: var(--text-secondary); text-align: center; padding: 12px 0; opacity: 0.5; }
     .work-inline-edit { background: var(--card-bg); border-radius: var(--button-radius, 8px); padding: 14px; border: 2px solid var(--primary-yellow); margin-bottom: 6px; }
     .work-drop-indicator { height: 3px; background: var(--primary-yellow); border-radius: 2px; margin: 4px 0; pointer-events: none; }
