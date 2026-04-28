@@ -7759,19 +7759,10 @@
       var srcStatus = __workDragSrcStatus;
 
       if (targetStatus !== srcStatus) {
-        // Cross-column: change status with bonus-lock check
-        if (srcStatus === 'done' && targetStatus !== 'done' && item.date && !item.isBonus) {
-          var bonusUsed = getBonusUsedCount(item.date);
-          var completedCnt = getCompletedNormalCount(item.date);
-          if (completedCnt - 1 < bonusUsed) {
-            showToast('보너스 할일이 이 완료에 묶여 있어 완료 취소할 수 없습니다', 'warning');
-            return;
-          }
-        }
-        item.status = targetStatus;
-        item.completed = (targetStatus === 'done');
-        logWorkEvent('status_changed', item, srcStatus, targetStatus);
-        showToast(targetStatus === 'done' ? '✅ 완료!' : targetStatus === 'in-progress' ? '⏳ 진행 중' : '↩ 시작 전으로');
+        // Cross-column: delegate to setWorkItemStatus so pomodoro pause logic fires
+        setWorkItemStatus(__workDragId, targetStatus);
+        __workDragId = null;
+        return;
       } else if (__workDragTargetId && __workDragTargetId !== __workDragId) {
         // Within-column: reorder
         var dragIdx = workItems.findIndex(function(it) { return it.id === __workDragId; });
