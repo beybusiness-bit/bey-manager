@@ -8708,6 +8708,7 @@
       }
       updatePageTitle();
       renderPomodoroUI();
+      _savePomodoroState();
     }
 
     function stopPomodoro() {
