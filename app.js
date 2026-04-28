@@ -1242,7 +1242,7 @@
 
       // Sheets 연동: access_token 획득 → 탭 생성/전체 로드
       GS.init(function(ok) {
-        if (!ok) { GS.updateUI('err'); return; }
+        if (!ok) return;
         GS.loadAll().then(function(loaded) {
           if (loaded) renderCurrentScheduleView();
         });
@@ -1640,7 +1640,7 @@
           showApp();
           // 세션 복원 시 Sheets 재연결
           GS.init(function(ok) {
-            if (!ok) { GS.updateUI('err'); return; }
+            if (!ok) return;
             GS.loadAll().then(function(loaded) {
               if (loaded) renderCurrentScheduleView();
             });
@@ -3566,7 +3566,9 @@
       function _saveTokenCache(token, expiresIn) {
         _token = token;
         _tokenExpiry = Date.now() + ((expiresIn || 3600) - 60) * 1000;
-        try { sessionStorage.setItem('_gs_tok', JSON.stringify({t: _token, e: _tokenExpiry})); } catch(e) {}
+        var data = JSON.stringify({t: _token, e: _tokenExpiry});
+        try { sessionStorage.setItem('_gs_tok', data); } catch(e) {}
+        try { localStorage.setItem('_gs_tok', data); } catch(e) {}
       }
 
       function _loadTokenCache() {
@@ -3574,12 +3576,17 @@
           var c = JSON.parse(sessionStorage.getItem('_gs_tok') || 'null');
           if (c && c.t && c.e && Date.now() < c.e) { _token = c.t; _tokenExpiry = c.e; return true; }
         } catch(e) {}
+        try {
+          var c2 = JSON.parse(localStorage.getItem('_gs_tok') || 'null');
+          if (c2 && c2.t && c2.e && Date.now() < c2.e) { _token = c2.t; _tokenExpiry = c2.e; return true; }
+        } catch(e) {}
         return false;
       }
 
       function _clearTokenCache() {
         _token = null; _tokenExpiry = 0;
         try { sessionStorage.removeItem('_gs_tok'); } catch(e) {}
+        try { localStorage.removeItem('_gs_tok'); } catch(e) {}
       }
 
       function _updateUI(state, msg) {
@@ -3868,7 +3875,17 @@
             return;
           }
 
-          // 2. 캐시 없음 → silent auth (팝업 없음)
+          // 2. Safari/모바일에서는 캐시 없을 때 자동 OAuth 시도 안 함 (팝업 차단 경고 방지)
+          //    사이드바 연결 버튼(사용자 제스처)으로만 OAuth 진행
+          var isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) ||
+            /iPhone|iPad|iPod/i.test(navigator.userAgent);
+          if (isSafari) {
+            _updateUI('', '미연결');
+            if (onDone) onDone(false);
+            return;
+          }
+
+          // 3. 캐시 없음 → silent auth
           if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
             _updateUI('err', 'Google 라이브러리 없음'); if (onDone) onDone(false); return;
           }
@@ -7267,18 +7284,16 @@
     function moveDetailItemToBasket(id) {
       var item = workItems.find(function(it) { return it.id === id; });
       if (!item) return;
-      showConfirm('바구니로 이동', '이 할일을 바구니로 이동할까요?', function() {
-        var oldDate = item.date;
-        item.date = null;
-        item.isBonus = false;
-        item.status = 'pending';
-        item.completed = false;
-        logWorkEvent('moved_to_basket', item, oldDate, 'basket');
-        saveWorkItems();
-        closeWorkItemDetail();
-        renderWorkView();
-        showToast('🧺 바구니로 이동했습니다');
-      });
+      var oldDate = item.date;
+      item.date = null;
+      item.isBonus = false;
+      item.status = 'pending';
+      item.completed = false;
+      logWorkEvent('moved_to_basket', item, oldDate, 'basket');
+      saveWorkItems();
+      closeWorkDetailModal();
+      renderWorkView();
+      showToast('🧺 바구니로 이동했습니다');
     }
 
     function moveDetailItemToDate(id, targetDate, label) {
@@ -7299,7 +7314,7 @@
       item.completed = false;
       logWorkEvent('date_changed', item, oldDate, targetDate);
       saveWorkItems();
-      closeWorkItemDetail();
+      closeWorkDetailModal();
       renderWorkView();
       showToast('📅 ' + label + '로 이동했습니다');
     }
