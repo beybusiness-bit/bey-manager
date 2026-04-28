@@ -7263,6 +7263,47 @@
       var dp = dateStr.split('-');
       _movePendingTasksToDate(dateStr, todayStr, parseInt(dp[1]) + '/' + parseInt(dp[2]) + '일', '오늘');
     }
+
+    function moveDetailItemToBasket(id) {
+      var item = workItems.find(function(it) { return it.id === id; });
+      if (!item) return;
+      showConfirm('바구니로 이동', '이 할일을 바구니로 이동할까요?', function() {
+        var oldDate = item.date;
+        item.date = null;
+        item.isBonus = false;
+        item.status = 'pending';
+        item.completed = false;
+        logWorkEvent('moved_to_basket', item, oldDate, 'basket');
+        saveWorkItems();
+        closeWorkItemDetail();
+        renderWorkView();
+        showToast('🧺 바구니로 이동했습니다');
+      });
+    }
+
+    function moveDetailItemToDate(id, targetDate, label) {
+      var item = workItems.find(function(it) { return it.id === id; });
+      if (!item) return;
+      var oldDate = item.date;
+      var targetItems = workItems.filter(function(it) {
+        return it.date === targetDate && !it.parentId;
+      });
+      var normalSlots = 3;
+      var normalCount = targetItems.filter(function(it) { return !it.isBonus; }).length;
+      if (!item.isBonus && normalCount >= normalSlots) {
+        showAlert('이동 불가', label + '의 일반 할일 슬롯이 가득 차 있습니다.');
+        return;
+      }
+      item.date = targetDate;
+      item.status = 'pending';
+      item.completed = false;
+      logWorkEvent('date_changed', item, oldDate, targetDate);
+      saveWorkItems();
+      closeWorkItemDetail();
+      renderWorkView();
+      showToast('📅 ' + label + '로 이동했습니다');
+    }
+
     function setWorkItemStatus(id, newStatus) {
       var item = workItems.find(function(it) { return it.id === id; });
       if (!item) return;
@@ -7477,14 +7518,6 @@
       html += '</div>';
       html += '<div class="work-today-stats">' + normalItems.length + '/3';
       if (bonusItems.length > 0) html += ' &nbsp;⭐' + bonusItems.length;
-      /* 내일로 버튼: 오늘 날짜 + 오후 10시 이후 */
-      if (workSelectedDate === todayStr && new Date().getHours() >= 22) {
-        html += '&nbsp;<button class="btn-text" style="font-size:11px;color:var(--text-secondary);background:none;border:1px solid var(--border-color);border-radius:6px;padding:2px 8px;cursor:pointer;" onclick="moveTasksToTomorrow()">내일 마저 하기</button>';
-      }
-      /* 오늘로 버튼: 과거 날짜 */
-      if (workSelectedDate < todayStr) {
-        html += '&nbsp;<button class="btn-text" style="font-size:11px;color:var(--text-secondary);background:none;border:1px solid var(--border-color);border-radius:6px;padding:2px 8px;cursor:pointer;" onclick="movePastTasksToToday(\'' + workSelectedDate + '\')">오늘 다시 하기</button>';
-      }
       html += '</div>';
 
       html += '<div class="work-kanban">';
@@ -7922,6 +7955,25 @@
       if (item.memo) html += '<div style="background:var(--bg-main);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.65;white-space:pre-wrap;">' + escapeHtml(item.memo) + '</div>';
       var detailDiv = document.getElementById('workDetailContent');
       if (detailDiv) detailDiv.innerHTML = html;
+      /* 이동 버튼 행 */
+      var actionRow = document.getElementById('workDetailActionRow');
+      if (actionRow) {
+        var todayStr = today();
+        var isPending = (status === 'pending' || status === 'in-progress');
+        var btnStyle = 'font-size:12px;padding:5px 10px;border:1px solid var(--border-color);border-radius:6px;background:none;color:var(--text-secondary);cursor:pointer;';
+        var actionHtml = '';
+        if (item.date && isPending) {
+          actionHtml += '<button style="' + btnStyle + '" onclick="moveDetailItemToBasket(\'' + id + '\')">🧺 바구니로</button>';
+        }
+        if (item.date && item.date < todayStr && isPending && !item.parentId) {
+          actionHtml += '<button style="' + btnStyle + '" onclick="moveDetailItemToDate(\'' + id + '\',\'' + todayStr + '\',\'오늘\')">오늘 다시 하기</button>';
+        }
+        if (item.date && item.date === todayStr && isPending && !item.parentId && new Date().getHours() >= 22) {
+          var tomorrow = addDays(todayStr, 1);
+          actionHtml += '<button style="' + btnStyle + '" onclick="moveDetailItemToDate(\'' + id + '\',\'' + tomorrow + '\',\'내일\')">내일 마저 하기</button>';
+        }
+        actionRow.innerHTML = actionHtml;
+      }
       var editBtn = document.getElementById('workDetailEditBtn');
       if (editBtn) editBtn.onclick = function() { showEditWorkItemModal(id); };
       var delBtn = document.getElementById('workDetailDeleteBtn');
@@ -8751,6 +8803,16 @@
 
     function _pipKeyColor() {
       return getComputedStyle(document.documentElement).getPropertyValue('--primary-yellow').trim() || '#ffde59';
+    }
+
+    function handlePomoPipOrFullscreen() {
+      if (window.innerWidth <= 768) {
+        /* 모바일: 패널 전체화면 토글 */
+        var panel = document.getElementById('pomodoroPanel');
+        if (panel) panel.classList.toggle('pomo-fullscreen');
+      } else {
+        togglePomodoroPoP();
+      }
     }
 
     async function togglePomodoroPoP() {

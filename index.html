@@ -711,12 +711,13 @@
               <span id="notifyPermStatus" style="font-size:13px;color:var(--text-secondary);">확인 중...</span>
               <button class="btn-cancel" style="padding:7px 16px;font-size:13px;" onclick="requestNotifyPermission()">알림 허용 요청</button>
             </div>
-            <p style="font-size:12px;color:var(--text-secondary);margin-top:8px;">⚠️ 브라우저 탭이 열려 있을 때만 작동합니다.</p>
+            <p style="font-size:12px;color:var(--text-secondary);margin-top:8px;">⏱ <strong>뽀모도로 알림</strong>은 이 권한을 사용합니다. 브라우저 탭이 열려 있을 때만 작동합니다.</p>
+            <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">🔔 <strong>커스텀 알림</strong>은 Firebase를 통해 전송되므로 앱이 닫혀 있어도 모바일·데스크탑 모두 수신됩니다. (Firebase 배포 완료 후 작동)</p>
           </div>
 
           <!-- 뽀모도로 알림 -->
           <div class="design-group" style="margin-bottom:24px;">
-            <h4 style="font-size:15px;margin-bottom:12px;">⏱ 뽀모도로 알림</h4>
+            <h4 style="font-size:15px;margin-bottom:12px;">⏱ 뽀모도로 알림 <span style="font-size:11px;font-weight:400;color:var(--text-secondary);">— 탭이 열려 있을 때만 작동</span></h4>
             <div class="design-row">
               <label class="design-label">집중 종료 시 알림</label>
               <div class="design-control">
@@ -740,7 +741,7 @@
           <!-- 커스텀 알림 목록 -->
           <div class="design-group">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-              <h4 style="font-size:15px;margin:0;">🔔 커스텀 알림</h4>
+              <h4 style="font-size:15px;margin:0;">🔔 커스텀 알림 <span style="font-size:11px;font-weight:400;color:var(--text-secondary);">— 앱 꺼져도 수신 가능</span></h4>
               <button class="btn-confirm" style="padding:6px 14px;font-size:13px;" onclick="openCustomNotifyForm(null)">+ 알림 추가</button>
             </div>
             <div id="customNotifyList"></div>
@@ -885,7 +886,8 @@
   <div id="workDetailModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeWorkDetailModal()">
     <div class="modal-box" style="max-width:400px;width:100%;">
       <div id="workDetailContent"></div>
-      <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
+      <div id="workDetailActionRow" style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
         <button class="btn-cancel" style="flex:1;min-width:80px;padding:10px;" id="workDetailEditBtn">수정</button>
         <button class="btn-cancel work-delete-btn" style="flex:1;min-width:80px;padding:10px;" id="workDetailDeleteBtn">삭제</button>
         <button class="btn-confirm" style="flex:1;min-width:80px;padding:10px;" onclick="closeWorkDetailModal()">닫기</button>
@@ -931,7 +933,7 @@
     <div id="pomodoroPanelHeader">
       <span id="pomodoroPhaseLabel">집중</span>
       <div style="display:flex;gap:4px;align-items:center;">
-        <button class="pomo-btn-icon" onclick="togglePomodoroPoP()" title="미니 팝업 창">&#x26F6;</button>
+        <button class="pomo-btn-icon" onclick="handlePomoPipOrFullscreen()" title="미니 팝업 / 전체화면">&#x26F6;</button>
         <button class="pomo-btn-icon" onclick="resetPomodoro()" title="초기화">&#8635;</button>
         <button class="pomo-btn-icon" onclick="togglePomodoroPanel()">&#10005;</button>
       </div>
