@@ -1235,8 +1235,8 @@
         sub: payload.sub || ''
       };
 
-      sessionStorage.setItem('isLoggedIn', 'true');
-      sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
 
       showApp();
 
@@ -1264,7 +1264,9 @@
           if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
             google.accounts.id.disableAutoSelect();
           }
-          GS.disconnect && GS.disconnect(true); // 캐시 클리어 (confirm 없이)
+          GS.disconnect && GS.disconnect(true);
+          localStorage.removeItem('isLoggedIn');
+          localStorage.removeItem('currentUser');
           sessionStorage.clear();
           currentUser = null;
           window.location.href = window.location.href.split('#')[0];
@@ -1625,8 +1627,8 @@
 
     function initLogin() {
       // 기존 세션 확인
-      if (sessionStorage.getItem('isLoggedIn') === 'true') {
-        const savedUser = sessionStorage.getItem('currentUser');
+      if (localStorage.getItem('isLoggedIn') === 'true') {
+        const savedUser = localStorage.getItem('currentUser');
         if (savedUser) {
           try {
             currentUser = JSON.parse(savedUser);
@@ -1636,7 +1638,7 @@
         }
         if (currentUser && currentUser.email === AUTH.USER_EMAIL) {
           showApp();
-          // 세션 복원 시 Sheets 재연결 (새로고침 후에도 연결 유지)
+          // 세션 복원 시 Sheets 재연결
           GS.init(function(ok) {
             if (!ok) { GS.updateUI('err'); return; }
             GS.loadAll().then(function(loaded) {
@@ -1645,7 +1647,8 @@
           });
           return;
         } else {
-          sessionStorage.clear();
+          localStorage.removeItem('isLoggedIn');
+          localStorage.removeItem('currentUser');
         }
       }
 
@@ -7476,11 +7479,11 @@
       if (bonusItems.length > 0) html += ' &nbsp;⭐' + bonusItems.length;
       /* 내일로 버튼: 오늘 날짜 + 오후 10시 이후 */
       if (workSelectedDate === todayStr && new Date().getHours() >= 22) {
-        html += '&nbsp;<button class="btn-text" style="font-size:11px;color:var(--text-secondary);background:none;border:1px solid var(--border-color);border-radius:6px;padding:2px 8px;cursor:pointer;" onclick="moveTasksToTomorrow()">내일로 →</button>';
+        html += '&nbsp;<button class="btn-text" style="font-size:11px;color:var(--text-secondary);background:none;border:1px solid var(--border-color);border-radius:6px;padding:2px 8px;cursor:pointer;" onclick="moveTasksToTomorrow()">내일 마저 하기</button>';
       }
       /* 오늘로 버튼: 과거 날짜 */
       if (workSelectedDate < todayStr) {
-        html += '&nbsp;<button class="btn-text" style="font-size:11px;color:var(--text-secondary);background:none;border:1px solid var(--border-color);border-radius:6px;padding:2px 8px;cursor:pointer;" onclick="movePastTasksToToday(\'' + workSelectedDate + '\')">오늘로 →</button>';
+        html += '&nbsp;<button class="btn-text" style="font-size:11px;color:var(--text-secondary);background:none;border:1px solid var(--border-color);border-radius:6px;padding:2px 8px;cursor:pointer;" onclick="movePastTasksToToday(\'' + workSelectedDate + '\')">오늘 다시 하기</button>';
       }
       html += '</div>';
 
@@ -7726,6 +7729,9 @@
           parentInfoEl.innerHTML = '';
         }
       }
+      /* 추가 모드에서는 날짜 수정 필드 숨김 */
+      var dateRow = document.getElementById('workEditDateRow');
+      if (dateRow) dateRow.style.display = 'none';
       /* 바구니 모드(날짜 없음)에서는 "바구니에서 선택" 탭 숨김 */
       var tabNav = document.getElementById('workModalTabNav');
       if (tabNav) tabNav.style.display = dateStr ? '' : 'none';
@@ -7803,10 +7809,22 @@
       var modal = document.getElementById('workItemModal');
       document.getElementById('workItemModalTitle').textContent = '할일 수정';
       var dateEl = document.getElementById('workItemDateDisplay');
-      if (dateEl) dateEl.textContent = item.date ? formatDateKR(item.date) : '날짜 미정 (바구니)';
+      if (dateEl) dateEl.textContent = '';
       document.getElementById('workEmojiBtn').innerHTML = renderEmoji(item.emoji || '📋');
       document.getElementById('workTitleInput').value = item.title || '';
       document.getElementById('workMemoInput').value = item.memo || '';
+      /* 날짜 수정 필드 표시 */
+      var dateRow = document.getElementById('workEditDateRow');
+      var dateInput = document.getElementById('workEditDateInput');
+      if (dateRow) dateRow.style.display = '';
+      if (dateInput) dateInput.value = item.date || '';
+      /* 탭 숨김 (수정 모드) */
+      var tabNav = document.getElementById('workModalTabNav');
+      if (tabNav) tabNav.style.display = 'none';
+      var parentInfoEl = document.getElementById('workModalParentInfo');
+      if (parentInfoEl) { parentInfoEl.style.display = 'none'; parentInfoEl.innerHTML = ''; }
+      document.getElementById('workModalNewTab').style.display = '';
+      document.getElementById('workModalBasketTab').style.display = 'none';
       closeWorkDetailModal();
       modal.style.display = 'flex';
       bringModalToFront(modal);
@@ -7831,6 +7849,16 @@
           item.emoji = workItemDraft ? (workItemDraft.emoji || '📋') : item.emoji;
           item.color = emojiToWorkColor(item.emoji);
           item.memo = memo;
+          /* 날짜 수정 */
+          var dateInput = document.getElementById('workEditDateInput');
+          if (dateInput) {
+            var newDate = dateInput.value || null;
+            if (newDate !== item.date) {
+              logWorkEvent('date_changed', item, item.date || 'basket', newDate || 'basket');
+              item.date = newDate;
+              if (!newDate) item.isBonus = false; /* 바구니로 이동 시 보너스 해제 */
+            }
+          }
         }
         showToast('할일을 수정했습니다');
       } else {

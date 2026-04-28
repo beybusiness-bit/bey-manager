@@ -857,6 +857,10 @@
           <input class="input-field work-form-input" id="workTitleInput" placeholder="할일 제목"
             onkeydown="if(event.key==='Enter')saveWorkItem();if(event.key==='Escape')closeWorkItemModal()">
         </div>
+        <div id="workEditDateRow" style="display:none;" class="work-form-row work-form-row-col">
+          <div class="work-form-label">날짜 <span style="font-size:10px;color:var(--text-tertiary);">(비우면 바구니로)</span></div>
+          <input type="date" class="input-field" id="workEditDateInput" style="width:100%;box-sizing:border-box;">
+        </div>
         <div class="work-form-row work-form-row-col">
           <div class="work-form-label">메모 (선택)</div>
           <textarea class="input-field" id="workMemoInput" placeholder="메모를 입력하세요" rows="3" style="resize:none;width:100%;box-sizing:border-box;"></textarea>
