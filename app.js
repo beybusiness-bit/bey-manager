@@ -7480,12 +7480,35 @@
       renderWorkView();
     }
 
+    function _updateWorkTabCounts() {
+      var basketCount = workItems.filter(function(it) { return !it.date; }).length;
+      var hallCount   = workItems.filter(function(it) { return getWorkStatus(it) === 'done'; }).length;
+      var basketBtns = document.querySelectorAll('#workPage .tab-btn');
+      basketBtns.forEach(function(btn) {
+        if (btn.textContent.indexOf('할일 바구니') !== -1) {
+          var sp = btn.querySelector('.work-basket-tab-count');
+          if (basketCount > 0) {
+            if (!sp) { sp = document.createElement('span'); sp.className = 'work-basket-tab-count'; btn.appendChild(sp); }
+            sp.textContent = basketCount;
+          } else if (sp) { sp.remove(); }
+        }
+        if (btn.textContent.indexOf('한 일의 전당') !== -1) {
+          var sp2 = btn.querySelector('.work-hall-tab-count');
+          if (hallCount > 0) {
+            if (!sp2) { sp2 = document.createElement('span'); sp2.className = 'work-hall-tab-count'; btn.appendChild(sp2); }
+            sp2.textContent = hallCount;
+          } else if (sp2) { sp2.remove(); }
+        }
+      });
+    }
+
     function renderWorkView() {
       if (workView === 'today') renderWorkToday();
       else if (workView === 'week') renderWorkWeek();
       else if (workView === 'basket') renderWorkBasketTab();
       else if (workView === 'hall') renderWorkHall();
       else renderWorkMonth();
+      _updateWorkTabCounts();
     }
 
     function renderWorkKanbanCard(item) {
