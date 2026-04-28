@@ -7356,9 +7356,28 @@
       item.status = newStatus;
       item.completed = (newStatus === 'done');
       logWorkEvent('status_changed', item, oldStatus, newStatus);
+
+      /* 완료로 변경할 때 뽀모도로에 연결된 할일이면 타이머 일시정지 */
+      if (newStatus === 'done' && pomodoroState.taskId === id && pomodoroState.running) {
+        if (pomodoroState.phase === 'work' && pomodoroState.sessionStart) {
+          var pomElapsed = Math.floor((Date.now() - pomodoroState.sessionStart) / 1000);
+          item.focusTime = (item.focusTime || 0) + pomElapsed;
+        }
+        pomodoroState.sessionStart = null;
+        stopPomodoroTick();
+        pomodoroState.running = false;
+        logPomoEvent('work_pause');
+        pomodoroState.taskId = null;
+        pomodoroState.taskTitle = '';
+        _savePomodoroState();
+        renderPomodoroUI();
+        showToast('⏸ 할일 완료 — 타이머를 일시정지했습니다. 뽀모도로 패널에서 다른 할일을 연결해 계속할 수 있습니다.', 'warning');
+      } else {
+        showToast(newStatus === 'done' ? '✅ 완료!' : newStatus === 'in-progress' ? '⏳ 진행 중' : '↩ 시작 전으로');
+      }
+
       saveWorkItems();
       renderWorkView();
-      showToast(newStatus === 'done' ? '✅ 완료!' : newStatus === 'in-progress' ? '⏳ 진행 중' : '↩ 시작 전으로');
     }
     function toggleWorkItemStatus(id) {
       var item = workItems.find(function(it) { return it.id === id; });
