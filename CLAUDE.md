@@ -521,7 +521,7 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 - **Google 계정으로만 로그인** 가능 (비밀번호 방식 폐기)
 - **이메일 화이트리스트**: 현재 `baekeun0@gmail.com` 단일 (추후 배열 확장 예정)
 - JWT 토큰에서 사용자 정보(email, name, picture) 자동 추출
-- **세션 유지**: sessionStorage 사용 (브라우저 탭 종료 시 초기화)
+- **세션 유지**: localStorage 사용 (재접속 시 자동 복구, 탭 종료해도 유지)
 - **로그아웃**: 사이드바 하단 버튼 → 확인 모달 → `google.accounts.id.disableAutoSelect()` 호출 → 세션 초기화
 - **GSI 스크립트 로드 대기**: 비동기 로드 실패 대비 200ms 간격 재시도 로직 있음
 
@@ -634,31 +634,34 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 
 ## 10. 다음 세션 시작점
 
-> **마지막 세션: 2026-04-26 (3차)**
-> **방향**: 심플 1차 완성 기조 유지. 습관 페이지 완료. 다음 페이지를 베이님이 선택 예정.
+> **마지막 세션: 2026-04-28**
+> **방향**: 뽀모도로 + 일 페이지 추가 기능 패치 완료. 세션 마무리.
 
 ### 🔄 현재 진행 상태
 
 - **작업 브랜치**: `claude/work-items-page-setup-d8f19` (main에 머지·배포 완료)
-- **마지막 커밋**: `d4dd4a6 fix: 습관추가버튼 인라인배치+소형화, 페이저 항상표시, 바구니 flex 컨트롤바`
-- **파일 라인 수**: app.js 7,746줄 / styles.css 3,286줄 / index.html 795줄
+- **마지막 커밋**: `4d19bcb feat: 할일 상세 모달에 바구니로/날짜이동 버튼, 알림 설정 문구 명확화`
+- **파일 라인 수**: app.js 9,065줄 / styles.css 3,472줄 / index.html 981줄
 
 ### ✅ 이번 세션에서 완료한 작업
 
-1. **습관 페이지 완성** — 오늘/주별/월별/습관목록 탭, 메모 기능, streak 계산, 테스트 데이터 페이지
-2. **습관 목록 UI 개선** — 검색+정렬+페이저+전체선택, 추가버튼 항상 인라인 표시
-3. **할일 바구니 개선** — 검색+정렬 컨트롤 추가
-4. **메모 목록 모달 페이지네이션** — 6개씩 페이지네이션
-5. **오늘로 이동 버튼 스타일 통일** — 일/습관 페이지 모두 텍스트 링크 방식으로 통일
-6. **습관 폼 모달 정렬** — 이모지버튼·입력칸 동일 높이(40px)로 정렬
+1. **할일 모달 버그 3종 수정** — 바구니 추가 시 탭 숨김, 연결할일 레이블 잔상 제거, 이전 상태 이월 버그 수정 (openBasketNewItem 제거, openWorkItemModal로 통일)
+2. **SW 캐시 버전 bump** — `bey-v2` → `bey-v3` (PWA 강제 갱신)
+3. **syncSheets 경쟁 조건 수정** — DROP → QUEUE 패턴: 동시 저장 시 두 번째 요청이 사라지던 버그 수정 (`_pendingSyncNames` 큐)
+4. **Document PiP 타이머 (데스크탑)** — Chrome 116+ 플로팅 팝업 창, 3가지 뷰 모드 (full/line/mini), 키컬러 CSS 변수 연동
+5. **미디어 세션 완전 제거** — 사일런트 WAV, `_updateMediaSession` 등 관련 코드 전부 삭제
+6. **뽀모도로 할일 필터** — `in-progress` 상태 할일만 연결 가능하도록 제한
+7. **내일 마저 하기 / 오늘 다시 하기 버튼** — 일 페이지 통계 바 → 할일 상세 모달로 이동. 각 할일별 개별 이동 지원 (`moveDetailItemToBasket`, `moveDetailItemToDate`)
+8. **할일 수정 날짜 변경** — 수정 모달에 날짜 필드 추가, 날짜 변경 시 `date_changed` 이벤트 로깅, 날짜 지우면 바구니로
+9. **로그인 세션 영구 유지** — `sessionStorage` → `localStorage` 변경 (재접속 시 자동 복구)
+10. **모바일 뽀모도로 전체화면** — 모바일(768px 이하)에서 ⛶ 버튼 클릭 시 CSS 전체화면 토글 (`pomo-fullscreen` 클래스)
+11. **알림 설정 문구 명확화** — 뽀모도로 알림(탭 열릴 때만)과 커스텀 알림(FCM, 앱 꺼져도 수신)을 별도 문구로 구분
 
-### 🎯 다음 단계: 뽀모도로 + 알림 기능 (베이님 결정, 2026-04-26)
+### 🎯 다음 단계 후보 (베이님 결정 대기)
 
-**진행 순서:**
-1. 더미 테스트 데이터 파일 삭제 (`habit-test-data.html`, `test-data.html`)
-2. 뽀모도로 타이머 — 플로팅 위젯, 할일 연결, 25/5분 사이클
-3. 브라우저 알림(Notification API) 인프라 구축
-4. 알림 설정 UI — 설정 페이지 내 "알림" 탭
+- **Firebase 재배포**: 커스텀 알림 FCM 작동을 위해 Mac에서 `cd ~/Desktop/bey-manager/functions && firebase deploy --only functions` 실행 필요
+- **테스트 파일 정리**: `habit-test-data.html`, `test-data.html` 삭제 (베이님 테스트 완료 후)
+- 추가 기능은 베이님이 다음 세션에서 선택
 
 ### 🗄️ 아카이브: 구(舊) 설계 우선순위 (참고 보관용, 재개 가능)
 
@@ -674,14 +677,15 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 
 ### 📌 현재 코드 구조 핵심 메모
 
-- **일 페이지 JS**: app.js `// 일(업무) 페이지` 섹션 (~6506줄~). 전역 상태: `workView`, `workWeekOffset`, `workMonthOffset`, `workSelectedDate`, `workBasketPage`, `workBasketPerPage`, `__workDragId`, `__workDragSrcStatus`, `__workDragTargetId`, `__workDragInsertBefore`.
+- **일 페이지 JS**: app.js `// 일(업무) 페이지` 섹션. 전역 상태: `workView`, `workWeekOffset`, `workMonthOffset`, `workSelectedDate`, `workBasketPage`, `workBasketPerPage`, `__workDragId`, `__workDragSrcStatus`, `__workDragTargetId`, `__workDragInsertBefore`.
 - **workItems 데이터 모델**: `{ id, emoji, color, title, date(null=바구니), status:'pending'|'in-progress'|'done', completed(compat), isBonus, memo, createdAt }`
-- **보너스 잠금 로직**: `getCompletedNormalCount(date) - 1 < getBonusUsedCount(date)` 이면 완료→다른상태 DnD + 삭제 모두 거부. `deleteWorkItem`과 `workDrop` 양쪽에 동일 체크 적용.
+- **보너스 잠금 로직**: `getCompletedNormalCount(date) - 1 < getBonusUsedCount(date)` 이면 완료→다른상태 DnD + 삭제 모두 거부.
+- **할일 이동 함수**: `moveDetailItemToBasket(id)` — 상세모달에서 바구니로 이동 (확인 모달 포함). `moveDetailItemToDate(id, targetDate, label)` — 슬롯 체크 후 날짜 이동.
+- **뽀모도로 PiP**: `_pipViewMode` ('full'|'line'|'mini'), `_PIP_SIZES`, `_PIP_VIEW_NEXT`. 데스크탑: `togglePomodoroPoP()`, 모바일: `pomodoroPanel.classList.toggle('pomo-fullscreen')`. 진입점: `handlePomoPipOrFullscreen()`.
+- **syncSheets 큐**: `_syncing` 플래그 + `_pendingSyncNames[]` 배열. 동시 저장 요청은 큐에 쌓이고 현재 sync 완료 후 재실행.
+- **로그인 영속성**: `localStorage.setItem('isLoggedIn','true')` + `localStorage.setItem('currentUser', JSON.stringify(...))`. 로그아웃 시 두 키 모두 `removeItem`.
 - **바구니 배정**: 선택 개수 > `normalSlots + availBonus` 이면 전체 거부. `toBonus.length > 0` 이면 보너스 확인 모달만 표시.
 - **DnD 순서 변경**: 같은 컬럼 내 드롭 시 `workItems` 배열에서 splice 재삽입. `__workDragTargetId` + `__workDragInsertBefore` 상태 사용.
-- **`.input-field` CSS**: styles.css 상단에 정의(`padding:9px 12px`, `border:1.5px solid`, `border-radius:var(--button-radius)`). 모달 외부 인라인 편집 폼에서도 일관된 스타일 유지.
-- **메뉴 설정**: `menuDraft[]` draft 패턴. DnD: `__mmDrag` 모듈 상태, `box-shadow` 삽입선.
-- **사이드바 토글**: `document click` 핸들러에서 `e.composedPath()` 사용.
 - **탭 UI**: `.tab-nav` + `.tab-btn` + `#pageId .tab-btn` 스코프 패턴 (전역 충돌 방지).
 
 ### ⚠️ 다음 세션 유의사항
