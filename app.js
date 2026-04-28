@@ -7509,6 +7509,7 @@
       else if (workView === 'hall') renderWorkHall();
       else renderWorkMonth();
       _updateWorkTabCounts();
+      refreshPomodoroTaskList();
     }
 
     function renderWorkKanbanCard(item) {
@@ -8623,6 +8624,15 @@
       var todayItems = workItems.filter(function(it) {
         return it.date === todayStr && it.status === 'in-progress';
       });
+      /* 연결된 할일이 더 이상 in-progress가 아니면 자동 해제 */
+      if (pomodoroState.taskId) {
+        var linkedItem = workItems.find(function(it) { return it.id === pomodoroState.taskId; });
+        if (!linkedItem || linkedItem.status !== 'in-progress') {
+          pomodoroState.taskId = null;
+          pomodoroState.taskTitle = '';
+          _savePomodoroState();
+        }
+      }
       sel.innerHTML = '<option value="">— 할일 선택 (선택) —</option>';
       todayItems.forEach(function(it) {
         var opt = document.createElement('option');
@@ -8635,6 +8645,7 @@
         pomodoroState.taskId = this.value || null;
         var selected = workItems.find(function(it) { return it.id === pomodoroState.taskId; });
         pomodoroState.taskTitle = selected ? ((selected.emoji || '📋') + ' ' + selected.title) : '';
+        _savePomodoroState();
       };
     }
 
