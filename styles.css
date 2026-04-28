@@ -3232,6 +3232,7 @@
     .work-today-stats { font-size: 12px; color: var(--text-secondary); text-align: center; margin-bottom: 8px; }
     /* 바구니 탭 */
     .work-basket-tab-count { display: inline-block; background: var(--border-color); border-radius: 10px; padding: 0 6px; font-size: 11px; min-width: 16px; text-align: center; }
+    .work-hall-tab-count { display: inline-block; background: var(--primary-yellow, #ffde59); color: #1a1a1a; border-radius: 10px; padding: 0 6px; font-size: 11px; min-width: 16px; text-align: center; font-weight: 600; }
     .work-basket-tab { padding: 4px 0; }
     /* 바구니 컨트롤 행 */
     .basket-controls-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: nowrap; }

@@ -7418,13 +7418,14 @@
       var container = document.getElementById('workPageContent');
       if (!container) return;
       var basketCount = workItems.filter(function(it) { return !it.date; }).length;
+      var hallCount   = workItems.filter(function(it) { return getWorkStatus(it) === 'done'; }).length;
       var html = '<div class="work-page">';
       html += '<div class="tab-nav" id="workTabNav">';
       html += '<button class="tab-btn' + (workView === 'today' ? ' active' : '') + '" onclick="switchWorkView(\'today\')">오늘</button>';
       html += '<button class="tab-btn' + (workView === 'week' ? ' active' : '') + '" onclick="switchWorkView(\'week\')">주별</button>';
       html += '<button class="tab-btn' + (workView === 'month' ? ' active' : '') + '" onclick="switchWorkView(\'month\')">월별</button>';
       html += '<button class="tab-btn' + (workView === 'basket' ? ' active' : '') + '" onclick="switchWorkView(\'basket\')">🧺 할일 바구니' + (basketCount > 0 ? ' <span class="work-basket-tab-count">' + basketCount + '</span>' : '') + '</button>';
-      html += '<button class="tab-btn' + (workView === 'hall' ? ' active' : '') + '" onclick="switchWorkView(\'hall\')">🏆 한 일의 전당</button>';
+      html += '<button class="tab-btn' + (workView === 'hall' ? ' active' : '') + '" onclick="switchWorkView(\'hall\')">🏆 한 일의 전당' + (hallCount > 0 ? ' <span class="work-hall-tab-count">' + hallCount + '</span>' : '') + '</button>';
       html += '</div>';
       html += '<div id="workViewContent"></div>';
       html += '</div>';
