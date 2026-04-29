@@ -1659,6 +1659,24 @@
     // ========================================
     // 앱 초기화
     // ========================================
+
+    function forceUpdate() {
+      showToast('🔄 업데이트 중...');
+      var done = function() { window.location.reload(true); };
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          var unregPromises = regs.map(function(r) { return r.unregister(); });
+          return Promise.all(unregPromises);
+        }).then(function() {
+          return caches.keys();
+        }).then(function(keys) {
+          return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+        }).then(done).catch(done);
+      } else {
+        done();
+      }
+    }
+
     function initializeApp() {
       loadMenus();
       loadFavorites();
