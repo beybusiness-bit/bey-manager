@@ -1189,7 +1189,7 @@
       google.accounts.id.initialize({
         client_id: AUTH.GOOGLE_CLIENT_ID,
         callback: handleGoogleCredentialResponse,
-        auto_select: false,
+        auto_select: true,
         cancel_on_tap_outside: true
       });
 
@@ -3895,13 +3895,30 @@
             return;
           }
 
-          // 2. Safari/모바일에서는 캐시 없을 때 자동 OAuth 시도 안 함 (팝업 차단 경고 방지)
-          //    사이드바 연결 버튼(사용자 제스처)으로만 OAuth 진행
+          // 2. Safari/모바일: prompt:'none'으로 팝업 없이 silent 재연결 시도
           var isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) ||
             /iPhone|iPad|iPod/i.test(navigator.userAgent);
           if (isSafari) {
-            _updateUI('', '미연결');
-            if (onDone) onDone(false);
+            if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
+              _updateUI('', '미연결'); if (onDone) onDone(false); return;
+            }
+            var hint = (currentUser && currentUser.email) ? currentUser.email : '';
+            _updateUI('sync', '연결 중...');
+            if (!_tokenClient) {
+              _tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: AUTH.GOOGLE_CLIENT_ID,
+                scope: 'https://www.googleapis.com/auth/spreadsheets',
+                hint: hint,
+                callback: function() {}
+              });
+            }
+            _tokenClient.callback = function(resp) {
+              if (resp.error) { _updateUI('', '미연결'); if (onDone) onDone(false); return; }
+              _saveTokenCache(resp.access_token, resp.expires_in);
+              _updateUI('ok', 'Sheets 연결됨');
+              if (onDone) onDone(true);
+            };
+            _tokenClient.requestAccessToken({ prompt: 'none', login_hint: hint });
             return;
           }
 
@@ -7332,6 +7349,8 @@
       item.date = targetDate;
       item.status = 'pending';
       item.completed = false;
+      /* 연결 할일(parentId)이 아닌 보너스 할일은 날짜 이동 시 일반 할일로 전환 */
+      if (item.isBonus && !item.parentId) item.isBonus = false;
       logWorkEvent('date_changed', item, oldDate, targetDate);
       saveWorkItems();
       closeWorkDetailModal();
@@ -8008,7 +8027,17 @@
       html += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">';
       html += '<div style="display:flex;gap:8px;align-items:center;font-size:13px;">';
       html += '<span style="color:var(--text-secondary);min-width:60px;">상태</span>';
-      html += '<span style="font-weight:600;">' + (statusLabels[status] || status) + '</span>';
+      /* 상태 변경 버튼 (모바일 드래그 대체) */
+      var sOpts = [{v:'pending',l:'시작 전'},{v:'in-progress',l:'진행 중'},{v:'done',l:'완료'}];
+      html += '<div style="display:flex;gap:4px;">';
+      sOpts.forEach(function(s) {
+        var active = status === s.v;
+        html += '<button onclick="event.stopPropagation();setWorkItemStatus(\'' + item.id + '\',\'' + s.v + '\');showWorkItemDetail(\'' + item.id + '\')"'
+          + ' style="font-size:11px;padding:3px 8px;border-radius:5px;border:1px solid var(--border-color);cursor:pointer;'
+          + (active ? 'background:var(--primary-yellow,#ffde59);color:#1a1a1a;font-weight:700;border-color:var(--primary-yellow,#ffde59);' : 'background:none;color:var(--text-secondary);') + '">'
+          + s.l + '</button>';
+      });
+      html += '</div>';
       html += '</div>';
       html += '<div style="display:flex;gap:8px;align-items:center;font-size:13px;">';
       html += '<span style="color:var(--text-secondary);min-width:60px;">날짜</span>';
