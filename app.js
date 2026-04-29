@@ -8972,7 +8972,7 @@
     var _pipWindow = null;
     var _pipViewMode = 'full'; // 'full' | 'line' | 'mini'
 
-    var _PIP_SIZES = { full: [260, 210], line: [400, 48], mini: [52, 64] };
+    var _PIP_SIZES = { full: [260, 210], line: [400, 48], mini: [52, 52] };
     var _PIP_VIEW_LABELS = { full: '전체', line: '한줄', mini: '최소' };
     var _PIP_VIEW_NEXT  = { full: 'line', line: 'mini', mini: 'full' };
 
@@ -9074,29 +9074,32 @@
           '<button onclick="window.opener.stopPomodoro()">⏹</button>';
 
       } else {
-        /* mini: SVG 원형 링 + 이모지 + 뷰 전환 버튼 */
+        /* mini: SVG 원형 링 + 이모지, ≡ 오버레이 */
         var circ = (2 * Math.PI * 17).toFixed(2);
         doc.head.innerHTML = '<style>' +
           '*{box-sizing:border-box;margin:0;padding:0}' +
-          'body{background:#1a1a1a;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100vw;height:100vh;gap:3px;overflow:hidden;user-select:none;}' +
-          '#m-svg{display:block;cursor:pointer;flex-shrink:0;}' +
+          'body{background:#1a1a1a;display:flex;align-items:center;justify-content:center;width:fit-content;min-width:44px;height:fit-content;min-height:44px;overflow:hidden;user-select:none;padding:4px;}' +
+          '#m-wrap{position:relative;width:44px;height:44px;flex-shrink:0;}' +
+          '#m-svg{display:block;cursor:pointer;}' +
           '#m-emoji{transition:opacity .12s;}' +
           '#m-overlay{pointer-events:none;opacity:0;transition:opacity .12s;}' +
           '#m-svg:hover #m-emoji{opacity:0;}' +
           '#m-svg:hover #m-overlay{opacity:1;}' +
-          '#m-switch{background:none;border:none;color:#888;font-size:9px;cursor:pointer;padding:1px 4px;line-height:1;letter-spacing:.5px;}' +
+          '#m-switch{position:absolute;top:0;right:0;background:none;border:none;color:#666;font-size:9px;cursor:pointer;padding:1px 2px;line-height:1;}' +
           '#m-switch:hover{color:#fff;}' +
           '</style>';
         doc.body.innerHTML =
-          '<svg id="m-svg" viewBox="0 0 44 44" width="44" height="44" onclick="window.opener.togglePomodoroTimer()">' +
-            '<circle cx="22" cy="22" r="17" fill="none" stroke="#333" stroke-width="4"/>' +
-            '<circle id="m-arc" cx="22" cy="22" r="17" fill="none" stroke="' + key + '" stroke-width="4"' +
-              ' stroke-linecap="round" stroke-dasharray="' + circ + '" stroke-dashoffset="' + circ + '"' +
-              ' transform="rotate(-90 22 22)"/>' +
-            '<text id="m-emoji" x="22" y="28" text-anchor="middle" font-size="18"></text>' +
-            '<text id="m-overlay" x="22" y="28" text-anchor="middle" font-size="16" fill="rgba(255,255,255,0.95)"></text>' +
-          '</svg>' +
-          '<button id="m-switch" onclick="window.opener.switchPiPView()">≡ 뷰 전환</button>';
+          '<div id="m-wrap">' +
+            '<svg id="m-svg" viewBox="0 0 44 44" width="44" height="44" onclick="window.opener.togglePomodoroTimer()">' +
+              '<circle cx="22" cy="22" r="17" fill="none" stroke="#333" stroke-width="4"/>' +
+              '<circle id="m-arc" cx="22" cy="22" r="17" fill="none" stroke="' + key + '" stroke-width="4"' +
+                ' stroke-linecap="round" stroke-dasharray="' + circ + '" stroke-dashoffset="' + circ + '"' +
+                ' transform="rotate(-90 22 22)"/>' +
+              '<text id="m-emoji" x="22" y="28" text-anchor="middle" font-size="18"></text>' +
+              '<text id="m-overlay" x="22" y="28" text-anchor="middle" font-size="16" fill="rgba(255,255,255,0.95)"></text>' +
+            '</svg>' +
+            '<button id="m-switch" onclick="window.opener.switchPiPView()">≡</button>' +
+          '</div>';
       }
       _updatePiP();
     }
