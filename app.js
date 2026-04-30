@@ -7879,6 +7879,34 @@
         html += '</div>';
       }
       html += '</div>';
+      /* 연결 관계 표시 */
+      var parent = getParentTask(item);
+      var children = getChildTasks(item.id);
+      if (parent) {
+        html += '<div style="background:var(--card-bg,#fff);border:1px solid var(--border-color);border-radius:8px;padding:8px 12px;font-size:12px;margin-bottom:8px;">';
+        html += '<span style="color:var(--text-secondary);">상위 할일</span>';
+        html += '<div style="margin-top:4px;display:flex;align-items:center;gap:6px;cursor:pointer;" onclick="closeWorkDetailModal();showWorkItemDetail(\'' + parent.id + '\')">';
+        var ps = getWorkStatus(parent);
+        html += workStatusSVG(ps, 13);
+        html += '<span style="font-size:16px;">' + (parent.emoji || '📋') + '</span>';
+        html += '<span style="font-weight:600;color:var(--text-primary);">' + escapeHtml(parent.title) + '</span>';
+        if (parent.date) html += '<span style="color:var(--text-secondary);margin-left:auto;">' + formatDateKR(parent.date) + '</span>';
+        html += '</div></div>';
+      }
+      if (children.length > 0) {
+        html += '<div style="background:var(--card-bg,#fff);border:1px solid var(--border-color);border-radius:8px;padding:8px 12px;font-size:12px;margin-bottom:8px;">';
+        html += '<span style="color:var(--text-secondary);">연결된 하위 할일 ' + children.length + '개</span>';
+        children.forEach(function(child) {
+          var cs = getWorkStatus(child);
+          html += '<div style="margin-top:5px;display:flex;align-items:center;gap:6px;cursor:pointer;" onclick="closeWorkDetailModal();showWorkItemDetail(\'' + child.id + '\')">';
+          html += workStatusSVG(cs, 13);
+          html += '<span style="font-size:14px;">' + (child.emoji || '📋') + '</span>';
+          html += '<span style="' + (cs === 'done' ? 'text-decoration:line-through;color:var(--text-secondary);' : 'font-weight:600;') + '">' + escapeHtml(child.title) + '</span>';
+          if (child.date) html += '<span style="color:var(--text-secondary);margin-left:auto;font-size:11px;">' + formatDateKR(child.date) + '</span>';
+          html += '</div>';
+        });
+        html += '</div>';
+      }
       if (item.memo) html += '<div style="background:var(--bg-main);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.65;white-space:pre-wrap;">' + escapeHtml(item.memo) + '</div>';
       var detailDiv = document.getElementById('workDetailContent');
       if (detailDiv) detailDiv.innerHTML = html;
@@ -7892,10 +7920,10 @@
         if (item.date && isPending) {
           actionHtml += '<button style="' + btnStyle + '" onclick="moveDetailItemToBasket(\'' + id + '\')">🧺 바구니로</button>';
         }
-        if (item.date && item.date < todayStr && isPending && !item.parentId) {
+        if (item.date && item.date < todayStr && isPending) {
           actionHtml += '<button style="' + btnStyle + '" onclick="moveDetailItemToDate(\'' + id + '\',\'' + todayStr + '\',\'오늘\')">오늘 다시 하기</button>';
         }
-        if (item.date && item.date === todayStr && isPending && !item.parentId && new Date().getHours() >= 22) {
+        if (item.date && item.date === todayStr && isPending && new Date().getHours() >= 22) {
           var tomorrow = addDays(todayStr, 1);
           actionHtml += '<button style="' + btnStyle + '" onclick="moveDetailItemToDate(\'' + id + '\',\'' + tomorrow + '\',\'내일\')">내일 마저 하기</button>';
         }
