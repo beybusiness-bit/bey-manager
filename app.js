@@ -9105,6 +9105,178 @@
       });
     }
 
+    // Google Sheets → Firestore 가져오기 (한 번만 실행)
+    function importFromSheets() {
+      if (!window.FS || !FS.isConnected()) {
+        showAlert('Firebase 미연결', 'Firebase에 먼저 연결해주세요.');
+        return;
+      }
+      if (!window.firebase || !firebase.auth || !firebase.auth().currentUser) {
+        showAlert('로그인 필요', '먼저 Google 로그인을 해주세요.');
+        return;
+      }
+      showConfirm(
+        'Sheets → Firestore 가져오기',
+        'Google Sheets에서 할일·습관·뽀모도로 데이터를 읽어 Firestore에 저장합니다.<br><br>' +
+        'Google 계정 재인증 팝업이 열립니다. 계속하시겠습니까?',
+        function(confirmed) {
+          if (!confirmed) return;
+          var provider = new firebase.auth.GoogleAuthProvider();
+          provider.addScope('https://www.googleapis.com/auth/spreadsheets.readonly');
+          firebase.auth().currentUser.reauthenticateWithPopup(provider)
+            .then(function(result) {
+              var token = result.credential.accessToken;
+              if (!token) { showAlert('오류', 'Sheets 접근 토큰을 받지 못했습니다.'); return; }
+              _doSheetsImport(token);
+            })
+            .catch(function(e) {
+              if (e.code !== 'auth/popup-closed-by-user') showAlert('인증 실패', e.message);
+            });
+        }
+      );
+    }
+
+    async function _doSheetsImport(token) {
+      var SHEET_ID = AUTH.SHEET_ID;
+      var BASE = 'https://sheets.googleapis.com/v4/spreadsheets/' + SHEET_ID + '/values/';
+      var headers = { 'Authorization': 'Bearer ' + token };
+
+      showToast('📊 Sheets에서 읽는 중...', 'info');
+
+      // 시트 이름 → 파서 맵
+      var SHEETS = [
+        { name: '할일',       parse: _parseWorkItems },
+        { name: '습관',       parse: _parseHabits },
+        { name: '습관기록',   parse: _parseHabitLogs },
+        { name: '뽀모도로기록', parse: _parsePomodoroLogs },
+        { name: '할일기록',   parse: _parseWorkItemLogs },
+      ];
+
+      var results = {};
+      for (var i = 0; i < SHEETS.length; i++) {
+        var s = SHEETS[i];
+        try {
+          var res = await fetch(BASE + encodeURIComponent(s.name), { headers: headers });
+          if (!res.ok) { console.warn('[Sheets] ' + s.name + ' 읽기 실패:', res.status); continue; }
+          var data = await res.json();
+          var rows = data.values || [];
+          if (rows.length < 2) continue;
+          results[s.name] = s.parse(rows);
+          console.log('[Sheets] ' + s.name + ':', results[s.name].length + '행 읽음');
+        } catch(e) { console.warn('[Sheets] ' + s.name + ' 오류:', e); }
+      }
+
+      // 파싱된 데이터를 전역 변수에 병합 (기존 Firestore 데이터 보존)
+      if (results['할일'] && results['할일'].length) {
+        workItems = results['할일'];
+        localStorage.setItem('workItems', JSON.stringify(workItems));
+      }
+      if (results['습관'] && results['습관'].length) {
+        habits = results['습관'];
+        localStorage.setItem('habits', JSON.stringify(habits));
+      }
+      if (results['습관기록'] && results['습관기록'].length) {
+        habitLogs = results['습관기록'];
+        localStorage.setItem('habitLogs', JSON.stringify(habitLogs));
+      }
+      if (results['뽀모도로기록'] && results['뽀모도로기록'].length) {
+        pomodoroLogs = results['뽀모도로기록'];
+        localStorage.setItem('pomodoroLogs', JSON.stringify(pomodoroLogs));
+      }
+      if (results['할일기록'] && results['할일기록'].length) {
+        workItemLogs = results['할일기록'];
+        localStorage.setItem('workItemLogs', JSON.stringify(workItemLogs));
+      }
+
+      // Firestore에 저장
+      showToast('☁️ Firestore에 저장 중...', 'info');
+      try {
+        await FS.sync(['할일', '습관', '습관기록', '뽀모도로기록', '할일기록']);
+        renderCurrentPageIfNeeded();
+        var total = Object.values(results).reduce(function(s,a){ return s + (a?a.length:0); }, 0);
+        showToast('✅ Sheets 데이터 가져오기 완료 (' + total + '건)', 'success');
+      } catch(e) { showAlert('저장 실패', e.message); }
+    }
+
+    // 시트 rows → 객체 배열 변환 (첫 행 = 헤더)
+    function _sheetRowsToObjects(rows) {
+      var headers = rows[0].map(function(h) { return h.trim(); });
+      return rows.slice(1).filter(function(r) { return r.some(function(c){ return c; }); }).map(function(row) {
+        var obj = {};
+        headers.forEach(function(h, i) { obj[h] = row[i] !== undefined ? row[i] : ''; });
+        return obj;
+      });
+    }
+
+    function _parseWorkItems(rows) {
+      return _sheetRowsToObjects(rows).map(function(r) {
+        return {
+          id: r.id || r.ID || ('wi_' + Date.now() + Math.random()),
+          emoji: r.emoji || r.이모지 || '💼',
+          color: r.color || r.색상 || '#ffde59',
+          title: r.title || r.제목 || '',
+          date: r.date || r.날짜 || null,
+          status: r.status || r.상태 || 'pending',
+          isBonus: r.isBonus === 'true' || r.isBonus === true || r.보너스 === 'Y',
+          memo: r.memo || r.메모 || '',
+          focusTime: Number(r.focusTime || r.집중시간_초 || 0),
+          createdAt: r.createdAt || r.생성일 || today()
+        };
+      });
+    }
+
+    function _parseHabits(rows) {
+      return _sheetRowsToObjects(rows).map(function(r) {
+        var days = r.days || r.요일 || '';
+        return {
+          id: r.id || r.ID || ('h_' + Date.now() + Math.random()),
+          emoji: r.emoji || r.이모지 || '✅',
+          name: r.name || r.이름 || '',
+          color: r.color || r.색상 || '#c1ff72',
+          days: typeof days === 'string' ? days.split(',').filter(Boolean) : days,
+          createdAt: r.createdAt || r.생성일 || today()
+        };
+      });
+    }
+
+    function _parseHabitLogs(rows) {
+      return _sheetRowsToObjects(rows).map(function(r) {
+        return {
+          id: r.id || r.ID || ('hl_' + Date.now() + Math.random()),
+          habitId: r.habitId || r.습관ID || '',
+          date: r.date || r.날짜 || '',
+          done: r.done === 'true' || r.done === true || r.달성 === 'Y',
+          memo: r.memo || r.메모 || ''
+        };
+      });
+    }
+
+    function _parsePomodoroLogs(rows) {
+      return _sheetRowsToObjects(rows).map(function(r) {
+        return {
+          id: r.id || r.ID || ('pl_' + Date.now() + Math.random()),
+          type: r.type || r.유형 || 'work',
+          duration: Number(r.duration || r.집중시간_초 || 0),
+          linkedWorkId: r.linkedWorkId || r.연결할일ID || '',
+          startedAt: r.startedAt || r.시작 || '',
+          endedAt: r.endedAt || r.종료 || ''
+        };
+      });
+    }
+
+    function _parseWorkItemLogs(rows) {
+      return _sheetRowsToObjects(rows).map(function(r) {
+        return {
+          id: r.id || r.ID || ('wl_' + Date.now() + Math.random()),
+          workItemId: r.workItemId || r.할일ID || '',
+          type: r.type || r.유형 || '',
+          duration: Number(r.duration || r.집중시간_초 || 0),
+          startedAt: r.startedAt || r.시작 || '',
+          endedAt: r.endedAt || r.종료 || ''
+        };
+      });
+    }
+
     function setExportDateRange(type) {
       var from = document.getElementById('exportDateFrom');
       var to = document.getElementById('exportDateTo');
