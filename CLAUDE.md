@@ -470,9 +470,12 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 - [x] R3단계: 파일 분할 ✅ (2026-04-25) — index.html(682줄) + styles.css(2,834줄) + app.js(5,824줄)
 
 ### Phase 7: 뽀모도로 + 알림 (신규, 진행 예정)
-- [ ] 19단계: 뽀모도로 타이머 + 할일 시간 기록 🔲
-- [ ] 20단계: 브라우저 알림(Notification API) 구조 구축 🔲
-- [ ] 21단계: 알림 설정 UI (설정 페이지 내) 🔲
+- [x] 19단계: 뽀모도로 타이머 + 할일 시간 기록 ✅
+- [x] 20단계: 브라우저 알림(Notification API) 구조 구축 ✅ (포그라운드 알림)
+- [x] 21단계: 알림 설정 UI (설정 페이지 내) ✅
+- [ ] 22단계: FCM 백그라운드 알림 🔲 **← 다음 작업**
+  - [ ] 22-A: 서비스 워커(`firebase-messaging-sw.js`) + FCM 토큰 발급 + Firestore 저장
+  - [ ] 22-B: Cloud Functions 작성 + `firebase deploy` (베이님 Mac 필요)
 
 ### ⏸ 잠정 중단 항목 (기획 보존 — 재개 요청 시 이어서 진행)
 > 2026-04-26 베이님 결정: 일/습관 외 모든 신규 페이지 기획은 잠정 중단. 삭제 아님, 재개 가능.
@@ -670,60 +673,51 @@ service cloud.firestore {
 
 ## 10. 다음 세션 시작점
 
-> **마지막 세션: 2026-05-01**
-> **방향**: Firebase 연동 검증 → 데이터 마이그레이션 버튼 → Excel 내보내기 기능
+> **마지막 세션: 2026-04-30**
+> **방향**: FCM 백그라운드 알림 구현 (서비스 워커 + Cloud Functions)
 
 ### 🔄 현재 진행 상태
 
-- **작업 브랜치**: `claude/focus-time-sheet-connection-NSJRn` (main에 머지·배포 완료)
-- **마지막 커밋**: `a2f1820 feat: Google Sheets → Firebase Firestore 마이그레이션`
-- **파일 라인 수**: app.js 9,109줄 / styles.css 3,474줄 / index.html 983줄
+- **작업 브랜치**: `claude/continue-migration-IEDG5` (main에 머지·배포 완료)
+- **마지막 커밋**: `a66c4b0 feat: 연결 할일 추가 시 상위 할일 이모지 자동 설정`
+- **파일 라인 수**: app.js 9,458줄 / styles.css 3,493줄 / index.html 1,043줄
 
 ### ✅ 이번 세션에서 완료한 작업
 
-1. **할일 카드 집중 시간 표시** — `renderWorkKanbanCard`에 `⏱ X시간 Y분` 표시 추가 (focusTime > 0일 때만)
-2. **Firebase 미연결 시 수정 차단** — `requireFS()` 헬퍼 추가, saveWorkItems/saveHabits/saveHabitLogs/saveSchedules/saveCategories/saveActivities에 적용. 미연결 시 경고 모달 + localStorage 원복 + 재렌더.
-3. **Sheets 토큰 선제 갱신** — `_saveTokenCache`에 만료 5분 전 silent re-auth 타이머 추가 (이 코드는 이제 FS로 대체되었으므로 기록용)
-4. **Google Sheets → Firebase Firestore 전면 마이그레이션**:
-   - GS 객체(~460줄) 완전 제거 → FS 객체(~220줄)로 교체
-   - Firebase Auth 연동: Google ID 토큰 → `signInWithCredential()` → 세션 자동 유지 (토큰 만료 없음)
-   - `FS.sync(['할일'])` 등으로 Firestore 문서 단위 저장
-   - `FS.loadAll()` — 8개 문서 병렬 읽기
-   - `FS.migrateFromLocal()` — localStorage → Firestore 일괄 마이그레이션 (코드 구현 완료, UI 버튼 미추가)
-   - `firebase-auth-compat.js` SDK 추가
-   - 사이드바 버튼 `GS.connect/disconnect` → `FS.connect/disconnect`
-   - 모든 `GS.syncSheets(` → `FS.sync(` (18곳), `requireGS` → `requireFS` (6곳) 교체
+1. **Firebase 전면 이전 완료** (이전 세션 이어서)
+   - `signInWithPopup(GoogleAuthProvider)` 방식으로 로그인 전환 (GSI 제거)
+   - OAuth Client ID 불일치 문제 근본 해결 (Firebase가 자체 OAuth 관리)
+   - 로그인 화면 깜빡임 수정 (`loginContainer` 기본 `display:none`)
+   - 즉시 초기화 IIFE로 "No Firebase App" 오류 해결
+2. **Google Sheets → Firestore 직접 가져오기** 기능 추가 (설정 > 데이터 관리)
+   - `reauthenticateWithPopup`으로 `spreadsheets.readonly` 스코프 획득
+   - 실제 탭 이름 자동 감지(메타데이터 API) + 유연 매칭으로 0건 문제 해결
+   - Google Sheets API 활성화 필요 → 403 해결 완료
+3. **연결 할일 기능 개선**
+   - 상세 모달에 상위/하위 할일 표시 박스 추가 (클릭으로 이동 가능)
+   - "오늘 다시 하기" / "내일 마저 하기" 버튼을 연결 할일에도 허용 (`!item.parentId` 조건 제거)
+   - 이동 후에도 `parentId` 유지 (연결 관계 보존)
+   - 연결 할일 추가 시 상위 할일 이모지 자동 설정
 
-### ⚠️ 다음 세션 시작 전 베이님이 해야 할 일 (Firebase Console)
+### 🎯 다음 세션 작업 목록 — FCM 백그라운드 알림
 
-**1. Firestore 보안 규칙 설정**
-> Firebase Console → beyhome-admin 프로젝트 → Firestore Database → **규칙** 탭
+**단계 ① (Claude가 코드 작성, 이번 세션에서 가능)**
+1. `firebase-messaging-sw.js` 서비스 워커 작성 → GitHub Pages 루트에 배포
+2. app.js에 FCM 토큰 발급 코드 추가 (`firebase.messaging().getToken(...)`)
+3. 발급된 토큰을 Firestore `config` 문서에 저장
+4. 설정 > 알림 탭에 "백그라운드 알림 활성화" 버튼 추가
 
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null
-        && request.auth.token.email == 'baekeun0@gmail.com';
-    }
-  }
-}
-```
-→ **게시** 버튼 클릭
+**단계 ② (베이님 Mac에서 직접 실행 필요)**
+5. Mac에서 Firebase CLI 설치: `npm install -g firebase-tools`
+6. `firebase login` → beyhome-admin 프로젝트 선택
+7. `functions/index.js` 작성 (Claude가 코드 생성): 알림 트리거별 FCM 발송 로직
+   - 뽀모도로 세션 종료
+   - 습관 알림 (설정한 시각)
+8. `firebase deploy --only functions` → Mac 터미널에서 실행
 
-**2. Firebase Auth 승인 도메인 추가**
-> Firebase Console → Authentication → **설정** 탭 → 승인된 도메인 → **도메인 추가**
-```
-beybusiness-bit.github.io
-```
-
-### 🎯 다음 세션 작업 목록
-
-1. **Firebase 연결 동작 확인** — 배포 URL에서 로그인 후 사이드바 "Firebase 연결됨" 표시 확인
-2. **데이터 마이그레이션 버튼 추가** — 설정 페이지에 "기존 데이터 → Firestore 이전" 버튼 (`FS.migrateFromLocal()` 호출, 이미 코드는 완성됨)
-3. **Excel 데이터 내보내기** — 기간 선택(날짜 피커) + SheetJS로 .xlsx 다운로드 (할일/습관/뽀모도로 등 탭별)
-4. 이후: FCM 푸시 알림 연동 (Mac에서 `firebase deploy --only functions` 필요)
+**알림 트리거 계획**
+- 뽀모도로 세션 종료 → 즉시 푸시 (`sendPomoEndNotification`)
+- 습관 알림 → Cloud Scheduler(cron) + FCM
 
 ### 🗄️ 아카이브: 구(舊) 설계 우선순위 (참고 보관용, 재개 가능)
 
@@ -734,20 +728,18 @@ beybusiness-bit.github.io
 - 21단계: 레시피 페이지 (잠정 중단)
 - 22단계: 금전 페이지 (잠정 중단)
 - 습관 고도화: 달성률 통계 차트, 캘린더 히트맵 (잠정 중단)
-- 23단계: 홈 대시보드 위젯
 - R1단계: `USER_EMAIL` → `ALLOWED_EMAILS` 배열 리팩토링
 
 ### 📌 현재 코드 구조 핵심 메모
 
+- **로그인**: `handleFirebaseGoogleLogin()` — `firebase.auth().signInWithPopup(GoogleAuthProvider)` 사용. GSI(`google.accounts.id`) 완전 제거됨.
+- **FS 객체**: IIFE 패턴. `FS.init()` → `onAuthStateChanged` 등록. `FS.sync(['문서명'])` → Firestore 저장. `FS.loadAll()` → 8개 문서 병렬 읽기.
+- **Firebase 즉시 초기화 IIFE**: FS IIFE 정의 직후 `firebase.initializeApp({...})` 호출하는 IIFE 존재 (앱 로드 즉시 Firebase 초기화).
 - **일 페이지 JS**: app.js `// 일(업무) 페이지` 섹션. 전역 상태: `workView`, `workWeekOffset`, `workMonthOffset`, `workSelectedDate`, `workBasketPage`, `workBasketPerPage`, `__workDragId`, `__workDragSrcStatus`, `__workDragTargetId`, `__workDragInsertBefore`.
-- **workItems 데이터 모델**: `{ id, emoji, color, title, date(null=바구니), status:'pending'|'in-progress'|'done', completed(compat), isBonus, memo, createdAt }`
+- **workItems 데이터 모델**: `{ id, emoji, color, title, date(null=바구니), status:'pending'|'in-progress'|'done', completed(compat), isBonus, memo, parentId, createdAt }` — `parentId`가 있으면 연결 할일.
+- **연결 할일 함수**: `getChildTasks(parentId)` / `getParentTask(item)`. `addConnectedTask(parentId)` → `openWorkItemModal(parent.date, false, parentId)`. 이동(바구니/날짜 변경) 후에도 `parentId` 유지.
 - **보너스 잠금 로직**: `getCompletedNormalCount(date) - 1 < getBonusUsedCount(date)` 이면 완료→다른상태 DnD + 삭제 모두 거부.
-- **할일 이동 함수**: `moveDetailItemToBasket(id)` — 상세모달에서 바구니로 이동 (확인 모달 포함). `moveDetailItemToDate(id, targetDate, label)` — 슬롯 체크 후 날짜 이동.
 - **뽀모도로 PiP**: `_pipViewMode` ('full'|'line'|'mini'), `_PIP_SIZES`, `_PIP_VIEW_NEXT`. 데스크탑: `togglePomodoroPoP()`, 모바일: `pomodoroPanel.classList.toggle('pomo-fullscreen')`. 진입점: `handlePomoPipOrFullscreen()`.
-- **syncSheets 큐**: `_syncing` 플래그 + `_pendingSyncNames[]` 배열. 동시 저장 요청은 큐에 쌓이고 현재 sync 완료 후 재실행.
-- **로그인 영속성**: `localStorage.setItem('isLoggedIn','true')` + `localStorage.setItem('currentUser', JSON.stringify(...))`. 로그아웃 시 두 키 모두 `removeItem`.
-- **바구니 배정**: 선택 개수 > `normalSlots + availBonus` 이면 전체 거부. `toBonus.length > 0` 이면 보너스 확인 모달만 표시.
-- **DnD 순서 변경**: 같은 컬럼 내 드롭 시 `workItems` 배열에서 splice 재삽입. `__workDragTargetId` + `__workDragInsertBefore` 상태 사용.
 - **탭 UI**: `.tab-nav` + `.tab-btn` + `#pageId .tab-btn` 스코프 패턴 (전역 충돌 방지).
 
 ### ⚠️ 다음 세션 유의사항
@@ -757,6 +749,7 @@ beybusiness-bit.github.io
 3. 로컬 테스트: `python3 -m http.server 8000` (file:// CORS 불가)
 4. **대용량 코드 작성 시 턴 실패 방지**: 한 턴에 200줄 이상 쓰지 말고 단계로 나눠 진행
 5. 세션 컨텍스트 길어지면 새 세션에서 이어갈 것 (CLAUDE.md가 SSOT)
+6. **FCM 서비스 워커**: `firebase-messaging-sw.js`는 GitHub Pages 루트(`/`)에 있어야 작동. index.html과 같은 레벨에 배포 필요.
 
 ### 🚨 push 방법
 
@@ -766,36 +759,6 @@ sh /home/user/bey-manager/.git/push.sh origin main
 - `push.sh`는 `.git/push.sh`에 존재
 - 토큰 파일이 없으면: `echo "ghp_..." > /home/user/bey-manager/.git/GITHUB_TOKEN`
 - **주의**: `.git/GITHUB_TOKEN`은 세션 컨테이너 리셋 시 사라질 수 있음 → 리셋 후 재발급 필요
-
-### 🔖 적용 대기 중인 피드백 → ✅ 이전 세션에서 모두 해결됨
-
-#### ② 시간표 인라인 일상 추가 폼 UI 개선 ✅ 해결됨
-- **문제**: 이모지 피커 버튼, 일상 이름 입력칸, 끄기(×) 버튼, 카테고리 셀렉트, 색상 입력, 일상 추가 버튼의 스타일이 제각각이어서 정리되지 않은 모달처럼 보임
-- **색상 선택 문제**: 현재 색상 피커를 열기 전에는 어떤 색인지 미리보기가 안 보임 → 색상 샘플(16x16px 컬러 원 또는 사각형)을 색상 입력 옆에 항상 표시해야 함
-- **일상 추가 버튼 크기**: 다른 버튼들에 비해 너무 좁음 → full-width 또는 충분한 패딩으로 넓힘
-- **정리 방향**: 전체 폼을 일관된 카드 스타일로 통일. 각 행은 label + input 구조로 정렬. 버튼은 모두 같은 높이(36~40px). 색상 미리보기 원은 항상 표시.
-
-#### ③ Sheets 미연결 토스트 오류 버그 ✅ 해결됨
-- **증상**: 수정 사항 저장 버튼 눌렀을 때 "⚠️ Sheets 미연결 — 로컬에만 저장됩니다" 토스트가 뜸. 그러나 사이드바 Sheets 상태는 "연결됨(초록 dot)"으로 표시됨.
-- **의심 원인**:
-  1. `GS.isConnected()` 체크와 실제 연결 상태 변수(`gsAccessToken`, `gsConnected` 등)가 다른 변수를 참조할 가능성
-  2. 저장 함수 내에서 Sheets 저장 실패 시 catch 블록이 미연결 메시지를 뿌리는데, 실제 토큰은 있지만 API 호출 자체가 실패하는 경우 (scope 부족, 시트 ID 오류 등)
-  3. `saveSchedule()` vs `syncSheets()` 의 호출 경로가 달라서 한쪽만 연결 체크를 잘못할 가능성
-- **디버깅 포인트**: 저장 버튼 누를 때 콘솔에서 `GS.isConnected()` 반환값과 `gsAccessToken` 변수 확인 후 실제 API 호출 에러 메시지 확인
-- **해결 방향**: 연결 상태 체크를 단일 변수 기준으로 통일하고, 실패 시 에러 메시지를 구체적으로 분기(미연결 vs API 오류)
-
-#### ⑥ 모달 위의 모달 z-index 자동 관리 (스마트 스태킹) ✅ 해결됨
-- **증상**: 이모지 피커 모달 → My Emojies 탭 → 업로드 이미지 삭제 버튼을 누르면, 확인 모달(`confirmModal`)이 이모지 피커 **뒤에** 뜸. 그래서 확인/취소 버튼을 누를 수 없음.
-- **원인 추정**: 현재 각 모달 z-index가 고정값으로 코드에 박혀 있음 (이모지 피커 1400, confirmModal 1000~1300 어딘가). 이모지 피커가 나중에 올라감.
-- **단순 fix**: confirmModal z-index를 이모지 피커보다 높게(예: 1500) 올리면 이번 건은 해결. 단 다른 모달 조합에서 비슷한 문제 반복 우려.
-- **스마트 해결 방향** (근본 대책):
-  1. **모달 스택 관리자(MM)** — `openModal(id)` / `closeModal(id)`로 래핑하고, 열릴 때마다 z-index를 `baseZ + stackDepth * 10`으로 동적 배정
-  2. 예: 첫 모달 1000, 두 번째 모달 1010, 세 번째 1020 … 닫을 때 스택에서 pop
-  3. 혹은 **더 단순한 패턴**: 열리는 순간 현재 DOM에서 가장 큰 z-index를 계산 → +10으로 자기 자신에 부여. 이 방식이면 순서와 무관하게 항상 최상단.
-- **구현 대상**:
-  - `showConfirm()`, `showAlert()`, `openEmojiPicker()`, `openScheduleItemModal()` 등 모든 모달 표시 함수
-  - 공통 헬퍼 `bringToFront(modalEl)` 하나 만들어서 각 open 함수에서 호출
-- **CSS 변수로 추출**: 모달 z-index를 하드코드 말고 `--modal-z-base: 1000` 정의 후 JS가 동적으로 늘리는 방식
 
 ---
 
@@ -988,4 +951,22 @@ sh /home/user/bey-manager/.git/push.sh origin main
 - `scheduleDraft`는 실제 저장된 객체와 다른 shallow copy일 수 있어서, 배열 전파로는 반영이 안 되는 경우가 있음.
 - **패턴**: 이름 변경 블록 안에 `scheduleDraft.tags[idx] = newText;` 한 줄 추가. 항상 draft와 글로벌 배열을 동시에 업데이트.
 
-**마지막 업데이트**: 2026-04-24 세션 3 · main 배포 완료(`ac4cd63`) · push.sh 영구 설정 완료 · 파일 7,478줄
+### Firebase OAuth Client ID는 프로젝트별로 격리됨 (이번 세션 교훈)
+- GSI(`google.accounts.id`)로 발급한 ID 토큰은 해당 GCP 프로젝트의 OAuth 클라이언트에만 유효
+- Firebase 프로젝트(beyhome-admin, project 849320781553)와 GCP 프로젝트(27055656717)가 다르면 `signInWithCredential(idToken)`에서 `auth/invalid-credential` 발생
+- **근본 해결**: `signInWithPopup(GoogleAuthProvider)` 사용. Firebase가 자체 OAuth 흐름을 내부적으로 관리하므로 Client ID 불일치 문제 원천 차단.
+- 교훈: Firebase Auth를 쓸 때는 GSI 토큰을 직접 Firebase에 넘기지 말고 `signInWithPopup`을 쓰는 것이 가장 안전.
+
+### Google Sheets API는 GCP 프로젝트별로 활성화해야 함 (이번 세션 교훈)
+- Firebase 프로젝트(849320781553)에서 Sheets API를 별도로 활성화하지 않으면 403 오류
+- Firebase Auth 토큰으로 Sheets API를 호출할 때도 해당 GCP 프로젝트에서 API 활성화 필요
+- 활성화 URL: `https://console.developers.google.com/apis/api/sheets.googleapis.com?project=849320781553`
+
+### FCM 백그라운드 알림은 서버 컴포넌트 없이 불가 (이번 세션 교훈)
+- 브라우저 Notification API: 앱 탭이 열려 있거나 백그라운드(탭 닫힘 X)일 때만 작동
+- FCM 백그라운드(앱 완전히 닫혀 있을 때): 반드시 서버(Cloud Functions)가 FCM API를 호출해야 함
+- 클라이언트 측: 서비스 워커 + FCM 토큰 발급 (Claude가 코드 작성 가능)
+- 서버 측: Firebase Cloud Functions → `firebase deploy` (베이님 Mac에서 직접 실행 필요)
+- 교훈: "앱 닫혀 있어도 알림" = 서버 필요. 세션 설계 시 이 의존성을 미리 사용자에게 안내할 것.
+
+**마지막 업데이트**: 2026-04-30 · main 배포 완료(`a66c4b0`) · 파일 app.js 9,458줄 / styles.css 3,493줄 / index.html 1,043줄
