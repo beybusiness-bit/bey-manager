@@ -1240,10 +1240,10 @@
 
       showApp();
 
-      // Sheets 연동: access_token 획득 → 탭 생성/전체 로드
-      GS.init(function(ok) {
+      // Firebase 연동: Google ID 토큰으로 Firestore 연결
+      FS.init(response.credential, function(ok) {
         if (!ok) return;
-        GS.loadAll().then(function(loaded) {
+        FS.loadAll().then(function(loaded) {
           if (loaded) renderCurrentScheduleView();
         });
       });
@@ -1264,7 +1264,7 @@
           if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
             google.accounts.id.disableAutoSelect();
           }
-          GS.disconnect && GS.disconnect(true);
+          FS.disconnect && FS.disconnect(true);
           localStorage.removeItem('isLoggedIn');
           localStorage.removeItem('currentUser');
           sessionStorage.clear();
@@ -1355,7 +1355,7 @@
 
     function saveMyEmojis() {
       localStorage.setItem('myEmojis', JSON.stringify(myEmojis));
-      GS.syncSheets(['사용자설정']);
+      FS.sync(['사용자설정']);
     }
 
     function loadTagColorOverrides() {
@@ -1363,7 +1363,7 @@
     }
     function saveTagColorOverrides() {
       localStorage.setItem('tagColorOverrides', JSON.stringify(tagColorOverrides));
-      GS.syncSheets(['사용자설정']);
+      FS.sync(['사용자설정']);
     }
 
     function renderEmoji(val) {
@@ -1638,10 +1638,10 @@
         }
         if (currentUser && currentUser.email === AUTH.USER_EMAIL) {
           showApp();
-          // 세션 복원 시 Sheets 재연결
-          GS.init(function(ok) {
+          // 세션 복원 시 Firebase 재연결 (Firebase Auth가 자동 복원)
+          FS.init(null, function(ok) {
             if (!ok) return;
-            GS.loadAll().then(function(loaded) {
+            FS.loadAll().then(function(loaded) {
               if (loaded) renderCurrentScheduleView();
             });
           });
@@ -1798,7 +1798,7 @@
 
     function saveMenus() {
       localStorage.setItem('menus', JSON.stringify(menus));
-      GS.syncSheets(['사용자설정']);
+      FS.sync(['사용자설정']);
     }
 
     function loadFavorites() {
@@ -1954,7 +1954,7 @@
         favoritePages.push(pageId);
       }
       localStorage.setItem('favoritePages', JSON.stringify(favoritePages));
-      if (window.GS && GS.isConnected()) GS.syncSheets(['사용자설정']);
+      if (window.FS && FS.isConnected()) FS.sync(['사용자설정']);
       renderSidebar();
     }
 
@@ -2327,7 +2327,7 @@
     function saveMmDraft() {
       menus = JSON.parse(JSON.stringify(menuDraft));
       saveMenus();
-      if (window.GS && GS.isConnected()) GS.syncSheets();
+      if (window.FS && FS.isConnected()) FS.sync();
       renderSidebar();
       showToast('메뉴 설정 저장 완료');
     }
@@ -2456,12 +2456,12 @@
     }
 
     function saveCategories() {
-      if (!requireGS()) {
+      if (!requireFS()) {
         try { categories = JSON.parse(localStorage.getItem('categories') || '[]'); } catch(e) { categories = []; }
         renderDailyPage(); return;
       }
       localStorage.setItem('categories', JSON.stringify(categories));
-      GS.syncSheets(['카테고리']);
+      FS.sync(['카테고리']);
     }
 
     function generateId() {
@@ -2812,12 +2812,12 @@
     }
 
     function saveActivities() {
-      if (!requireGS()) {
+      if (!requireFS()) {
         try { activities = JSON.parse(localStorage.getItem('activities') || '[]'); } catch(e) { activities = []; }
         renderDailyPage(); return;
       }
       localStorage.setItem('activities', JSON.stringify(activities));
-      GS.syncSheets(['일상종류']);
+      FS.sync(['일상종류']);
     }
 
     function addActivityInline() {
@@ -3550,105 +3550,69 @@
     }
 
     function saveSchedules() {
-      if (!requireGS()) {
+      if (!requireFS()) {
         try { schedules = JSON.parse(localStorage.getItem('schedules') || '[]'); } catch(e) { schedules = []; }
         try { scheduleItems = JSON.parse(localStorage.getItem('scheduleItems') || '[]'); } catch(e) { scheduleItems = []; }
         navigateTo('daily'); return;
       }
       localStorage.setItem('schedules', JSON.stringify(schedules));
       localStorage.setItem('scheduleItems', JSON.stringify(scheduleItems));
-      GS.syncSheets(['시간표', '시간표_일정']);
+      FS.sync(['시간표', '시간표_일정']);
     }
 
     // ========================================
-    // 16단계 — Google Sheets 연동
+    // 16단계 — Firebase Firestore 연동 (FS 객체)
     // ========================================
-    // ── Google Sheets 연동 (GS 객체) ──
-    var GS = (function() {
-      var _token = null;
-      var _tokenExpiry = 0;
-      var _tokenClient = null;
-      var _syncing = false;
-      var _pendingSyncNames = [];  // 싱크 중 들어온 요청을 큐에 쌓아 완료 후 재실행
-      var _refreshTimer = null;
-      var BASE = 'https://sheets.googleapis.com/v4/spreadsheets/' + AUTH.SHEET_ID;
+    var FS = (function() {
+      'use strict';
 
-      var SHEETS_DEF = {
-        '시간표':    ['id','emoji','title','description','tags','isLiked','gridStartMin','createdAt','updatedAt'],
-        '시간표_일정': ['id','scheduleId','activityId','weekdays','startTime','endTime','createdAt'],
-        '카테고리':  ['id','emoji','name','active','createdAt'],
-        '일상종류':  ['id','categoryId','emoji','name','color','active','createdAt'],
-        '사용자설정': ['key','value'],
-        '할일':      ['id','emoji','color','title','date','status','isBonus','memo','focusTime','parentId','createdAt'],
-        '습관':      ['id','emoji','name','color','weekdays','active','createdAt'],
-        '습관기록':  ['id','habitId','date','done','memo'],
-        '뽀모도로기록': ['id','date','eventType','phase','taskId','taskTitle','timestamp','cycle'],
-        '할일기록':    ['id','date','eventType','taskId','taskTitle','oldValue','newValue','timestamp']
+      var FB_CONFIG = {
+        apiKey: "AIzaSyC8uy09XOeEYIs1m3Rga5BMqd7gS7o3roI",
+        authDomain: "beyhome-admin.firebaseapp.com",
+        projectId: "beyhome-admin",
+        storageBucket: "beyhome-admin.firebasestorage.app",
+        messagingSenderId: "849320781553",
+        appId: "1:849320781553:web:5a78f9c2bd936b60aa2b50"
       };
 
-      function colLetter(n) {
-        var s = '';
-        while (n > 0) { var r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = Math.floor((n - 1) / 26); }
-        return s;
-      }
+      var COL = 'bey-manager';
+      var _db = null;
+      var _auth = null;
+      var _syncing = false;
+      var _pendingSyncNames = [];
 
-      function _isConnected() { return !!_token && Date.now() < _tokenExpiry; }
+      // Firestore 문서명 → 저장 데이터 빌더
+      var _DOC = {
+        workItems:    function() { return { items: workItems }; },
+        habits:       function() { return { habits: habits }; },
+        habitLogs:    function() { return { logs: habitLogs }; },
+        schedules:    function() { return { schedules: schedules, scheduleItems: scheduleItems }; },
+        categories:   function() { return { categories: categories, activities: activities }; },
+        settings:     function() { return _buildSettings(); },
+        pomodoroLogs: function() { return { logs: pomodoroLogs }; },
+        workItemLogs: function() { return { logs: workItemLogs }; }
+      };
 
-      function _silentReauth() {
-        return new Promise(function(resolve) {
-          if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) { resolve(false); return; }
-          var hint = (currentUser && currentUser.email) ? currentUser.email : '';
-          if (!_tokenClient) {
-            _tokenClient = google.accounts.oauth2.initTokenClient({
-              client_id: AUTH.GOOGLE_CLIENT_ID,
-              scope: 'https://www.googleapis.com/auth/spreadsheets',
-              hint: hint,
-              callback: function() {}
-            });
-          }
-          _tokenClient.callback = function(resp) {
-            if (resp.error) { resolve(false); return; }
-            _saveTokenCache(resp.access_token, resp.expires_in);
-            resolve(true);
-          };
-          _tokenClient.requestAccessToken({ prompt: '', login_hint: hint });
+      // 시트 이름 → Firestore 문서 이름 매핑
+      var _NAME_MAP = {
+        '할일': 'workItems', '습관': 'habits', '습관기록': 'habitLogs',
+        '시간표': 'schedules', '시간표_일정': 'schedules',
+        '카테고리': 'categories', '일상종류': 'categories',
+        '사용자설정': 'settings',
+        '뽀모도로기록': 'pomodoroLogs', '할일기록': 'workItemLogs'
+      };
+
+      function _buildSettings() {
+        var s = {
+          profileQuote: localStorage.getItem('profileQuote') || '',
+          profilePhoto: localStorage.getItem('profilePhoto') || null
+        };
+        ['designSettings','menus','myEmojis','tagColorOverrides',
+         'pomodoroSettings','notificationSettings','favoritePages'].forEach(function(k) {
+          var v = localStorage.getItem(k);
+          if (v !== null) { try { s[k] = JSON.parse(v); } catch(e) { s[k] = v; } }
         });
-      }
-
-      function _saveTokenCache(token, expiresIn) {
-        _token = token;
-        _tokenExpiry = Date.now() + ((expiresIn || 3600) - 60) * 1000;
-        var data = JSON.stringify({t: _token, e: _tokenExpiry});
-        try { sessionStorage.setItem('_gs_tok', data); } catch(e) {}
-        try { localStorage.setItem('_gs_tok', data); } catch(e) {}
-        // 만료 5분 전에 선제적으로 silent re-auth (같은 탭 세션 내 재접속 속도 개선)
-        if (_refreshTimer) clearTimeout(_refreshTimer);
-        var refreshIn = _tokenExpiry - Date.now() - 5 * 60 * 1000;
-        if (refreshIn > 0) {
-          _refreshTimer = setTimeout(function() {
-            _silentReauth().then(function(ok) {
-              if (ok) console.log('[GS] ✅ 토큰 선제 갱신 완료');
-            });
-          }, refreshIn);
-        }
-      }
-
-      function _loadTokenCache() {
-        try {
-          var c = JSON.parse(sessionStorage.getItem('_gs_tok') || 'null');
-          if (c && c.t && c.e && Date.now() < c.e) { _token = c.t; _tokenExpiry = c.e; return true; }
-        } catch(e) {}
-        try {
-          var c2 = JSON.parse(localStorage.getItem('_gs_tok') || 'null');
-          if (c2 && c2.t && c2.e && Date.now() < c2.e) { _token = c2.t; _tokenExpiry = c2.e; return true; }
-        } catch(e) {}
-        return false;
-      }
-
-      function _clearTokenCache() {
-        _token = null; _tokenExpiry = 0;
-        try { sessionStorage.removeItem('_gs_tok'); } catch(e) {}
-        try { localStorage.removeItem('_gs_tok'); } catch(e) {}
+        return s;
       }
 
       function _updateUI(state, msg) {
@@ -3658,7 +3622,7 @@
         var btnDisc = document.getElementById('gs-action-disconnect');
         if (!dot) return;
         dot.className = 'gs-dot' + (state ? ' ' + state : '');
-        if (lbl) lbl.textContent = msg || ({ ok: 'Sheets 연결됨', err: '재연결 필요', sync: '저장 중...' }[state] || 'Sheets 미연결');
+        if (lbl) lbl.textContent = msg || ({ ok: 'Firebase 연결됨', err: '재연결 필요', sync: '저장 중...' }[state] || 'Firebase 미연결');
         if (state === 'ok') {
           if (btnConn) btnConn.style.display = 'none';
           if (btnDisc) btnDisc.style.display = '';
@@ -3671,368 +3635,188 @@
         }
       }
 
-      async function _api(method, path, body) {
-        if (!_token) return null;
+      function _initFirebase() {
+        if (!window.firebase) return false;
         try {
-          var opts = { method: method, headers: { 'Authorization': 'Bearer ' + _token, 'Content-Type': 'application/json' } };
-          if (body !== undefined) opts.body = JSON.stringify(body);
-          var r = await fetch(BASE + path, opts);
-          if (r.status === 401) {
-            _clearTokenCache();
-            _updateUI('err', '재연결 필요');
-            showToast('Sheets 토큰 만료. 재연결해주세요', 'warning');
-            return null;
+          if (!firebase.apps || !firebase.apps.length) {
+            firebase.initializeApp(FB_CONFIG);
           }
-          var json = await r.json();
-          if (json && json.error) { console.warn('[GS] API 오류:', json.error.message); }
-          return json;
-        } catch (e) { console.warn('[GS] 요청 실패:', e); return null; }
+          _auth = firebase.auth();
+          _db = firebase.firestore();
+          return true;
+        } catch(e) { console.warn('[FS] Firebase 초기화 실패:', e); return false; }
       }
 
-      async function _ensureTabs() {
-        var meta = await _api('GET', '?fields=sheets.properties.title');
-        if (!meta || !meta.sheets) return false;
-        var existing = meta.sheets.map(function(s) { return s.properties.title; });
-        var toCreate = Object.keys(SHEETS_DEF).filter(function(n) { return existing.indexOf(n) < 0; });
-        if (toCreate.length > 0) {
-          await _api('POST', ':batchUpdate', { requests: toCreate.map(function(n) { return { addSheet: { properties: { title: n } } }; }) });
-        }
-        for (var name in SHEETS_DEF) {
-          var cols = SHEETS_DEF[name];
-          await _api('PUT', '/values/' + encodeURIComponent(name + '!A1:' + colLetter(cols.length) + '1') + '?valueInputOption=RAW', { values: [cols] });
-        }
-        return true;
-      }
-
-      function _getRows(name) {
-        switch (name) {
-          case '시간표':
-            return schedules.map(function(s) {
-              return [s.id, s.emoji||'', s.title||'', s.description||'', (s.tags||[]).join(','), s.isLiked?'TRUE':'FALSE', String(getScheduleGridStartMin(s)), s.createdAt||'', s.updatedAt||''];
-            });
-          case '시간표_일정':
-            return scheduleItems.map(function(i) {
-              return [i.id, i.scheduleId, i.activityId, (i.weekdays||[]).join(','), i.startTime||'', i.endTime||'', i.createdAt||''];
-            });
-          case '카테고리':
-            return categories.map(function(c) {
-              return [c.id, c.emoji||'', c.name||'', c.active!==false?'TRUE':'FALSE', c.createdAt||''];
-            });
-          case '일상종류':
-            return activities.map(function(a) {
-              return [a.id, a.categoryId||'', a.emoji||'', a.name||'', a.color||'#ffde59', a.active!==false?'TRUE':'FALSE', a.createdAt||''];
-            });
-          case '사용자설정':
-            var pairs = [
-              ['profileQuote', profileQuote || ''],
-              ['designSettings', JSON.stringify(designSettings || {})],
-              ['myEmojis', JSON.stringify(myEmojis || [])],
-              ['menus', JSON.stringify(menus || [])],
-              ['tagColorOverrides', JSON.stringify(tagColorOverrides || {})],
-              ['customNotifications', JSON.stringify(customNotifications || [])],
-              ['pomodoroSettings', JSON.stringify(pomodoroSettings || {})],
-              ['notificationSettings', JSON.stringify(notificationSettings || {})],
-              ['favoritePages', JSON.stringify(favoritePages || [])]
-            ];
-            if (profilePhoto && profilePhoto.length < 45000) pairs.push(['profilePhoto', profilePhoto]);
-            return pairs;
-          case '할일':
-            return workItems.map(function(w) {
-              return [w.id, w.emoji||'📋', w.color||'', w.title||'', w.date||'', w.status||'pending', w.isBonus?'TRUE':'FALSE', w.memo||'', String(w.focusTime||0), w.parentId||'', w.createdAt||''];
-            });
-          case '습관':
-            return habits.map(function(h) {
-              return [h.id, h.emoji||'', h.name||'', h.color||'', (h.weekdays||[]).join(','), h.active!==false?'TRUE':'FALSE', h.createdAt||''];
-            });
-          case '습관기록':
-            return habitLogs.map(function(l) {
-              return [l.id, l.habitId, l.date||'', l.done?'TRUE':'FALSE', l.memo||''];
-            });
-          case '뽀모도로기록':
-            return pomodoroLogs.map(function(l) {
-              return [l.id, l.date||'', l.eventType||'', l.phase||'', l.taskId||'', l.taskTitle||'', l.timestamp||'', String(l.cycle||0)];
-            });
-          case '할일기록':
-            return workItemLogs.map(function(l) {
-              return [l.id, l.date||'', l.eventType||'', l.taskId||'', l.taskTitle||'', l.oldValue||'', l.newValue||'', l.timestamp||''];
-            });
-          default: return [];
-        }
-      }
-
-      async function _writeSheet(name) {
-        var cols = SHEETS_DEF[name];
-        var rows = [cols].concat(_getRows(name));
-        await _api('POST', '/values/' + encodeURIComponent(name) + ':clear', {});
-        await _api('PUT', '/values/' + encodeURIComponent(name + '!A1') + '?valueInputOption=RAW', { values: rows });
+      async function _writeDoc(docName, data) {
+        try {
+          await _db.collection(COL).doc(docName).set(
+            Object.assign({ _updatedAt: new Date().toISOString() }, data)
+          );
+          return true;
+        } catch(e) { console.warn('[FS] 쓰기 실패:', docName, e); return false; }
       }
 
       async function _loadAll() {
+        if (!_db || !_auth || !_auth.currentUser) return false;
         _updateUI('sync', '불러오는 중...');
-        var ok = await _ensureTabs();
-        if (!ok) { _updateUI('err', '재연결 필요'); return false; }
+        try {
+          var docNames = Object.keys(_DOC);
+          var snaps = await Promise.all(
+            docNames.map(function(n) { return _db.collection(COL).doc(n).get(); })
+          );
+          var data = {};
+          docNames.forEach(function(n, i) { data[n] = snaps[i].exists ? snaps[i].data() : null; });
 
-        var results = {};
-        for (var name in SHEETS_DEF) {
-          var cols = SHEETS_DEF[name];
-          var resp = await _api('GET', '/values/' + encodeURIComponent(name + '!A:' + colLetter(cols.length)));
-          results[name] = ((resp && resp.values) || []).slice(1).filter(function(r) { return r && r[0]; });
-        }
-
-        // 시간표
-        if (results['시간표'].length > 0) {
-          schedules = results['시간표'].map(function(r) {
-            var rawGsm = parseInt(r[6], 10);
-            var gsm;
-            var createdAt, updatedAt;
-            // 기존 시트(컬럼 8개) 하위 호환 — r[6]이 숫자가 아니면 createdAt로 간주
-            if (isNaN(rawGsm)) {
-              gsm = 360;
-              createdAt = r[6] || today();
-              updatedAt = r[7] || today();
-            } else {
-              // 0~23: 구 gridStartHour 값 (시) → 분으로 변환
-              // 24~1439: 신 gridStartMin 값 (분)
-              if (rawGsm >= 0 && rawGsm <= 23) gsm = rawGsm * 60;
-              else if (rawGsm >= 24 && rawGsm < 1440) gsm = Math.round(rawGsm / 30) * 30;
-              else gsm = 360;
-              createdAt = r[7] || today();
-              updatedAt = r[8] || today();
-            }
-            return { id:r[0], emoji:r[1]||'📅', title:r[2]||'', description:r[3]||'', tags:r[4]?r[4].split(',').filter(Boolean):[], isLiked:r[5]==='TRUE', gridStartMin:gsm, createdAt:createdAt, updatedAt:updatedAt };
-          });
-          scheduleItems = results['시간표_일정'].map(function(r) {
-            return { id:r[0], scheduleId:r[1], activityId:r[2], weekdays:r[3]?r[3].split(',').filter(Boolean):[], startTime:r[4]||'09:00', endTime:r[5]||'10:00', createdAt:r[6]||today() };
-          });
-          localStorage.setItem('schedules', JSON.stringify(schedules));
-          localStorage.setItem('scheduleItems', JSON.stringify(scheduleItems));
-        } else { await _writeSheet('시간표'); await _writeSheet('시간표_일정'); }
-
-        // 카테고리
-        if (results['카테고리'].length > 0) {
-          categories = results['카테고리'].map(function(r) {
-            return { id:r[0], emoji:r[1]||'', name:r[2]||'', active:r[3]!=='FALSE', createdAt:r[4]||today() };
-          });
-          localStorage.setItem('categories', JSON.stringify(categories));
-        } else { await _writeSheet('카테고리'); }
-
-        // 일상종류
-        if (results['일상종류'].length > 0) {
-          activities = results['일상종류'].map(function(r) {
-            return { id:r[0], categoryId:r[1]||'', emoji:r[2]||'', name:r[3]||'', color:r[4]||'#ffde59', active:r[5]!=='FALSE', createdAt:r[6]||today() };
-          });
-          localStorage.setItem('activities', JSON.stringify(activities));
-        } else { await _writeSheet('일상종류'); }
-
-        // 사용자설정
-        if (results['사용자설정'].length > 0) {
-          var sm = {};
-          results['사용자설정'].forEach(function(r) { sm[r[0]] = r[1] || ''; });
-          if (sm['profileQuote'] !== undefined) { profileQuote = sm['profileQuote']; localStorage.setItem('profileQuote', profileQuote); }
-          if (sm['designSettings']) {
-            try { designSettings = Object.assign({}, DESIGN_DEFAULTS, JSON.parse(sm['designSettings'])); localStorage.setItem('designSettings', JSON.stringify(designSettings)); applyDesignSettings(); } catch(e) {}
+          if (data.workItems && data.workItems.items) {
+            workItems = data.workItems.items;
+            workItems.forEach(function(it) { it.focusTime = it.focusTime || 0; });
+            localStorage.setItem('workItems', JSON.stringify(workItems));
           }
-          if (sm['myEmojis']) { try { myEmojis = JSON.parse(sm['myEmojis']); localStorage.setItem('myEmojis', JSON.stringify(myEmojis)); } catch(e) { myEmojis = []; } }
-          if (sm['menus']) { try { menus = JSON.parse(sm['menus']); localStorage.setItem('menus', JSON.stringify(menus)); renderSidebar(); } catch(e) {} }
-          if (sm['profilePhoto']) { profilePhoto = sm['profilePhoto']; localStorage.setItem('profilePhoto', profilePhoto); }
-          if (sm['tagColorOverrides']) { try { tagColorOverrides = JSON.parse(sm['tagColorOverrides']); localStorage.setItem('tagColorOverrides', JSON.stringify(tagColorOverrides)); } catch(e) { tagColorOverrides = {}; } }
-          if (sm['customNotifications']) { try { customNotifications = JSON.parse(sm['customNotifications']); localStorage.setItem('customNotifications', JSON.stringify(customNotifications)); } catch(e) { customNotifications = []; } }
-          if (sm['pomodoroSettings']) { try { var ps = JSON.parse(sm['pomodoroSettings']); Object.assign(pomodoroSettings, ps); localStorage.setItem('pomodoroSettings', JSON.stringify(pomodoroSettings)); } catch(e) {} }
-          if (sm['notificationSettings']) { try { var ns = JSON.parse(sm['notificationSettings']); Object.assign(notificationSettings, ns); localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings)); } catch(e) {} }
-          if (sm['favoritePages']) { try { favoritePages = JSON.parse(sm['favoritePages']); localStorage.setItem('favoritePages', JSON.stringify(favoritePages)); } catch(e) { favoritePages = []; } }
-        } else { await _writeSheet('사용자설정'); }
-
-        // 할일
-        if (results['할일'] && results['할일'].length > 0) {
-          workItems = results['할일'].map(function(r) {
-            return { id:r[0], emoji:r[1]||'📋', color:r[2]||null, title:r[3]||'', date:r[4]||null, status:r[5]||'pending', isBonus:r[6]==='TRUE', memo:r[7]||'', focusTime:parseInt(r[8],10)||0, parentId:r[9]||null, createdAt:r[10]||today() };
-          });
-          localStorage.setItem('workItems', JSON.stringify(workItems));
-        } else { await _writeSheet('할일'); }
-
-        // 습관
-        if (results['습관'] && results['습관'].length > 0) {
-          habits = results['습관'].map(function(r) {
-            return { id:r[0], emoji:r[1]||'', name:r[2]||'', color:r[3]||'#ffde59', weekdays:r[4]?r[4].split(',').filter(Boolean):[], active:r[5]!=='FALSE', createdAt:r[6]||today() };
-          });
-          localStorage.setItem('habits', JSON.stringify(habits));
-        } else { await _writeSheet('습관'); }
-
-        // 습관기록
-        if (results['습관기록'] && results['습관기록'].length > 0) {
-          habitLogs = results['습관기록'].map(function(r) {
-            return { id:r[0], habitId:r[1], date:r[2]||'', done:r[3]==='TRUE', memo:r[4]||'' };
-          });
-          localStorage.setItem('habitLogs', JSON.stringify(habitLogs));
-        } else { await _writeSheet('습관기록'); }
-
-        // 뽀모도로기록
-        if (results['뽀모도로기록'] && results['뽀모도로기록'].length > 0) {
-          pomodoroLogs = results['뽀모도로기록'].map(function(r) {
-            return { id:r[0], date:r[1]||'', eventType:r[2]||'', phase:r[3]||'', taskId:r[4]||'', taskTitle:r[5]||'', timestamp:r[6]||'', cycle:parseInt(r[7],10)||0 };
-          });
-          localStorage.setItem('pomodoroLogs', JSON.stringify(pomodoroLogs));
-        } else { await _writeSheet('뽀모도로기록'); }
-
-        // 할일기록
-        if (results['할일기록'] && results['할일기록'].length > 0) {
-          workItemLogs = results['할일기록'].map(function(r) {
-            return { id:r[0], date:r[1]||'', eventType:r[2]||'', taskId:r[3]||'', taskTitle:r[4]||'', oldValue:r[5]||'', newValue:r[6]||'', timestamp:r[7]||'' };
-          });
-          localStorage.setItem('workItemLogs', JSON.stringify(workItemLogs));
-        } else { await _writeSheet('할일기록'); }
-
-        console.log('[GS] ✅ 전체 로드 완료');
-        _updateUI('ok', '연결됨');
-        return true;
+          if (data.habits && data.habits.habits) {
+            habits = data.habits.habits;
+            localStorage.setItem('habits', JSON.stringify(habits));
+          }
+          if (data.habitLogs && data.habitLogs.logs) {
+            habitLogs = data.habitLogs.logs;
+            localStorage.setItem('habitLogs', JSON.stringify(habitLogs));
+          }
+          if (data.schedules) {
+            if (data.schedules.schedules) { schedules = data.schedules.schedules; localStorage.setItem('schedules', JSON.stringify(schedules)); }
+            if (data.schedules.scheduleItems) { scheduleItems = data.schedules.scheduleItems; localStorage.setItem('scheduleItems', JSON.stringify(scheduleItems)); }
+          }
+          if (data.categories) {
+            if (data.categories.categories) { categories = data.categories.categories; localStorage.setItem('categories', JSON.stringify(categories)); }
+            if (data.categories.activities) { activities = data.categories.activities; localStorage.setItem('activities', JSON.stringify(activities)); }
+          }
+          if (data.settings) {
+            var sm = data.settings;
+            if (sm.profileQuote !== undefined) localStorage.setItem('profileQuote', sm.profileQuote);
+            if (sm.profilePhoto) localStorage.setItem('profilePhoto', sm.profilePhoto);
+            if (sm.designSettings) { designSettings = sm.designSettings; localStorage.setItem('designSettings', JSON.stringify(designSettings)); applyDesignSettings(); }
+            if (sm.menus) { menus = sm.menus; localStorage.setItem('menus', JSON.stringify(menus)); renderSidebar(); }
+            if (sm.myEmojis) localStorage.setItem('myEmojis', JSON.stringify(sm.myEmojis));
+            if (sm.tagColorOverrides) localStorage.setItem('tagColorOverrides', JSON.stringify(sm.tagColorOverrides));
+            if (sm.pomodoroSettings) { Object.assign(pomodoroSettings, sm.pomodoroSettings); localStorage.setItem('pomodoroSettings', JSON.stringify(pomodoroSettings)); }
+            if (sm.notificationSettings) { Object.assign(notificationSettings, sm.notificationSettings); localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings)); }
+            if (sm.favoritePages) { favoritePages = sm.favoritePages; localStorage.setItem('favoritePages', JSON.stringify(favoritePages)); }
+          }
+          if (data.pomodoroLogs && data.pomodoroLogs.logs) {
+            pomodoroLogs = data.pomodoroLogs.logs;
+            localStorage.setItem('pomodoroLogs', JSON.stringify(pomodoroLogs));
+          }
+          if (data.workItemLogs && data.workItemLogs.logs) {
+            workItemLogs = data.workItemLogs.logs;
+            localStorage.setItem('workItemLogs', JSON.stringify(workItemLogs));
+          }
+          _updateUI('ok', 'Firebase 연결됨');
+          console.log('[FS] ✅ 전체 로드 완료');
+          return true;
+        } catch(e) {
+          console.warn('[FS] 로드 실패:', e);
+          _updateUI('err', '로드 실패');
+          return false;
+        }
       }
 
-      // 공개 API
       return {
-        isConnected: function() { return _isConnected(); },
-        updateUI: _updateUI,
+        isConnected: function() { return !!_auth && !!_auth.currentUser; },
 
-        syncSheets: async function(names) {
-          if (!_isConnected()) {
-            _updateUI('sync', '재연결 중...');
-            var reAuthed = await _silentReauth();
-            if (!reAuthed) {
-              _updateUI('err', '재연결 필요');
-              showToast('⚠️ Sheets 연결 만료 — 로컬에 저장됨. 사이드바 연결 버튼을 눌러주세요', 'warning');
-              return;
+        init: function(idToken, onDone) {
+          if (!_initFirebase()) { _updateUI('err', 'Firebase 없음'); if (onDone) onDone(false); return; }
+
+          // 이미 로그인 상태 → 즉시 성공 (Firebase Auth 세션 유지)
+          _auth.onAuthStateChanged(function(user) {
+            if (user && onDone) {
+              _updateUI('ok', 'Firebase 연결됨');
+              var cb = onDone; onDone = null; cb(true);
             }
-            _updateUI('ok', '연결됨');
+          });
+
+          if (idToken) {
+            // 최초 로그인: Google ID 토큰으로 Firebase 인증
+            var cred = firebase.auth.GoogleAuthProvider.credential(idToken);
+            _auth.signInWithCredential(cred)
+              .then(function() {
+                _updateUI('ok', 'Firebase 연결됨');
+                if (onDone) { var cb = onDone; onDone = null; cb(true); }
+              })
+              .catch(function(e) {
+                console.warn('[FS] Firebase 로그인 실패:', e);
+                _updateUI('err', '연결 실패');
+                if (onDone) { var cb = onDone; onDone = null; cb(false); }
+              });
+          } else {
+            // 세션 복원: Firebase Auth가 자동 복원 — onAuthStateChanged 처리
+            // 2초 내 복원 안 되면 미연결로 표시
+            setTimeout(function() {
+              if (!_auth || !_auth.currentUser) {
+                _updateUI('', 'Firebase 미연결');
+                if (onDone) { var cb = onDone; onDone = null; cb(false); }
+              }
+            }, 2000);
+          }
+        },
+
+        sync: async function(names) {
+          if (!this.isConnected()) {
+            showToast('⚠️ Firebase 미연결 — 로컬에만 저장됩니다', 'warning');
+            return;
           }
           if (_syncing) {
-            /* 현재 싱크 중 — 요청된 시트 이름을 큐에 추가하고 대기 */
-            names.forEach(function(n) { if (_pendingSyncNames.indexOf(n) < 0) _pendingSyncNames.push(n); });
+            if (names) names.forEach(function(n) { if (_pendingSyncNames.indexOf(n) < 0) _pendingSyncNames.push(n); });
             return;
           }
           _syncing = true;
           _updateUI('sync', '저장 중...');
           try {
-            for (var i = 0; i < names.length; i++) { await _writeSheet(names[i]); }
-            _updateUI('ok', '연결됨');
-          } catch (e) {
-            console.error('[GS] sync 오류:', e);
-            showToast('Sheets 동기화 실패: ' + e.message, 'error');
-            _updateUI('ok', '연결됨 (동기화 오류)');
+            var docNames = names
+              ? names.map(function(n) { return _NAME_MAP[n] || n; })
+                     .filter(function(n, i, a) { return _DOC[n] && a.indexOf(n) === i; })
+              : Object.keys(_DOC);
+            await Promise.all(docNames.map(function(n) { return _writeDoc(n, _DOC[n]()); }));
+            _updateUI('ok', 'Firebase 연결됨');
+          } catch(e) {
+            console.warn('[FS] sync 실패:', e);
+            _updateUI('ok', 'Firebase 연결됨');
           } finally {
             _syncing = false;
-            /* 큐에 쌓인 요청이 있으면 한 번 더 실행 */
             if (_pendingSyncNames.length > 0) {
               var pending = _pendingSyncNames.slice();
               _pendingSyncNames = [];
-              GS.syncSheets(pending);
+              FS.sync(pending);
             }
           }
         },
 
-        init: function(onDone) {
-          // 1. 캐시 토큰 유효 → 즉시 UI 업데이트 후 onDone 호출
-          if (_loadTokenCache()) {
-            console.log('[GS] ✅ 캐시 토큰 사용');
-            _updateUI('ok', 'Sheets 연결됨');
-            if (onDone) onDone(true);
-            return;
-          }
-
-          // 2. Safari/모바일: prompt:'none'으로 팝업 없이 silent 재연결 시도
-          var isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) ||
-            /iPhone|iPad|iPod/i.test(navigator.userAgent);
-          if (isSafari) {
-            if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
-              _updateUI('', '미연결'); if (onDone) onDone(false); return;
-            }
-            var hint = (currentUser && currentUser.email) ? currentUser.email : '';
-            _updateUI('sync', '연결 중...');
-            if (!_tokenClient) {
-              _tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: AUTH.GOOGLE_CLIENT_ID,
-                scope: 'https://www.googleapis.com/auth/spreadsheets',
-                hint: hint,
-                callback: function() {}
-              });
-            }
-            _tokenClient.callback = function(resp) {
-              if (resp.error) { _updateUI('', '미연결'); if (onDone) onDone(false); return; }
-              _saveTokenCache(resp.access_token, resp.expires_in);
-              _updateUI('ok', 'Sheets 연결됨');
-              if (onDone) onDone(true);
-            };
-            _tokenClient.requestAccessToken({ prompt: 'none', login_hint: hint });
-            return;
-          }
-
-          // 3. 캐시 없음 → silent auth
-          if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
-            _updateUI('err', 'Google 라이브러리 없음'); if (onDone) onDone(false); return;
-          }
-          var hint = (currentUser && currentUser.email) ? currentUser.email : '';
-          _tokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: AUTH.GOOGLE_CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/spreadsheets',
-            hint: hint,
-            callback: function(resp) {
-              if (resp.error) { _updateUI('err'); if (onDone) onDone(false); return; }
-              _saveTokenCache(resp.access_token, resp.expires_in);
-              _updateUI('ok', 'Sheets 연결됨');
-              console.log('[GS] ✅ 토큰 획득 (silent)');
-              if (onDone) onDone(true);
-            }
-          });
-          _tokenClient.requestAccessToken({ prompt: '', login_hint: hint });
-        },
+        loadAll: function() { return _loadAll(); },
 
         connect: function() {
-          // 연결 버튼 클릭 → silent 먼저 시도 (경고창 없음), 실패 시 consent로 재시도
-          _updateUI('sync', '연결 중...');
-          if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
-            _updateUI('err'); return;
-          }
-          var hint = (currentUser && currentUser.email) ? currentUser.email : '';
-          var _doConnect = function(prompt) {
-            if (!_tokenClient) {
-              _tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: AUTH.GOOGLE_CLIENT_ID,
-                scope: 'https://www.googleapis.com/auth/spreadsheets',
-                hint: hint,
-                callback: function() {}
-              });
-            }
-            _tokenClient.callback = function(resp) {
-              if (resp.error) {
-                if (prompt === '' ) {
-                  // silent 실패 → consent로 재시도 (이미 동의한 경우에도 팝업 필요할 수 있음)
-                  _doConnect('consent');
-                } else {
-                  _updateUI('err'); showToast('Sheets 연결 실패: ' + resp.error, 'error');
-                }
-                return;
-              }
-              _saveTokenCache(resp.access_token, resp.expires_in);
-              _updateUI('ok', 'Sheets 연결됨');
-              GS.loadAll().then(function() { showToast('☁️ Sheets 연결됨'); });
-            };
-            _tokenClient.requestAccessToken({ prompt: prompt, login_hint: hint });
-          };
-          _doConnect('');
+          showAlert('Firebase 재연결', '페이지를 새로고침 후 Google 로그인을 다시 해주세요.<br><br><button onclick="location.reload()" style="padding:8px 16px;background:var(--primary-yellow);border:none;border-radius:6px;cursor:pointer;font-weight:600;">새로고침</button>');
         },
 
         disconnect: function(silent) {
-          if (!silent && !confirm('Sheets 연결을 해제할까요?\n(데이터는 로컬에 유지됩니다)')) return;
-          _clearTokenCache();
-          if (!silent) { _updateUI('', '미연결'); showToast('Sheets 연결 해제됨', 'warning'); }
+          if (!silent && !confirm('Firebase 연결을 해제할까요?\n(데이터는 로컬에 유지됩니다)')) return;
+          if (_auth) _auth.signOut().catch(function() {});
+          if (!silent) { _updateUI('', '미연결'); showToast('Firebase 연결 해제됨', 'warning'); }
         },
 
-        loadAll: function() { return _loadAll(); }
+        // 로컬스토리지 → Firestore 일괄 마이그레이션 (최초 1회)
+        migrateFromLocal: async function() {
+          if (!this.isConnected()) { showAlert('마이그레이션 실패', 'Firebase에 먼저 연결해주세요.'); return; }
+          _updateUI('sync', '마이그레이션 중...');
+          try {
+            await Promise.all(Object.keys(_DOC).map(function(n) { return _writeDoc(n, _DOC[n]()); }));
+            showToast('✅ 데이터 마이그레이션 완료', 'success');
+            _updateUI('ok', 'Firebase 연결됨');
+          } catch(e) { showAlert('마이그레이션 실패', e.message); _updateUI('err', '오류'); }
+        }
       };
     })();
 
-    // Sheets 연결 필수 체크 — 미연결 시 경고 모달 표시하고 false 반환
-    function requireGS(onConnect) {
-      if (window.GS && GS.isConnected()) { if (onConnect) onConnect(); return true; }
-      showAlert('Sheets 미연결', '데이터 보호를 위해 Sheets 연결이 필요합니다.<br>수정이 차단되었습니다.<br><br>사이드바 하단에서 <b>☁️ 연결</b> 버튼을 눌러 연결 후 다시 시도해주세요.');
+    // Firebase 연결 필수 체크 — 미연결 시 경고 모달 표시하고 false 반환
+    function requireFS(onConnect) {
+      if (window.FS && FS.isConnected()) { if (onConnect) onConnect(); return true; }
+      showAlert('Firebase 미연결', '데이터 보호를 위해 Firebase 연결이 필요합니다.<br>수정이 차단되었습니다.<br><br>페이지를 새로고침하거나 사이드바 하단 <b>☁️ 연결</b> 버튼을 눌러주세요.');
       return false;
     }
 
@@ -6152,7 +5936,7 @@
       
       localStorage.setItem('profilePhoto', profilePhoto);
       localStorage.setItem('profileQuote', profileQuote);
-      GS.syncSheets(['사용자설정']);
+      FS.sync(['사용자설정']);
       updateProfileDisplay();
       showToast('✅ 프로필이 저장되었습니다');
     }
@@ -6424,7 +6208,7 @@
 
     function saveDesignSettings() {
       localStorage.setItem('designSettings', JSON.stringify(designSettings));
-      GS.syncSheets(['사용자설정']);
+      FS.sync(['사용자설정']);
     }
 
     function applyDesignSettings() {
@@ -6590,24 +6374,24 @@
       if (!Array.isArray(habits)) habits = [];
     }
     function saveHabits() {
-      if (!requireGS()) {
+      if (!requireFS()) {
         try { habits = JSON.parse(localStorage.getItem('habits') || '[]'); } catch(e) { habits = []; }
         renderHabitPage(); return;
       }
       localStorage.setItem('habits', JSON.stringify(habits));
-      if (window.GS && GS.isConnected()) GS.syncSheets(['습관']);
+      if (window.FS && FS.isConnected()) FS.sync(['습관']);
     }
     function loadHabitLogs() {
       try { habitLogs = JSON.parse(localStorage.getItem('habitLogs') || '[]'); } catch(e) { habitLogs = []; }
       if (!Array.isArray(habitLogs)) habitLogs = [];
     }
     function saveHabitLogs() {
-      if (!requireGS()) {
+      if (!requireFS()) {
         try { habitLogs = JSON.parse(localStorage.getItem('habitLogs') || '[]'); } catch(e) { habitLogs = []; }
         renderHabitPage(); return;
       }
       localStorage.setItem('habitLogs', JSON.stringify(habitLogs));
-      if (window.GS && GS.isConnected()) GS.syncSheets(['습관기록']);
+      if (window.FS && FS.isConnected()) FS.sync(['습관기록']);
     }
 
     function renderHabitPage() {
@@ -7487,7 +7271,7 @@
 
     function saveWorkItemLogs() {
       localStorage.setItem('workItemLogs', JSON.stringify(workItemLogs));
-      if (window.GS && GS.isConnected()) GS.syncSheets(['할일기록']);
+      if (window.FS && FS.isConnected()) FS.sync(['할일기록']);
     }
 
     function logWorkEvent(eventType, item, oldValue, newValue) {
@@ -7505,12 +7289,12 @@
     }
 
     function saveWorkItems() {
-      if (!requireGS()) {
+      if (!requireFS()) {
         try { workItems = JSON.parse(localStorage.getItem('workItems') || '[]'); } catch(e) { workItems = []; }
         renderWorkView(); return;
       }
       localStorage.setItem('workItems', JSON.stringify(workItems));
-      if (window.GS && GS.isConnected()) GS.syncSheets(['할일']);
+      if (window.FS && FS.isConnected()) FS.sync(['할일']);
     }
 
     function getMondayOf(dateStr) {
@@ -8608,7 +8392,7 @@
 
     function savePomodoroLogs() {
       localStorage.setItem('pomodoroLogs', JSON.stringify(pomodoroLogs));
-      if (window.GS && GS.isConnected()) GS.syncSheets(['뽀모도로기록']);
+      if (window.FS && FS.isConnected()) FS.sync(['뽀모도로기록']);
     }
 
     function logPomoEvent(eventType) {
@@ -8694,7 +8478,7 @@
 
     function savePomodoroSettings() {
       localStorage.setItem('pomodoroSettings', JSON.stringify(pomodoroSettings));
-      if (window.GS && GS.isConnected()) GS.syncSheets(['사용자설정']);
+      if (window.FS && FS.isConnected()) FS.sync(['사용자설정']);
     }
 
     function togglePomodoroPanel() {
@@ -9284,13 +9068,13 @@
 
     function saveNotificationSettings() {
       localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings));
-      if (window.GS && GS.isConnected()) GS.syncSheets(['사용자설정']);
+      if (window.FS && FS.isConnected()) FS.sync(['사용자설정']);
     }
 
     function saveCustomNotifications() {
       localStorage.setItem('customNotifications', JSON.stringify(customNotifications));
       syncFCMSchedules();
-      if (window.GS && GS.isConnected()) GS.syncSheets(['사용자설정']);
+      if (window.FS && FS.isConnected()) FS.sync(['사용자설정']);
     }
 
     function sendNotification(title, body) {
