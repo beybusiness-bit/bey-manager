@@ -1179,74 +1179,39 @@
     }
 
     // Google Sign-In 초기화
-    function initGoogleSignIn() {
-      if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
-        // GSI 스크립트 로드 대기 후 재시도
-        setTimeout(initGoogleSignIn, 200);
-        return;
+    // Firebase Google 로그인 (signInWithPopup)
+    function handleFirebaseGoogleLogin() {
+      var btn = document.getElementById('googleSignInButton');
+      var SVG_GOOGLE = '<svg width="18" height="18" viewBox="0 0 18 18" style="margin-right:8px;flex-shrink:0"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/></svg>Google로 로그인';
+      if (btn) { btn.disabled = true; btn.textContent = '로그인 중...'; }
+      var restore = function() { if (btn) { btn.disabled = false; btn.innerHTML = SVG_GOOGLE; } };
+
+      if (!window.firebase || !firebase.auth) {
+        showAlert('초기화 오류', 'Firebase가 아직 로드되지 않았습니다. 잠시 후 다시 시도해주세요.');
+        restore(); return;
       }
 
-      google.accounts.id.initialize({
-        client_id: AUTH.GOOGLE_CLIENT_ID,
-        callback: handleGoogleCredentialResponse,
-        auto_select: true,
-        cancel_on_tap_outside: true
-      });
-
-      const btnContainer = document.getElementById('googleSignInButton');
-      if (btnContainer) {
-        google.accounts.id.renderButton(btnContainer, {
-          theme: 'outline',
-          size: 'large',
-          text: 'signin_with',
-          shape: 'rectangular',
-          logo_alignment: 'left',
-          width: 320
+      var provider = new firebase.auth.GoogleAuthProvider();
+      firebase.auth().signInWithPopup(provider)
+        .then(function(result) {
+          var user = result.user;
+          if (user.email !== AUTH.USER_EMAIL) {
+            showAlert('접근 불가', '이 앱은 ' + AUTH.USER_EMAIL + ' 계정 전용입니다.');
+            firebase.auth().signOut();
+            restore(); return;
+          }
+          currentUser = { email: user.email, name: user.displayName || '', picture: user.photoURL || '', sub: user.uid || '' };
+          localStorage.setItem('isLoggedIn', 'true');
+          localStorage.setItem('currentUser', JSON.stringify(currentUser));
+          showApp();
+          FS.loadAll().then(function(loaded) { if (loaded) renderCurrentScheduleView(); });
+        })
+        .catch(function(e) {
+          if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
+            showAlert('로그인 실패', e.message || e.code);
+          }
+          restore();
         });
-      }
-    }
-
-    // Google 로그인 성공 시 호출되는 콜백
-    function handleGoogleCredentialResponse(response) {
-      if (!response || !response.credential) {
-        console.error('Google 로그인 응답 없음');
-        return;
-      }
-
-      const payload = decodeJwtPayload(response.credential);
-      if (!payload) {
-        showAlert('로그인 실패', '로그인 정보를 확인할 수 없습니다.');
-        return;
-      }
-
-      // 베이님 본인 계정만 허용 (단일 사용자 앱)
-      if (payload.email !== AUTH.USER_EMAIL) {
-        showAlert('접근 불가', '이 앱은 ' + AUTH.USER_EMAIL + ' 계정 전용입니다.\n\n로그인된 계정: ' + payload.email);
-        if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
-          google.accounts.id.disableAutoSelect();
-        }
-        return;
-      }
-
-      currentUser = {
-        email: payload.email,
-        name: payload.name || '',
-        picture: payload.picture || '',
-        sub: payload.sub || ''
-      };
-
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('currentUser', JSON.stringify(currentUser));
-
-      showApp();
-
-      // Firebase 연동: Google ID 토큰으로 Firestore 연결
-      FS.init(response.credential, function(ok) {
-        if (!ok) return;
-        FS.loadAll().then(function(loaded) {
-          if (loaded) renderCurrentScheduleView();
-        });
-      });
     }
 
     function showApp() {
@@ -1638,22 +1603,23 @@
         }
         if (currentUser && currentUser.email === AUTH.USER_EMAIL) {
           showApp();
-          // 세션 복원 시 Firebase 재연결 (Firebase Auth가 자동 복원)
-          FS.init(null, function(ok) {
-            if (!ok) return;
-            FS.loadAll().then(function(loaded) {
-              if (loaded) renderCurrentScheduleView();
+          // 세션 복원 시 Firebase Auth 자동 복원 대기
+          if (window.firebase && firebase.auth) {
+            var _unsubscribe = firebase.auth().onAuthStateChanged(function(user) {
+              _unsubscribe();
+              if (user) {
+                FS.loadAll().then(function(loaded) { if (loaded) renderCurrentScheduleView(); });
+              } else {
+                _updateFSUI && _updateFSUI('', 'Firebase 미연결');
+              }
             });
-          });
+          }
           return;
         } else {
           localStorage.removeItem('isLoggedIn');
           localStorage.removeItem('currentUser');
         }
       }
-
-      // Google Sign-In 초기화
-      initGoogleSignIn();
     }
 
     // ========================================
@@ -1678,6 +1644,8 @@
     }
 
     function initializeApp() {
+      // Firebase Auth 리스너 등록 (signInWithPopup 방식)
+      if (window.firebase && firebase.auth) { FS.init(); }
       loadMenus();
       loadFavorites();
       loadExpandedGroups();
@@ -3721,44 +3689,13 @@
       return {
         isConnected: function() { return !!_auth && !!_auth.currentUser; },
 
-        init: function(idToken, onDone) {
-          if (!_initFirebase()) { _updateUI('err', 'Firebase 없음'); if (onDone) onDone(false); return; }
-
-          // 이미 로그인 상태 → 즉시 성공 (Firebase Auth 세션 유지)
+        init: function() {
+          // signInWithPopup 방식으로 전환됨 — 이 함수는 onAuthStateChanged 리스너 등록만 수행
+          if (!_initFirebase()) { _updateUI('err', 'Firebase 없음'); return; }
           _auth.onAuthStateChanged(function(user) {
-            if (user && onDone) {
-              _updateUI('ok', 'Firebase 연결됨');
-              var cb = onDone; onDone = null; cb(true);
-            }
+            if (user) { _updateUI('ok', 'Firebase 연결됨'); }
+            else { _updateUI('', 'Firebase 미연결'); }
           });
-
-          if (idToken) {
-            // 최초 로그인: Google ID 토큰으로 Firebase 인증
-            var cred = firebase.auth.GoogleAuthProvider.credential(idToken);
-            _auth.signInWithCredential(cred)
-              .then(function() {
-                _updateUI('ok', 'Firebase 연결됨');
-                if (onDone) { var cb = onDone; onDone = null; cb(true); }
-              })
-              .catch(function(e) {
-                console.warn('[FS] Firebase 로그인 실패:', e);
-                _updateUI('err', '연결 실패');
-                var hint = '';
-                if (e.code === 'auth/operation-not-allowed') hint = '<br><br>💡 Firebase Console → Authentication → <b>Sign-in method → Google을 활성화</b>해주세요.';
-                else if (e.code === 'auth/unauthorized-domain') hint = '<br><br>💡 Firebase Console → Authentication → 설정 → <b>승인된 도메인에 현재 URL을 추가</b>해주세요.';
-                showAlert('Firebase 연결 실패 (' + (e.code || e.message) + ')', '오류: ' + (e.message || e.code) + hint);
-                if (onDone) { var cb = onDone; onDone = null; cb(false); }
-              });
-          } else {
-            // 세션 복원: Firebase Auth가 자동 복원 — onAuthStateChanged 처리
-            // 2초 내 복원 안 되면 미연결로 표시
-            setTimeout(function() {
-              if (!_auth || !_auth.currentUser) {
-                _updateUI('', 'Firebase 미연결');
-                if (onDone) { var cb = onDone; onDone = null; cb(false); }
-              }
-            }, 2000);
-          }
         },
 
         sync: async function(names) {
@@ -3795,34 +3732,16 @@
         loadAll: function() { return _loadAll(); },
 
         connect: function() {
+          // signInWithPopup 방식: Firebase Auth가 이미 로그인돼 있으면 즉시 연결
+          // 미연결 상태면 로그아웃 후 재로그인 안내
           if (!_initFirebase()) { _updateUI('err', 'Firebase 없음'); return; }
-          _updateUI('sync', '연결 중...');
-
-          var done = false;
-          var succeed = function() {
-            if (done) return; done = true;
+          if (_auth && _auth.currentUser) {
             _updateUI('ok', 'Firebase 연결됨');
             showToast('✅ Firebase 연결됨', 'success');
             _loadAll().then(function(ok) { if (ok) renderCurrentPageIfNeeded(); });
-          };
-          var fail = function() {
-            if (done) return; done = true;
-            _updateUI('', 'Firebase 미연결');
-            showAlert('Firebase 재연결 실패', '아래 <b>새로고침</b> 버튼을 누른 뒤 Google 로그인을 다시 해주세요.<br><br><button onclick="location.reload()" style="padding:8px 16px;background:var(--primary-yellow);border:none;border-radius:6px;cursor:pointer;font-weight:600;">새로고침</button>');
-          };
-
-          // ① Firebase Auth 세션 자동 복원 시도
-          _auth.onAuthStateChanged(function(user) { if (user) succeed(); });
-
-          // ② Google One Tap으로 새 토큰 요청 (이미 로그인된 계정은 UI 없이 즉시 반환)
-          if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
-            google.accounts.id.prompt(function(notification) {
-              // 팝업이 표시되지 않고 콜백이 안 오면 → onAuthStateChanged 또는 fail 대기
-            });
+          } else {
+            showAlert('Firebase 재연결', '로그아웃 후 다시 로그인하면 자동으로 Firebase에 연결됩니다.<br><br><button onclick="handleLogout()" style="padding:8px 16px;background:var(--primary-yellow);border:none;border-radius:6px;cursor:pointer;font-weight:600;">로그아웃</button>');
           }
-
-          // ③ 3초 내 연결 안 되면 실패 처리
-          setTimeout(function() { if (!done) fail(); }, 3000);
         },
 
         disconnect: function(silent) {
@@ -3842,6 +3761,23 @@
           } catch(e) { showAlert('마이그레이션 실패', e.message); _updateUI('err', '오류'); }
         }
       };
+    })();
+
+    // Firebase 앱 즉시 초기화 (로그인 버튼 클릭 전에 준비되어야 함)
+    (function() {
+      if (!window.firebase) return;
+      try {
+        if (!firebase.apps || !firebase.apps.length) {
+          firebase.initializeApp({
+            apiKey: "AIzaSyC8uy09XOeEYIs1m3Rga5BMqd7gS7o3roI",
+            authDomain: "beyhome-admin.firebaseapp.com",
+            projectId: "beyhome-admin",
+            storageBucket: "beyhome-admin.firebasestorage.app",
+            messagingSenderId: "849320781553",
+            appId: "1:849320781553:web:5a78f9c2bd936b60aa2b50"
+          });
+        }
+      } catch(e) { console.warn('[Firebase] 즉시 초기화 실패:', e); }
     })();
 
     // Firebase 연결 필수 체크 — 미연결 시 경고 모달 표시하고 false 반환
