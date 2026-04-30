@@ -9138,63 +9138,81 @@
 
     async function _doSheetsImport(token) {
       var SHEET_ID = AUTH.SHEET_ID;
-      var BASE = 'https://sheets.googleapis.com/v4/spreadsheets/' + SHEET_ID + '/values/';
       var headers = { 'Authorization': 'Bearer ' + token };
 
-      showToast('📊 Sheets에서 읽는 중...', 'info');
+      showToast('📊 시트 목록 확인 중...', 'info');
 
-      // 시트 이름 → 파서 맵
-      var SHEETS = [
-        { name: '할일',       parse: _parseWorkItems },
-        { name: '습관',       parse: _parseHabits },
-        { name: '습관기록',   parse: _parseHabitLogs },
-        { name: '뽀모도로기록', parse: _parsePomodoroLogs },
-        { name: '할일기록',   parse: _parseWorkItemLogs },
-      ];
+      // ① 실제 시트 탭명 목록 조회
+      var metaRes = await fetch(
+        'https://sheets.googleapis.com/v4/spreadsheets/' + SHEET_ID + '?fields=sheets.properties.title',
+        { headers: headers }
+      );
+      if (!metaRes.ok) {
+        var err = await metaRes.json().catch(function(){return {};});
+        showAlert('Sheets 접근 실패', '상태: ' + metaRes.status + '<br>' + (err.error && err.error.message || '') +
+          '<br><br>시트 공유 설정이나 OAuth 권한을 확인해주세요.');
+        return;
+      }
+      var meta = await metaRes.json();
+      var actualTabs = (meta.sheets || []).map(function(s){ return s.properties.title; });
+      console.log('[Sheets] 실제 탭 목록:', actualTabs);
 
+      // ② 탭명 → 파서 매핑 (유사 이름도 허용)
+      var PARSERS = {
+        '할일': _parseWorkItems,
+        '습관': _parseHabits,
+        '습관기록': _parseHabitLogs,
+        '뽀모도로기록': _parsePomodoroLogs,
+        '할일기록': _parseWorkItemLogs
+      };
+      // 탭명 유연 매칭 (공백·대소문자 무시)
+      function findTab(key) {
+        var k = key.replace(/\s/g,'').toLowerCase();
+        return actualTabs.find(function(t){ return t.replace(/\s/g,'').toLowerCase() === k; }) || null;
+      }
+
+      var BASE = 'https://sheets.googleapis.com/v4/spreadsheets/' + SHEET_ID + '/values/';
       var results = {};
-      for (var i = 0; i < SHEETS.length; i++) {
-        var s = SHEETS[i];
+      var missing = [];
+
+      for (var key in PARSERS) {
+        var tabName = findTab(key);
+        if (!tabName) { missing.push(key); continue; }
         try {
-          var res = await fetch(BASE + encodeURIComponent(s.name), { headers: headers });
-          if (!res.ok) { console.warn('[Sheets] ' + s.name + ' 읽기 실패:', res.status); continue; }
+          var res = await fetch(BASE + encodeURIComponent(tabName), { headers: headers });
+          if (!res.ok) { console.warn('[Sheets] ' + tabName + ' 읽기 실패:', res.status); missing.push(key); continue; }
           var data = await res.json();
           var rows = data.values || [];
-          if (rows.length < 2) continue;
-          results[s.name] = s.parse(rows);
-          console.log('[Sheets] ' + s.name + ':', results[s.name].length + '행 읽음');
-        } catch(e) { console.warn('[Sheets] ' + s.name + ' 오류:', e); }
+          if (rows.length < 2) { console.log('[Sheets] ' + tabName + ': 데이터 없음'); continue; }
+          results[key] = PARSERS[key](rows);
+          console.log('[Sheets] ' + tabName + ' (' + key + '):', results[key].length + '행');
+        } catch(e) { console.warn('[Sheets] ' + key + ' 오류:', e); missing.push(key); }
       }
 
-      // 파싱된 데이터를 전역 변수에 병합 (기존 Firestore 데이터 보존)
-      if (results['할일'] && results['할일'].length) {
-        workItems = results['할일'];
-        localStorage.setItem('workItems', JSON.stringify(workItems));
-      }
-      if (results['습관'] && results['습관'].length) {
-        habits = results['습관'];
-        localStorage.setItem('habits', JSON.stringify(habits));
-      }
-      if (results['습관기록'] && results['습관기록'].length) {
-        habitLogs = results['습관기록'];
-        localStorage.setItem('habitLogs', JSON.stringify(habitLogs));
-      }
-      if (results['뽀모도로기록'] && results['뽀모도로기록'].length) {
-        pomodoroLogs = results['뽀모도로기록'];
-        localStorage.setItem('pomodoroLogs', JSON.stringify(pomodoroLogs));
-      }
-      if (results['할일기록'] && results['할일기록'].length) {
-        workItemLogs = results['할일기록'];
-        localStorage.setItem('workItemLogs', JSON.stringify(workItemLogs));
+      if (missing.length && !Object.keys(results).length) {
+        showAlert('시트 탭을 찾을 수 없음',
+          '실제 탭 목록: <b>' + actualTabs.join(', ') + '</b><br><br>' +
+          '찾으려 했던 탭: ' + missing.join(', ') + '<br><br>' +
+          '탭 이름을 확인해주세요.');
+        return;
       }
 
-      // Firestore에 저장
+      // ③ 전역 변수 + localStorage 업데이트
+      if (results['할일'] && results['할일'].length) { workItems = results['할일']; localStorage.setItem('workItems', JSON.stringify(workItems)); }
+      if (results['습관'] && results['습관'].length) { habits = results['습관']; localStorage.setItem('habits', JSON.stringify(habits)); }
+      if (results['습관기록'] && results['습관기록'].length) { habitLogs = results['습관기록']; localStorage.setItem('habitLogs', JSON.stringify(habitLogs)); }
+      if (results['뽀모도로기록'] && results['뽀모도로기록'].length) { pomodoroLogs = results['뽀모도로기록']; localStorage.setItem('pomodoroLogs', JSON.stringify(pomodoroLogs)); }
+      if (results['할일기록'] && results['할일기록'].length) { workItemLogs = results['할일기록']; localStorage.setItem('workItemLogs', JSON.stringify(workItemLogs)); }
+
+      // ④ Firestore 저장
       showToast('☁️ Firestore에 저장 중...', 'info');
       try {
         await FS.sync(['할일', '습관', '습관기록', '뽀모도로기록', '할일기록']);
         renderCurrentPageIfNeeded();
-        var total = Object.values(results).reduce(function(s,a){ return s + (a?a.length:0); }, 0);
-        showToast('✅ Sheets 데이터 가져오기 완료 (' + total + '건)', 'success');
+        var total = Object.values(results).reduce(function(s,a){ return s + (a ? a.length : 0); }, 0);
+        var msg = '✅ 가져오기 완료 (' + total + '건)';
+        if (missing.length) msg += ' / 없는 탭: ' + missing.join(', ');
+        showToast(msg, 'success');
       } catch(e) { showAlert('저장 실패', e.message); }
     }
 
