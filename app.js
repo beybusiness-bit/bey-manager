@@ -3791,7 +3791,34 @@
         loadAll: function() { return _loadAll(); },
 
         connect: function() {
-          showAlert('Firebase 재연결', '페이지를 새로고침 후 Google 로그인을 다시 해주세요.<br><br><button onclick="location.reload()" style="padding:8px 16px;background:var(--primary-yellow);border:none;border-radius:6px;cursor:pointer;font-weight:600;">새로고침</button>');
+          if (!_initFirebase()) { _updateUI('err', 'Firebase 없음'); return; }
+          _updateUI('sync', '연결 중...');
+
+          var done = false;
+          var succeed = function() {
+            if (done) return; done = true;
+            _updateUI('ok', 'Firebase 연결됨');
+            showToast('✅ Firebase 연결됨', 'success');
+            _loadAll().then(function(ok) { if (ok) renderCurrentPageIfNeeded(); });
+          };
+          var fail = function() {
+            if (done) return; done = true;
+            _updateUI('', 'Firebase 미연결');
+            showAlert('Firebase 재연결 실패', '아래 <b>새로고침</b> 버튼을 누른 뒤 Google 로그인을 다시 해주세요.<br><br><button onclick="location.reload()" style="padding:8px 16px;background:var(--primary-yellow);border:none;border-radius:6px;cursor:pointer;font-weight:600;">새로고침</button>');
+          };
+
+          // ① Firebase Auth 세션 자동 복원 시도
+          _auth.onAuthStateChanged(function(user) { if (user) succeed(); });
+
+          // ② Google One Tap으로 새 토큰 요청 (이미 로그인된 계정은 UI 없이 즉시 반환)
+          if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+            google.accounts.id.prompt(function(notification) {
+              // 팝업이 표시되지 않고 콜백이 안 오면 → onAuthStateChanged 또는 fail 대기
+            });
+          }
+
+          // ③ 3초 내 연결 안 되면 실패 처리
+          setTimeout(function() { if (!done) fail(); }, 3000);
         },
 
         disconnect: function(silent) {
@@ -9107,6 +9134,13 @@
     }
 
     // ========================================
+    // Firebase 연결 후 현재 페이지 재렌더
+    function renderCurrentPageIfNeeded() {
+      if (currentPage === 'daily' || currentPage === 'scheduleDetail') renderCurrentScheduleView();
+      else if (currentPage === 'habits') renderHabitsPage && renderHabitsPage();
+      else if (currentPage === 'work') renderWorkPage && renderWorkPage();
+    }
+
     // 데이터 관리 (마이그레이션 + Excel 내보내기)
     // ========================================
 
