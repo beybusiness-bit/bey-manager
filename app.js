@@ -5983,6 +5983,10 @@
         menuItems[4].classList.add('active');
         document.getElementById('settingsNotifySection').classList.add('active');
         renderNotifySettings();
+      } else if (sectionName === 'data' && menuItems[5]) {
+        menuItems[5].classList.add('active');
+        document.getElementById('settingsDataSection').classList.add('active');
+        setExportDateRange('all');
       }
 
       updateProfileDisplay();
@@ -9100,6 +9104,144 @@
       Notification.requestPermission().then(function(perm) {
         if (cb) cb(perm === 'granted');
       });
+    }
+
+    // ========================================
+    // 데이터 관리 (마이그레이션 + Excel 내보내기)
+    // ========================================
+
+    function runFirestoreMigration() {
+      if (!window.FS || !FS.isConnected()) {
+        showAlert('Firebase 미연결', 'Firebase에 먼저 연결해주세요.<br>사이드바 하단 <b>☁️ 연결</b> 버튼을 눌러주세요.');
+        return;
+      }
+      showConfirm('데이터 이전 확인', '현재 기기의 localStorage 데이터를 Firestore에 업로드합니다.<br><br>기존 Firestore 데이터는 <strong>덮어써집니다</strong>. 계속하시겠습니까?', function(confirmed) {
+        if (!confirmed) return;
+        FS.migrateFromLocal();
+      });
+    }
+
+    function setExportDateRange(type) {
+      var from = document.getElementById('exportDateFrom');
+      var to = document.getElementById('exportDateTo');
+      if (!from || !to) return;
+      var d = new Date();
+      var pad = function(n) { return String(n).padStart(2, '0'); };
+      var fmt = function(dt) { return dt.getFullYear() + '-' + pad(dt.getMonth()+1) + '-' + pad(dt.getDate()); };
+      to.value = fmt(d);
+      if (type === 'all') {
+        from.value = '2020-01-01';
+      } else if (type === 'month') {
+        from.value = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-01';
+      } else if (type === '3month') {
+        var t = new Date(d);
+        t.setMonth(t.getMonth() - 3);
+        from.value = fmt(t);
+      }
+    }
+
+    function exportToExcel() {
+      if (typeof XLSX === 'undefined') {
+        showAlert('라이브러리 미로드', 'SheetJS 라이브러리가 아직 로드되지 않았습니다. 잠시 후 다시 시도해주세요.');
+        return;
+      }
+      var fromVal = (document.getElementById('exportDateFrom') || {}).value || '';
+      var toVal = (document.getElementById('exportDateTo') || {}).value || '';
+      var inRange = function(dateStr) {
+        if (!dateStr) return true;
+        if (fromVal && dateStr < fromVal) return false;
+        if (toVal && dateStr > toVal) return false;
+        return true;
+      };
+      var wb = XLSX.utils.book_new();
+
+      if ((document.getElementById('exportChkWork') || {}).checked) {
+        var wRows = (workItems || []).filter(function(w) {
+          return inRange(w.date || w.createdAt || '');
+        }).map(function(w) {
+          return {
+            ID: w.id, 이모지: w.emoji || '', 제목: w.title || '',
+            날짜: w.date || '', 상태: w.status || '',
+            보너스: w.isBonus ? 'Y' : 'N', 메모: w.memo || '',
+            집중시간_초: w.focusTime || 0, 생성일: w.createdAt || ''
+          };
+        });
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(wRows), '할일');
+
+        var wLogRows = (workItemLogs || []).filter(function(l) {
+          return inRange(l.startedAt ? l.startedAt.slice(0,10) : '');
+        }).map(function(l) {
+          return {
+            ID: l.id, 할일ID: l.workItemId || '', 유형: l.type || '',
+            집중시간_초: l.duration || 0, 시작: l.startedAt || '', 종료: l.endedAt || ''
+          };
+        });
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(wLogRows), '할일_집중로그');
+      }
+
+      if ((document.getElementById('exportChkHabit') || {}).checked) {
+        var hRows = (habits || []).map(function(h) {
+          return {
+            ID: h.id, 이모지: h.emoji || '', 이름: h.name || '',
+            색상: h.color || '', 요일: (h.days || []).join(','), 생성일: h.createdAt || ''
+          };
+        });
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(hRows), '습관');
+
+        var hlRows = (habitLogs || []).filter(function(l) { return inRange(l.date || ''); })
+          .map(function(l) {
+            var h = (habits || []).find(function(x) { return x.id === l.habitId; }) || {};
+            return {
+              ID: l.id, 습관ID: l.habitId || '', 습관명: h.name || '',
+              날짜: l.date || '', 달성: l.done ? 'Y' : 'N', 메모: l.memo || ''
+            };
+          });
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(hlRows), '습관_로그');
+      }
+
+      if ((document.getElementById('exportChkPomo') || {}).checked) {
+        var pRows = (pomodoroLogs || []).filter(function(l) {
+          return inRange(l.startedAt ? l.startedAt.slice(0,10) : '');
+        }).map(function(l) {
+          var w = (workItems || []).find(function(x) { return x.id === l.linkedWorkId; }) || {};
+          return {
+            ID: l.id, 유형: l.type || '',
+            집중시간_초: l.duration || 0, 연결할일: w.title || '',
+            시작: l.startedAt || '', 종료: l.endedAt || ''
+          };
+        });
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pRows), '뽀모도로');
+      }
+
+      if ((document.getElementById('exportChkSchedule') || {}).checked) {
+        var sRows = (schedules || []).map(function(s) {
+          return {
+            ID: s.id, 이모지: s.emoji || '', 제목: s.title || '',
+            설명: s.description || '', 태그: (s.tags || []).join(','),
+            좋아요: s.isLiked ? 'Y' : 'N', 생성일: s.createdAt || '', 수정일: s.updatedAt || ''
+          };
+        });
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sRows), '시간표');
+
+        var siRows = (scheduleItems || []).map(function(i) {
+          var s = (schedules || []).find(function(x) { return x.id === i.scheduleId; }) || {};
+          var a = (activities || []).find(function(x) { return x.id === i.activityId; }) || {};
+          return {
+            ID: i.id, 시간표명: s.title || '', 일상명: a.name || '',
+            요일: (i.weekdays || []).join(','), 시작: i.startTime || '', 종료: i.endTime || ''
+          };
+        });
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(siRows), '시간표_일정');
+      }
+
+      if (wb.SheetNames.length === 0) {
+        showAlert('내보내기 실패', '내보낼 데이터 항목을 하나 이상 선택해주세요.');
+        return;
+      }
+
+      var suffix = (fromVal && toVal) ? ('_' + fromVal + '_' + toVal) : '_전체';
+      XLSX.writeFile(wb, '베이관리자' + suffix + '.xlsx');
+      showToast('✅ Excel 파일 다운로드 완료', 'success');
     }
 
     // ========================================
