@@ -3743,6 +3743,10 @@
               .catch(function(e) {
                 console.warn('[FS] Firebase 로그인 실패:', e);
                 _updateUI('err', '연결 실패');
+                var hint = '';
+                if (e.code === 'auth/operation-not-allowed') hint = '<br><br>💡 Firebase Console → Authentication → <b>Sign-in method → Google을 활성화</b>해주세요.';
+                else if (e.code === 'auth/unauthorized-domain') hint = '<br><br>💡 Firebase Console → Authentication → 설정 → <b>승인된 도메인에 현재 URL을 추가</b>해주세요.';
+                showAlert('Firebase 연결 실패 (' + (e.code || e.message) + ')', '오류: ' + (e.message || e.code) + hint);
                 if (onDone) { var cb = onDone; onDone = null; cb(false); }
               });
           } else {
