@@ -2456,6 +2456,10 @@
     }
 
     function saveCategories() {
+      if (!requireGS()) {
+        try { categories = JSON.parse(localStorage.getItem('categories') || '[]'); } catch(e) { categories = []; }
+        renderDailyPage(); return;
+      }
       localStorage.setItem('categories', JSON.stringify(categories));
       GS.syncSheets(['카테고리']);
     }
@@ -2808,6 +2812,10 @@
     }
 
     function saveActivities() {
+      if (!requireGS()) {
+        try { activities = JSON.parse(localStorage.getItem('activities') || '[]'); } catch(e) { activities = []; }
+        renderDailyPage(); return;
+      }
       localStorage.setItem('activities', JSON.stringify(activities));
       GS.syncSheets(['일상종류']);
     }
@@ -3542,6 +3550,11 @@
     }
 
     function saveSchedules() {
+      if (!requireGS()) {
+        try { schedules = JSON.parse(localStorage.getItem('schedules') || '[]'); } catch(e) { schedules = []; }
+        try { scheduleItems = JSON.parse(localStorage.getItem('scheduleItems') || '[]'); } catch(e) { scheduleItems = []; }
+        navigateTo('daily'); return;
+      }
       localStorage.setItem('schedules', JSON.stringify(schedules));
       localStorage.setItem('scheduleItems', JSON.stringify(scheduleItems));
       GS.syncSheets(['시간표', '시간표_일정']);
@@ -3557,6 +3570,7 @@
       var _tokenClient = null;
       var _syncing = false;
       var _pendingSyncNames = [];  // 싱크 중 들어온 요청을 큐에 쌓아 완료 후 재실행
+      var _refreshTimer = null;
       var BASE = 'https://sheets.googleapis.com/v4/spreadsheets/' + AUTH.SHEET_ID;
 
       var SHEETS_DEF = {
@@ -3607,6 +3621,16 @@
         var data = JSON.stringify({t: _token, e: _tokenExpiry});
         try { sessionStorage.setItem('_gs_tok', data); } catch(e) {}
         try { localStorage.setItem('_gs_tok', data); } catch(e) {}
+        // 만료 5분 전에 선제적으로 silent re-auth (같은 탭 세션 내 재접속 속도 개선)
+        if (_refreshTimer) clearTimeout(_refreshTimer);
+        var refreshIn = _tokenExpiry - Date.now() - 5 * 60 * 1000;
+        if (refreshIn > 0) {
+          _refreshTimer = setTimeout(function() {
+            _silentReauth().then(function(ok) {
+              if (ok) console.log('[GS] ✅ 토큰 선제 갱신 완료');
+            });
+          }, refreshIn);
+        }
       }
 
       function _loadTokenCache() {
@@ -4004,6 +4028,13 @@
         loadAll: function() { return _loadAll(); }
       };
     })();
+
+    // Sheets 연결 필수 체크 — 미연결 시 경고 모달 표시하고 false 반환
+    function requireGS(onConnect) {
+      if (window.GS && GS.isConnected()) { if (onConnect) onConnect(); return true; }
+      showAlert('Sheets 미연결', '데이터 보호를 위해 Sheets 연결이 필요합니다.<br>수정이 차단되었습니다.<br><br>사이드바 하단에서 <b>☁️ 연결</b> 버튼을 눌러 연결 후 다시 시도해주세요.');
+      return false;
+    }
 
     // 경량 토스트 알림
     var _toastTimer = null;
@@ -6559,6 +6590,10 @@
       if (!Array.isArray(habits)) habits = [];
     }
     function saveHabits() {
+      if (!requireGS()) {
+        try { habits = JSON.parse(localStorage.getItem('habits') || '[]'); } catch(e) { habits = []; }
+        renderHabitPage(); return;
+      }
       localStorage.setItem('habits', JSON.stringify(habits));
       if (window.GS && GS.isConnected()) GS.syncSheets(['습관']);
     }
@@ -6567,6 +6602,10 @@
       if (!Array.isArray(habitLogs)) habitLogs = [];
     }
     function saveHabitLogs() {
+      if (!requireGS()) {
+        try { habitLogs = JSON.parse(localStorage.getItem('habitLogs') || '[]'); } catch(e) { habitLogs = []; }
+        renderHabitPage(); return;
+      }
       localStorage.setItem('habitLogs', JSON.stringify(habitLogs));
       if (window.GS && GS.isConnected()) GS.syncSheets(['습관기록']);
     }
@@ -7466,6 +7505,10 @@
     }
 
     function saveWorkItems() {
+      if (!requireGS()) {
+        try { workItems = JSON.parse(localStorage.getItem('workItems') || '[]'); } catch(e) { workItems = []; }
+        renderWorkView(); return;
+      }
       localStorage.setItem('workItems', JSON.stringify(workItems));
       if (window.GS && GS.isConnected()) GS.syncSheets(['할일']);
     }
@@ -7572,6 +7615,8 @@
       if (item.isBonus) html += '<span style="font-size:10px;color:#fdcb6e;font-weight:700;">⭐ 보너스 </span>';
       html += '<div class="work-kanban-title' + (isDone ? ' done' : '') + '">' + escapeHtml(item.title) + '</div>';
       if (item.memo) html += '<div class="work-kanban-memo">' + escapeHtml(item.memo) + '</div>';
+      var _focusStr = formatFocusTime(item.focusTime);
+      if (_focusStr) html += '<div class="work-kanban-focus">⏱ ' + _focusStr + '</div>';
       html += '</div>';
       html += '</div>';
       /* 연결된 하위 할일 목록 */
