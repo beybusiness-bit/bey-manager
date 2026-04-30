@@ -7655,7 +7655,12 @@
     var _workModalBasketSelectedId = null;
 
     function openWorkItemModal(dateStr, isBonus, parentId) {
-      workItemDraft = { emoji: '📋', color: null, isBonus: !!isBonus, date: dateStr || null, parentId: parentId || null };
+      var parentEmoji = '📋';
+      if (parentId) {
+        var par = workItems.find(function(it) { return it.id === parentId; });
+        if (par && par.emoji) parentEmoji = par.emoji;
+      }
+      workItemDraft = { emoji: parentEmoji, color: null, isBonus: !!isBonus, date: dateStr || null, parentId: parentId || null };
       workItemEditId = null;
       _workModalBasketSelectedId = null;
       var modal = document.getElementById('workItemModal');
@@ -7664,7 +7669,7 @@
       document.getElementById('workItemModalTitle').textContent = titleText;
       var dateEl = document.getElementById('workItemDateDisplay');
       if (dateEl) dateEl.textContent = dateStr ? formatDateKR(dateStr) : '날짜 미정 (바구니)';
-      document.getElementById('workEmojiBtn').innerHTML = '📋';
+      document.getElementById('workEmojiBtn').innerHTML = parentEmoji;
       document.getElementById('workTitleInput').value = '';
       document.getElementById('workMemoInput').value = '';
       /* 상위 할일 표시 — 반드시 명시적으로 숨기거나 채움 */
