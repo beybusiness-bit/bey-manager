@@ -83,9 +83,9 @@ bey-manager/
 
 1. **CLAUDE.md 읽기** (자동으로 시스템 프롬프트에 포함됨)
 2. `git log -5 --oneline`으로 최근 커밋 확인
-3. `wc -l index.html`로 파일 라인 수 확인
-4. `grep "console.log('베이 관리자" index.html`로 현재 버전 확인
-5. CLAUDE.md의 **"10. 다음 세션 시작점"** 섹션을 읽고 이어서 작업
+3. `wc -l app.js styles.css index.html`으로 파일 라인 수 확인
+4. CLAUDE.md의 **"10. 다음 세션 시작점"** 섹션을 읽고 이어서 작업
+5. **GitHub 토큰은 절대 먼저 물어보지 말 것** — `.git/GITHUB_TOKEN`이 세션 간 유지됨. push 실패(401/403) 시에만 요청.
 
 ### 세션 마무리 루틴 (단계 완료 또는 사용자가 "마무리" 명시 시)
 
@@ -745,7 +745,7 @@ service cloud.firestore {
 ### ⚠️ 다음 세션 유의사항
 
 1. 세션 시작 시 `git log -3 --oneline` + `wc -l app.js styles.css index.html` + CLAUDE.md §10 정독
-2. `.git/GITHUB_TOKEN` 존재 여부 확인 → 없으면 토큰 요청
+2. `.git/GITHUB_TOKEN` 파일은 **세션 간 유지**되므로 시작 시 토큰을 물어보지 말 것. `cat .git/GITHUB_TOKEN`으로 존재 확인만. 실제 push 실패(401/403)가 났을 때만 토큰을 요청.
 3. 로컬 테스트: `python3 -m http.server 8000` (file:// CORS 불가)
 4. **대용량 코드 작성 시 턴 실패 방지**: 한 턴에 200줄 이상 쓰지 말고 단계로 나눠 진행
 5. 세션 컨텍스트 길어지면 새 세션에서 이어갈 것 (CLAUDE.md가 SSOT)
