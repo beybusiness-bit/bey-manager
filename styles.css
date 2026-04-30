@@ -3255,6 +3255,10 @@
     .work-hall-tab-count { display: inline-block; background: var(--primary-yellow, #ffde59); color: #1a1a1a; border-radius: 10px; padding: 0 6px; font-size: 11px; min-width: 16px; text-align: center; font-weight: 600; }
     .work-basket-tab { padding: 4px 0; }
     /* 바구니 컨트롤 행 */
+    .basket-quick-add-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .basket-quick-add-input { flex: 1; min-width: 0; height: 40px; padding: 8px 12px; font-size: 14px; }
+    .basket-quick-add-btn { flex-shrink: 0; width: 40px; height: 40px; border: none; border-radius: var(--button-radius, 8px); background: var(--primary-yellow); color: #000; font-size: 22px; font-weight: 700; line-height: 1; cursor: pointer; transition: opacity 0.15s; }
+    .basket-quick-add-btn:hover { opacity: 0.8; }
     .basket-controls-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: nowrap; }
     .basket-date-input { height: 36px; width: 140px; flex-shrink: 0; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: var(--button-radius, 8px); font-size: 13px; font-family: inherit; background: var(--bg-card); outline: none; }
     .basket-date-input:focus { border-color: var(--primary-yellow); }

@@ -8179,12 +8179,17 @@
         var html = '<div class="basket-controls-row">';
         html += '<input type="date" id="basketDateInput' + suffix + '" class="basket-date-input" value="' + todayVal + '">';
         html += '<button class="btn-confirm basket-assign-btn" onclick="basketAssignToDate(\'' + suffix + '\')">날짜에 추가</button>';
-        html += '<button class="basket-add-new-btn" onclick="openWorkItemModal(null, false)">+ 할일 추가</button>';
         html += '</div>';
         return html;
       }
 
       var html = '<div class="work-basket-tab">';
+
+      /* 빠른 추가 입력창 */
+      html += '<div class="basket-quick-add-row">';
+      html += '<input class="input-field basket-quick-add-input" id="basketQuickAddInput" placeholder="할일 제목 입력 후 Enter 또는 +" onkeydown="if(event.key===\'Enter\'){event.preventDefault();basketQuickAdd();}">';
+      html += '<button class="basket-quick-add-btn" onclick="basketQuickAdd()">+</button>';
+      html += '</div>';
 
       /* 검색/정렬 바 — 항상 표시 */
       html += '<div class="work-list-controls" style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">';
@@ -8199,7 +8204,6 @@
       var rawTotal = workItems.filter(function(it) { return !it.date; }).length;
       if (rawTotal === 0) {
         html += '<div class="work-empty-state"><div class="work-empty-icon">🧺</div><div class="work-empty-text">바구니가 비어있습니다</div></div>';
-        html += '<button class="basket-add-new-btn" style="margin-top:16px;width:100%;" onclick="openWorkItemModal(null, false)">+ 할일 추가</button>';
       } else {
         html += controlsRow('top');
 
@@ -8236,6 +8240,29 @@
       html += '</div>';
       c.innerHTML = html;
       if (rawTotal > 0) basketUpdateSelection();
+    }
+
+    function basketQuickAdd() {
+      var inp = document.getElementById('basketQuickAddInput');
+      if (!inp) return;
+      var title = inp.value.trim();
+      if (!title) { inp.focus(); return; }
+      var newItem = {
+        id: 'w' + Date.now() + Math.random().toString(36).slice(2, 7),
+        emoji: '📋', color: '', title: title,
+        date: null, status: 'pending', completed: false,
+        isBonus: false, memo: '', parentId: null,
+        createdAt: new Date().toISOString()
+      };
+      workItems.push(newItem);
+      saveWorkItems();
+      logWorkEvent('created', newItem, '', 'basket');
+      showToast('🧺 바구니에 추가했습니다');
+      inp.value = '';
+      renderWorkBasketTab();
+      /* 재렌더 후 입력창에 포커스 유지 */
+      var newInp = document.getElementById('basketQuickAddInput');
+      if (newInp) newInp.focus();
     }
 
     function basketSetSearch(val) {
