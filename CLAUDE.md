@@ -634,32 +634,34 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 
 ## 10. 다음 세션 시작점
 
-> **마지막 세션: 2026-04-28**
-> **방향**: 뽀모도로 + 일 페이지 추가 기능 패치 완료. 세션 마무리.
+> **마지막 세션: 2026-04-30**
+> **방향**: 버그 패치 + UX 개선 연속 작업. 세션 마무리.
 
 ### 🔄 현재 진행 상태
 
-- **작업 브랜치**: `claude/work-items-page-setup-d8f19` (main에 머지·배포 완료)
-- **마지막 커밋**: `4d19bcb feat: 할일 상세 모달에 바구니로/날짜이동 버튼, 알림 설정 문구 명확화`
-- **파일 라인 수**: app.js 9,065줄 / styles.css 3,472줄 / index.html 981줄
+- **작업 브랜치**: `claude/fix-task-action-buttons-b7yso` (main에 머지·배포 완료)
+- **마지막 커밋**: `75bd8c2 fix: PiP mini 뷰 - 뷰전환 텍스트 제거, ≡ SVG 위 오버레이로 이동, 창 크기 최소화`
+- **파일 라인 수**: app.js 9,280줄 / styles.css 3,473줄 / index.html 982줄
 
 ### ✅ 이번 세션에서 완료한 작업
 
-1. **할일 모달 버그 3종 수정** — 바구니 추가 시 탭 숨김, 연결할일 레이블 잔상 제거, 이전 상태 이월 버그 수정 (openBasketNewItem 제거, openWorkItemModal로 통일)
-2. **SW 캐시 버전 bump** — `bey-v2` → `bey-v3` (PWA 강제 갱신)
-3. **syncSheets 경쟁 조건 수정** — DROP → QUEUE 패턴: 동시 저장 시 두 번째 요청이 사라지던 버그 수정 (`_pendingSyncNames` 큐)
-4. **Document PiP 타이머 (데스크탑)** — Chrome 116+ 플로팅 팝업 창, 3가지 뷰 모드 (full/line/mini), 키컬러 CSS 변수 연동
-5. **미디어 세션 완전 제거** — 사일런트 WAV, `_updateMediaSession` 등 관련 코드 전부 삭제
-6. **뽀모도로 할일 필터** — `in-progress` 상태 할일만 연결 가능하도록 제한
-7. **내일 마저 하기 / 오늘 다시 하기 버튼** — 일 페이지 통계 바 → 할일 상세 모달로 이동. 각 할일별 개별 이동 지원 (`moveDetailItemToBasket`, `moveDetailItemToDate`)
-8. **할일 수정 날짜 변경** — 수정 모달에 날짜 필드 추가, 날짜 변경 시 `date_changed` 이벤트 로깅, 날짜 지우면 바구니로
-9. **로그인 세션 영구 유지** — `sessionStorage` → `localStorage` 변경 (재접속 시 자동 복구)
-10. **모바일 뽀모도로 전체화면** — 모바일(768px 이하)에서 ⛶ 버튼 클릭 시 CSS 전체화면 토글 (`pomo-fullscreen` 클래스)
-11. **알림 설정 문구 명확화** — 뽀모도로 알림(탭 열릴 때만)과 커스텀 알림(FCM, 앱 꺼져도 수신)을 별도 문구로 구분
+1. **할일 바구니로/날짜이동 버튼 즉시 갱신** — `closeWorkItemDetail()` TypeError 수정 (함수명 오류)
+2. **일 탭 카운트 배지 즉시 갱신** — `_updateWorkTabCounts()` 추가, `renderWorkView()` 끝에서 호출
+3. **드래그로 완료 이동 시 타이머 미일시정지 수정** — `workDrop`이 직접 status 수정하던 것을 `setWorkItemStatus` 위임으로 변경
+4. **타이머 할일 드롭다운 실시간 갱신** — `renderWorkView()` 끝에서 `refreshPomodoroTaskList()` 호출
+5. **연결 할일 완료 시 타이머 자동 연결 해제** — `refreshPomodoroTaskList()`에서 in-progress 아닌 할일 자동 disconnect
+6. **PiP 최소화 뷰 전면 개선** — 이모지 클릭=토글, 호버=▶/⏸ 오버레이, 뷰 전환 버튼, 이모지 로직(집중=할일이모지, 휴식=☕/🌙)
+7. **알림 차단 버그 수정** — `sendNotification`의 `pomodoroEnabled` 잘못된 조건 제거 → 모든 알림 정상 발송
+8. **모바일 Sheets silent 자동연결** — Safari/iOS에서 `prompt:'none'`으로 팝업 없이 자동 재연결 시도
+9. **모바일 할일 상태 변경** — 상세 모달에 시작전/진행중/완료 3버튼 추가 (드래그 대체)
+10. **보너스 할일 날짜이동 시 일반할일 전환** — `moveDetailItemToDate`에서 parentId 없는 보너스는 `isBonus=false`
+11. **사이드바 🔄 업데이트 버튼** — SW 캐시 삭제 후 강제 새로고침 (`forceUpdate()`)
+12. **PiP mini 뷰 ≡ 오버레이** — 뷰전환 텍스트 제거, SVG 위 절대위치 오버레이로 이동
 
 ### 🎯 다음 단계 후보 (베이님 결정 대기)
 
 - **Firebase 재배포**: 커스텀 알림 FCM 작동을 위해 Mac에서 `cd ~/Desktop/bey-manager/functions && firebase deploy --only functions` 실행 필요
+- **PiP mini 뷰 이모지 더블클릭 = 뷰 전환**: ≡ 버튼 없애고 더블클릭으로 대체 (원하면 적용)
 - **테스트 파일 정리**: `habit-test-data.html`, `test-data.html` 삭제 (베이님 테스트 완료 후)
 - 추가 기능은 베이님이 다음 세션에서 선택
 
@@ -854,6 +856,25 @@ sh /home/user/bey-manager/.git/push.sh origin main
 - 한 페이지의 탭 전환 함수가 다른 페이지 탭 상태를 실수로 건드려서 "어제는 잘 되던 일상 탭이 오늘 설정 페이지 만들고 나니 깨짐" 같은 버그 발생 가능.
 - **해결**: 함수마다 페이지 ID로 스코프 제한. 예: `document.querySelectorAll('#dailyPage .tab-btn')`, `document.querySelectorAll('#settingsPage .tab-content')`.
 - 교훈: 공유 클래스 + 페이지 컨테이너 ID 조합은 CSS 모듈화 없이도 충돌을 막는 가장 단순한 패턴.
+
+### DnD 상태 변경은 반드시 setWorkItemStatus를 거쳐야 함 (2026-04-30 교훈)
+- `workDrop`에서 컬럼 간 이동 시 `item.status = targetStatus` 직접 수정하면, 그 위에 쌓인 비즈니스 로직(뽀모도로 연동, 보너스 잠금 체크 등)이 모두 우회됨
+- **해결**: 상태 변경이 필요한 모든 경로에서 `setWorkItemStatus(id, newStatus)` 단일 진입점 사용
+- 교훈: status 변경 로직이 한 곳에 있어야 파생 효과(타이머 일시정지, 토스트 등)를 빠뜨리지 않는다
+
+### sendNotification 가드 조건 오류 패턴 (2026-04-30 교훈)
+- `notificationSettings.pomodoroEnabled` 키가 존재하지 않아 항상 undefined(falsy) → 함수가 항상 early return
+- 버그가 조용히 실패(silent failure)해서 알림이 안 오는 이유를 찾기 어려웠음
+- **해결**: 가드 조건을 제거하고, 각 호출부에서 이미 설정 체크를 하므로 중복 가드 불필요
+- 교훈: 새 설정 키를 추가할 때 초기화 코드(loadNotificationSettings 등)에 반드시 해당 키도 추가할 것
+
+### Document PiP 창 최소 크기는 Chrome이 강제함 (2026-04-30 교훈)
+- `requestWindow({ width: 44, height: 44 })` 요청해도 Chrome이 최소 약 100~120px로 강제 확장
+- 타이틀바 버튼(커스텀) 추가 불가 — 파비콘+도메인+닫기 버튼 고정
+- **대안**: 콘텐츠를 `fit-content`로 설계하고, 여분 공간은 `#1a1a1a` 배경으로 자연스럽게 처리
+- 뷰 전환은 이모지 더블클릭 등 콘텐츠 내 제스처로 해결하는 것이 최선
+
+**마지막 업데이트**: 2026-04-30 · main 배포 완료(`75bd8c2`) · 파일 app.js 9,280줄 / styles.css 3,473줄 / index.html 982줄
 
 ---
 
