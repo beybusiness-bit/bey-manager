@@ -15,7 +15,7 @@
 
 ```javascript
 const AUTH = {
-  GOOGLE_CLIENT_ID: '849320781553-88an8e0iu083iki1juaqt4k8a3ekdq2i.apps.googleusercontent.com',
+  GOOGLE_CLIENT_ID: '27055656717-5e6n898lk22dhjf5mn82hk7q1q25u8vm.apps.googleusercontent.com',
   SHEET_ID: '1cMy2OVO69IfAqIahlyrJNCQUZDuqo1e_3ZM9BomkOXI',
   USER_EMAIL: 'baekeun0@gmail.com',  // ⚠️ 향후 ALLOWED_EMAILS 배열로 리팩토링 예정 (15단계 이후)
 };
@@ -24,7 +24,7 @@ const AUTH = {
 **향후 리팩토링 후 목표 구조:**
 ```javascript
 const AUTH = {
-  GOOGLE_CLIENT_ID: '849320781553-88an8e0iu083iki1juaqt4k8a3ekdq2i.apps.googleusercontent.com',
+  GOOGLE_CLIENT_ID: '27055656717-5e6n898lk22dhjf5mn82hk7q1q25u8vm.apps.googleusercontent.com',
   SHEET_ID: '1cMy2OVO69IfAqIahlyrJNCQUZDuqo1e_3ZM9BomkOXI',
   ALLOWED_EMAILS: ['baekeun0@gmail.com'],  // 추가 계정은 여기에만 넣으면 됨
 };
