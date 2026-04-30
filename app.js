@@ -3,7 +3,7 @@
     // ========================================
     const AUTH = {
       // Google Cloud Console에서 발급받은 OAuth 2.0 클라이언트 ID로 교체
-      GOOGLE_CLIENT_ID: '27055656717-5e6n898lk22dhjf5mn82hk7q1q25u8vm.apps.googleusercontent.com',
+      GOOGLE_CLIENT_ID: '849320781553-88an8e0iu083iki1juaqt4k8a3ekdq2i.apps.googleusercontent.com',
       SHEET_ID: '1cMy2OVO69IfAqIahlyrJNCQUZDuqo1e_3ZM9BomkOXI',
       USER_EMAIL: 'baekeun0@gmail.com',
     };
