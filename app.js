@@ -3763,6 +3763,23 @@
       };
     })();
 
+    // Firebase 앱 즉시 초기화 (로그인 버튼 클릭 전에 준비되어야 함)
+    (function() {
+      if (!window.firebase) return;
+      try {
+        if (!firebase.apps || !firebase.apps.length) {
+          firebase.initializeApp({
+            apiKey: "AIzaSyC8uy09XOeEYIs1m3Rga5BMqd7gS7o3roI",
+            authDomain: "beyhome-admin.firebaseapp.com",
+            projectId: "beyhome-admin",
+            storageBucket: "beyhome-admin.firebasestorage.app",
+            messagingSenderId: "849320781553",
+            appId: "1:849320781553:web:5a78f9c2bd936b60aa2b50"
+          });
+        }
+      } catch(e) { console.warn('[Firebase] 즉시 초기화 실패:', e); }
+    })();
+
     // Firebase 연결 필수 체크 — 미연결 시 경고 모달 표시하고 false 반환
     function requireFS(onConnect) {
       if (window.FS && FS.isConnected()) { if (onConnect) onConnect(); return true; }
