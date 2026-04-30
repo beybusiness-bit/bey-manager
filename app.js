@@ -1620,6 +1620,9 @@
           localStorage.removeItem('currentUser');
         }
       }
+      // 로그인 필요 — loginContainer 표시
+      var lc = document.getElementById('loginContainer');
+      if (lc) lc.style.display = 'flex';
     }
 
     // ========================================
@@ -3756,8 +3759,15 @@
           _updateUI('sync', '마이그레이션 중...');
           try {
             await Promise.all(Object.keys(_DOC).map(function(n) { return _writeDoc(n, _DOC[n]()); }));
-            showToast('✅ 데이터 마이그레이션 완료', 'success');
             _updateUI('ok', 'Firebase 연결됨');
+            // Firestore에서 다시 로드 후 전체 재렌더
+            var loaded = await _loadAll();
+            if (loaded) {
+              renderCurrentPageIfNeeded();
+              showToast('✅ 마이그레이션 완료 — 데이터를 불러왔습니다', 'success');
+            } else {
+              showToast('✅ Firestore 저장 완료 (새로고침하면 반영됩니다)', 'success');
+            }
           } catch(e) { showAlert('마이그레이션 실패', e.message); _updateUI('err', '오류'); }
         }
       };
