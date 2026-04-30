@@ -5994,6 +5994,8 @@
           statusEl.style.color = 'var(--text-secondary)';
         }
       }
+      /* FCM 토큰 상태 */
+      renderFCMStatus();
       /* 뽀모도로 알림 체크박스 */
       var we = document.getElementById('pomoNotifyWorkEnd');
       if (we) we.checked = pomodoroSettings.notifyWorkEnd;
@@ -6001,6 +6003,51 @@
       if (be) be.checked = pomodoroSettings.notifyBreakEnd;
       /* 커스텀 알림 목록 */
       renderCustomNotifyList();
+    }
+
+    function renderFCMStatus() {
+      var el = document.getElementById('fcmTokenStatus');
+      if (!el) return;
+      if (!('serviceWorker' in navigator)) {
+        el.textContent = '❌ 서비스 워커 미지원 브라우저';
+        el.style.color = '#e53e3e';
+        return;
+      }
+      if (Notification.permission !== 'granted') {
+        el.textContent = '⚠️ 브라우저 알림 권한이 필요합니다';
+        el.style.color = 'var(--text-secondary)';
+        return;
+      }
+      if (_fcmToken) {
+        el.textContent = '✅ FCM 등록됨 (토큰: ' + _fcmToken.slice(0, 12) + '...)';
+        el.style.color = '#56cfb2';
+      } else {
+        el.textContent = '⚠️ FCM 미등록 — 아래 버튼으로 등록하세요';
+        el.style.color = '#e8a838';
+      }
+    }
+
+    function registerFCMTokenAndRefresh() {
+      if (Notification.permission !== 'granted') {
+        requestNotificationPermission(function(granted) {
+          if (granted) { registerFCMTokenAndRefresh(); }
+          else { showAlert('권한 필요', '먼저 브라우저 알림을 허용해 주세요.'); }
+        });
+        return;
+      }
+      var el = document.getElementById('fcmTokenStatus');
+      if (el) { el.textContent = '⏳ 등록 중...'; el.style.color = 'var(--text-secondary)'; }
+      registerFCMToken(function(ok) {
+        renderFCMStatus();
+        if (ok) showToast('✅ FCM 등록 완료');
+        else showToast('❌ FCM 등록 실패 — 콘솔 확인');
+      });
+    }
+
+    function toggleFCMDeployGuide() {
+      var el = document.getElementById('fcmDeployStatus');
+      if (!el) return;
+      el.style.display = el.style.display === 'none' ? '' : 'none';
     }
 
     function updatePomodoroSetting(key, val) {
@@ -9024,26 +9071,35 @@
       }
     }
 
-    function registerFCMToken() {
-      if (typeof firebase === 'undefined' || !('serviceWorker' in navigator)) return;
+    function registerFCMToken(cb) {
+      if (typeof firebase === 'undefined' || !('serviceWorker' in navigator)) {
+        if (cb) cb(false);
+        return;
+      }
       _initFirebase();
       navigator.serviceWorker.ready.then(function(reg) {
         return firebase.messaging().getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: reg });
       }).then(function(token) {
-        if (!token) return;
+        if (!token) { if (cb) cb(false); return; }
         _fcmToken = token;
         var deviceId = _getDeviceId();
         var update = { updatedAt: new Date().toISOString() };
         update['tokens.' + deviceId] = token;
         firebase.firestore().collection('bey-manager').doc('config').set(update, { merge: true }).catch(function() {});
         syncFCMSchedules();
-        /* 앱이 열려있을 때 수신한 FCM 메시지 → 기존 sendNotification으로 처리 */
-        firebase.messaging().onMessage(function(payload) {
-          var t = payload.notification && payload.notification.title || '베이 관리자';
-          var b = payload.notification && payload.notification.body || '';
-          new Notification(t, { body: b, icon: './icon-192.png' });
-        });
-      }).catch(function() {});
+        /* 앱이 열려있을 때 수신한 FCM 메시지 → OS 알림으로 표시 */
+        try {
+          firebase.messaging().onMessage(function(payload) {
+            var t = (payload.notification && payload.notification.title) || '베이 관리자';
+            var b = (payload.notification && payload.notification.body) || '';
+            new Notification(t, { body: b, icon: './icon-192.png' });
+          });
+        } catch(e) {}
+        if (cb) cb(true);
+      }).catch(function(e) {
+        console.warn('[FCM] 토큰 발급 실패:', e);
+        if (cb) cb(false);
+      });
     }
 
     function syncFCMSchedules() {

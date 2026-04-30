@@ -716,7 +716,24 @@
               <button class="btn-cancel" style="padding:7px 16px;font-size:13px;" onclick="requestNotifyPermission()">알림 허용 요청</button>
             </div>
             <p style="font-size:12px;color:var(--text-secondary);margin-top:8px;">⏱ <strong>뽀모도로 알림</strong>은 이 권한을 사용합니다. 브라우저 탭이 열려 있을 때만 작동합니다.</p>
-            <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">🔔 <strong>커스텀 알림</strong>은 Firebase를 통해 전송되므로 앱이 닫혀 있어도 모바일·데스크탑 모두 수신됩니다. (Firebase 배포 완료 후 작동)</p>
+          </div>
+
+          <!-- FCM 백그라운드 알림 -->
+          <div class="design-group" style="margin-bottom:24px;">
+            <h4 style="font-size:15px;margin-bottom:12px;">📱 백그라운드 알림 (FCM) <span style="font-size:11px;font-weight:400;color:var(--text-secondary);">— 앱 꺼져도 수신</span></h4>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+              <span id="fcmTokenStatus" style="font-size:13px;color:var(--text-secondary);">확인 중...</span>
+              <button class="btn-cancel" style="padding:7px 16px;font-size:13px;" onclick="registerFCMTokenAndRefresh()">FCM 등록 / 재등록</button>
+            </div>
+            <div id="fcmDeployStatus" style="margin-top:8px;padding:10px 12px;background:var(--card-bg,#f9f9f9);border-radius:8px;border:1px solid var(--border-color);display:none;">
+              <p style="font-size:12px;font-weight:600;margin:0 0 6px;">🛠 Cloud Functions 배포 방법 (Mac 터미널에서 한 번만)</p>
+              <pre style="font-size:11px;background:#1a1a1a;color:#c8f5a0;padding:10px;border-radius:6px;overflow-x:auto;margin:0;line-height:1.7;">npm install -g firebase-tools
+firebase login
+cd bey-manager/functions &amp;&amp; npm install
+firebase deploy --only functions</pre>
+              <p style="font-size:11px;color:var(--text-secondary);margin:6px 0 0;">배포하면 커스텀 알림이 앱이 닫혀 있을 때도 전송됩니다. (Blaze 플랜 필요 — 실사용량은 무료 한도 내)</p>
+            </div>
+            <button class="btn-cancel" style="padding:5px 12px;font-size:12px;margin-top:8px;" onclick="toggleFCMDeployGuide()">배포 방법 보기</button>
           </div>
 
           <!-- 뽀모도로 알림 -->
