@@ -466,7 +466,7 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 
 ### Phase 6: 리팩토링 (후순위 / 잠정 중단)
 - [ ] R1단계: `USER_EMAIL` → `ALLOWED_EMAILS` 배열로 리팩토링 ⏸ 잠정 중단
-- [ ] R2단계: localStorage → Google Sheets 연동 ⏸ 잠정 중단
+- [x] R2단계: localStorage → **Firebase Firestore** 연동 ✅ (2026-05-01) — GS 객체 완전 제거, FS 객체로 교체
 - [x] R3단계: 파일 분할 ✅ (2026-04-25) — index.html(682줄) + styles.css(2,834줄) + app.js(5,824줄)
 
 ### Phase 7: 뽀모도로 + 알림 (신규, 진행 예정)
@@ -484,14 +484,50 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 
 ---
 
-## 8. DB 구조 (Sheets 시트 구성)
+## 8. DB 구조 (Firebase Firestore)
 
-> **현재 Sheets 연동 완료.** localStorage + Sheets 동시 저장, 로드 시 Sheets 우선.
+> **현재 Firestore 연동 완료.** localStorage + Firestore 동시 저장, 로드 시 Firestore 우선.
+> Google Sheets는 완전히 제거됨.
 
-### 시트1: 카테고리
+### Firebase 프로젝트 정보
+- **프로젝트 표시명**: bey-apps
+- **프로젝트 ID**: beyhome-admin
+- **Firestore 컬렉션**: `bey-manager`
+
+### Firestore 문서 구조 (`bey-manager` 컬렉션)
+
+| 문서명 | 내용 |
+|--------|------|
+| `workItems` | `{ items: [...workItems], _updatedAt }` |
+| `habits` | `{ habits: [...habits], _updatedAt }` |
+| `habitLogs` | `{ logs: [...habitLogs], _updatedAt }` |
+| `schedules` | `{ schedules: [...], scheduleItems: [...], _updatedAt }` |
+| `categories` | `{ categories: [...], activities: [...], _updatedAt }` |
+| `settings` | `{ designSettings, menus, profileQuote, profilePhoto, myEmojis, tagColorOverrides, pomodoroSettings, notificationSettings, favoritePages, _updatedAt }` |
+| `pomodoroLogs` | `{ logs: [...pomodoroLogs], _updatedAt }` |
+| `workItemLogs` | `{ logs: [...workItemLogs], _updatedAt }` |
+| `config` | 기존 FCM 토큰 (건드리지 않음) |
+
+### Firestore 보안 규칙 (Firebase Console에서 설정 필요)
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email == 'baekeun0@gmail.com';
+    }
+  }
+}
+```
+
+### Firebase Auth 승인 도메인 (Firebase Console → Authentication → 설정)
+- `beybusiness-bit.github.io` 추가 필요
+
+### 구(舊) 시트1: 카테고리 (참고용 — 이제 Firestore 사용)
 - 헤더: `id, emoji, name, active, createdAt`
 
-### 시트2: 일상종류
+### 구(舊) 시트2: 일상종류 (참고용)
 - 헤더: `id, categoryId, emoji, name, color, active, createdAt`
 - `color`: 대표 색상 (기본 `#ffde59`)
 
@@ -634,36 +670,60 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 
 ## 10. 다음 세션 시작점
 
-> **마지막 세션: 2026-04-30**
-> **방향**: 버그 패치 + UX 개선 연속 작업. 세션 마무리.
+> **마지막 세션: 2026-05-01**
+> **방향**: Firebase 연동 검증 → 데이터 마이그레이션 버튼 → Excel 내보내기 기능
 
 ### 🔄 현재 진행 상태
 
-- **작업 브랜치**: `claude/fix-task-action-buttons-b7yso` (main에 머지·배포 완료)
-- **마지막 커밋**: `75bd8c2 fix: PiP mini 뷰 - 뷰전환 텍스트 제거, ≡ SVG 위 오버레이로 이동, 창 크기 최소화`
-- **파일 라인 수**: app.js 9,280줄 / styles.css 3,473줄 / index.html 982줄
+- **작업 브랜치**: `claude/focus-time-sheet-connection-NSJRn` (main에 머지·배포 완료)
+- **마지막 커밋**: `a2f1820 feat: Google Sheets → Firebase Firestore 마이그레이션`
+- **파일 라인 수**: app.js 9,109줄 / styles.css 3,474줄 / index.html 983줄
 
 ### ✅ 이번 세션에서 완료한 작업
 
-1. **할일 바구니로/날짜이동 버튼 즉시 갱신** — `closeWorkItemDetail()` TypeError 수정 (함수명 오류)
-2. **일 탭 카운트 배지 즉시 갱신** — `_updateWorkTabCounts()` 추가, `renderWorkView()` 끝에서 호출
-3. **드래그로 완료 이동 시 타이머 미일시정지 수정** — `workDrop`이 직접 status 수정하던 것을 `setWorkItemStatus` 위임으로 변경
-4. **타이머 할일 드롭다운 실시간 갱신** — `renderWorkView()` 끝에서 `refreshPomodoroTaskList()` 호출
-5. **연결 할일 완료 시 타이머 자동 연결 해제** — `refreshPomodoroTaskList()`에서 in-progress 아닌 할일 자동 disconnect
-6. **PiP 최소화 뷰 전면 개선** — 이모지 클릭=토글, 호버=▶/⏸ 오버레이, 뷰 전환 버튼, 이모지 로직(집중=할일이모지, 휴식=☕/🌙)
-7. **알림 차단 버그 수정** — `sendNotification`의 `pomodoroEnabled` 잘못된 조건 제거 → 모든 알림 정상 발송
-8. **모바일 Sheets silent 자동연결** — Safari/iOS에서 `prompt:'none'`으로 팝업 없이 자동 재연결 시도
-9. **모바일 할일 상태 변경** — 상세 모달에 시작전/진행중/완료 3버튼 추가 (드래그 대체)
-10. **보너스 할일 날짜이동 시 일반할일 전환** — `moveDetailItemToDate`에서 parentId 없는 보너스는 `isBonus=false`
-11. **사이드바 🔄 업데이트 버튼** — SW 캐시 삭제 후 강제 새로고침 (`forceUpdate()`)
-12. **PiP mini 뷰 ≡ 오버레이** — 뷰전환 텍스트 제거, SVG 위 절대위치 오버레이로 이동
+1. **할일 카드 집중 시간 표시** — `renderWorkKanbanCard`에 `⏱ X시간 Y분` 표시 추가 (focusTime > 0일 때만)
+2. **Firebase 미연결 시 수정 차단** — `requireFS()` 헬퍼 추가, saveWorkItems/saveHabits/saveHabitLogs/saveSchedules/saveCategories/saveActivities에 적용. 미연결 시 경고 모달 + localStorage 원복 + 재렌더.
+3. **Sheets 토큰 선제 갱신** — `_saveTokenCache`에 만료 5분 전 silent re-auth 타이머 추가 (이 코드는 이제 FS로 대체되었으므로 기록용)
+4. **Google Sheets → Firebase Firestore 전면 마이그레이션**:
+   - GS 객체(~460줄) 완전 제거 → FS 객체(~220줄)로 교체
+   - Firebase Auth 연동: Google ID 토큰 → `signInWithCredential()` → 세션 자동 유지 (토큰 만료 없음)
+   - `FS.sync(['할일'])` 등으로 Firestore 문서 단위 저장
+   - `FS.loadAll()` — 8개 문서 병렬 읽기
+   - `FS.migrateFromLocal()` — localStorage → Firestore 일괄 마이그레이션 (코드 구현 완료, UI 버튼 미추가)
+   - `firebase-auth-compat.js` SDK 추가
+   - 사이드바 버튼 `GS.connect/disconnect` → `FS.connect/disconnect`
+   - 모든 `GS.syncSheets(` → `FS.sync(` (18곳), `requireGS` → `requireFS` (6곳) 교체
 
-### 🎯 다음 단계 후보 (베이님 결정 대기)
+### ⚠️ 다음 세션 시작 전 베이님이 해야 할 일 (Firebase Console)
 
-- **Firebase 재배포**: 커스텀 알림 FCM 작동을 위해 Mac에서 `cd ~/Desktop/bey-manager/functions && firebase deploy --only functions` 실행 필요
-- **PiP mini 뷰 이모지 더블클릭 = 뷰 전환**: ≡ 버튼 없애고 더블클릭으로 대체 (원하면 적용)
-- **테스트 파일 정리**: `habit-test-data.html`, `test-data.html` 삭제 (베이님 테스트 완료 후)
-- 추가 기능은 베이님이 다음 세션에서 선택
+**1. Firestore 보안 규칙 설정**
+> Firebase Console → beyhome-admin 프로젝트 → Firestore Database → **규칙** 탭
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email == 'baekeun0@gmail.com';
+    }
+  }
+}
+```
+→ **게시** 버튼 클릭
+
+**2. Firebase Auth 승인 도메인 추가**
+> Firebase Console → Authentication → **설정** 탭 → 승인된 도메인 → **도메인 추가**
+```
+beybusiness-bit.github.io
+```
+
+### 🎯 다음 세션 작업 목록
+
+1. **Firebase 연결 동작 확인** — 배포 URL에서 로그인 후 사이드바 "Firebase 연결됨" 표시 확인
+2. **데이터 마이그레이션 버튼 추가** — 설정 페이지에 "기존 데이터 → Firestore 이전" 버튼 (`FS.migrateFromLocal()` 호출, 이미 코드는 완성됨)
+3. **Excel 데이터 내보내기** — 기간 선택(날짜 피커) + SheetJS로 .xlsx 다운로드 (할일/습관/뽀모도로 등 탭별)
+4. 이후: FCM 푸시 알림 연동 (Mac에서 `firebase deploy --only functions` 필요)
 
 ### 🗄️ 아카이브: 구(舊) 설계 우선순위 (참고 보관용, 재개 가능)
 
@@ -874,7 +934,17 @@ sh /home/user/bey-manager/.git/push.sh origin main
 - **대안**: 콘텐츠를 `fit-content`로 설계하고, 여분 공간은 `#1a1a1a` 배경으로 자연스럽게 처리
 - 뷰 전환은 이모지 더블클릭 등 콘텐츠 내 제스처로 해결하는 것이 최선
 
-**마지막 업데이트**: 2026-04-30 · main 배포 완료(`75bd8c2`) · 파일 app.js 9,280줄 / styles.css 3,473줄 / index.html 982줄
+### Firebase Auth는 GSI보다 세션 유지가 훨씬 강력 (2026-05-01 교훈)
+- Google Sheets 연동 시 OAuth implicit token은 1시간마다 만료 → 매번 재연결 불편
+- Firebase Auth는 IndexedDB에 세션을 영구 저장 → 앱 재시작해도 자동 복원, 토큰 만료 없음
+- `FS.init(null, callback)` 호출 시 `onAuthStateChanged`가 2초 내 자동 복원
+- GSI ID 토큰(`response.credential`)을 `GoogleAuthProvider.credential(idToken)`으로 변환해 `signInWithCredential()` 사용
+
+### GS→FS 마이그레이션 시 주의: `syncSheets`의 전체 교체 (2026-05-01 교훈)
+- GS에는 `GS.syncSheets()` (인자 없음)로 전체 sync하는 호출이 있었음 → FS.sync()에도 `names` 없을 때 전체 문서 sync 처리 필요
+- `window.GS && GS.isConnected()` 패턴이 두 부분(`window.GS`와 `GS.isConnected()`)으로 나뉘어 있어 일부 치환이 누락됨 → Python replace로 정확히 잡아야 함
+
+**마지막 업데이트**: 2026-05-01 · main 배포 완료(`a2f1820`) · 파일 app.js 9,109줄 / styles.css 3,474줄 / index.html 983줄
 
 ---
 
