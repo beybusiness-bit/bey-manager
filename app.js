@@ -1602,18 +1602,7 @@
           }
         }
         if (currentUser && currentUser.email === AUTH.USER_EMAIL) {
-          showApp();
-          // 세션 복원 시 Firebase Auth 자동 복원 대기
-          if (window.firebase && firebase.auth) {
-            var _unsubscribe = firebase.auth().onAuthStateChanged(function(user) {
-              _unsubscribe();
-              if (user) {
-                FS.loadAll().then(function(loaded) { if (loaded) renderCurrentScheduleView(); });
-              } else {
-                _updateFSUI && _updateFSUI('', 'Firebase 미연결');
-              }
-            });
-          }
+          showApp(); /* initializeApp() → FS.init() → onAuthStateChanged 에서 세션 복원 처리 */
           return;
         } else {
           localStorage.removeItem('isLoggedIn');
@@ -3695,9 +3684,18 @@
         init: function() {
           // signInWithPopup 방식으로 전환됨 — 이 함수는 onAuthStateChanged 리스너 등록만 수행
           if (!_initFirebase()) { _updateUI('err', 'Firebase 없음'); return; }
+          /* 명시적 LOCAL 영속성 설정 (iOS Safari 재접속 후 세션 유지 강화) */
+          try { _auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); } catch(e) {}
+          /* 초기 상태를 "연결 확인 중..."으로 표시해 false "미연결" 깜빡임 방지 */
+          _updateUI('sync', '연결 확인 중...');
           _auth.onAuthStateChanged(function(user) {
-            if (user) { _updateUI('ok', 'Firebase 연결됨'); }
-            else { _updateUI('', 'Firebase 미연결'); }
+            if (user) {
+              _updateUI('ok', 'Firebase 연결됨');
+              /* 세션 자동 복원 시 Firestore에서 최신 데이터 로드 */
+              _loadAll().then(function(ok) { if (ok) renderCurrentPageIfNeeded(); });
+            } else {
+              _updateUI('', 'Firebase 미연결');
+            }
           });
         },
 
@@ -7714,8 +7712,6 @@
       /* 제목 */
       var titleText = parentId ? '연결 할일 추가' : (isBonus ? '⭐ 보너스 할일 추가' : (dateStr ? '할일 추가' : '바구니에 할일 추가'));
       document.getElementById('workItemModalTitle').textContent = titleText;
-      var dateEl = document.getElementById('workItemDateDisplay');
-      if (dateEl) dateEl.textContent = dateStr ? formatDateKR(dateStr) : '날짜 미정 (바구니)';
       document.getElementById('workEmojiBtn').innerHTML = parentEmoji;
       document.getElementById('workTitleInput').value = '';
       document.getElementById('workMemoInput').value = '';
@@ -7731,9 +7727,11 @@
           parentInfoEl.innerHTML = '';
         }
       }
-      /* 추가 모드에서는 날짜 수정 필드 숨김 */
+      /* 날짜 입력 항상 표시, dateStr이 있으면 자동으로 채움 */
       var dateRow = document.getElementById('workEditDateRow');
-      if (dateRow) dateRow.style.display = 'none';
+      var dateInput = document.getElementById('workEditDateInput');
+      if (dateRow) dateRow.style.display = '';
+      if (dateInput) dateInput.value = dateStr || '';
       /* 바구니 모드(날짜 없음)에서는 "바구니에서 선택" 탭 숨김 */
       var tabNav = document.getElementById('workModalTabNav');
       if (tabNav) tabNav.style.display = dateStr ? '' : 'none';
@@ -7810,8 +7808,6 @@
       workItemEditId = id;
       var modal = document.getElementById('workItemModal');
       document.getElementById('workItemModalTitle').textContent = '할일 수정';
-      var dateEl = document.getElementById('workItemDateDisplay');
-      if (dateEl) dateEl.textContent = '';
       document.getElementById('workEmojiBtn').innerHTML = renderEmoji(item.emoji || '📋');
       document.getElementById('workTitleInput').value = item.title || '';
       document.getElementById('workMemoInput').value = item.memo || '';
@@ -7864,12 +7860,14 @@
         }
         showToast('할일을 수정했습니다');
       } else {
+        var dateInputEl = document.getElementById('workEditDateInput');
+        var pickedDate = dateInputEl ? (dateInputEl.value || null) : (workItemDraft ? workItemDraft.date : null);
         var newItem = {
           id: 'w' + Date.now(),
           emoji: workItemDraft ? (workItemDraft.emoji || '📋') : '📋',
           color: null,
           title: title,
-          date: workItemDraft ? workItemDraft.date : null,
+          date: pickedDate,
           completed: false,
           status: 'pending',
           memo: memo,
@@ -8187,7 +8185,7 @@
 
       /* 빠른 추가 입력창 */
       html += '<div class="basket-quick-add-row">';
-      html += '<input class="input-field basket-quick-add-input" id="basketQuickAddInput" placeholder="할일 제목 입력 후 Enter 또는 +" onkeydown="if(event.key===\'Enter\'){event.preventDefault();basketQuickAdd();}">';
+      html += '<input class="input-field basket-quick-add-input" id="basketQuickAddInput" placeholder="할일 제목 입력 후 Enter 또는 +" onkeydown="if(event.key===\'Enter\' && !event.isComposing){event.preventDefault();basketQuickAdd();}">';
       html += '<button class="basket-quick-add-btn" onclick="basketQuickAdd()">+</button>';
       html += '</div>';
 
