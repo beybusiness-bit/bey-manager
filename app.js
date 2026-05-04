@@ -1180,11 +1180,8 @@
 
     // Google Sign-In 초기화
     // Firebase Google 로그인
-    // 모바일/PWA: signInWithRedirect (팝업 차단 우회)
-    // 데스크탑:   signInWithPopup
-    var _isMobileOrPWA = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-      || window.matchMedia('(display-mode: standalone)').matches
-      || window.navigator.standalone === true;
+    // 전략: signInWithPopup 먼저 시도 → 팝업 차단 시 signInWithRedirect 자동 전환
+    // (UA 기반 분기 제거 — iOS ITP 쿠키 차단 문제로 redirect-only 방식이 불안정)
 
     function _processFirebaseUser(user) {
       if (user.email !== AUTH.USER_EMAIL) {
@@ -1203,7 +1200,7 @@
     function handleFirebaseGoogleLogin() {
       var btn = document.getElementById('googleSignInButton');
       var SVG_GOOGLE = '<svg width="18" height="18" viewBox="0 0 18 18" style="margin-right:8px;flex-shrink:0"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/></svg>Google로 로그인';
-      if (btn) { btn.disabled = true; btn.textContent = _isMobileOrPWA ? '로그인 페이지로 이동 중...' : '로그인 중...'; }
+      if (btn) { btn.disabled = true; btn.innerHTML = '로그인 중...'; }
       var restore = function() { if (btn) { btn.disabled = false; btn.innerHTML = SVG_GOOGLE; } };
 
       if (!window.firebase || !firebase.auth) {
@@ -1213,23 +1210,25 @@
 
       var provider = new firebase.auth.GoogleAuthProvider();
 
-      if (_isMobileOrPWA) {
-        /* 모바일/PWA: 리다이렉트 방식 — 결과는 페이지 로드 시 getRedirectResult()로 처리 */
-        firebase.auth().signInWithRedirect(provider).catch(function(e) {
-          showAlert('로그인 실패', e.message || e.code);
-          restore();
-        });
-      } else {
-        /* 데스크탑: 팝업 방식 */
-        firebase.auth().signInWithPopup(provider)
-          .then(function(result) { _processFirebaseUser(result.user); })
-          .catch(function(e) {
-            if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
-              showAlert('로그인 실패', e.message || e.code);
-            }
+      firebase.auth().signInWithPopup(provider)
+        .then(function(result) {
+          _processFirebaseUser(result.user);
+        })
+        .catch(function(e) {
+          if (e.code === 'auth/popup-blocked' || e.code === 'auth/cancelled-popup-request') {
+            /* 팝업 차단 → 리다이렉트 방식으로 자동 전환 */
+            if (btn) { btn.disabled = true; btn.innerHTML = '로그인 페이지로 이동 중...'; }
+            firebase.auth().signInWithRedirect(provider).catch(function(e2) {
+              showAlert('로그인 실패 (' + (e2.code || '') + ')', e2.message || '');
+              restore();
+            });
+          } else if (e.code === 'auth/popup-closed-by-user') {
+            restore(); /* 사용자가 팝업 직접 닫음 — 조용히 복원 */
+          } else {
+            showAlert('로그인 실패 (' + (e.code || '') + ')', e.message || '');
             restore();
-          });
-      }
+          }
+        });
     }
 
     function showApp() {
@@ -1624,7 +1623,7 @@
         }
       }
 
-      /* 모바일 리다이렉트 로그인 결과 처리 (Google → 앱으로 복귀 후) */
+      /* 리다이렉트 로그인 결과 처리 (Google → 앱으로 복귀 후) */
       var lc = document.getElementById('loginContainer');
       if (window.firebase && firebase.auth) {
         firebase.auth().getRedirectResult().then(function(result) {
@@ -1634,8 +1633,11 @@
             if (lc) lc.style.display = 'flex';
           }
         }).catch(function(e) {
-          console.warn('[Login] getRedirectResult 오류:', e.code, e.message);
+          /* 에러를 사용자에게 노출해 진단 가능하게 함 */
           if (lc) lc.style.display = 'flex';
+          if (e.code && e.code !== 'auth/no-auth-event') {
+            showAlert('로그인 오류 (' + e.code + ')', e.message + '<br><br>이 오류 내용을 알려주세요.');
+          }
         });
       } else {
         if (lc) lc.style.display = 'flex';
