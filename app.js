@@ -50,8 +50,9 @@
         order: 3,
         children: [
           { id: 'habit', type: 'page', icon: '✅', name: '습관', slug: 'habit', order: 0 },
-          { id: 'recipe', type: 'page', icon: '🍳', name: '레시피', slug: 'recipe', order: 1 },
-          { id: 'money', type: 'page', icon: '💰', name: '금전', slug: 'money', order: 2 },
+          { id: 'quirk', type: 'page', icon: '🔁', name: '버릇', slug: 'quirk', order: 1 },
+          { id: 'recipe', type: 'page', icon: '🍳', name: '레시피', slug: 'recipe', order: 2 },
+          { id: 'money', type: 'page', icon: '💰', name: '금전', slug: 'money', order: 3 },
         ]
       },
       {
@@ -1681,6 +1682,7 @@
       loadWorkItemLogs();
       loadHabits();
       loadHabitLogs();
+      loadQuirks();
       loadPomodoroLogs();
       loadProfile();
       loadDesignSettings();
@@ -1771,6 +1773,21 @@
           }
         }
         localStorage.setItem('menuMig_sosPages', '1');
+      }
+
+      // 마이그레이션: 생활 그룹에 "버릇" 페이지 추가 (1회)
+      if (!localStorage.getItem('menuMig_quirk')) {
+        var lifeGrp = menus.find(function(m) { return m.type === 'group' && m.id === 'group-life'; });
+        if (lifeGrp && lifeGrp.children) {
+          var hasSlugs = lifeGrp.children.map(function(c) { return c.slug; });
+          if (hasSlugs.indexOf('quirk') === -1) {
+            var habitIdx = lifeGrp.children.findIndex(function(c) { return c.slug === 'habit'; });
+            lifeGrp.children.splice(habitIdx + 1, 0, { id: 'quirk', type: 'page', icon: '🔁', name: '버릇', slug: 'quirk', order: 0 });
+            lifeGrp.children.forEach(function(c, i) { c.order = i; });
+            saveMenus();
+          }
+        }
+        localStorage.setItem('menuMig_quirk', '1');
       }
 
       // 마이그레이션: work-sos / habit-sos → work / habit ID 수정
@@ -2008,6 +2025,7 @@
 
       if (pageId === 'habit') renderHabitPage();
       if (pageId === 'work') renderWorkPage();
+      if (pageId === 'quirk') renderQuirkPage();
 
       if (window.innerWidth <= 768) {
         toggleSidebar();
@@ -3580,7 +3598,8 @@
         categories:   function() { return { categories: categories, activities: activities }; },
         settings:     function() { return _buildSettings(); },
         pomodoroLogs: function() { return { logs: pomodoroLogs }; },
-        workItemLogs: function() { return { logs: workItemLogs }; }
+        workItemLogs: function() { return { logs: workItemLogs }; },
+        quirks:       function() { return { items: quirks }; }
       };
 
       // 시트 이름 → Firestore 문서 이름 매핑
@@ -3697,6 +3716,10 @@
           if (data.workItemLogs && data.workItemLogs.logs) {
             workItemLogs = data.workItemLogs.logs;
             localStorage.setItem('workItemLogs', JSON.stringify(workItemLogs));
+          }
+          if (data.quirks && data.quirks.items) {
+            quirks = data.quirks.items;
+            localStorage.setItem('quirks', JSON.stringify(quirks));
           }
           _updateUI('ok', 'Firebase 연결됨');
           console.log('[FS] ✅ 전체 로드 완료');
@@ -9233,6 +9256,7 @@
       if (currentPage === 'daily' || currentPage === 'scheduleDetail') renderCurrentScheduleView();
       else if (currentPage === 'habits') renderHabitsPage && renderHabitsPage();
       else if (currentPage === 'work') renderWorkPage && renderWorkPage();
+      else if (currentPage === 'quirk') renderQuirkPage && renderQuirkPage();
     }
 
     // 데이터 관리 (마이그레이션 + Excel 내보내기)
@@ -9560,6 +9584,218 @@
       var suffix = (fromVal && toVal) ? ('_' + fromVal + '_' + toVal) : '_전체';
       XLSX.writeFile(wb, '베이관리자' + suffix + '.xlsx');
       showToast('✅ Excel 파일 다운로드 완료', 'success');
+    }
+
+    // ========================================
+    // 버릇 페이지
+    // ========================================
+    var quirks = [];
+    var quirkTab = 'counter';
+    var quirkListPage = 1;
+    var quirkListPerPage = 10;
+    var quirkListSearch = '';
+    var quirkListSort = 'order';
+    var quirkDraft = null;
+
+    function loadQuirks() {
+      try { quirks = JSON.parse(localStorage.getItem('quirks') || '[]'); } catch(e) { quirks = []; }
+      if (!Array.isArray(quirks)) quirks = [];
+    }
+
+    function saveQuirks() {
+      localStorage.setItem('quirks', JSON.stringify(quirks));
+      if (window.FS && FS.isConnected()) FS.sync(['quirks']);
+    }
+
+    function renderQuirkPage() {
+      var el = document.getElementById('quirkPageContent');
+      if (!el) return;
+      el.innerHTML =
+        '<div class="tab-nav">' +
+          '<button class="tab-btn' + (quirkTab === 'counter' ? ' active' : '') + '" onclick="quirkTab=\'counter\'; renderQuirkPage();">버릇 카운터</button>' +
+          '<button class="tab-btn' + (quirkTab === 'list' ? ' active' : '') + '" onclick="quirkTab=\'list\'; renderQuirkPage();">버릇 목록</button>' +
+        '</div>' +
+        '<div id="quirkTabContent"></div>';
+      if (quirkTab === 'counter') renderQuirkCounterTab();
+      else renderQuirkListTab();
+    }
+
+    function renderQuirkCounterTab() {
+      var el = document.getElementById('quirkTabContent');
+      if (!el) return;
+      var active = quirks.filter(function(q) { return q.counterEnabled !== false; });
+      if (!active.length) {
+        el.innerHTML = '<div class="empty-state" style="margin-top:60px;"><p>카운터 버릇이 없습니다.<br>버릇 목록 탭에서 버릇을 추가해주세요.</p></div>';
+        return;
+      }
+      var html = '<div class="quirk-counter-grid">';
+      active.forEach(function(q) {
+        html +=
+          '<div class="quirk-counter-card">' +
+            '<div class="quirk-counter-emoji">' + (q.emoji || '🔁') + '</div>' +
+            '<div class="quirk-counter-name">' + (q.name || '버릇') + '</div>' +
+            '<div class="quirk-counter-row">' +
+              '<button class="quirk-counter-btn" onclick="quirkDecrement(\'' + q.id + '\')">&minus;</button>' +
+              '<span class="quirk-counter-count" id="quirkCount_' + q.id + '">' + (q.count || 0) + '</span>' +
+              '<button class="quirk-counter-btn quirk-counter-btn-plus" onclick="quirkIncrement(\'' + q.id + '\')">&plus;</button>' +
+            '</div>' +
+            (q.memo ? '<div class="quirk-counter-memo">' + escapeHtml(q.memo) + '</div>' : '') +
+          '</div>';
+      });
+      html += '</div>';
+      el.innerHTML = html;
+    }
+
+    function renderQuirkListTab() {
+      var el = document.getElementById('quirkTabContent');
+      if (!el) return;
+      var filtered = quirks.filter(function(q) {
+        if (!quirkListSearch) return true;
+        var s = quirkListSearch.toLowerCase();
+        return (q.name || '').toLowerCase().includes(s) || (q.memo || '').toLowerCase().includes(s);
+      });
+      if (quirkListSort === 'name') filtered.sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); });
+      else if (quirkListSort === 'count_desc') filtered.sort(function(a, b) { return (b.count || 0) - (a.count || 0); });
+      else if (quirkListSort === 'count_asc') filtered.sort(function(a, b) { return (a.count || 0) - (b.count || 0); });
+      // else 'order' — original order
+
+      var total = filtered.length;
+      var totalPages = Math.max(1, Math.ceil(total / quirkListPerPage));
+      if (quirkListPage > totalPages) quirkListPage = totalPages;
+      var start = (quirkListPage - 1) * quirkListPerPage;
+      var pageItems = filtered.slice(start, start + quirkListPerPage);
+
+      var pagerHtml = buildGenericPagerBar({
+        page: quirkListPage, total: total, perPage: quirkListPerPage,
+        perPageOpts: [5, 10, 20],
+        goFn: 'goQuirkListPage', setPerPageFn: 'setQuirkListPerPage'
+      });
+
+      var listHtml = '<div class="quirk-list">';
+      pageItems.forEach(function(q) {
+        listHtml +=
+          '<div class="quirk-list-item">' +
+            '<span class="quirk-list-emoji">' + (q.emoji || '🔁') + '</span>' +
+            '<span class="quirk-list-name">' + escapeHtml(q.name || '') + '</span>' +
+            '<span class="quirk-list-count">' + (q.count || 0) + '회</span>' +
+            '<label class="quirk-counter-toggle" title="카운터 탭에 표시">' +
+              '<input type="checkbox" ' + (q.counterEnabled !== false ? 'checked' : '') +
+              ' onchange="quirkToggleCounter(\'' + q.id + '\', this.checked)">' +
+              '<span>카운터</span>' +
+            '</label>' +
+            '<button class="btn-icon" onclick="openQuirkForm(\'' + q.id + '\')" title="수정">✏️</button>' +
+            '<button class="btn-icon" onclick="deleteQuirk(\'' + q.id + '\')" title="삭제">🗑️</button>' +
+          '</div>';
+      });
+      if (!pageItems.length) listHtml += '<div class="empty-state"><p>버릇이 없습니다.</p></div>';
+      listHtml += '</div>';
+
+      el.innerHTML =
+        '<div class="quirk-list-controls">' +
+          '<input type="text" class="filter-input" placeholder="검색..." value="' + escapeHtml(quirkListSearch) + '" ' +
+            'oninput="quirkListSearch=this.value; quirkListPage=1; renderQuirkPage();">' +
+          '<select class="filter-select" onchange="quirkListSort=this.value; quirkListPage=1; renderQuirkPage();">' +
+            '<option value="order"' + (quirkListSort === 'order' ? ' selected' : '') + '>추가순</option>' +
+            '<option value="name"' + (quirkListSort === 'name' ? ' selected' : '') + '>이름순</option>' +
+            '<option value="count_desc"' + (quirkListSort === 'count_desc' ? ' selected' : '') + '>많은순</option>' +
+            '<option value="count_asc"' + (quirkListSort === 'count_asc' ? ' selected' : '') + '>적은순</option>' +
+          '</select>' +
+          '<button class="btn-primary" onclick="openQuirkForm(null)">+ 버릇 추가</button>' +
+        '</div>' +
+        pagerHtml +
+        listHtml +
+        pagerHtml;
+    }
+
+    function quirkIncrement(id) {
+      var q = quirks.find(function(x) { return x.id === id; });
+      if (!q) return;
+      q.count = (q.count || 0) + 1;
+      var el = document.getElementById('quirkCount_' + id);
+      if (el) el.textContent = q.count;
+      saveQuirks();
+    }
+
+    function quirkDecrement(id) {
+      var q = quirks.find(function(x) { return x.id === id; });
+      if (!q) return;
+      q.count = Math.max(0, (q.count || 0) - 1);
+      var el = document.getElementById('quirkCount_' + id);
+      if (el) el.textContent = q.count;
+      saveQuirks();
+    }
+
+    function quirkToggleCounter(id, enabled) {
+      var q = quirks.find(function(x) { return x.id === id; });
+      if (!q) return;
+      q.counterEnabled = enabled;
+      saveQuirks();
+    }
+
+    function openQuirkForm(id) {
+      quirkDraft = id ? Object.assign({}, quirks.find(function(q) { return q.id === id; })) : null;
+      var isEdit = !!quirkDraft;
+      document.getElementById('quirkModalTitle').textContent = isEdit ? '버릇 수정' : '버릇 추가';
+      document.getElementById('quirkFormEmoji').textContent = (quirkDraft && quirkDraft.emoji) || '🔁';
+      document.getElementById('quirkFormName').value = (quirkDraft && quirkDraft.name) || '';
+      document.getElementById('quirkFormMemo').value = (quirkDraft && quirkDraft.memo) || '';
+      document.getElementById('quirkFormCount').value = (quirkDraft && quirkDraft.count) || 0;
+      document.getElementById('quirkFormCounter').checked = !quirkDraft || quirkDraft.counterEnabled !== false;
+      document.getElementById('quirkModal').style.display = 'flex';
+      setTimeout(function() { document.getElementById('quirkFormName').focus(); }, 50);
+    }
+
+    function closeQuirkModal() {
+      document.getElementById('quirkModal').style.display = 'none';
+      quirkDraft = null;
+    }
+
+    function saveQuirk() {
+      var name = (document.getElementById('quirkFormName').value || '').trim();
+      if (!name) { showAlert('입력 오류', '버릇 이름을 입력해주세요.'); return; }
+      var emoji = document.getElementById('quirkFormEmoji').textContent.trim() || '🔁';
+      var memo = (document.getElementById('quirkFormMemo').value || '').trim();
+      var count = parseInt(document.getElementById('quirkFormCount').value, 10) || 0;
+      var counterEnabled = document.getElementById('quirkFormCounter').checked;
+
+      if (quirkDraft) {
+        var q = quirks.find(function(x) { return x.id === quirkDraft.id; });
+        if (q) { q.emoji = emoji; q.name = name; q.memo = memo; q.count = count; q.counterEnabled = counterEnabled; }
+      } else {
+        quirks.push({ id: 'q' + Date.now(), emoji: emoji, name: name, memo: memo, count: count, counterEnabled: counterEnabled, createdAt: today() });
+      }
+      var wasEdit = !!quirkDraft;
+      saveQuirks();
+      closeQuirkModal();
+      renderQuirkPage();
+      showToast(wasEdit ? '✅ 버릇이 수정됐습니다.' : '✅ 버릇이 추가됐습니다.', 'success');
+    }
+
+    function deleteQuirk(id) {
+      var q = quirks.find(function(x) { return x.id === id; });
+      if (!q) return;
+      showConfirm('버릇 삭제', '&apos;' + escapeHtml(q.name) + '&apos; 버릇을 삭제하시겠습니까?', function(ok) {
+        if (!ok) return;
+        quirks = quirks.filter(function(x) { return x.id !== id; });
+        saveQuirks();
+        renderQuirkPage();
+        showToast('🗑️ 버릇이 삭제됐습니다.', 'info');
+      });
+    }
+
+    function goQuirkListPage(page) {
+      var total = quirks.length;
+      var totalPages = Math.max(1, Math.ceil(total / quirkListPerPage));
+      page = parseInt(page, 10);
+      if (isNaN(page) || page < 1 || page > totalPages) return;
+      quirkListPage = page;
+      renderQuirkPage();
+    }
+
+    function setQuirkListPerPage(val) {
+      quirkListPerPage = parseInt(val, 10) || 10;
+      quirkListPage = 1;
+      renderQuirkPage();
     }
 
     // ========================================
