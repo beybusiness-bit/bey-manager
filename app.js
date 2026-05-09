@@ -1650,12 +1650,17 @@
     // ========================================
 
     function forceUpdate() {
-      showToast('🔄 업데이트 중...');
-      var done = function() { window.location.reload(true); };
+      showToast('🔄 캐시 삭제 중... 잠시 후 재시작됩니다.');
+      var done = function() {
+        // sessionStorage 플래그 → 재로드 후 클린 URL 복원
+        sessionStorage.setItem('_swForceReload', '1');
+        location.replace(location.href.split('?')[0] + '?bust=' + Date.now());
+      };
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(regs) {
-          var unregPromises = regs.map(function(r) { return r.unregister(); });
-          return Promise.all(unregPromises);
+          // waiting 중인 SW에 skipWaiting 신호 먼저 전송
+          regs.forEach(function(r) { if (r.waiting) r.waiting.postMessage({ type: 'SKIP_WAITING' }); });
+          return Promise.all(regs.map(function(r) { return r.unregister(); }));
         }).then(function() {
           return caches.keys();
         }).then(function(keys) {
@@ -1667,6 +1672,13 @@
     }
 
     function initializeApp() {
+      // forceUpdate 후 bust 쿼리스트링 제거
+      if (sessionStorage.getItem('_swForceReload')) {
+        sessionStorage.removeItem('_swForceReload');
+        if (location.search.includes('bust=')) {
+          history.replaceState(null, '', location.pathname);
+        }
+      }
       // Firebase Auth 리스너 등록 (signInWithPopup 방식)
       if (window.firebase && firebase.auth) { FS.init(); }
       loadMenus();
@@ -1776,18 +1788,27 @@
       }
 
       // 마이그레이션: 생활 그룹에 "버릇" 페이지 추가 (1회)
-      if (!localStorage.getItem('menuMig_quirk')) {
-        var lifeGrp = menus.find(function(m) { return m.type === 'group' && m.id === 'group-life'; });
-        if (lifeGrp && lifeGrp.children) {
-          var hasSlugs = lifeGrp.children.map(function(c) { return c.slug; });
-          if (hasSlugs.indexOf('quirk') === -1) {
-            var habitIdx = lifeGrp.children.findIndex(function(c) { return c.slug === 'habit'; });
-            lifeGrp.children.splice(habitIdx + 1, 0, { id: 'quirk', type: 'page', icon: '🔁', name: '버릇', slug: 'quirk', order: 0 });
-            lifeGrp.children.forEach(function(c, i) { c.order = i; });
-            saveMenus();
-          }
+      if (!localStorage.getItem('menuMig_quirk_v2')) {
+        localStorage.removeItem('menuMig_quirk');
+        var lifeGrp = menus.find(function(m) {
+          return m.type === 'group' && (m.id === 'group-life' || m.name === '생활');
+        });
+        if (!lifeGrp) {
+          // 생활 그룹이 없으면 새로 만들어서 삽입
+          lifeGrp = { id: 'group-life', type: 'group', icon: '🌱', name: '생활', order: 99, children: [] };
+          menus.push(lifeGrp);
         }
-        localStorage.setItem('menuMig_quirk', '1');
+        if (!lifeGrp.children) lifeGrp.children = [];
+        var hasSlugs = lifeGrp.children.map(function(c) { return c.slug; });
+        if (hasSlugs.indexOf('quirk') === -1) {
+          // 습관이 있으면 습관 바로 뒤에, 없으면 맨 앞에 추가
+          var habitIdx = lifeGrp.children.findIndex(function(c) { return c.slug === 'habit'; });
+          var insertAt = habitIdx >= 0 ? habitIdx + 1 : 0;
+          lifeGrp.children.splice(insertAt, 0, { id: 'quirk', type: 'page', icon: '🔁', name: '버릇', slug: 'quirk', order: 0 });
+          lifeGrp.children.forEach(function(c, i) { c.order = i; });
+          saveMenus();
+        }
+        localStorage.setItem('menuMig_quirk_v2', '1');
       }
 
       // 마이그레이션: work-sos / habit-sos → work / habit ID 수정
