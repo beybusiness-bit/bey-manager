@@ -22,51 +22,24 @@
     // 기본 메뉴 구조
     const DEFAULT_MENUS = [
       { id: 'home', type: 'page', icon: '🏠', name: '홈 대시보드', slug: 'home', order: 0 },
-      { 
-        id: 'group-daily', 
-        type: 'group', 
-        icon: '📋', 
-        name: '일상 관리', 
-        order: 1,
+      {
+        id: 'group-sos', type: 'group', icon: '💚', name: '조난 구조 중', order: 1,
+        children: [
+          { id: 'work', type: 'page', icon: '🧑‍🚒', name: '일', slug: 'work', order: 0 },
+          { id: 'habit', type: 'page', icon: '🍎', name: '습관', slug: 'habit', order: 1 },
+        ]
+      },
+      {
+        id: 'group-storage', type: 'group', icon: '🎁', name: '보관보관', order: 2,
         children: [
           { id: 'daily', type: 'page', icon: '📅', name: '시간표', slug: 'daily', order: 0 },
+          { id: 'recipe', type: 'page', icon: '🍳', name: '레시피', slug: 'recipe', order: 1 },
+          { id: 'money', type: 'page', icon: '💰', name: '금전', slug: 'money', order: 2 },
+          { id: 'todo', type: 'page', icon: '📝', name: '할일', slug: 'todo', order: 3 },
+          { id: 'idea', type: 'page', icon: '💡', name: '아이디어', slug: 'idea', order: 4 },
         ]
       },
-      {
-        id: 'group-work',
-        type: 'group',
-        icon: '💼',
-        name: '업무',
-        order: 2,
-        children: [
-          { id: 'work', type: 'page', icon: '💼', name: '업무', slug: 'work', order: 0 },
-        ]
-      },
-      {
-        id: 'group-life',
-        type: 'group',
-        icon: '🌱',
-        name: '생활',
-        order: 3,
-        children: [
-          { id: 'habit', type: 'page', icon: '✅', name: '습관', slug: 'habit', order: 0 },
-          { id: 'quirk', type: 'page', icon: '🔁', name: '버릇', slug: 'quirk', order: 1 },
-          { id: 'recipe', type: 'page', icon: '🍳', name: '레시피', slug: 'recipe', order: 2 },
-          { id: 'money', type: 'page', icon: '💰', name: '금전', slug: 'money', order: 3 },
-        ]
-      },
-      {
-        id: 'group-misc',
-        type: 'group',
-        icon: '📝',
-        name: '기타',
-        order: 4,
-        children: [
-          { id: 'idea', type: 'page', icon: '💡', name: '아이디어', slug: 'idea', order: 0 },
-          { id: 'todo', type: 'page', icon: '📝', name: '할일', slug: 'todo', order: 1 },
-        ]
-      },
-      { id: 'settings', type: 'page', icon: '⚙️', name: '설정', slug: 'settings', order: 5 },
+      { id: 'settings', type: 'page', icon: '⚙️', name: '설정', slug: 'settings', order: 3 },
     ];
 
     // 이모지 데이터
@@ -1743,99 +1716,38 @@
     }
 
     function loadMenus() {
-      const saved = localStorage.getItem('menus');
+      menus = JSON.parse(JSON.stringify(DEFAULT_MENUS));
+      var saved = localStorage.getItem('menuCustomizations');
       if (saved) {
         try {
-          menus = JSON.parse(saved);
-        } catch (e) {
-          menus = JSON.parse(JSON.stringify(DEFAULT_MENUS));
-        }
-      } else {
-        menus = JSON.parse(JSON.stringify(DEFAULT_MENUS));
+          var customizations = JSON.parse(saved);
+          (function applyCustom(list) {
+            list.forEach(function(m) {
+              if (customizations[m.id]) {
+                if (customizations[m.id].name !== undefined) m.name = customizations[m.id].name;
+                if (customizations[m.id].icon !== undefined) m.icon = customizations[m.id].icon;
+              }
+              if (m.children) applyCustom(m.children);
+            });
+          })(menus);
+        } catch(e) {}
       }
-      // 마이그레이션: '일상' 메뉴명 → '시간표'
-      var migrated = false;
-      function walkRename(list) {
-        list.forEach(function(m) {
-          if (m.slug === 'daily' && m.name === '일상') { m.name = '시간표'; migrated = true; }
-          if (m.children) walkRename(m.children);
-        });
-      }
-      walkRename(menus);
-      if (migrated) saveMenus();
-
-      // 마이그레이션: "조난 구조 중" 그룹에 "일"·"습관" 페이지 추가 (1회)
-      if (!localStorage.getItem('menuMig_sosPages')) {
-        var sosGrp = menus.find(function(m) { return m.type === 'group' && m.name === '조난 구조 중'; });
-        if (sosGrp) {
-          if (!sosGrp.children) sosGrp.children = [];
-          var slugs = sosGrp.children.map(function(c) { return c.slug; });
-          var added = false;
-          if (slugs.indexOf('work') === -1) {
-            sosGrp.children.push({ id: 'work', type: 'page', icon: '💼', name: '일', slug: 'work', order: sosGrp.children.length });
-            added = true;
-          }
-          if (slugs.indexOf('habit') === -1) {
-            sosGrp.children.push({ id: 'habit', type: 'page', icon: '✅', name: '습관', slug: 'habit', order: sosGrp.children.length });
-            added = true;
-          }
-          if (added) {
-            sosGrp.children.forEach(function(c, i) { c.order = i; });
-            saveMenus();
-          }
-        }
-        localStorage.setItem('menuMig_sosPages', '1');
-      }
-
-      // 마이그레이션: 생활 그룹에 "버릇" 페이지 추가 (1회)
-      if (!localStorage.getItem('menuMig_quirk_v3')) {
-        localStorage.removeItem('menuMig_quirk');
-        localStorage.removeItem('menuMig_quirk_v2');
-        // "습관" 페이지(slug:'habit')가 들어있는 그룹을 찾아 바로 뒤에 "버릇" 추가
-        var targetGrp = null;
-        menus.forEach(function(m) {
-          if (m.type === 'group' && m.children) {
-            if (m.children.some(function(c) { return c.slug === 'habit'; })) targetGrp = m;
-          }
-        });
-        if (!targetGrp) {
-          // 습관이 어느 그룹에도 없으면 id='group-life' 또는 name='생활' 찾기
-          targetGrp = menus.find(function(m) {
-            return m.type === 'group' && (m.id === 'group-life' || m.name === '생활');
-          });
-        }
-        if (!targetGrp) {
-          // 그래도 없으면 새 그룹 생성
-          targetGrp = { id: 'group-life', type: 'group', icon: '🌱', name: '생활', order: 99, children: [] };
-          menus.push(targetGrp);
-        }
-        if (!targetGrp.children) targetGrp.children = [];
-        var hasSlugs = targetGrp.children.map(function(c) { return c.slug; });
-        if (hasSlugs.indexOf('quirk') === -1) {
-          var habitIdx = targetGrp.children.findIndex(function(c) { return c.slug === 'habit'; });
-          var insertAt = habitIdx >= 0 ? habitIdx + 1 : targetGrp.children.length;
-          targetGrp.children.splice(insertAt, 0, { id: 'quirk', type: 'page', icon: '🔁', name: '버릇', slug: 'quirk', order: 0 });
-          targetGrp.children.forEach(function(c, i) { c.order = i; });
-          saveMenus();
-        }
-        localStorage.setItem('menuMig_quirk_v3', '1');
-      }
-
-      // 마이그레이션: work-sos / habit-sos → work / habit ID 수정
-      var idFixNeeded = false;
-      (function fixWrongIds(arr) {
-        if (!arr) return;
-        arr.forEach(function(m) {
-          if (m.id === 'work-sos') { m.id = 'work'; idFixNeeded = true; }
-          if (m.id === 'habit-sos') { m.id = 'habit'; idFixNeeded = true; }
-          fixWrongIds(m.children);
-        });
-      })(menus);
-      if (idFixNeeded) saveMenus();
     }
 
     function saveMenus() {
-      localStorage.setItem('menus', JSON.stringify(menus));
+      var customizations = {};
+      (function calcDiff(current, defList) {
+        current.forEach(function(m) {
+          var def = defList.find(function(d) { return d.id === m.id; });
+          if (!def) return;
+          var diff = {};
+          if (m.name !== def.name) diff.name = m.name;
+          if (m.icon !== def.icon) diff.icon = m.icon;
+          if (Object.keys(diff).length > 0) customizations[m.id] = diff;
+          if (m.children && def.children) calcDiff(m.children, def.children);
+        });
+      })(menus, DEFAULT_MENUS);
+      localStorage.setItem('menuCustomizations', JSON.stringify(customizations));
       FS.sync(['사용자설정']);
     }
 
@@ -2087,33 +1999,28 @@
       if (!container) return;
 
       const sorted = menuDraft.slice().sort(function(a, b) { return a.order - b.order; });
-      let html = '<div class="mm-list" id="mmList">';
+      let html = '<p class="mm-hint">이름과 이모지만 변경할 수 있습니다. 메뉴 구성은 고정되어 있습니다.</p>';
+      html += '<div class="mm-list">';
 
       sorted.forEach(function(item) {
         if (item.type === 'group') {
           const sortedChildren = (item.children || []).slice().sort(function(a, b) { return a.order - b.order; });
-          html += '<div class="mm-group" data-group-id="' + item.id + '">';
-          html += '  <div class="mm-group-header" draggable="true" data-group-id="' + item.id + '">';
-          html += '    <span class="mm-drag-handle">⠿</span>';
+          html += '<div class="mm-group">';
+          html += '  <div class="mm-group-header">';
           html += '    <button class="mm-emoji-btn" onclick="openMmEmojiPicker(&apos;group&apos;,&apos;' + item.id + '&apos;,&apos;&apos;)">' + renderEmoji(item.icon) + '</button>';
           html += '    <input class="mm-name-input" value="' + escapeHtml(item.name) + '" oninput="updateMmGroupName(&apos;' + item.id + '&apos;,this.value)" placeholder="대분류명">';
-          html += '    <button class="mm-del-btn" onclick="deleteMmGroup(&apos;' + item.id + '&apos;)" title="삭제">🗑</button>';
           html += '  </div>';
-          html += '  <div class="mm-children" data-group-id="' + item.id + '">';
+          html += '  <div class="mm-children">';
           sortedChildren.forEach(function(child) {
-            html += '    <div class="mm-menu-item" draggable="true" data-menu-id="' + child.id + '" data-group-id="' + item.id + '">';
-            html += '      <span class="mm-drag-handle">⠿</span>';
+            html += '    <div class="mm-menu-item">';
             html += '      <button class="mm-emoji-btn mm-emoji-btn-sm" onclick="openMmEmojiPicker(&apos;menu&apos;,&apos;' + item.id + '&apos;,&apos;' + child.id + '&apos;)">' + renderEmoji(child.icon) + '</button>';
             html += '      <input class="mm-name-input" value="' + escapeHtml(child.name) + '" oninput="updateMmMenuName(&apos;' + item.id + '&apos;,&apos;' + child.id + '&apos;,this.value)" placeholder="메뉴명">';
-            html += '      <button class="mm-del-btn" onclick="deleteMmMenuItem(&apos;' + item.id + '&apos;,&apos;' + child.id + '&apos;)" title="삭제">🗑</button>';
             html += '    </div>';
           });
-          html += '    <button class="mm-add-menu-btn" onclick="addMmMenuItem(&apos;' + item.id + '&apos;)">+ 메뉴 추가</button>';
           html += '  </div>';
           html += '</div>';
         } else if (item.type === 'page') {
-          html += '<div class="mm-top-page" data-page-id="' + item.id + '">';
-          html += '  <span class="mm-drag-handle" style="visibility:hidden">⠿</span>';
+          html += '<div class="mm-top-page">';
           html += '  <button class="mm-emoji-btn" onclick="openMmEmojiPicker(&apos;top&apos;,&apos;' + item.id + '&apos;,&apos;&apos;)">' + renderEmoji(item.icon) + '</button>';
           html += '  <input class="mm-name-input" value="' + escapeHtml(item.name) + '" oninput="updateMmTopName(&apos;' + item.id + '&apos;,this.value)" placeholder="메뉴명">';
           html += '  <span class="mm-fixed-badge">고정</span>';
@@ -2122,142 +2029,12 @@
       });
 
       html += '</div>';
-      html += '<button class="mm-add-group-btn" onclick="addMmGroup()">+ 대분류 추가</button>';
       html += '<div class="mm-save-row">';
       html += '  <button class="btn-cancel" onclick="initMenuDraft()">되돌리기</button>';
       html += '  <button class="btn-confirm" onclick="saveMmDraft()">저장</button>';
       html += '</div>';
 
       container.innerHTML = html;
-      attachMmDnd(container.querySelector('#mmList'));
-    }
-
-    var __mmDrag = { type: null, id: null, groupId: null };
-
-    function attachMmDnd(list) {
-      if (!list) return;
-
-      list.addEventListener('dragstart', function(e) {
-        var origin = e.composedPath ? e.composedPath()[0] : e.target;
-        var menuItem    = e.target.closest('.mm-menu-item[draggable]');
-        var groupHeader = e.target.closest('.mm-group-header[draggable]');
-        if (menuItem && list.contains(menuItem)) {
-          if (origin.tagName === 'INPUT') { e.preventDefault(); return; }
-          __mmDrag.type = 'menu';
-          __mmDrag.id = menuItem.dataset.menuId;
-          __mmDrag.groupId = menuItem.dataset.groupId;
-          menuItem.classList.add('mm-dragging');
-          e.dataTransfer.effectAllowed = 'move';
-          e.stopPropagation();
-        } else if (groupHeader && list.contains(groupHeader)) {
-          if (origin.tagName === 'INPUT') { e.preventDefault(); return; }
-          __mmDrag.type = 'group';
-          __mmDrag.id = groupHeader.dataset.groupId;
-          groupHeader.closest('.mm-group').classList.add('mm-dragging');
-          e.dataTransfer.effectAllowed = 'move';
-        }
-      });
-
-      list.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        list.querySelectorAll('.mm-insert-before, .mm-insert-after').forEach(function(el) {
-          el.classList.remove('mm-insert-before', 'mm-insert-after');
-        });
-
-        if (__mmDrag.type === 'group') {
-          var overGroup = e.target.closest('.mm-group');
-          if (!overGroup || overGroup.dataset.groupId === __mmDrag.id) return;
-          var r = overGroup.getBoundingClientRect();
-          if (e.clientY < r.top + r.height / 2) overGroup.classList.add('mm-insert-before');
-          else overGroup.classList.add('mm-insert-after');
-        } else if (__mmDrag.type === 'menu') {
-          var overItem = e.target.closest('.mm-menu-item');
-          if (overItem && overItem.dataset.menuId !== __mmDrag.id) {
-            var r2 = overItem.getBoundingClientRect();
-            if (e.clientY < r2.top + r2.height / 2) overItem.classList.add('mm-insert-before');
-            else overItem.classList.add('mm-insert-after');
-          }
-        }
-      });
-
-      list.addEventListener('dragleave', function(e) {
-        if (!list.contains(e.relatedTarget)) {
-          list.querySelectorAll('.mm-insert-before, .mm-insert-after').forEach(function(el) {
-            el.classList.remove('mm-insert-before', 'mm-insert-after');
-          });
-        }
-      });
-
-      list.addEventListener('drop', function(e) {
-        e.preventDefault();
-        var insertBefore = list.querySelector('.mm-insert-before');
-        var insertAfter  = list.querySelector('.mm-insert-after');
-        list.querySelectorAll('.mm-dragging, .mm-insert-before, .mm-insert-after').forEach(function(el) {
-          el.classList.remove('mm-dragging', 'mm-insert-before', 'mm-insert-after');
-        });
-
-        if (__mmDrag.type === 'group') {
-          var targetEl = insertBefore || insertAfter;
-          if (!targetEl) return;
-          var targetId = targetEl.dataset.groupId;
-          var sorted = menuDraft.slice().sort(function(a, b) { return a.order - b.order; });
-          var fromIdx = sorted.findIndex(function(m) { return m.id === __mmDrag.id; });
-          var toIdx   = sorted.findIndex(function(m) { return m.id === targetId; });
-          if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
-          if (insertAfter) toIdx++;
-          if (fromIdx < toIdx) toIdx--;
-          var moved = sorted.splice(fromIdx, 1)[0];
-          sorted.splice(toIdx, 0, moved);
-          sorted.forEach(function(m, i) { m.order = i; });
-          renderMenuManager();
-
-        } else if (__mmDrag.type === 'menu') {
-          var targetItem = insertBefore || insertAfter;
-          if (!targetItem) {
-            // dropped onto a children zone but not on a specific item → append to that group
-            var overChildren = e.target.closest('.mm-children');
-            if (!overChildren) return;
-            var tgtGrpId = overChildren.dataset.groupId;
-            var srcGrp = menuDraft.find(function(m) { return m.id === __mmDrag.groupId; });
-            var tgtGrp = menuDraft.find(function(m) { return m.id === tgtGrpId; });
-            if (!srcGrp || !tgtGrp || srcGrp === tgtGrp) return;
-            var srcIdx = (srcGrp.children || []).findIndex(function(c) { return c.id === __mmDrag.id; });
-            if (srcIdx === -1) return;
-            var movedItem = srcGrp.children.splice(srcIdx, 1)[0];
-            if (!tgtGrp.children) tgtGrp.children = [];
-            tgtGrp.children.push(movedItem);
-            srcGrp.children.forEach(function(c, i) { c.order = i; });
-            tgtGrp.children.forEach(function(c, i) { c.order = i; });
-            renderMenuManager();
-            return;
-          }
-          var targetMenuId = targetItem.dataset.menuId;
-          var targetGrpId  = targetItem.dataset.groupId;
-          var srcGrp2 = menuDraft.find(function(m) { return m.id === __mmDrag.groupId; });
-          var tgtGrp2 = menuDraft.find(function(m) { return m.id === targetGrpId; });
-          if (!srcGrp2 || !tgtGrp2) return;
-          var srcIdx2 = (srcGrp2.children || []).findIndex(function(c) { return c.id === __mmDrag.id; });
-          if (srcIdx2 === -1) return;
-          var movedItem2 = srcGrp2.children.splice(srcIdx2, 1)[0];
-          var sortedTgt = tgtGrp2.children.slice().sort(function(a, b) { return a.order - b.order; });
-          var insertIdx = sortedTgt.findIndex(function(c) { return c.id === targetMenuId; });
-          if (insertAfter) insertIdx++;
-          if (srcGrp2 === tgtGrp2 && srcIdx2 < insertIdx) insertIdx--;
-          tgtGrp2.children.splice(insertIdx, 0, movedItem2);
-          srcGrp2.children.forEach(function(c, i) { c.order = i; });
-          tgtGrp2.children.forEach(function(c, i) { c.order = i; });
-          renderMenuManager();
-        }
-
-        __mmDrag = { type: null, id: null, groupId: null };
-      });
-
-      list.addEventListener('dragend', function() {
-        list.querySelectorAll('.mm-dragging, .mm-insert-before, .mm-insert-after').forEach(function(el) {
-          el.classList.remove('mm-dragging', 'mm-insert-before', 'mm-insert-after');
-        });
-        __mmDrag = { type: null, id: null, groupId: null };
-      });
     }
 
     function initMenuDraft() {
@@ -2309,60 +2086,6 @@
       });
     }
 
-    function addMmGroup() {
-      var newGroup = {
-        id: 'group-' + Date.now(),
-        type: 'group',
-        icon: '📁',
-        name: '새 대분류',
-        order: menuDraft.length,
-        children: []
-      };
-      menuDraft.push(newGroup);
-      renderMenuManager();
-    }
-
-    function deleteMmGroup(groupId) {
-      var g = menuDraft.find(function(m) { return m.id === groupId; });
-      if (!g) return;
-      if (g.children && g.children.length > 0) {
-        showAlert('삭제 불가', '소속된 메뉴가 있어서 삭제할 수 없습니다.<br>메뉴를 모두 다른 대분류로 이동하거나 삭제한 후 시도해 주세요.');
-        return;
-      }
-      showConfirm('대분류 삭제', '"' + escapeHtml(g.name) + '" 대분류를 삭제하시겠습니까?', function() {
-        menuDraft = menuDraft.filter(function(m) { return m.id !== groupId; });
-        menuDraft.forEach(function(m, i) { m.order = i; });
-        renderMenuManager();
-      });
-    }
-
-    function addMmMenuItem(groupId) {
-      var g = menuDraft.find(function(m) { return m.id === groupId; });
-      if (!g) return;
-      if (!g.children) g.children = [];
-      g.children.push({
-        id: 'menu-' + Date.now(),
-        type: 'page',
-        icon: '📄',
-        name: '새 메뉴',
-        slug: '',
-        order: g.children.length
-      });
-      renderMenuManager();
-    }
-
-    function deleteMmMenuItem(groupId, menuId) {
-      var g = menuDraft.find(function(m) { return m.id === groupId; });
-      if (!g || !g.children) return;
-      var item = g.children.find(function(c) { return c.id === menuId; });
-      if (!item) return;
-      showConfirm('메뉴 삭제', '"' + escapeHtml(item.name) + '" 메뉴를 삭제하시겠습니까?', function() {
-        g.children = g.children.filter(function(c) { return c.id !== menuId; });
-        g.children.forEach(function(c, i) { c.order = i; });
-        renderMenuManager();
-      });
-    }
-
     function saveMmDraft() {
       menus = JSON.parse(JSON.stringify(menuDraft));
       saveMenus();
@@ -2381,74 +2104,19 @@
       if (menu) { menu.name = name; saveMenus(); renderSidebar(); renderMenuManager(); }
     }
 
-    function updateMenuSlug(menuId, slug) {
-      const menu = menus.find(function(m) { return m.id === menuId; });
-      if (menu) { menu.slug = slug; saveMenus(); renderMenuManager(); }
-    }
-
-    function moveMenuUp(index) {
-      const sortedMenus = menus.slice().sort(function(a, b) { return a.order - b.order; });
-      if (index > 0) {
-        const temp = sortedMenus[index].order;
-        sortedMenus[index].order = sortedMenus[index - 1].order;
-        sortedMenus[index - 1].order = temp;
-        saveMenus(); renderSidebar(); renderMenuManager();
-      }
-    }
-
-    function moveMenuDown(index) {
-      const sortedMenus = menus.slice().sort(function(a, b) { return a.order - b.order; });
-      if (index < sortedMenus.length - 1) {
-        const temp = sortedMenus[index].order;
-        sortedMenus[index].order = sortedMenus[index + 1].order;
-        sortedMenus[index + 1].order = temp;
-        saveMenus(); renderSidebar(); renderMenuManager();
-      }
-    }
-
-    function updateChildIcon(groupId, childIndex, icon) {
+    function updateChildIcon(groupId, childId, icon) {
       const group = menus.find(function(m) { return m.id === groupId; });
       if (group && group.children) {
-        const sc = group.children.slice().sort(function(a, b) { return a.order - b.order; });
-        if (sc[childIndex]) { sc[childIndex].icon = icon; saveMenus(); renderSidebar(); renderMenuManager(); }
+        const child = group.children.find(function(c) { return c.id === childId; });
+        if (child) { child.icon = icon; saveMenus(); renderSidebar(); renderMenuManager(); }
       }
     }
 
-    function updateChildName(groupId, childIndex, name) {
+    function updateChildName(groupId, childId, name) {
       const group = menus.find(function(m) { return m.id === groupId; });
       if (group && group.children) {
-        const sc = group.children.slice().sort(function(a, b) { return a.order - b.order; });
-        if (sc[childIndex]) { sc[childIndex].name = name; saveMenus(); renderSidebar(); renderMenuManager(); }
-      }
-    }
-
-    function updateChildSlug(groupId, childIndex, slug) {
-      const group = menus.find(function(m) { return m.id === groupId; });
-      if (group && group.children) {
-        const sc = group.children.slice().sort(function(a, b) { return a.order - b.order; });
-        if (sc[childIndex]) { sc[childIndex].slug = slug; saveMenus(); renderMenuManager(); }
-      }
-    }
-
-    function moveChildUp(groupId, childIndex) {
-      const group = menus.find(function(m) { return m.id === groupId; });
-      if (group && group.children) {
-        const sc = group.children.slice().sort(function(a, b) { return a.order - b.order; });
-        if (childIndex > 0) {
-          const temp = sc[childIndex].order; sc[childIndex].order = sc[childIndex-1].order; sc[childIndex-1].order = temp;
-          saveMenus(); renderSidebar(); renderMenuManager();
-        }
-      }
-    }
-
-    function moveChildDown(groupId, childIndex) {
-      const group = menus.find(function(m) { return m.id === groupId; });
-      if (group && group.children) {
-        const sc = group.children.slice().sort(function(a, b) { return a.order - b.order; });
-        if (childIndex < sc.length - 1) {
-          const temp = sc[childIndex].order; sc[childIndex].order = sc[childIndex+1].order; sc[childIndex+1].order = temp;
-          saveMenus(); renderSidebar(); renderMenuManager();
-        }
+        const child = group.children.find(function(c) { return c.id === childId; });
+        if (child) { child.name = name; saveMenus(); renderSidebar(); renderMenuManager(); }
       }
     }
 
@@ -3647,7 +3315,7 @@
           profileQuote: localStorage.getItem('profileQuote') || '',
           profilePhoto: localStorage.getItem('profilePhoto') || null
         };
-        ['designSettings','menus','myEmojis','tagColorOverrides',
+        ['designSettings','menuCustomizations','myEmojis','tagColorOverrides',
          'pomodoroSettings','notificationSettings','favoritePages'].forEach(function(k) {
           var v = localStorage.getItem(k);
           if (v !== null) { try { s[k] = JSON.parse(v); } catch(e) { s[k] = v; } }
@@ -3733,7 +3401,7 @@
             if (sm.profileQuote !== undefined) localStorage.setItem('profileQuote', sm.profileQuote);
             if (sm.profilePhoto) localStorage.setItem('profilePhoto', sm.profilePhoto);
             if (sm.designSettings) { designSettings = sm.designSettings; localStorage.setItem('designSettings', JSON.stringify(designSettings)); applyDesignSettings(); }
-            if (sm.menus) { menus = sm.menus; localStorage.setItem('menus', JSON.stringify(menus)); renderSidebar(); }
+            if (sm.menuCustomizations !== undefined) { localStorage.setItem('menuCustomizations', JSON.stringify(sm.menuCustomizations)); loadMenus(); renderSidebar(); }
             if (sm.myEmojis) localStorage.setItem('myEmojis', JSON.stringify(sm.myEmojis));
             if (sm.tagColorOverrides) localStorage.setItem('tagColorOverrides', JSON.stringify(sm.tagColorOverrides));
             if (sm.pomodoroSettings) { Object.assign(pomodoroSettings, sm.pomodoroSettings); localStorage.setItem('pomodoroSettings', JSON.stringify(pomodoroSettings)); }
