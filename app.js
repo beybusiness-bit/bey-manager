@@ -3324,7 +3324,7 @@
           profilePhoto: localStorage.getItem('profilePhoto') || null
         };
         ['designSettings','menuCustomizations','myEmojis','tagColorOverrides',
-         'pomodoroSettings','notificationSettings','favoritePages'].forEach(function(k) {
+         'pomodoroSettings','notificationSettings','favoritePages','bae_done'].forEach(function(k) {
           var v = localStorage.getItem(k);
           if (v !== null) { try { s[k] = JSON.parse(v); } catch(e) { s[k] = v; } }
         });
@@ -3415,6 +3415,7 @@
             if (sm.pomodoroSettings) { Object.assign(pomodoroSettings, sm.pomodoroSettings); localStorage.setItem('pomodoroSettings', JSON.stringify(pomodoroSettings)); }
             if (sm.notificationSettings) { Object.assign(notificationSettings, sm.notificationSettings); localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings)); }
             if (sm.favoritePages) { favoritePages = sm.favoritePages; localStorage.setItem('favoritePages', JSON.stringify(favoritePages)); }
+            if (sm.bae_done) { dnDone = sm.bae_done; localStorage.setItem('bae_done', JSON.stringify(dnDone)); }
           }
           if (data.pomodoroLogs && data.pomodoroLogs.logs) {
             pomodoroLogs = data.pomodoroLogs.logs;
@@ -9572,7 +9573,7 @@
       env:   {label:'개발 환경 실전', total:2, ids:[16,17]},
     };
 
-    function dnSave() { localStorage.setItem('bae_done', JSON.stringify(dnDone)); }
+    function dnSave() { localStorage.setItem('bae_done', JSON.stringify(dnDone)); if (window.FS && FS.isConnected()) FS.sync(['사용자설정']); }
 
     function dnMarkDone(idx) {
       dnDone[idx] = true; dnSave();
