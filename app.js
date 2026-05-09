@@ -1788,27 +1788,37 @@
       }
 
       // 마이그레이션: 생활 그룹에 "버릇" 페이지 추가 (1회)
-      if (!localStorage.getItem('menuMig_quirk_v2')) {
+      if (!localStorage.getItem('menuMig_quirk_v3')) {
         localStorage.removeItem('menuMig_quirk');
-        var lifeGrp = menus.find(function(m) {
-          return m.type === 'group' && (m.id === 'group-life' || m.name === '생활');
+        localStorage.removeItem('menuMig_quirk_v2');
+        // "습관" 페이지(slug:'habit')가 들어있는 그룹을 찾아 바로 뒤에 "버릇" 추가
+        var targetGrp = null;
+        menus.forEach(function(m) {
+          if (m.type === 'group' && m.children) {
+            if (m.children.some(function(c) { return c.slug === 'habit'; })) targetGrp = m;
+          }
         });
-        if (!lifeGrp) {
-          // 생활 그룹이 없으면 새로 만들어서 삽입
-          lifeGrp = { id: 'group-life', type: 'group', icon: '🌱', name: '생활', order: 99, children: [] };
-          menus.push(lifeGrp);
+        if (!targetGrp) {
+          // 습관이 어느 그룹에도 없으면 id='group-life' 또는 name='생활' 찾기
+          targetGrp = menus.find(function(m) {
+            return m.type === 'group' && (m.id === 'group-life' || m.name === '생활');
+          });
         }
-        if (!lifeGrp.children) lifeGrp.children = [];
-        var hasSlugs = lifeGrp.children.map(function(c) { return c.slug; });
+        if (!targetGrp) {
+          // 그래도 없으면 새 그룹 생성
+          targetGrp = { id: 'group-life', type: 'group', icon: '🌱', name: '생활', order: 99, children: [] };
+          menus.push(targetGrp);
+        }
+        if (!targetGrp.children) targetGrp.children = [];
+        var hasSlugs = targetGrp.children.map(function(c) { return c.slug; });
         if (hasSlugs.indexOf('quirk') === -1) {
-          // 습관이 있으면 습관 바로 뒤에, 없으면 맨 앞에 추가
-          var habitIdx = lifeGrp.children.findIndex(function(c) { return c.slug === 'habit'; });
-          var insertAt = habitIdx >= 0 ? habitIdx + 1 : 0;
-          lifeGrp.children.splice(insertAt, 0, { id: 'quirk', type: 'page', icon: '🔁', name: '버릇', slug: 'quirk', order: 0 });
-          lifeGrp.children.forEach(function(c, i) { c.order = i; });
+          var habitIdx = targetGrp.children.findIndex(function(c) { return c.slug === 'habit'; });
+          var insertAt = habitIdx >= 0 ? habitIdx + 1 : targetGrp.children.length;
+          targetGrp.children.splice(insertAt, 0, { id: 'quirk', type: 'page', icon: '🔁', name: '버릇', slug: 'quirk', order: 0 });
+          targetGrp.children.forEach(function(c, i) { c.order = i; });
           saveMenus();
         }
-        localStorage.setItem('menuMig_quirk_v2', '1');
+        localStorage.setItem('menuMig_quirk_v3', '1');
       }
 
       // 마이그레이션: work-sos / habit-sos → work / habit ID 수정
