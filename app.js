@@ -27,6 +27,7 @@
         children: [
           { id: 'work', type: 'page', icon: '🧑‍🚒', name: '일', slug: 'work', order: 0 },
           { id: 'habit', type: 'page', icon: '🍎', name: '습관', slug: 'habit', order: 1 },
+          { id: 'quirk', type: 'page', icon: '🔁', name: '버릇', slug: 'quirk', order: 2 },
         ]
       },
       {
@@ -9296,6 +9297,11 @@
     var quirkListSort = 'order';
     var quirkDraft = null;
 
+    var QUIRK_RANDOM_EMOJIS = ['🌀','🔥','💭','⚡','🌊','🎭','🌈','💫','🎯','🍃','🦋','🌙','⭐','🎪','🌺','🔮','🎨','🌸','🏔️','🌿','🎵','💦','🌪️','🎲','🍀','💥','🌻','🎸','🎮','🫧','🪩','🎀','🎁','🌐','🎑'];
+    function getRandomQuirkEmoji() {
+      return QUIRK_RANDOM_EMOJIS[Math.floor(Math.random() * QUIRK_RANDOM_EMOJIS.length)];
+    }
+
     function loadQuirks() {
       try { quirks = JSON.parse(localStorage.getItem('quirks') || '[]'); } catch(e) { quirks = []; }
       if (!Array.isArray(quirks)) quirks = [];
@@ -9348,6 +9354,7 @@
     function renderQuirkListTab() {
       var el = document.getElementById('quirkTabContent');
       if (!el) return;
+
       var filtered = quirks.filter(function(q) {
         if (!quirkListSearch) return true;
         var s = quirkListSearch.toLowerCase();
@@ -9356,7 +9363,6 @@
       if (quirkListSort === 'name') filtered.sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); });
       else if (quirkListSort === 'count_desc') filtered.sort(function(a, b) { return (b.count || 0) - (a.count || 0); });
       else if (quirkListSort === 'count_asc') filtered.sort(function(a, b) { return (a.count || 0) - (b.count || 0); });
-      // else 'order' — original order
 
       var total = filtered.length;
       var totalPages = Math.max(1, Math.ceil(total / quirkListPerPage));
@@ -9366,44 +9372,67 @@
 
       var pagerHtml = buildGenericPagerBar({
         page: quirkListPage, total: total, perPage: quirkListPerPage,
-        perPageOpts: [5, 10, 20],
+        perPageOpts: [8, 12, 20],
         goFn: 'goQuirkListPage', setPerPageFn: 'setQuirkListPerPage'
       });
 
-      var listHtml = '<div class="quirk-list">';
-      pageItems.forEach(function(q) {
-        listHtml +=
-          '<div class="quirk-list-item">' +
-            '<span class="quirk-list-emoji">' + (q.emoji || '🔁') + '</span>' +
-            '<span class="quirk-list-name">' + escapeHtml(q.name || '') + '</span>' +
-            '<span class="quirk-list-count">' + (q.count || 0) + '회</span>' +
-            '<label class="quirk-counter-toggle" title="카운터 탭에 표시">' +
-              '<input type="checkbox" ' + (q.counterEnabled !== false ? 'checked' : '') +
-              ' onchange="quirkToggleCounter(\'' + q.id + '\', this.checked)">' +
-              '<span>카운터</span>' +
-            '</label>' +
-            '<button class="btn-icon" onclick="openQuirkForm(\'' + q.id + '\')" title="수정">✏️</button>' +
-            '<button class="btn-icon" onclick="deleteQuirk(\'' + q.id + '\')" title="삭제">🗑️</button>' +
-          '</div>';
-      });
-      if (!pageItems.length) listHtml += '<div class="empty-state"><p>버릇이 없습니다.</p></div>';
-      listHtml += '</div>';
+      var html = '';
 
-      el.innerHTML =
-        '<div class="quirk-list-controls">' +
-          '<input type="text" class="filter-input" placeholder="검색..." value="' + escapeHtml(quirkListSearch) + '" ' +
-            'oninput="quirkListSearch=this.value; quirkListPage=1; renderQuirkPage();">' +
-          '<select class="filter-select" onchange="quirkListSort=this.value; quirkListPage=1; renderQuirkPage();">' +
-            '<option value="order"' + (quirkListSort === 'order' ? ' selected' : '') + '>추가순</option>' +
-            '<option value="name"' + (quirkListSort === 'name' ? ' selected' : '') + '>이름순</option>' +
-            '<option value="count_desc"' + (quirkListSort === 'count_desc' ? ' selected' : '') + '>많은순</option>' +
-            '<option value="count_asc"' + (quirkListSort === 'count_asc' ? ' selected' : '') + '>적은순</option>' +
-          '</select>' +
-          '<button class="btn-primary" onclick="openQuirkForm(null)">+ 버릇 추가</button>' +
-        '</div>' +
-        pagerHtml +
-        listHtml +
-        pagerHtml;
+      // 빠른 추가
+      html += '<div class="basket-quick-add-row">';
+      html += '<input class="input-field basket-quick-add-input" id="quirkQuickAddInput" placeholder="버릇 이름 입력 후 Enter 또는 +" onkeydown="if(event.key===\'Enter\'&&!event.isComposing){event.preventDefault();quirkQuickAdd();}">';
+      html += '<button class="basket-quick-add-btn" onclick="quirkQuickAdd()">+</button>';
+      html += '</div>';
+
+      // 검색/정렬/자세히 추가
+      html += '<div class="quirk-list-controls">';
+      html += '<input type="text" class="filter-input" style="flex:1;min-width:0;" placeholder="검색..." value="' + escapeHtml(quirkListSearch) + '" oninput="quirkListSearch=this.value;quirkListPage=1;renderQuirkPage();">';
+      html += '<select class="filter-select" onchange="quirkListSort=this.value;quirkListPage=1;renderQuirkPage();">';
+      html += '<option value="order"' + (quirkListSort==='order'?' selected':'') + '>추가순</option>';
+      html += '<option value="name"' + (quirkListSort==='name'?' selected':'') + '>이름순</option>';
+      html += '<option value="count_desc"' + (quirkListSort==='count_desc'?' selected':'') + '>많은순</option>';
+      html += '<option value="count_asc"' + (quirkListSort==='count_asc'?' selected':'') + '>적은순</option>';
+      html += '</select>';
+      html += '<button class="btn-primary" onclick="openQuirkForm(null)" style="white-space:nowrap;">+ 자세히 추가</button>';
+      html += '</div>';
+
+      html += pagerHtml;
+
+      if (!quirks.length) {
+        html += '<div class="empty-state"><p>버릇이 없습니다.<br>위에서 버릇을 추가해보세요.</p></div>';
+      } else if (!pageItems.length) {
+        html += '<div class="empty-state"><p>검색 결과가 없습니다.</p></div>';
+      } else {
+        html += '<div class="quirk-list-grid">';
+        pageItems.forEach(function(q) {
+          html += '<div class="quirk-list-card">';
+          html += '<div class="quirk-card-top-row">';
+          html += '<label class="quirk-card-toggle" title="카운터 탭에 표시"><input type="checkbox" ' + (q.counterEnabled !== false ? 'checked' : '') + ' onchange="quirkToggleCounter(\'' + q.id + '\',this.checked)"><span>카운터</span></label>';
+          html += '<div class="quirk-card-actions"><button class="btn-icon" onclick="openQuirkForm(\'' + q.id + '\')" title="수정">✏️</button><button class="btn-icon" onclick="deleteQuirk(\'' + q.id + '\')" title="삭제">🗑️</button></div>';
+          html += '</div>';
+          html += '<div class="quirk-card-emoji">' + (q.emoji || '🔁') + '</div>';
+          html += '<div class="quirk-card-name">' + escapeHtml(q.name || '') + '</div>';
+          html += '<div class="quirk-card-count">' + (q.count || 0) + '회</div>';
+          if (q.memo) html += '<div class="quirk-card-memo">' + escapeHtml(q.memo.substring(0, 28)) + (q.memo.length > 28 ? '…' : '') + '</div>';
+          html += '</div>';
+        });
+        html += '</div>';
+      }
+
+      html += pagerHtml;
+      el.innerHTML = html;
+    }
+
+    function quirkQuickAdd() {
+      var inp = document.getElementById('quirkQuickAddInput');
+      if (!inp) return;
+      var name = inp.value.trim();
+      if (!name) { inp.focus(); return; }
+      quirks.push({ id: 'q' + Date.now(), emoji: getRandomQuirkEmoji(), name: name, memo: '', count: 0, counterEnabled: true, createdAt: today() });
+      saveQuirks();
+      inp.value = '';
+      renderQuirkPage();
+      showToast('✅ 버릇이 추가됐습니다.', 'success');
     }
 
     function quirkIncrement(id) {
@@ -9435,7 +9464,7 @@
       quirkDraft = id ? Object.assign({}, quirks.find(function(q) { return q.id === id; })) : null;
       var isEdit = !!quirkDraft;
       document.getElementById('quirkModalTitle').textContent = isEdit ? '버릇 수정' : '버릇 추가';
-      document.getElementById('quirkFormEmoji').textContent = (quirkDraft && quirkDraft.emoji) || '🔁';
+      document.getElementById('quirkFormEmoji').textContent = (quirkDraft && quirkDraft.emoji) || getRandomQuirkEmoji();
       document.getElementById('quirkFormName').value = (quirkDraft && quirkDraft.name) || '';
       document.getElementById('quirkFormMemo').value = (quirkDraft && quirkDraft.memo) || '';
       document.getElementById('quirkFormCount').value = (quirkDraft && quirkDraft.count) || 0;
