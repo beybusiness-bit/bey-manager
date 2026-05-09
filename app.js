@@ -40,7 +40,13 @@
           { id: 'idea', type: 'page', icon: '💡', name: '아이디어', slug: 'idea', order: 4 },
         ]
       },
-      { id: 'settings', type: 'page', icon: '⚙️', name: '설정', slug: 'settings', order: 3 },
+      {
+        id: 'group-study', type: 'group', icon: '💻', name: '공부', order: 3,
+        children: [
+          { id: 'devnotes', type: 'page', icon: '📓', name: '개발괴발', slug: 'devnotes', order: 0 },
+        ]
+      },
+      { id: 'settings', type: 'page', icon: '⚙️', name: '설정', slug: 'settings', order: 4 },
     ];
 
     // 이모지 데이터
@@ -1970,6 +1976,7 @@
       if (pageId === 'habit') renderHabitPage();
       if (pageId === 'work') renderWorkPage();
       if (pageId === 'quirk') renderQuirkPage();
+      if (pageId === 'devnotes') dnUpdateAll();
 
       if (window.innerWidth <= 768) {
         toggleSidebar();
@@ -9524,6 +9531,144 @@
       quirkListPerPage = parseInt(val, 10) || 10;
       quirkListPage = 1;
       renderQuirkPage();
+    }
+
+    // ========================================
+    // 개발괴발 (devnotes) 페이지
+    // ========================================
+    var dnDone = JSON.parse(localStorage.getItem('bae_done') || '{}');
+    var dnQuizScores = {};
+    var dnQuizAnswered = {};
+    var dnCurrentTab = 'dash';
+
+    var DN_CHAPTERS = [
+      null,
+      {title:'웹의 구조', section:'basic'},
+      {title:'개발 언어 입문', section:'basic'},
+      {title:'코드 읽는 법', section:'prac'},
+      {title:'에러 해석하기', section:'prac'},
+      {title:'파일과 배포', section:'prac'},
+      {title:'데이터 흐름', section:'prac'},
+      {title:'구조 용어 심화', section:'adv'},
+      {title:'앱 종류와 기술 스택', section:'adv'},
+      {title:'개발 흐름과 도구', section:'adv'},
+      {title:'클로드 소통법', section:'claude'},
+      {title:'클로드 코드 활용', section:'claude'},
+      {title:'용어 혼동 주의보', section:'claude'},
+      {title:'개념 퀴즈', section:'quiz'},
+      {title:'실습 과제', section:'quiz'},
+      {title:'브랜치·PR·merge·diff', section:'git'},
+      {title:'갑자기 튀어나오는 개념들', section:'env'},
+      {title:'브랜치 실전 생존 가이드', section:'env'},
+    ];
+
+    var DN_SECTIONS = {
+      basic: {label:'기초편', total:2, ids:[1,2]},
+      prac:  {label:'실전편', total:4, ids:[3,4,5,6]},
+      adv:   {label:'심화편', total:3, ids:[7,8,9]},
+      claude:{label:'클로드 활용', total:3, ids:[10,11,12]},
+      quiz:  {label:'퀴즈·실습', total:2, ids:[13,14]},
+      git:   {label:'Git 실전', total:1, ids:[15]},
+      env:   {label:'개발 환경 실전', total:2, ids:[16,17]},
+    };
+
+    function dnSave() { localStorage.setItem('bae_done', JSON.stringify(dnDone)); }
+
+    function dnMarkDone(idx) {
+      dnDone[idx] = true; dnSave();
+      var btn = document.getElementById('dn-done' + idx);
+      if (btn) { btn.classList.add('checked'); btn.textContent = '✓ 읽었어요!'; }
+      dnUpdateAll();
+    }
+
+    function dnSwitchTab(tabKey) {
+      dnCurrentTab = tabKey;
+      document.querySelectorAll('#devnotesPage .tab-btn').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.tab === tabKey);
+      });
+      document.querySelectorAll('#devnotesPage .dn-tab-pane').forEach(function(p) {
+        p.classList.toggle('active', p.dataset.tab === tabKey);
+      });
+      if (tabKey === 'dash') dnUpdateAll();
+      document.getElementById('devnotesPage').scrollTop = 0;
+    }
+
+    function dnUpdateAll() {
+      var total = 17;
+      var doneCount = Object.keys(dnDone).filter(function(k) { return dnDone[k] && parseInt(k) >= 1; }).length;
+
+      var progFill = document.getElementById('dn-prog-fill');
+      var progLabel = document.getElementById('dn-prog-label');
+      if (progFill) progFill.style.width = (doneCount / total * 100) + '%';
+      if (progLabel) progLabel.textContent = doneCount + ' / ' + total;
+
+      for (var i = 1; i <= 17; i++) {
+        var donBtn = document.getElementById('dn-done' + i);
+        if (donBtn && dnDone[i]) { donBtn.classList.add('checked'); donBtn.textContent = '✓ 읽었어요!'; }
+      }
+
+      Object.keys(DN_SECTIONS).forEach(function(sec) {
+        var s = DN_SECTIONS[sec];
+        var cnt = s.ids.filter(function(i) { return dnDone[i]; }).length;
+        var fill = document.getElementById('dn-fill-' + sec);
+        var cntEl = document.getElementById('dn-cnt-' + sec);
+        if (fill) fill.style.width = (cnt / s.total * 100) + '%';
+        if (cntEl) cntEl.textContent = cnt + '/' + s.total;
+      });
+
+      var grid = document.getElementById('dn-dash-grid');
+      if (grid) {
+        var html = '';
+        for (var j = 1; j <= 17; j++) {
+          var ch = DN_CHAPTERS[j];
+          var isDone = dnDone[j];
+          var secLabel = DN_SECTIONS[ch.section] ? DN_SECTIONS[ch.section].label : '';
+          html += '<div class="dn-dash-card' + (isDone ? ' done' : '') + '">';
+          html += '<div class="dn-dash-card-num">Ch ' + j + ' · ' + secLabel + '</div>';
+          html += '<div class="dn-dash-card-title">' + ch.title + '</div>';
+          html += '<div class="dn-dash-card-status">' + (isDone ? '✓ 완료' : '● 미완료') + '</div>';
+          var tabKey = ch.section === 'basic' ? 'basic' : ch.section === 'prac' ? 'prac' : ch.section === 'adv' ? 'adv' : ch.section === 'claude' ? 'claude' : ch.section === 'quiz' ? 'quiz' : ch.section === 'git' ? 'git' : 'env';
+          html += '<button class="dn-dash-goto" onclick="dnSwitchTab(\'' + tabKey + '\');">' + (isDone ? '복습하기' : '바로 가기') + '</button>';
+          html += '</div>';
+        }
+        grid.innerHTML = html;
+      }
+    }
+
+    function dnResetAll() {
+      showConfirm('진도 초기화', '개발괴발 진도를 초기화할까요?', function(ok) {
+        if (!ok) return;
+        dnDone = {}; dnSave(); dnUpdateAll();
+      });
+    }
+
+    function dnMarkAllDone() {
+      for (var i = 1; i <= 17; i++) dnDone[i] = true;
+      dnSave(); dnUpdateAll();
+    }
+
+    function dnAns(btn, isCorrect, qid) {
+      if (dnQuizAnswered[qid]) return;
+      dnQuizAnswered[qid] = true;
+      var opts = btn.parentElement.querySelectorAll('.dn-quiz-opt');
+      opts.forEach(function(o) { o.disabled = true; });
+      if (isCorrect) {
+        btn.classList.add('correct');
+        dnQuizScores[qid] = true;
+      } else {
+        btn.classList.add('wrong');
+        opts.forEach(function(o) {
+          if (o.onclick && o.onclick.toString().indexOf('true,') !== -1) o.classList.add('correct');
+        });
+      }
+      var exp = document.getElementById(qid + '-exp');
+      if (exp) exp.classList.add('show');
+      var correct = Object.values(dnQuizScores).length;
+      var totalQ = Object.keys(dnQuizAnswered).length;
+      var scoreEl = document.getElementById('dn-score-num');
+      var totalEl = document.getElementById('dn-total-num');
+      if (scoreEl) scoreEl.textContent = correct;
+      if (totalEl) totalEl.textContent = totalQ;
     }
 
     // ========================================

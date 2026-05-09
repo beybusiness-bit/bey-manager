@@ -3522,3 +3522,87 @@
     .quirk-card-count { font-size:12px;font-weight:600;color:var(--text-secondary,#888);font-family:'DM Mono',monospace; }
     .quirk-card-memo { font-size:11px;color:var(--text-secondary,#888);text-align:center;word-break:break-word;line-height:1.3; }
     @media (max-width:480px) { .quirk-counter-grid { grid-template-columns:repeat(2,1fr);gap:10px; } .quirk-list-grid { grid-template-columns:repeat(2,1fr);gap:8px; } }
+
+    /* ── 개발괴발 (devnotes) 페이지 ── */
+    #devnotesPage .dn-progress-bar { height:4px;background:var(--border-color,#eee);border-radius:2px;overflow:hidden;margin-bottom:16px; }
+    #devnotesPage .dn-progress-fill { height:100%;background:var(--primary-yellow,#ffde59);border-radius:2px;transition:width .4s; }
+    #devnotesPage .dn-progress-label { font-size:12px;color:var(--text-secondary,#888);margin-bottom:6px;display:flex;justify-content:space-between; }
+    #devnotesPage .dn-tab-pane { display:none; }
+    #devnotesPage .dn-tab-pane.active { display:block; }
+    #devnotesPage .dn-card { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:10px;padding:14px 16px;margin-bottom:12px; }
+    #devnotesPage .dn-card-head { display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap; }
+    #devnotesPage .dn-card-title { font-size:14px;font-weight:700; }
+    #devnotesPage .dn-card-body { font-size:13.5px;color:var(--text-secondary,#888);line-height:1.8; }
+    #devnotesPage .dn-card-body strong { color:var(--text-primary,#222);font-weight:600; }
+    #devnotesPage .dn-tag { font-size:11px;padding:2px 9px;border-radius:20px;font-weight:600;white-space:nowrap; }
+    #devnotesPage .dn-tag-purple { background:#eeedfc;color:#3a30a8; }
+    #devnotesPage .dn-tag-green { background:#e2f5ec;color:#0f6044; }
+    #devnotesPage .dn-tag-amber { background:#fdf0db;color:#7d4a08; }
+    #devnotesPage .dn-tag-red { background:#fdecea;color:#922620; }
+    #devnotesPage .dn-tag-blue { background:#e5f0fa;color:#144e82; }
+    #devnotesPage .dn-tag-new { background:#d6f5e8;color:#0f6044; }
+    #devnotesPage code.dn-code { font-family:'DM Mono',monospace;font-size:12px;background:var(--card-bg,#f5f5f5);padding:1px 6px;border-radius:4px;border:1px solid var(--border-color,#eee); }
+    #devnotesPage .dn-pre { font-family:'DM Mono',monospace;font-size:12.5px;background:#1e1d1a;color:#d4d0c4;padding:12px 16px;border-radius:8px;margin:10px 0;overflow-x:auto;line-height:1.7;white-space:pre; }
+    #devnotesPage .dn-pre .cm { color:#7a7868; }
+    #devnotesPage .dn-pre .kw { color:#c792ea; }
+    #devnotesPage .dn-pre .fn { color:#82aaff; }
+    #devnotesPage .dn-pre .str { color:#c3e88d; }
+    #devnotesPage .dn-pre .num { color:#f78c6c; }
+    #devnotesPage .dn-tip { border-left:3px solid #5b4fd4;background:#eeedfc;border-radius:0 6px 6px 0;padding:10px 14px;margin-top:10px;font-size:13px;color:#3a30a8;line-height:1.65; }
+    #devnotesPage .dn-tip::before { content:"💡 "; }
+    #devnotesPage .dn-analogy { border-left:3px solid #1a8c60;background:#e2f5ec;border-radius:0 6px 6px 0;padding:10px 14px;margin-top:10px;font-size:13px;color:#0f6044;line-height:1.65; }
+    #devnotesPage .dn-analogy::before { content:"🔍 비유: ";font-weight:600; }
+    #devnotesPage .dn-warn { border-left:3px solid #b06a10;background:#fdf0db;border-radius:0 6px 6px 0;padding:10px 14px;margin-top:10px;font-size:13px;color:#7d4a08;line-height:1.65; }
+    #devnotesPage .dn-warn::before { content:"⚠️ 주의: ";font-weight:600; }
+    #devnotesPage .dn-scene { background:var(--card-bg,#f5f5f5);border:1px solid var(--border-color,#eee);border-radius:6px;padding:10px 14px;margin:10px 0;font-size:13.5px;color:var(--text-secondary,#888);line-height:1.75; }
+    #devnotesPage .dn-scene strong { color:var(--text-primary,#222); }
+    #devnotesPage .dn-ch-header { margin-bottom:1.25rem;padding-bottom:10px;border-bottom:1px solid var(--border-color,#eee);margin-top:1.5rem; }
+    #devnotesPage .dn-ch-header:first-child { margin-top:0; }
+    #devnotesPage .dn-ch-num { font-size:11px;color:var(--text-secondary,#888);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;display:flex;align-items:center;gap:8px; }
+    #devnotesPage .dn-badge-new { font-size:10px;background:#d6f5e8;color:#0f6044;padding:2px 7px;border-radius:8px;font-weight:700; }
+    #devnotesPage .dn-ch-title { font-size:20px;font-weight:700;line-height:1.3; }
+    #devnotesPage .dn-ch-desc { font-size:13px;color:var(--text-secondary,#888);margin-top:4px;line-height:1.6; }
+    #devnotesPage .dn-done-btn { display:flex;align-items:center;gap:8px;margin-top:1rem;margin-bottom:2rem;padding:.6rem 1.25rem;border-radius:8px;border:1.5px solid var(--border-color,#ddd);background:var(--card-bg,#fff);font-size:13.5px;font-weight:500;color:var(--text-secondary,#888);cursor:pointer;justify-content:center;width:100%;transition:all .15s; }
+    #devnotesPage .dn-done-btn:hover { border-color:#1a8c60;color:#1a8c60;background:#e2f5ec; }
+    #devnotesPage .dn-done-btn.checked { background:#e2f5ec;border-color:#1a8c60;color:#0f6044; }
+    #devnotesPage .dn-quiz-card { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:10px;padding:14px 16px;margin-bottom:12px; }
+    #devnotesPage .dn-quiz-q { font-size:13.5px;font-weight:600;margin-bottom:10px;line-height:1.5; }
+    #devnotesPage .dn-quiz-options { display:flex;flex-direction:column;gap:6px; }
+    #devnotesPage .dn-quiz-opt { background:var(--body-bg,#f7f6f2);border:1px solid var(--border-color,#eee);border-radius:6px;padding:8px 12px;font-size:13px;cursor:pointer;transition:all .12s;color:var(--text-secondary,#888);text-align:left; }
+    #devnotesPage .dn-quiz-opt:hover:not(:disabled) { border-color:#5b4fd4;color:var(--text-primary,#222); }
+    #devnotesPage .dn-quiz-opt.correct { background:#e2f5ec;border-color:#1a8c60;color:#0f6044;font-weight:600; }
+    #devnotesPage .dn-quiz-opt.wrong { background:#fdecea;border-color:#c0332a;color:#922620; }
+    #devnotesPage .dn-quiz-opt:disabled { cursor:default; }
+    #devnotesPage .dn-quiz-exp { margin-top:10px;font-size:13px;color:var(--text-secondary,#888);background:var(--body-bg,#f7f6f2);border-radius:6px;padding:8px 12px;display:none;line-height:1.65; }
+    #devnotesPage .dn-quiz-exp.show { display:block; }
+    #devnotesPage .dn-score-bar { background:var(--body-bg,#f5f5f5);border:1px solid var(--border-color,#eee);border-radius:10px;padding:10px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text-secondary,#888); }
+    #devnotesPage .dn-score-num { font-size:22px;font-weight:700;color:#3a30a8; }
+    #devnotesPage .dn-prac-card { background:#1e1d1a;border-radius:10px;padding:14px;margin-bottom:12px;color:#d4d0c4; }
+    #devnotesPage .dn-prac-head { display:flex;align-items:center;gap:8px;margin-bottom:8px; }
+    #devnotesPage .dn-prac-num { font-size:11px;background:#5b4fd4;color:#fff;padding:2px 8px;border-radius:20px;font-weight:600; }
+    #devnotesPage .dn-prac-title { font-size:14px;font-weight:700;color:#f0ede6; }
+    #devnotesPage .dn-prac-body { font-size:13px;line-height:1.75;color:#9a9688; }
+    #devnotesPage .dn-prac-body strong { color:#d4d0c4; }
+    #devnotesPage .dn-prac-hint { margin-top:10px;font-size:12px;color:#6a6858;border-top:1px solid #2e2c28;padding-top:8px; }
+    #devnotesPage .dn-prac-hint::before { content:"힌트: ";color:#8a7fd0;font-weight:600; }
+    #devnotesPage .dn-dash-big { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:10px;padding:14px 16px;margin-bottom:14px; }
+    #devnotesPage .dn-dash-big-title { font-size:14px;font-weight:700;margin-bottom:10px; }
+    #devnotesPage .dn-big-progress { display:flex;flex-direction:column;gap:8px; }
+    #devnotesPage .dn-big-p-row { display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-secondary,#888); }
+    #devnotesPage .dn-big-p-label { width:120px;min-width:120px; }
+    #devnotesPage .dn-big-p-track { flex:1;height:8px;background:var(--body-bg,#f5f5f5);border-radius:4px;overflow:hidden; }
+    #devnotesPage .dn-big-p-fill { height:100%;border-radius:4px;background:#1a8c60;transition:width .4s; }
+    #devnotesPage .dn-big-p-count { font-size:12px;width:32px;text-align:right;color:var(--text-secondary,#888); }
+    #devnotesPage .dn-dash-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:12px; }
+    #devnotesPage .dn-dash-card { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:4px; }
+    #devnotesPage .dn-dash-card.done { border-color:#1a8c60;background:#e2f5ec; }
+    #devnotesPage .dn-dash-card-num { font-size:10px;font-weight:700;color:var(--text-secondary,#999);letter-spacing:.05em; }
+    #devnotesPage .dn-dash-card-title { font-size:12.5px;font-weight:600;line-height:1.4; }
+    #devnotesPage .dn-dash-card-status { font-size:11.5px;margin-top:2px; }
+    #devnotesPage .dn-dash-card.done .dn-dash-card-status { color:#0f6044; }
+    #devnotesPage .dn-dash-card:not(.done) .dn-dash-card-status { color:var(--text-secondary,#999); }
+    #devnotesPage .dn-dash-goto { margin-top:6px;font-size:11.5px;padding:4px 10px;border-radius:6px;border:1px solid var(--border-color,#eee);background:transparent;cursor:pointer;color:var(--text-secondary,#888);transition:all .12s; }
+    #devnotesPage .dn-dash-goto:hover { background:var(--body-bg,#f5f5f5); }
+    #devnotesPage .dn-dash-actions { display:flex;gap:8px;flex-wrap:wrap;margin-top:4px; }
+    #devnotesPage .dn-ch-divider { border:none;border-top:1px solid var(--border-color,#eee);margin:1.5rem 0; }
+    #devnotesPage .dn-scene-label { font-size:12px;font-weight:700;color:var(--text-secondary,#999);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;padding:0; }
