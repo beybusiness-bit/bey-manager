@@ -3415,7 +3415,16 @@
             if (sm.pomodoroSettings) { Object.assign(pomodoroSettings, sm.pomodoroSettings); localStorage.setItem('pomodoroSettings', JSON.stringify(pomodoroSettings)); }
             if (sm.notificationSettings) { Object.assign(notificationSettings, sm.notificationSettings); localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings)); }
             if (sm.favoritePages) { favoritePages = sm.favoritePages; localStorage.setItem('favoritePages', JSON.stringify(favoritePages)); }
-            if (sm.bae_done) { dnDone = sm.bae_done; localStorage.setItem('bae_done', JSON.stringify(dnDone)); }
+            if (sm.bae_done && Object.keys(sm.bae_done).length > 0) {
+              dnDone = sm.bae_done; localStorage.setItem('bae_done', JSON.stringify(dnDone));
+            } else {
+              // Firestore에 bae_done 없으면 로컬 데이터 업로드 (초기 1회 마이그레이션)
+              var localDone = JSON.parse(localStorage.getItem('bae_done') || '{}');
+              if (Object.keys(localDone).length > 0) {
+                dnDone = localDone;
+                setTimeout(function() { if (window.FS && FS.isConnected()) FS.sync(['사용자설정']); }, 500);
+              }
+            }
           }
           if (data.pomodoroLogs && data.pomodoroLogs.logs) {
             pomodoroLogs = data.pomodoroLogs.logs;
