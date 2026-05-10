@@ -31,19 +31,19 @@
         ]
       },
       {
-        id: 'group-storage', type: 'group', icon: '🎁', name: '보관보관', order: 2,
+        id: 'group-study', type: 'group', icon: '💻', name: '공부', order: 2,
+        children: [
+          { id: 'devnotes', type: 'page', icon: '📓', name: '개발괴발', slug: 'devnotes', order: 0 },
+        ]
+      },
+      {
+        id: 'group-storage', type: 'group', icon: '🎁', name: '보관보관', order: 3,
         children: [
           { id: 'daily', type: 'page', icon: '📅', name: '시간표', slug: 'daily', order: 0 },
           { id: 'recipe', type: 'page', icon: '🍳', name: '레시피', slug: 'recipe', order: 1 },
           { id: 'money', type: 'page', icon: '💰', name: '금전', slug: 'money', order: 2 },
           { id: 'todo', type: 'page', icon: '📝', name: '할일', slug: 'todo', order: 3 },
           { id: 'idea', type: 'page', icon: '💡', name: '아이디어', slug: 'idea', order: 4 },
-        ]
-      },
-      {
-        id: 'group-study', type: 'group', icon: '💻', name: '공부', order: 3,
-        children: [
-          { id: 'devnotes', type: 'page', icon: '📓', name: '개발괴발', slug: 'devnotes', order: 0 },
         ]
       },
       { id: 'settings', type: 'page', icon: '⚙️', name: '설정', slug: 'settings', order: 4 },
