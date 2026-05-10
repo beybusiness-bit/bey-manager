@@ -9658,6 +9658,16 @@
       dnSave(); dnUpdateAll();
     }
 
+    function dnSyncNow() {
+      if (!window.FS || !FS.isConnected()) {
+        showAlert('Firebase 미연결', '사이드바 하단에서 Firebase에 먼저 연결해주세요.');
+        return;
+      }
+      localStorage.setItem('bae_done', JSON.stringify(dnDone));
+      FS.sync(['사용자설정']);
+      showToast('☁️ 진도를 Firestore에 저장했습니다', 'success');
+    }
+
     function dnAns(btn, isCorrect, qid) {
       if (dnQuizAnswered[qid]) return;
       dnQuizAnswered[qid] = true;
