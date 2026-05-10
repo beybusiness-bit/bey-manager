@@ -8965,6 +8965,7 @@
       else if (currentPage === 'habits') renderHabitsPage && renderHabitsPage();
       else if (currentPage === 'work') renderWorkPage && renderWorkPage();
       else if (currentPage === 'quirk') renderQuirkPage && renderQuirkPage();
+      else if (currentPage === 'devnotes') dnUpdateAll && dnUpdateAll();
     }
 
     // 데이터 관리 (마이그레이션 + Excel 내보내기)
