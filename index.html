@@ -1308,6 +1308,83 @@ console.log(name); // ❌ 오류 — 밖에서 접근 불가</div>
             <p style="margin:6px 0 4px;">배포 중인 서비스에 긴급한 버그가 생겼을 때 빠르게 고치는 패치. 다음 정기 배포를 기다릴 수 없을 때 씀.</p>
           </div>
 
+          <!-- 자주 쓰는 구조 -->
+          <div class="dn-card" style="margin-bottom:12px;margin-top:20px;"><strong>🏗️ 자주 쓰는 구조와 패턴</strong></div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>플랫(Flat) vs 트리(Tree) 구조</strong>
+            <p style="margin:6px 0 4px;">플랫: 모든 항목이 같은 레벨. 트리: 부모-자식 계층이 있음. 오늘 만든 연결 할일이 플랫 구조예요.</p>
+            <div class="dn-pre">// 트리: A → B → C (계층이 깊어짐)
+// 플랫: A → B, A → C (항상 A 아래)
+A
+├── B  ← A의 자식
+└── C  ← B에서 만들었지만 A의 자식</div>
+            <div class="dn-tip">관리가 단순할 땐 플랫이 좋아요. GitHub Issues의 sub-issue, Linear의 subtask 모두 플랫 구조예요.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>1:N / N:N 관계</strong>
+            <p style="margin:6px 0 4px;">데이터 간의 연결 방식. 1:N은 하나가 여럿을 가짐. N:N은 서로 여럿이 연결됨.</p>
+            <div class="dn-pre">// 1:N: 카테고리 1개 → 일상 종류 여러 개
+// N:N: 할일 ↔ 태그 (할일에 태그 여러 개, 태그도 여러 할일에 붙음)</div>
+            <div class="dn-tip">베이 관리자에서: 시간표(1) : 일정(N), 카테고리(1) : 일상종류(N) 이 1:N 관계예요.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>상태 머신 / State Machine</strong>
+            <p style="margin:6px 0 4px;">정해진 상태들과 전환 규칙의 집합. 지금 어떤 상태이고, 어떤 조건에서 다음 상태로 바뀌는지 정의함.</p>
+            <div class="dn-pre">// 뽀모도로 상태 머신
+idle → work → break → work → longbreak → ...
+할일: pending → in-progress → done</div>
+            <div class="dn-tip">클로드가 "이건 상태 머신으로 관리하는 게 좋겠어요"라고 하면: 상태가 많고 전환 규칙이 복잡할 때예요.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>싱글톤 / Singleton</strong>
+            <p style="margin:6px 0 4px;">앱 전체에서 딱 하나만 존재하는 인스턴스. 전역 설정, DB 연결처럼 중복 생성하면 안 되는 것에 씀.</p>
+            <div class="dn-tip">베이 관리자의 FS 객체(Firebase 연결)가 싱글톤이에요. 여러 곳에서 쓰지만 연결은 하나.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>옵저버 패턴 / Observer Pattern</strong>
+            <p style="margin:6px 0 4px;">어떤 값이 바뀌면 구독 중인 여러 곳에 자동으로 알려주는 구조. 이벤트 리스너, Firebase의 onSnapshot이 이 패턴.</p>
+            <div class="dn-pre">// "상태 바뀌면 알려줘" 구독
+firebase.auth().onAuthStateChanged(function(user) {
+  // 로그인 상태 바뀔 때마다 자동 호출 ← 옵저버
+});</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>낙관적 업데이트 / Optimistic Update</strong>
+            <p style="margin:6px 0 4px;">서버 응답을 기다리지 않고 UI를 먼저 바꾸는 것. 빠르게 느껴지지만 실패하면 롤백해야 함.</p>
+            <div class="dn-tip">좋아요 버튼 누르면 즉시 하트가 채워지고, 서버 실패 시 되돌아오는 것이 낙관적 업데이트예요.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>단방향 데이터 흐름 / Unidirectional Data Flow</strong>
+            <p style="margin:6px 0 4px;">데이터가 한 방향으로만 흐르는 구조. 상태(state) → UI 렌더링 → 이벤트 → 상태 변경. React/Vue의 핵심 개념.</p>
+            <div class="dn-pre">// 상태 → 화면 (단방향)
+workItems → renderWorkPage() → 화면 표시
+버튼 클릭 → workItems 변경 → renderWorkPage() 재실행</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>SSOT / Single Source of Truth</strong>
+            <p style="margin:6px 0 4px;">데이터의 유일한 원본을 한 곳에만 두는 원칙. 두 곳에 같은 데이터가 있으면 동기화 문제가 생김.</p>
+            <div class="dn-tip">베이 관리자 CLAUDE.md 첫 줄에 "SSOT"라고 되어있어요 — 프로젝트 지침의 단일 원본이라는 뜻.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>이벤트 버블링 / Event Bubbling</strong>
+            <p style="margin:6px 0 4px;">자식 요소의 이벤트가 부모로 전파되는 것. 카드 안의 버튼 클릭이 카드 클릭도 같이 발생시키는 이유.</p>
+            <div class="dn-pre">// 버블링 막기
+button.onclick = function(e) {
+  e.stopPropagation(); // 부모로 전파 차단
+  doSomething();
+};</div>
+            <div class="dn-tip">베이 관리자 코드에 onclick="event.stopPropagation()"이 많은데, 다 이 이유예요.</div>
+          </div>
+
           <!-- 용어 사전 퀴즈 -->
           <div class="dn-ch-header" style="margin-top:32px;">
             <div class="dn-ch-num">📝 용어 확인 퀴즈</div>
@@ -1372,6 +1449,26 @@ console.log(name); // ❌ 오류 — 밖에서 접근 불가</div>
               <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq6')">클로저(Closure)</button>
             </div>
             <div class="dn-quiz-exp" id="dn-tq6-exp">큐(Queue)예요. FIFO(First In, First Out). 줄 서기랑 같아요. 스택은 반대로 LIFO(마지막에 넣은 게 먼저 나옴).</div>
+          </div>
+          <div class="dn-card" style="margin-bottom:12px;">
+            <p class="dn-q-text">Q. Firebase의 onAuthStateChanged처럼, 값이 바뀌면 구독한 곳에 자동으로 알려주는 패턴은?</p>
+            <div class="dn-quiz-opts">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq7')">싱글톤 패턴</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq7')">옵저버 패턴</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq7')">상태 머신</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq7')">낙관적 업데이트</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-tq7-exp">옵저버 패턴(Observer Pattern)이에요. 이벤트 리스너, onSnapshot, onAuthStateChanged 모두 이 패턴으로 동작해요.</div>
+          </div>
+          <div class="dn-card" style="margin-bottom:12px;">
+            <p class="dn-q-text">Q. 카드 안의 버튼을 클릭했는데 카드 클릭 이벤트까지 같이 발생하는 현상은?</p>
+            <div class="dn-quiz-opts">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq8')">사이드 이펙트</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq8')">리그레션</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq8')">이벤트 버블링</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq8')">멱등성</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-tq8-exp">이벤트 버블링(Event Bubbling)이에요. e.stopPropagation()으로 막을 수 있어요. 베이 관리자 코드에도 여러 군데 쓰였어요.</div>
           </div>
         </div>
 
