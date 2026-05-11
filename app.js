@@ -7210,10 +7210,11 @@
         });
         html += '</div>';
       }
-      /* 연결 할일 추가 버튼 — 완료 상태이고 상위 할일이 아닌 경우만 표시 */
-      if (isDone && !item.parentId) {
+      /* 연결 할일 추가 버튼 — 완료 상태인 경우 표시 (연결할일이어도 루트 기준으로 추가) */
+      if (isDone) {
+        var connectRootId = item.parentId || item.id;
         html += '<div class="work-connect-row" onclick="event.stopPropagation()">';
-        html += '<button class="work-connect-btn" onclick="addConnectedTask(\'' + item.id + '\')">+ 연결 할일</button>';
+        html += '<button class="work-connect-btn" onclick="addConnectedTask(\'' + connectRootId + '\')">+ 연결 할일</button>';
         html += '</div>';
       }
       html += '</div>';
