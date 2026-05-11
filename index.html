@@ -416,9 +416,10 @@
           <button class="tab-btn" data-tab="prac" onclick="dnSwitchTab('prac')">⚡ 실전편</button>
           <button class="tab-btn" data-tab="adv" onclick="dnSwitchTab('adv')">🧠 심화편</button>
           <button class="tab-btn" data-tab="claude" onclick="dnSwitchTab('claude')">🤖 클로드 활용</button>
-          <button class="tab-btn" data-tab="quiz" onclick="dnSwitchTab('quiz')">🎯 퀴즈·실습</button>
           <button class="tab-btn" data-tab="git" onclick="dnSwitchTab('git')">🌿 Git 실전</button>
           <button class="tab-btn" data-tab="env" onclick="dnSwitchTab('env')">💻 개발 환경</button>
+          <button class="tab-btn" data-tab="terms" onclick="dnSwitchTab('terms')">📖 용어 사전</button>
+          <button class="tab-btn" data-tab="quiz" onclick="dnSwitchTab('quiz')">🎯 퀴즈·실습</button>
         </div>
 
         <!-- ── 대시보드 탭 ── -->
@@ -430,7 +431,6 @@
               <div class="dn-big-p-row"><span class="dn-big-p-label">실전편</span><div class="dn-big-p-track"><div class="dn-big-p-fill" id="dn-fill-prac" style="width:0%"></div></div><span class="dn-big-p-count" id="dn-cnt-prac">0/4</span></div>
               <div class="dn-big-p-row"><span class="dn-big-p-label">심화편</span><div class="dn-big-p-track"><div class="dn-big-p-fill" id="dn-fill-adv" style="width:0%"></div></div><span class="dn-big-p-count" id="dn-cnt-adv">0/3</span></div>
               <div class="dn-big-p-row"><span class="dn-big-p-label">클로드 활용</span><div class="dn-big-p-track"><div class="dn-big-p-fill" id="dn-fill-claude" style="width:0%"></div></div><span class="dn-big-p-count" id="dn-cnt-claude">0/3</span></div>
-              <div class="dn-big-p-row"><span class="dn-big-p-label">퀴즈·실습</span><div class="dn-big-p-track"><div class="dn-big-p-fill" id="dn-fill-quiz" style="width:0%"></div></div><span class="dn-big-p-count" id="dn-cnt-quiz">0/2</span></div>
               <div class="dn-big-p-row"><span class="dn-big-p-label">Git 실전</span><div class="dn-big-p-track"><div class="dn-big-p-fill" id="dn-fill-git" style="width:0%"></div></div><span class="dn-big-p-count" id="dn-cnt-git">0/1</span></div>
               <div class="dn-big-p-row"><span class="dn-big-p-label">개발 환경 실전</span><div class="dn-big-p-track"><div class="dn-big-p-fill" id="dn-fill-env" style="width:0%"></div></div><span class="dn-big-p-count" id="dn-cnt-env">0/2</span></div>
             </div>
@@ -940,11 +940,12 @@ items.<span class="fn">map</span>(item =&gt; item.name)</div>
           <button class="dn-done-btn" id="dn-done12" onclick="dnMarkDone(12)">이 챕터 읽었어요 ✓</button>
         </div>
 
-        <!-- ── 퀴즈·실습 탭 (Ch 13-14) ── -->
+        <!-- ── 퀴즈·실습 탭 (진도 미포함) ── -->
         <div class="dn-tab-pane" data-tab="quiz">
+          <div class="dn-tip" style="margin-bottom:20px;">📝 퀴즈·실습은 <strong>진도에 포함되지 않아요.</strong> 각 섹션 학습 후 여기서 실력을 확인하세요.</div>
           <!-- Ch 13 -->
           <div class="dn-ch-header">
-            <div class="dn-ch-num">Chapter 13 · 퀴즈</div>
+            <div class="dn-ch-num">퀴즈</div>
             <div class="dn-ch-title">개념 퀴즈</div>
             <div class="dn-ch-desc">틀려도 괜찮아요. 해설을 읽으면서 이해하면 돼요.</div>
           </div>
@@ -1030,11 +1031,9 @@ items.<span class="fn">map</span>(item =&gt; item.name)</div>
             <div class="dn-quiz-exp" id="dn-q8-exp">리팩토링은 기능 변경 없이 코드 구조를 개선하는 작업이에요. 사용자 입장에서는 아무것도 안 바뀌어요.</div>
           </div>
 
-          <button class="dn-done-btn" id="dn-done13" onclick="dnMarkDone(13)">이 챕터 읽었어요 ✓</button>
-
           <!-- Ch 14 -->
-          <div class="dn-ch-header">
-            <div class="dn-ch-num">Chapter 14 · 실습 과제</div>
+          <div class="dn-ch-header" style="margin-top:32px;">
+            <div class="dn-ch-num">실습 과제</div>
             <div class="dn-ch-title">실습 과제</div>
             <div class="dn-ch-desc">클로드에게 직접 요청해보는 과제들이에요. 막히면 언제든지 여기 채팅창으로 돌아와서 물어봐요.</div>
           </div>
@@ -1080,7 +1079,300 @@ items.<span class="fn">map</span>(item =&gt; item.name)</div>
             <p class="dn-prac-hint">이 과제를 끝내면 개발 → 배포 전체 흐름을 한 번 경험한 거예요.</p>
           </div>
 
-          <button class="dn-done-btn" id="dn-done14" onclick="dnMarkDone(14)">이 챕터 읽었어요 ✓</button>
+        </div>
+
+        <!-- ── 용어 사전 탭 ── -->
+        <div class="dn-tab-pane" data-tab="terms">
+          <div class="dn-ch-header">
+            <div class="dn-ch-num">참고 자료 · 진도 미포함</div>
+            <div class="dn-ch-title">개발 용어 사전</div>
+            <div class="dn-ch-desc">개발하다 보면 자주 나오는 용어들이에요. 처음엔 몰라도 괜찮고, 나오면 여기서 찾아보면 돼요.</div>
+          </div>
+
+          <!-- 기본 개념 -->
+          <div class="dn-card" style="margin-bottom:12px;"><strong>🎯 기본 개념</strong></div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>엣지케이스 / Edge Case</strong>
+            <p style="margin:6px 0 4px;">일반적이지 않은 극단적인 입력이나 상황. 정상 케이스는 잘 되는데 특정 조건에서만 터지는 버그의 원인.</p>
+            <div class="dn-tip">예: 나이 입력칸에 0이나 999를 넣으면? / 이름에 이모지를 넣으면? / 리스트가 비어있으면?</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>레거시 코드 / Legacy Code</strong>
+            <p style="margin:6px 0 4px;">오래되어서 고치기 무서운 코드. 잘 돌아가고 있어서 건드리기 애매한 것들. "왜 이렇게 짰지?"가 자주 나옴.</p>
+            <div class="dn-tip">클로드한테 "이 코드 레거시라 손대기 싫은데 여기만 살짝 고칠 수 있어?" 이렇게 말할 수 있어요.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>리팩토링 / Refactoring</strong>
+            <p style="margin:6px 0 4px;">기능은 그대로인데 코드 구조를 깔끔하게 개선하는 것. 결과는 같은데 코드가 더 읽기 쉬워짐.</p>
+            <div class="dn-tip">사용자 입장에서는 아무 변화도 없음. 개발자 입장에서는 나중에 수정하기 쉬워짐.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>보일러플레이트 / Boilerplate</strong>
+            <p style="margin:6px 0 4px;">새 프로젝트 시작할 때 매번 반복해서 쓰는 기본 틀 코드. 내용은 거의 안 바뀌는 설정, 선언 같은 것들.</p>
+            <div class="dn-pre">// 이런 거: 항상 파일 맨 위에 똑같이 들어가는 것들
+'use strict';
+import React from 'react';</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>하드코딩 / Hardcoding</strong>
+            <p style="margin:6px 0 4px;">값을 변수로 빼지 않고 코드 안에 직접 박아넣는 것. 나중에 바꾸려면 코드를 직접 열어야 해서 불편함.</p>
+            <div class="dn-pre">// 하드코딩 (나쁜 예)
+if (userAge &gt; 19) { ... }
+
+// 변수로 뺀 것 (좋은 예)
+const ADULT_AGE = 19;
+if (userAge &gt; ADULT_AGE) { ... }</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>마이그레이션 / Migration</strong>
+            <p style="margin:6px 0 4px;">데이터나 시스템을 한 곳에서 다른 곳으로 옮기는 것. 베이 관리자도 localStorage → Firestore 마이그레이션을 했어요.</p>
+            <div class="dn-tip">이사 개념이에요. 짐(데이터)을 새 집(새 DB)으로 옮기는 것.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>기술 부채 / Tech Debt</strong>
+            <p style="margin:6px 0 4px;">빠르게 개발하려고 대충 짠 코드. 지금은 잘 돌아가지만 나중에 반드시 고쳐야 하는 것. 금전적 부채처럼 이자가 붙음.</p>
+            <div class="dn-tip">클로드가 "지금은 이렇게 하고 나중에 리팩토링 하는 게 나을 것 같아요" 할 때가 기술 부채를 만드는 순간.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>컨벤션 / Convention</strong>
+            <p style="margin:6px 0 4px;">팀이나 언어에서 암묵적으로 정한 코딩 규칙. 강제는 아니지만 안 따르면 이상하게 보임.</p>
+            <div class="dn-tip">예: 변수명은 camelCase, 상수는 UPPER_SNAKE_CASE, 파일명은 kebab-case 등.</div>
+          </div>
+
+          <!-- 함수와 비동기 -->
+          <div class="dn-card" style="margin-bottom:12px;margin-top:20px;"><strong>⚡ 함수와 비동기</strong></div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>콜백 / Callback</strong>
+            <p style="margin:6px 0 4px;">나중에 호출되도록 함수에 넘겨주는 함수. "이거 끝나면 이 함수 불러줘"의 개념.</p>
+            <div class="dn-pre">// "파일 읽기 끝나면 이 함수(콜백)를 실행해줘"
+readFile('data.txt', function(result) {
+  console.log(result); // 이게 콜백
+});</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>비동기 / Async · Await</strong>
+            <p style="margin:6px 0 4px;">기다리지 않고 다음 코드 실행. 서버 응답 기다리는 동안 화면이 멈추지 않는 이유. await은 "여기서만 기다려".</p>
+            <div class="dn-pre">// await 없이 → 데이터 오기 전에 실행됨 (버그)
+// await 있음 → 데이터 올 때까지 기다렸다가 실행
+const data = await fetch('/api/items');</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>사이드 이펙트 / Side Effect</strong>
+            <p style="margin:6px 0 4px;">함수가 반환값 외에 외부에 영향을 주는 것. localStorage 저장, 화면 업데이트, 콘솔 출력 등. 많을수록 예측하기 어려워짐.</p>
+            <div class="dn-tip">클로드가 "이 함수에 사이드 이펙트가 있어요"라고 하면: 이 함수가 뭔가를 바꾼다는 뜻.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>클로저 / Closure</strong>
+            <p style="margin:6px 0 4px;">함수가 만들어질 때의 주변 변수를 기억하는 것. 함수가 사라져도 그 변수는 살아있음.</p>
+            <div class="dn-pre">function counter() {
+  let count = 0; // 이 변수를
+  return function() { count++; return count; }; // 이 함수가 기억함
+}</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>재귀 / Recursion</strong>
+            <p style="margin:6px 0 4px;">함수가 자기 자신을 호출하는 것. 폴더 안에 폴더가 있는 구조나, 트리 구조 탐색에 자주 씀.</p>
+            <div class="dn-warn">⚠️ 종료 조건이 없으면 무한 루프 → 스택 오버플로우 오류 발생</div>
+          </div>
+
+          <!-- 자료구조 -->
+          <div class="dn-card" style="margin-bottom:12px;margin-top:20px;"><strong>🗄️ 자료구조</strong></div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>스택 / Stack</strong>
+            <p style="margin:6px 0 4px;">마지막에 넣은 게 먼저 나오는 구조 (LIFO). 브라우저 뒤로가기, Ctrl+Z 실행취소가 이 방식.</p>
+            <div class="dn-tip">접시를 쌓으면 맨 위(마지막 올린 것)부터 꺼내는 것과 같아요.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>큐 / Queue</strong>
+            <p style="margin:6px 0 4px;">먼저 넣은 게 먼저 나오는 구조 (FIFO). 줄 서기랑 같음. 네트워크 요청 대기열, 알림 발송 순서에 사용.</p>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>해시맵 / HashMap (객체)</strong>
+            <p style="margin:6px 0 4px;">key-value 쌍의 저장 구조. JavaScript의 객체(Object)가 해시맵이에요. key로 값을 바로 꺼낼 수 있어 빠름.</p>
+            <div class="dn-pre">const map = { 'apple': 1200, 'banana': 800 };
+console.log(map['apple']); // → 1200</div>
+          </div>
+
+          <!-- 웹과 API -->
+          <div class="dn-card" style="margin-bottom:12px;margin-top:20px;"><strong>🌐 웹과 API</strong></div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>엔드포인트 / Endpoint</strong>
+            <p style="margin:6px 0 4px;">API에서 특정 기능을 담당하는 URL 주소. "이 주소로 요청 보내면 이 기능을 해줌".</p>
+            <div class="dn-pre">GET  /api/users          ← 유저 목록
+POST /api/users          ← 유저 추가
+DELETE /api/users/123    ← 특정 유저 삭제</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>페이로드 / Payload</strong>
+            <p style="margin:6px 0 4px;">요청이나 응답에 실제로 담기는 데이터. 택배로 치면 박스(HTTP 요청) 안에 들어있는 내용물(payload).</p>
+            <div class="dn-pre">// POST 요청 시 body에 담기는 payload
+{ "name": "베이", "email": "bae@example.com" }</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>환경변수 / Environment Variable</strong>
+            <p style="margin:6px 0 4px;">코드 밖에 저장하는 설정값. API 키, 비밀번호처럼 코드에 직접 쓰면 안 되는 것들을 여기에 보관.</p>
+            <div class="dn-pre">// .env 파일 (절대 GitHub에 올리면 안 됨)
+FIREBASE_API_KEY=AIzaSy...
+DATABASE_URL=https://...
+
+// 코드에서 읽기
+process.env.FIREBASE_API_KEY</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>웹훅 / Webhook</strong>
+            <p style="margin:6px 0 4px;">이벤트가 발생하면 자동으로 특정 URL을 호출해주는 것. 내가 폴링(계속 물어보기)하는 게 아니라 상대방이 알려줌.</p>
+            <div class="dn-tip">예: GitHub에서 코드 push되면 → 자동으로 배포 서버에 알림 전송</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>미들웨어 / Middleware</strong>
+            <p style="margin:6px 0 4px;">요청과 응답 사이에 끼어서 처리하는 함수. 로그인 확인, 로그 기록, 데이터 검증 등을 요청마다 공통으로 처리할 때 씀.</p>
+            <div class="dn-tip">공항 보안 검색대처럼, 요청이 목적지에 도달하기 전에 거쳐야 하는 관문들.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>멱등성 / Idempotent</strong>
+            <p style="margin:6px 0 4px;">같은 요청을 여러 번 해도 결과가 같은 성질. GET, PUT은 멱등, POST는 아님 (누를 때마다 새로 생성됨).</p>
+            <div class="dn-tip">결제 버튼을 실수로 두 번 눌러도 한 번만 결제돼야 → 멱등성이 중요한 이유</div>
+          </div>
+
+          <!-- 개발 문화 -->
+          <div class="dn-card" style="margin-bottom:12px;margin-top:20px;"><strong>🛠️ 개발 문화와 도구</strong></div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>모킹 / Mocking</strong>
+            <p style="margin:6px 0 4px;">실제 데이터나 API 대신 가짜로 만들어서 테스트하는 것. 서버가 아직 없어도 프론트 개발 가능하게 해줌.</p>
+            <div class="dn-tip">클로드가 "일단 목업 데이터로 개발하고 나중에 실제 API 연결할게요"라고 하면 이 뜻.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>CI/CD</strong>
+            <p style="margin:6px 0 4px;">Continuous Integration / Continuous Deployment. 코드 올리면 자동으로 테스트하고 배포하는 파이프라인. GitHub Actions 같은 것.</p>
+            <div class="dn-tip">베이 관리자는 main에 push하면 GitHub Pages가 자동 배포되는데, 이게 간단한 CD예요.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>스코프 / Scope</strong>
+            <p style="margin:6px 0 4px;">변수가 살아있는 범위. 함수 안에서 만든 변수는 함수 밖에서 쓸 수 없음. 이걸 모르면 "변수가 왜 없다고 하지?" 버그가 생김.</p>
+            <div class="dn-pre">function hello() {
+  const name = '베이'; // 함수 스코프 안
+}
+console.log(name); // ❌ 오류 — 밖에서 접근 불가</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>디펜던시 / Dependency</strong>
+            <p style="margin:6px 0 4px;">내 코드가 의존하는 외부 라이브러리. `npm install`로 설치하는 것들. 너무 많으면 유지보수가 어렵고, 보안 이슈가 생길 수 있음.</p>
+            <div class="dn-tip">package.json에 적힌 것들이 모두 디펜던시예요.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>스택 오버플로우 / Stack Overflow</strong>
+            <p style="margin:6px 0 4px;">함수 호출이 너무 많이 쌓여서 메모리가 넘치는 오류. 주로 재귀함수에서 종료 조건을 빠트렸을 때 발생.</p>
+            <div class="dn-warn">⚠️ 사이트 stackoverflow.com과 동음이의어! 개발자들이 에러 해결법 찾는 사이트 이름이 이 오류에서 유래.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>리그레션 / Regression</strong>
+            <p style="margin:6px 0 4px;">이전에 잘 되던 기능이 수정 후에 망가지는 것. 버그를 고쳤더니 다른 버그가 생기는 상황.</p>
+            <div class="dn-tip">클로드가 "리그레션이 없는지 테스트해보세요"라고 하면: 기존에 잘 되던 것도 확인하세요 라는 뜻.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>롤백 / Rollback</strong>
+            <p style="margin:6px 0 4px;">배포 후 문제가 생겨서 이전 버전으로 되돌리는 것. git revert나 이전 버전 재배포로 실행.</p>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>핫픽스 / Hotfix</strong>
+            <p style="margin:6px 0 4px;">배포 중인 서비스에 긴급한 버그가 생겼을 때 빠르게 고치는 패치. 다음 정기 배포를 기다릴 수 없을 때 씀.</p>
+          </div>
+
+          <!-- 용어 사전 퀴즈 -->
+          <div class="dn-ch-header" style="margin-top:32px;">
+            <div class="dn-ch-num">📝 용어 확인 퀴즈</div>
+            <div class="dn-ch-title">얼마나 익혔나 확인해봐요</div>
+          </div>
+          <div class="dn-card" style="margin-bottom:12px;">
+            <p class="dn-q-text">Q. 기능은 그대로인데 코드 구조를 깔끔하게 개선하는 것을 뭐라고 할까요?</p>
+            <div class="dn-quiz-opts">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq1')">마이그레이션</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq1')">리팩토링</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq1')">롤백</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq1')">하드코딩</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-tq1-exp">리팩토링(Refactoring)은 결과는 동일하게 유지하면서 코드 품질을 개선하는 것이에요.</div>
+          </div>
+          <div class="dn-card" style="margin-bottom:12px;">
+            <p class="dn-q-text">Q. 값을 변수로 빼지 않고 코드 안에 직접 박아넣는 것을 뭐라고 해요?</p>
+            <div class="dn-quiz-opts">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq2')">보일러플레이트</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq2')">엣지케이스</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq2')">하드코딩</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq2')">클로저</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-tq2-exp">하드코딩(Hardcoding)이에요. 값을 상수나 환경변수로 빼는 게 좋은 습관이에요.</div>
+          </div>
+          <div class="dn-card" style="margin-bottom:12px;">
+            <p class="dn-q-text">Q. API에서 특정 기능을 담당하는 URL 주소를 뭐라고 해요?</p>
+            <div class="dn-quiz-opts">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq3')">페이로드</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq3')">엔드포인트</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq3')">웹훅</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq3')">미들웨어</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-tq3-exp">엔드포인트(Endpoint)예요. /api/users 같은 URL 경로 하나하나가 엔드포인트예요.</div>
+          </div>
+          <div class="dn-card" style="margin-bottom:12px;">
+            <p class="dn-q-text">Q. 이전에 잘 되던 기능이 수정 후에 망가지는 것을 뭐라고 해요?</p>
+            <div class="dn-quiz-opts">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq4')">핫픽스</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq4')">기술 부채</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq4')">리그레션</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq4')">사이드 이펙트</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-tq4-exp">리그레션(Regression)이에요. 수정 전에 잘 되던 기능이 수정 후에 망가지는 것. 테스트가 중요한 이유예요.</div>
+          </div>
+          <div class="dn-card" style="margin-bottom:12px;">
+            <p class="dn-q-text">Q. 코드 밖에 저장하는 API 키, 비밀번호 같은 설정값을 뭐라고 해요?</p>
+            <div class="dn-quiz-opts">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq5')">디펜던시</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq5')">환경변수</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq5')">컨벤션</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq5')">레거시</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-tq5-exp">환경변수(Environment Variable)예요. .env 파일에 저장하고 절대 GitHub에 올리면 안 돼요!</div>
+          </div>
+          <div class="dn-card" style="margin-bottom:12px;">
+            <p class="dn-q-text">Q. 먼저 넣은 것이 먼저 나오는 자료구조는?</p>
+            <div class="dn-quiz-opts">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq6')">스택(Stack)</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq6')">큐(Queue)</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq6')">해시맵(HashMap)</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq6')">클로저(Closure)</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-tq6-exp">큐(Queue)예요. FIFO(First In, First Out). 줄 서기랑 같아요. 스택은 반대로 LIFO(마지막에 넣은 게 먼저 나옴).</div>
+          </div>
         </div>
 
         <!-- ── Git 실전 탭 (Ch 15) ── -->
