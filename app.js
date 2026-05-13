@@ -1976,7 +1976,9 @@
       if (pageId === 'habit') renderHabitPage();
       if (pageId === 'work') renderWorkPage();
       if (pageId === 'quirk') renderQuirkPage();
-      if (pageId === 'devnotes') dnUpdateAll();
+      if (pageId === 'devnotes') { dnUpdateAll(); dnUpdateTabBadges(); }
+      var dnFab = document.getElementById('dnQuestionFab');
+      if (dnFab) dnFab.style.display = (pageId === 'devnotes') ? 'flex' : 'none';
 
       if (window.innerWidth <= 768) {
         toggleSidebar();
@@ -3306,6 +3308,7 @@
         settings:     function() { return _buildSettings(); },
         pomodoroLogs: function() { return { logs: pomodoroLogs }; },
         workItemLogs: function() { return { logs: workItemLogs }; },
+        devnotesLogs: function() { return { items: dnNoteLogs }; },
         quirks:       function() { return { items: quirks }; }
       };
 
@@ -3315,7 +3318,7 @@
         '시간표': 'schedules', '시간표_일정': 'schedules',
         '카테고리': 'categories', '일상종류': 'categories',
         '사용자설정': 'settings',
-        '뽀모도로기록': 'pomodoroLogs', '할일기록': 'workItemLogs'
+        '뽀모도로기록': 'pomodoroLogs', '할일기록': 'workItemLogs', '개발괴발기록': 'devnotesLogs'
       };
 
       function _buildSettings() {
@@ -3324,7 +3327,7 @@
           profilePhoto: localStorage.getItem('profilePhoto') || null
         };
         ['designSettings','menuCustomizations','myEmojis','tagColorOverrides',
-         'pomodoroSettings','notificationSettings','favoritePages','bae_done'].forEach(function(k) {
+         'pomodoroSettings','notificationSettings','favoritePages','bae_done','dnSeenVersions'].forEach(function(k) {
           var v = localStorage.getItem(k);
           if (v !== null) { try { s[k] = JSON.parse(v); } catch(e) { s[k] = v; } }
         });
@@ -3415,6 +3418,7 @@
             if (sm.pomodoroSettings) { Object.assign(pomodoroSettings, sm.pomodoroSettings); localStorage.setItem('pomodoroSettings', JSON.stringify(pomodoroSettings)); }
             if (sm.notificationSettings) { Object.assign(notificationSettings, sm.notificationSettings); localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings)); }
             if (sm.favoritePages) { favoritePages = sm.favoritePages; localStorage.setItem('favoritePages', JSON.stringify(favoritePages)); }
+            if (sm.dnSeenVersions) { dnSeenVersions = sm.dnSeenVersions; localStorage.setItem('dnSeenVersions', JSON.stringify(dnSeenVersions)); }
             if (sm.bae_done && Object.keys(sm.bae_done).length > 0) {
               dnDone = sm.bae_done; localStorage.setItem('bae_done', JSON.stringify(dnDone));
             } else {
@@ -3437,6 +3441,10 @@
           if (data.quirks && data.quirks.items) {
             quirks = data.quirks.items;
             localStorage.setItem('quirks', JSON.stringify(quirks));
+          }
+          if (data.devnotesLogs && data.devnotesLogs.items) {
+            dnNoteLogs = data.devnotesLogs.items;
+            localStorage.setItem('dnNoteLogs', JSON.stringify(dnNoteLogs));
           }
           _updateUI('ok', 'Firebase 연결됨');
           console.log('[FS] ✅ 전체 로드 완료');
@@ -9550,6 +9558,19 @@
     // ========================================
     var dnDone = JSON.parse(localStorage.getItem('bae_done') || '{}');
     var dnQuizScores = {};
+    var dnNoteLogs = [];   // [{ id, type:'question'|'mistake', content, quizId, questionText, myAnswer, correctAnswer, createdAt, reviewed }]
+    var dnSeenVersions = JSON.parse(localStorage.getItem('dnSeenVersions') || '{}');
+
+    // 섹션별 콘텐츠 버전 — 내용 추가 시 해당 섹션 날짜 업데이트
+    var DN_SECTION_VERSIONS = {
+      basic:  '2026-05-01',
+      prac:   '2026-05-01',
+      adv:    '2026-05-01',
+      claude: '2026-05-01',
+      git:    '2026-05-13',
+      env:    '2026-05-01',
+      terms:  '2026-05-13',
+    };
     var dnQuizAnswered = {};
     var dnCurrentTab = 'dash';
 
@@ -9601,6 +9622,8 @@
         p.classList.toggle('active', p.dataset.tab === tabKey);
       });
       if (tabKey === 'dash') dnUpdateAll();
+      dnMarkSectionSeen(tabKey);
+      dnUpdateTabBadges();
       document.getElementById('devnotesPage').scrollTop = 0;
     }
 
@@ -9666,6 +9689,70 @@
       dnSave(); dnUpdateAll();
     }
 
+    function dnSaveNoteLogs() {
+      localStorage.setItem('dnNoteLogs', JSON.stringify(dnNoteLogs));
+      if (window.FS && FS.isConnected()) FS.sync(['개발괴발기록']);
+    }
+
+    function dnOpenQuestionModal() {
+      var modal = document.getElementById('dnQuestionModal');
+      if (!modal) return;
+      modal.style.display = 'flex';
+      var ta = document.getElementById('dnQuestionText');
+      if (ta) { ta.value = ''; ta.focus(); }
+    }
+
+    function dnCloseQuestionModal() {
+      var modal = document.getElementById('dnQuestionModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function dnSubmitQuestion() {
+      var ta = document.getElementById('dnQuestionText');
+      var text = ta ? ta.value.trim() : '';
+      if (!text) return;
+      var entry = { id: 'q-' + Date.now(), type: 'question', content: text, createdAt: new Date().toISOString(), reviewed: false };
+      dnNoteLogs.push(entry);
+      dnSaveNoteLogs();
+      dnCloseQuestionModal();
+      showToast('💬 질문이 저장됐어요!', 'success');
+    }
+
+    function dnAutoSaveMistake(qid, questionText, myAnswer, correctAnswer) {
+      var entry = {
+        id: 'w-' + Date.now(), type: 'mistake', quizId: qid,
+        questionText: questionText, myAnswer: myAnswer, correctAnswer: correctAnswer,
+        createdAt: new Date().toISOString(), reviewed: false
+      };
+      dnNoteLogs.push(entry);
+      dnSaveNoteLogs();
+    }
+
+    function dnMarkSectionSeen(tabKey) {
+      if (!DN_SECTION_VERSIONS[tabKey]) return;
+      dnSeenVersions[tabKey] = DN_SECTION_VERSIONS[tabKey];
+      localStorage.setItem('dnSeenVersions', JSON.stringify(dnSeenVersions));
+      if (window.FS && FS.isConnected()) FS.sync(['사용자설정']);
+    }
+
+    function dnUpdateTabBadges() {
+      document.querySelectorAll('#devnotesPage .tab-btn[data-tab]').forEach(function(btn) {
+        var tab = btn.dataset.tab;
+        var ver = DN_SECTION_VERSIONS[tab];
+        var seen = dnSeenVersions[tab];
+        var hasNew = ver && seen && seen < ver;
+        var existing = btn.querySelector('.dn-tab-new');
+        if (hasNew && !existing) {
+          var badge = document.createElement('span');
+          badge.className = 'dn-tab-new';
+          badge.textContent = 'N';
+          btn.appendChild(badge);
+        } else if (!hasNew && existing) {
+          existing.remove();
+        }
+      });
+    }
+
     function dnSyncNow() {
       if (!window.FS || !FS.isConnected()) {
         showAlert('Firebase 미연결', '사이드바 하단에서 Firebase에 먼저 연결해주세요.');
@@ -9686,9 +9773,17 @@
         dnQuizScores[qid] = true;
       } else {
         btn.classList.add('wrong');
+        var correctBtn = null;
         opts.forEach(function(o) {
-          if (o.onclick && o.onclick.toString().indexOf('true,') !== -1) o.classList.add('correct');
+          if (o.getAttribute('onclick') && o.getAttribute('onclick').indexOf(',true,') !== -1) {
+            o.classList.add('correct');
+            correctBtn = o;
+          }
         });
+        // 오답 자동 저장
+        var card = btn.closest('.dn-card');
+        var qText = card ? (card.querySelector('.dn-q-text') ? card.querySelector('.dn-q-text').textContent.trim() : '') : '';
+        dnAutoSaveMistake(qid, qText, btn.textContent.trim(), correctBtn ? correctBtn.textContent.trim() : '');
       }
       var exp = document.getElementById(qid + '-exp');
       if (exp) exp.classList.add('show');

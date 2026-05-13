@@ -3338,6 +3338,63 @@
       50% { box-shadow: 0 4px 24px rgba(255,80,80,0.45); }
     }
 
+    /* 개발괴발 질문 저장 FAB */
+    #dnQuestionFab {
+      position: fixed;
+      bottom: 84px;
+      right: 24px;
+      display: none;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #5b4fd4;
+      border: none;
+      color: #fff;
+      font-size: 20px;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+      z-index: 1199;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    #dnQuestionFab:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(91,79,212,0.35); }
+
+    /* 개발괴발 질문 모달 */
+    #dnQuestionModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 1300;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #dnQuestionModalBox {
+      background: var(--card-bg, #fff);
+      border-radius: 14px;
+      padding: 20px;
+      width: min(420px, 92vw);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    }
+
+    /* 개발괴발 탭 NEW 뱃지 */
+    .dn-tab-new {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #e53935;
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      line-height: 1;
+      border-radius: 8px;
+      padding: 1px 4px;
+      margin-left: 4px;
+      vertical-align: middle;
+      letter-spacing: 0;
+    }
+
     #pomodoroPanel {
       position: fixed;
       bottom: 86px;
