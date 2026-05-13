@@ -1546,6 +1546,74 @@ button.onclick = function(e) {
               새 브랜치 생성 → 코드 수정 → commit → push → GitHub에서 PR 생성 → diff 확인 → merge → main 배포
             </div>
           </div>
+          <div class="dn-card" style="margin-top:8px;">
+            <div class="dn-card-head"><span class="dn-card-title">📸 실제 상황: "main에 머지할까요?" 대화창</span><span class="dn-tag dn-tag-purple">실전 독해</span></div>
+            <p class="dn-card-body">클로드 코드가 feature 브랜치에서 작업하다가 main에 합칠 때 이런 대화창을 띄워요. 용어를 하나씩 뜯어볼게요.</p>
+            <div class="dn-scene">
+              <strong>"main이 뒤처져있고 분기점만 있으므로"</strong>란?<br><br>
+              feature 브랜치가 생긴 이후 main에 아무 커밋도 없었다는 뜻이에요.<br>
+              즉, main과 feature가 같은 지점에서 출발했고 main은 그 자리에 멈춰있는 상태.
+            </div>
+            <div class="dn-pre"><span class="cm"># main이 뒤처진 상황 (Fast-forward 가능한 상태)</span>
+main:    A → B                    ← 여기서 멈춤
+feature: A → B → C → D → E      ← 여기까지 왔음
+
+<span class="cm"># main이 분기한 상황 (3-way merge 필요)</span>
+main:    A → B → X → Y           ← main도 앞으로 나감
+feature: A → B → C → D           ← feature도 나감
+                    ↑ B가 분기점</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <div class="dn-card-head"><span class="dn-card-title">Fast-forward 머지</span><span class="dn-tag dn-tag-purple">권장 방식</span></div>
+            <p class="dn-card-body">main이 뒤처져 있을 때, feature 커밋들을 그대로 main에 이어 붙이는 것. 합쳤다는 흔적(머지 커밋)이 없어서 히스토리가 깔끔해요.</p>
+            <div class="dn-pre"><span class="cm"># 전: main은 B, feature는 E까지</span>
+main:    A → B
+feature: A → B → C → D → E
+
+<span class="cm"># Fast-forward 머지 후: main이 E까지 쭉 이어짐</span>
+main:    A → B → C → D → E  ✓ 깔끔!</div>
+            <div class="dn-tip">혼자 작업할 땐 거의 항상 이 방식이 좋아요. "충돌 없이 깔끔하게 머지"가 되는 조건이기도 해요.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <div class="dn-card-head"><span class="dn-card-title">PR 만들어서 머지</span><span class="dn-tag dn-tag-green">검토 포함</span></div>
+            <p class="dn-card-body">GitHub에서 PR(Pull Request)을 생성하고, diff를 확인한 뒤 머지 버튼을 누르는 방식. 한 단계가 더 있지만 변경 내용을 눈으로 확인할 수 있어요.</p>
+            <div class="dn-scene">
+              혼자 개발: PR 없이 Fast-forward가 더 빠름<br>
+              팀 개발: PR이 필수 — 다른 사람이 코드 리뷰 후 머지
+            </div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <div class="dn-card-head"><span class="dn-card-title">cherry-pick</span><span class="dn-tag dn-tag-green">선택적 가져오기</span></div>
+            <p class="dn-card-body">브랜치 전체를 머지하는 게 아니라 <strong>특정 커밋만 골라서</strong> 다른 브랜치에 가져오는 것.</p>
+            <div class="dn-pre"><span class="cm"># feature에 커밋이 3개 있는데 그 중 하나만 main에 가져오고 싶을 때</span>
+<span class="fn">git cherry-pick</span> abc1234  <span class="cm"># 커밋 해시 지정</span></div>
+            <div class="dn-tip">버그 수정 커밋만 급하게 main에 반영해야 할 때 씁니다. 체리를 하나씩 골라 담는 것처럼요.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <div class="dn-card-head"><span class="dn-card-title">커밋 해시 (Commit Hash)</span><span class="dn-tag dn-tag-green">알면 좋음</span></div>
+            <p class="dn-card-body">각 커밋에 자동으로 붙는 고유 ID. git log를 보면 옆에 긴 영숫자가 붙어요. cherry-pick 같은 명령에서 "어떤 커밋인지" 특정할 때 씁니다.</p>
+            <div class="dn-pre"><span class="fn">git log</span> --oneline
+<span class="cm">abc1234 로그인 기능 추가      ← 여기서 abc1234가 해시
+def5678 버그 수정
+ghi9012 초기 설정</span></div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <div class="dn-card-head"><span class="dn-card-title">머지 충돌 (Merge Conflict)</span><span class="dn-tag dn-tag-purple">꼭 알기</span></div>
+            <p class="dn-card-body">두 브랜치가 <strong>같은 파일의 같은 줄</strong>을 다르게 수정했을 때 발생. Git이 "어떤 걸 쓸지 나는 모르겠으니 직접 골라"라고 멈추는 상황.</p>
+            <div class="dn-pre"><span class="cm"># 충돌이 나면 파일 안에 이런 표시가 생겨요</span>
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD (현재 브랜치)
+이쪽 내용
+=======
+저쪽 내용
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; feature/login (합치려는 브랜치)</div>
+            <div class="dn-warn">⚠️ 충돌이 나면 파일을 직접 열어서 원하는 내용만 남기고 나머지 표시를 지운 뒤, 다시 커밋해야 해요.</div>
+          </div>
+
           <button class="dn-done-btn" id="dn-done15" onclick="dnMarkDone(15)">이 챕터 읽었어요 ✓</button>
         </div>
 
