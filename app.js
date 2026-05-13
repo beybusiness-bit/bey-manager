@@ -9566,7 +9566,7 @@
       basic:  '2026-05-01',
       prac:   '2026-05-01',
       adv:    '2026-05-01',
-      claude: '2026-05-01',
+      claude: '2026-05-13',
       git:    '2026-05-13',
       env:    '2026-05-13',
       terms:  '2026-05-13',
@@ -9588,6 +9588,8 @@
       {title:'클로드 소통법', section:'claude'},
       {title:'클로드 코드 활용', section:'claude'},
       {title:'용어 혼동 주의보', section:'claude'},
+      {title:'에이전트·스킬·멀티에이전트', section:'claude'},
+      {title:'CLAUDE.md 심화 + 참고 링크', section:'claude'},
       {title:'개념 퀴즈', section:'quiz', quizOnly:true},
       {title:'실습 과제', section:'quiz', quizOnly:true},
       {title:'브랜치·PR·merge·diff', section:'git'},
@@ -9600,7 +9602,7 @@
       basic: {label:'기초편', total:2, ids:[1,2]},
       prac:  {label:'실전편', total:4, ids:[3,4,5,6]},
       adv:   {label:'심화편', total:3, ids:[7,8,9]},
-      claude:{label:'클로드 활용', total:3, ids:[10,11,12]},
+      claude:{label:'클로드 활용', total:5, ids:[10,11,12,19,20]},
       git:   {label:'Git 실전', total:1, ids:[15]},
       env:   {label:'개발 환경 실전', total:3, ids:[16,17,18]},
     };
@@ -9667,7 +9669,7 @@
         });
 
         var html = '';
-        for (var j = 1; j <= 18; j++) {
+        for (var j = 1; j <= 20; j++) {
           var ch = DN_CHAPTERS[j];
           if (ch.quizOnly) continue;
           var isDone = dnDone[j];
