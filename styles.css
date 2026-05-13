@@ -3653,13 +3653,17 @@
     #devnotesPage .dn-dash-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:12px; }
     #devnotesPage .dn-dash-card { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:4px; }
     #devnotesPage .dn-dash-card.done { border-color:#1a8c60;background:#e2f5ec; }
+    #devnotesPage .dn-dash-card.in-progress { border-color:#7c5fd4;background:#f3f0fd; }
     #devnotesPage .dn-dash-card-num { font-size:10px;font-weight:700;color:var(--text-secondary,#999);letter-spacing:.05em; }
     #devnotesPage .dn-dash-card-title { font-size:12.5px;font-weight:600;line-height:1.4; }
     #devnotesPage .dn-dash-card-status { font-size:11.5px;margin-top:2px; }
     #devnotesPage .dn-dash-card.done .dn-dash-card-status { color:#0f6044; }
-    #devnotesPage .dn-dash-card:not(.done) .dn-dash-card-status { color:var(--text-secondary,#999); }
+    #devnotesPage .dn-dash-card.in-progress .dn-dash-card-status { color:#5b4fd4; }
+    #devnotesPage .dn-dash-card:not(.done):not(.in-progress) .dn-dash-card-status { color:var(--text-secondary,#999); }
     #devnotesPage .dn-dash-goto { margin-top:6px;font-size:11.5px;padding:4px 10px;border-radius:6px;border:1px solid var(--border-color,#eee);background:transparent;cursor:pointer;color:var(--text-secondary,#888);transition:all .12s; }
     #devnotesPage .dn-dash-goto:hover { background:var(--body-bg,#f5f5f5); }
+    #devnotesPage .dn-dash-goto.in-progress { border-color:#7c5fd4;color:#5b4fd4;background:#ede9fb; }
+    #devnotesPage .dn-dash-goto.in-progress:hover { background:#ddd6f8; }
     #devnotesPage .dn-dash-actions { display:flex;gap:8px;flex-wrap:wrap;margin-top:4px; }
     #devnotesPage .dn-ch-divider { border:none;border-top:1px solid var(--border-color,#eee);margin:1.5rem 0; }
     #devnotesPage .dn-scene-label { font-size:12px;font-weight:700;color:var(--text-secondary,#999);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;padding:0; }

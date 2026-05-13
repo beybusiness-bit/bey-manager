@@ -9657,18 +9657,32 @@
 
       var grid = document.getElementById('dn-dash-grid');
       if (grid) {
+        // 섹션별 진행 상태 미리 계산
+        var secProgress = {};
+        Object.keys(DN_SECTIONS).forEach(function(sec) {
+          var s = DN_SECTIONS[sec];
+          var cnt = s.ids.filter(function(i) { return dnDone[i]; }).length;
+          secProgress[sec] = { done: cnt, total: s.total };
+        });
+
         var html = '';
         for (var j = 1; j <= 17; j++) {
           var ch = DN_CHAPTERS[j];
           if (ch.quizOnly) continue;
           var isDone = dnDone[j];
-          var secLabel = DN_SECTIONS[ch.section] ? DN_SECTIONS[ch.section].label : '';
-          html += '<div class="dn-dash-card' + (isDone ? ' done' : '') + '">';
+          var sec = ch.section;
+          var sp = secProgress[sec] || { done: 0, total: 1 };
+          var secPartial = !isDone && sp.done > 0;  // 이 챕터는 미완료지만 섹션 내 다른 챕터는 완료된 상태
+          var secLabel = DN_SECTIONS[sec] ? DN_SECTIONS[sec].label : '';
+          var cardClass = 'dn-dash-card' + (isDone ? ' done' : secPartial ? ' in-progress' : '');
+          html += '<div class="' + cardClass + '">';
           html += '<div class="dn-dash-card-num">Ch ' + j + ' · ' + secLabel + '</div>';
           html += '<div class="dn-dash-card-title">' + ch.title + '</div>';
           html += '<div class="dn-dash-card-status">' + (isDone ? '✓ 완료' : '● 미완료') + '</div>';
-          var tabKey = ch.section === 'basic' ? 'basic' : ch.section === 'prac' ? 'prac' : ch.section === 'adv' ? 'adv' : ch.section === 'claude' ? 'claude' : ch.section === 'git' ? 'git' : 'env';
-          html += '<button class="dn-dash-goto" onclick="dnSwitchTab(\'' + tabKey + '\');">' + (isDone ? '복습하기' : '바로 가기') + '</button>';
+          var tabKey = sec === 'basic' ? 'basic' : sec === 'prac' ? 'prac' : sec === 'adv' ? 'adv' : sec === 'claude' ? 'claude' : sec === 'git' ? 'git' : 'env';
+          var btnClass = 'dn-dash-goto' + (secPartial ? ' in-progress' : '');
+          var btnLabel = isDone ? '복습하기' : secPartial ? '학습 중' : '바로가기';
+          html += '<button class="' + btnClass + '" onclick="dnSwitchTab(\'' + tabKey + '\');">' + btnLabel + '</button>';
           html += '</div>';
         }
         grid.innerHTML = html;
