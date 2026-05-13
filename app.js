@@ -9568,7 +9568,7 @@
       adv:    '2026-05-01',
       claude: '2026-05-01',
       git:    '2026-05-13',
-      env:    '2026-05-01',
+      env:    '2026-05-13',
       terms:  '2026-05-13',
     };
     var dnQuizAnswered = {};
@@ -9593,6 +9593,7 @@
       {title:'브랜치·PR·merge·diff', section:'git'},
       {title:'갑자기 튀어나오는 개념들', section:'env'},
       {title:'브랜치 실전 생존 가이드', section:'env'},
+      {title:'클로드 코드 웹 환경 이해하기', section:'env'},
     ];
 
     var DN_SECTIONS = {
@@ -9601,7 +9602,7 @@
       adv:   {label:'심화편', total:3, ids:[7,8,9]},
       claude:{label:'클로드 활용', total:3, ids:[10,11,12]},
       git:   {label:'Git 실전', total:1, ids:[15]},
-      env:   {label:'개발 환경 실전', total:2, ids:[16,17]},
+      env:   {label:'개발 환경 실전', total:3, ids:[16,17,18]},
     };
 
     function dnSave() { localStorage.setItem('bae_done', JSON.stringify(dnDone)); if (window.FS && FS.isConnected()) FS.sync(['사용자설정']); }
@@ -9666,7 +9667,7 @@
         });
 
         var html = '';
-        for (var j = 1; j <= 17; j++) {
+        for (var j = 1; j <= 18; j++) {
           var ch = DN_CHAPTERS[j];
           if (ch.quizOnly) continue;
           var isDone = dnDone[j];

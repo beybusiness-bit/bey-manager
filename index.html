@@ -1791,6 +1791,97 @@ ghi9012 초기 설정</span></div>
             <div class="dn-warn">다음번에 클로드 코드가 "리셋할게요"라고 하면 — 바로 진행하지 말고 "리셋하면 사라지는 내 작업이 있어?" 먼저 물어봐요.</div>
           </div>
           <button class="dn-done-btn" id="dn-done17" onclick="dnMarkDone(17)">이 챕터 읽었어요 ✓</button>
+
+          <!-- ── Chapter 18 ── -->
+          <div class="dn-chapter">
+            <div class="dn-ch-num">Chapter 18 · 개발 환경 실전 <span class="dn-badge-new">NEW</span></div>
+            <div class="dn-ch-title">클로드 코드 웹 환경 이해하기</div>
+
+            <div class="dn-card">
+              <div class="dn-card-head"><span class="dn-card-title">Remote(클라우드) vs Local(로컬) — 클로드가 돌아가는 곳</span><span class="dn-tag dn-tag-yellow">꼭 알기</span></div>
+              <p class="dn-card-body">
+                클로드 코드를 <strong>어디서 여냐</strong>에 따라 실행 환경이 완전히 달라요.<br><br>
+                <strong>Remote(클라우드) ☁️</strong>: <code class="dn-code">claude.ai/code</code>에서 열면 클로드가 <strong>클라우드 서버</strong>(인터넷 어딘가에 있는 컴퓨터)에서 실행돼요. 지금 이 베이 관리자 개발이 바로 이 방식이에요.<br><br>
+                <strong>Local(로컬) 💻</strong>: 내 Mac 터미널에서 <code class="dn-code">claude</code> 명령어로 열면 클로드가 <strong>내 컴퓨터 안</strong>에서 실행돼요. 내 Git 계정, 내 비밀번호, 내 파일 등을 직접 사용할 수 있어요.<br><br>
+                핵심 차이: Remote 환경에서는 클로드가 내 GitHub 계정에 직접 접근할 권한이 없어요. 그래서 push 방식이나 브랜치 전략이 달라지는 거예요.
+              </p>
+              <div class="dn-tip">
+                "스크린샷에 Remote(☁️) 표시가 있어요" → 지금 클라우드 서버에서 클로드가 실행 중이라는 뜻이에요.
+              </div>
+            </div>
+
+            <div class="dn-card">
+              <div class="dn-card-head"><span class="dn-card-title">feature 브랜치 자동 생성 (claude/이름-랜덤코드)</span><span class="dn-tag dn-tag-purple">꼭 알기</span></div>
+              <p class="dn-card-body">
+                웹(Remote) 환경에서 클로드는 <strong>main 브랜치에 직접 작업하지 않아요.</strong> 대신 매 세션마다 임시 브랜치를 자동으로 만들어요.<br><br>
+                형식: <code class="dn-code">claude/작업이름-랜덤코드</code><br>
+                예: <code class="dn-code">claude/setup-environment-detection-MYc81</code><br><br>
+                <strong>왜 이렇게 하냐면?</strong><br>
+                main 브랜치는 실제 서비스에 배포되는 중요한 브랜치예요. 작업 중인 미완성 코드가 바로 main에 들어가면 앱이 깨질 수 있어요. 그래서 별도 브랜치에서 작업하고, 완성되면 검토 후 합치는 방식을 써요.
+              </p>
+              <div class="dn-pre"><span class="cm"># 현재 브랜치 확인</span>
+<span class="fn">git branch</span>  <span class="cm"># * claude/setup-environment-... 처럼 뜨면 feature 브랜치</span>
+<span class="fn">git branch</span>  <span class="cm"># * main 이면 main 브랜치</span></div>
+            </div>
+
+            <div class="dn-card">
+              <div class="dn-card-head"><span class="dn-card-title">git push 403 에러 — "웹 환경에서 main에 직접 push 안 돼요"</span><span class="dn-tag dn-tag-red">자주 만남</span></div>
+              <p class="dn-card-body">
+                <code class="dn-code">git push origin main</code>을 실행했을 때 <strong>403 에러</strong>가 뜨는 건 "권한이 없어요"라는 뜻이에요.<br><br>
+                웹(Remote) 환경에서는 클로드가 GitHub 계정을 직접 갖고 있지 않아서 main 브랜치에 바로 push할 권한이 없어요.<br><br>
+                <strong>해결 흐름:</strong><br>
+                1️⃣ feature 브랜치에 push (이건 가능해요)<br>
+                2️⃣ PR(Pull Request) 생성 — "이 브랜치를 main에 합쳐도 될까요?" 요청<br>
+                3️⃣ 검토 후 머지(merge) — feature 브랜치가 main에 합쳐짐<br>
+                4️⃣ GitHub Pages가 main 기준으로 자동 배포
+              </p>
+              <div class="dn-tip">베이 관리자에서는 push.sh 스크립트를 써서 이 문제를 우회하고 있어요. 클로드가 알아서 처리하니 신경 안 써도 돼요.</div>
+            </div>
+
+            <div class="dn-card">
+              <div class="dn-card-head"><span class="dn-card-title">MCP 도구 (mcp__github__ 등) — 클로드의 손발</span><span class="dn-tag dn-tag-blue">개념</span></div>
+              <p class="dn-card-body">
+                <strong>MCP(Model Context Protocol)</strong>는 클로드가 외부 서비스를 직접 다룰 수 있게 해주는 연결 규격이에요.<br><br>
+                <code class="dn-code">mcp__github__</code>: GitHub에서 PR 만들기, 머지하기, 이슈 보기 등을 클로드가 직접 실행<br>
+                <code class="dn-code">mcp__notion__</code>: Notion 페이지 읽기/쓰기<br>
+                <code class="dn-code">mcp__firebase__</code>: Firestore 데이터 읽기/쓰기 (연결하면 저장된 질문 바로 확인 가능!)<br><br>
+                MCP가 없으면 클로드는 코드 파일만 수정할 수 있어요. MCP가 있으면 GitHub, Notion, Firebase 같은 외부 서비스까지 직접 조작할 수 있어요.<br><br>
+                <strong>설정 방법:</strong> <code class="dn-code">~/.claude/settings.json</code>에 MCP 서버를 등록하면, 다음 세션부터 해당 도구가 활성화돼요.
+              </p>
+              <div class="dn-tip">클로드가 대화 중에 <code class="dn-code">mcp__github__create_pull_request</code> 같은 걸 쓴다면, GitHub MCP 도구로 PR을 만들고 있다는 뜻이에요.</div>
+            </div>
+
+            <!-- 퀴즈 -->
+            <div class="dn-card dn-quiz-card">
+              <div class="dn-card-head"><span class="dn-card-title">✏️ 확인 퀴즈</span></div>
+              <div class="dn-quiz" id="dn-q18-1">
+                <div class="dn-q-text">claude.ai/code 웹에서 클로드를 사용할 때의 환경은?</div>
+                <div class="dn-opts">
+                  <button class="dn-opt" onclick="dnAns('dn-q18-1',this,false)">Local — 내 컴퓨터에서 실행</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q18-1',this,true)">Remote — 클라우드 서버에서 실행</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q18-1',this,false)">환경은 항상 동일하다</button>
+                </div>
+              </div>
+              <div class="dn-quiz" id="dn-q18-2">
+                <div class="dn-q-text">웹 환경에서 git push origin main을 했을 때 403 에러가 뜨는 이유는?</div>
+                <div class="dn-opts">
+                  <button class="dn-opt" onclick="dnAns('dn-q18-2',this,false)">인터넷이 끊겨서</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q18-2',this,false)">main 브랜치가 삭제되어서</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q18-2',this,true)">클라우드 환경에서는 GitHub main에 직접 push할 권한이 없어서</button>
+                </div>
+              </div>
+              <div class="dn-quiz" id="dn-q18-3">
+                <div class="dn-q-text">MCP(Model Context Protocol)는 무엇인가요?</div>
+                <div class="dn-opts">
+                  <button class="dn-opt" onclick="dnAns('dn-q18-3',this,false)">코드를 자동으로 리뷰해주는 AI 기능</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q18-3',this,true)">클로드가 GitHub·Notion 등 외부 서비스를 직접 다룰 수 있게 해주는 연결 규격</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q18-3',this,false)">Git 브랜치를 자동으로 만들어주는 명령어</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+          <button class="dn-done-btn" id="dn-done18" onclick="dnMarkDone(18)">이 챕터 읽었어요 ✓</button>
         </div>
 
       </div>
