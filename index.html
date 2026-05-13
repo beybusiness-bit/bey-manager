@@ -1470,6 +1470,204 @@ button.onclick = function(e) {
             </div>
             <div class="dn-quiz-exp" id="dn-tq8-exp">이벤트 버블링(Event Bubbling)이에요. e.stopPropagation()으로 막을 수 있어요. 베이 관리자 코드에도 여러 군데 쓰였어요.</div>
           </div>
+
+          <!-- ── UI 레이아웃 용어 ── -->
+          <div class="dn-card" style="margin-bottom:12px;margin-top:24px;"><strong>🖼️ UI 레이아웃 용어 — 화면의 영역들</strong></div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">화면 구조 한눈에 보기</span><span class="dn-tag dn-tag-yellow">꼭 알기</span></div>
+            <p class="dn-card-body">앱 화면은 이름 붙은 영역들로 나뉘어 있어요. 아래 그림으로 전체 구조를 먼저 잡아봐요.</p>
+            <div class="dn-pre" style="font-size:11.5px;line-height:1.7;">┌─────────────────────────────────────┐
+│              Header / Navbar         │  ← 상단 고정 영역
+│─────────┬───────────────────────────│
+│         │                           │
+│ Sidebar │      Main Content         │  ← 본문 영역
+│  (Nav)  │                           │
+│         │   ┌─────────────────┐     │
+│         │   │   Card / Panel  │     │  ← 정보 묶음
+│         │   └─────────────────┘     │
+│         │                           │
+│─────────┴───────────────────────────│
+│              Footer                 │  ← 하단 고정 영역
+└─────────────────────────────────────┘
+              ↓ (모바일에서는)
+┌─────────────────────┐
+│     Top Bar         │  ← 모바일 상단 바 (햄버거+제목)
+│─────────────────────│
+│                     │
+│   Main Content      │
+│                     │
+│─────────────────────│
+│  Bottom Navigation  │  ← 하단 탭바 (인스타그램 하단처럼)
+└─────────────────────┘
+        ↑ 위에서 올라오는
+   ┌─────────────────┐
+   │  Bottom Sheet   │  ← 아래에서 올라오는 패널
+   └─────────────────┘</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Header · Navbar · Top Bar</span></div>
+            <p class="dn-card-body">
+              모두 "화면 위쪽에 고정된 영역"이에요. 차이는 미묘해요.<br><br>
+              <strong>Header (헤더)</strong>: 페이지 최상단 영역. 로고, 제목, 로그인 버튼 등이 들어가요.<br>
+              <strong>Navbar (내비바)</strong>: Navigation Bar의 줄임. 메뉴·링크가 있는 탐색 바. Header 안에 있는 경우도 많아요.<br>
+              <strong>Top Bar</strong>: 주로 모바일 앱에서 상단 고정 바를 부르는 말. 베이 관리자 모바일 상단에 있는 그거예요.<br>
+              <strong>App Bar</strong>: 모바일 앱에서 Top Bar와 거의 같은 의미로 써요.
+            </p>
+            <div class="dn-tip">베이 관리자 코드에서 <code class="dn-code">#mobileTopBar</code>가 바로 이 Top Bar예요. 모바일에서만 보여요.</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Footer · Bottom Bar · Bottom Navigation</span></div>
+            <p class="dn-card-body">
+              <strong>Footer (푸터)</strong>: 페이지 맨 아래 영역. 저작권, 링크, 회사 정보 등이 들어가요. 웹사이트에서 자주 보여요.<br><br>
+              <strong>Bottom Bar</strong>: 모바일 화면 아래에 고정된 바.<br><br>
+              <strong>Bottom Navigation (바텀 내비)</strong>: 모바일 앱에서 화면 하단에 탭 아이콘들이 줄지어 있는 것. 인스타그램·유튜브 하단 메뉴가 대표적이에요.<br><br>
+              <strong>Tab Bar</strong>: Bottom Navigation과 거의 같은 의미. iOS에서 자주 쓰는 표현이에요.
+            </p>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Sidebar · Drawer · Side Menu</span></div>
+            <p class="dn-card-body">
+              <strong>Sidebar (사이드바)</strong>: 화면 옆(주로 왼쪽)에 있는 보조 영역. 베이 관리자의 왼쪽 메뉴가 사이드바예요.<br><br>
+              <strong>Drawer (드로어)</strong>: 평소엔 숨겨져 있다가 햄버거 버튼을 누르면 옆에서 밀려나오는 메뉴. 모바일에서 사이드바를 이렇게 구현해요.<br><br>
+              <strong>Side Menu</strong>: Drawer, Sidebar와 거의 같은 뜻으로 혼용돼요.
+            </p>
+            <div class="dn-pre" style="font-size:11px;line-height:1.6;">← 닫힘               열림 →
+┌──┬──────────┐    ┌────────┬───────┐
+│  │          │    │Sidebar │ Main  │
+│  │  Main    │    │ Menu   │Content│
+│  │ Content  │    │ 홈     │       │
+│  │          │    │ 설정   │       │
+└──┴──────────┘    └────────┴───────┘
+ 햄버거 닫힘              열린 상태</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Modal · Dialog · Popup · Overlay</span><span class="dn-tag dn-tag-purple">자주 혼동</span></div>
+            <p class="dn-card-body">
+              모두 "현재 화면 위에 떠있는 무언가"예요. 미묘하게 달라요.<br><br>
+              <strong>Modal (모달)</strong>: 화면 중앙에 뜨는 창. 뒤 배경이 어두워지고, 이걸 닫기 전까지 다른 조작이 막혀요. "삭제할까요?" 확인창이 대표적.<br><br>
+              <strong>Dialog (다이얼로그)</strong>: Modal과 거의 같은 말. "모달 다이얼로그"라고도 해요. Windows의 경고창 같은 것.<br><br>
+              <strong>Popup (팝업)</strong>: 원래는 새 브라우저 창을 여는 거지만, 요즘은 Modal과 거의 같은 뜻으로 혼용돼요.<br><br>
+              <strong>Overlay (오버레이)</strong>: 화면 위에 반투명하게 덮이는 레이어 전체를 뜻해요. Modal을 띄울 때 배경에 깔리는 어두운 부분이 오버레이예요.
+            </p>
+            <div class="dn-pre" style="font-size:11px;line-height:1.6;">┌──────────────────────────────┐
+│  (Overlay — 어두운 배경)     │
+│    ┌────────────────────┐    │
+│    │      Modal         │    │
+│    │  "정말 삭제할까요?" │    │
+│    │  [취소]  [삭제]    │    │
+│    └────────────────────┘    │
+└──────────────────────────────┘</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Bottom Sheet · Action Sheet</span><span class="dn-tag dn-tag-blue">모바일 필수</span></div>
+            <p class="dn-card-body">
+              <strong>Bottom Sheet (바텀 시트)</strong>: 화면 아래에서 위로 밀려 올라오는 패널이에요. 모바일 앱에서 자주 써요. 공유하기, 정렬 옵션 등을 보여줄 때 많이 사용해요.<br><br>
+              <strong>Action Sheet (액션 시트)</strong>: Bottom Sheet와 비슷한데, 주로 iOS에서 "이 중에 뭘 할까요?" 선택지를 보여줄 때 써요. 사진 앱에서 "사진 저장 / 공유 / 삭제" 같은 것.
+            </p>
+            <div class="dn-pre" style="font-size:11px;line-height:1.6;">┌─────────────────┐
+│   Main Content  │   ← 평소
+└─────────────────┘
+
+┌─────────────────┐
+│   Main Content  │
+│░░░░░░░░░░░░░░░░░│   ← 바텀 시트 올라올 때
+│ ─ ─ ─ ─ ─ ─ ─  │     (배경 어두워짐)
+│  Bottom Sheet   │
+│  공유하기       │
+│  링크 복사      │
+│  삭제           │
+└─────────────────┘</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Toast · Snackbar · Tooltip · Banner</span></div>
+            <p class="dn-card-body">
+              <strong>Toast (토스트)</strong>: 화면 아래(또는 위)에 잠깐 나타났다 사라지는 짧은 알림. "저장됐어요 ✓" 같은 것. 베이 관리자의 작업 완료 알림이 토스트예요.<br><br>
+              <strong>Snackbar (스낵바)</strong>: Toast와 거의 같아요. Google(Android)에서 쓰는 표현. 때로는 "실행 취소" 버튼이 달려있기도 해요.<br><br>
+              <strong>Tooltip (툴팁)</strong>: 요소에 마우스를 올리면 나오는 작은 설명 풍선. 버튼의 title 속성이 대표적.<br><br>
+              <strong>Banner (배너)</strong>: 화면 상단(또는 하단)에 길게 가로질러 표시되는 알림 바. "쿠키 동의", "앱 업데이트" 등에 많이 써요.
+            </p>
+            <div class="dn-pre" style="font-size:11px;line-height:1.6;">Toast/Snackbar:          Tooltip:
+┌───────────────┐        [버튼] ← 마우스 올리면
+│ ✓ 저장됐어요  │               ┌──────────┐
+└───────────────┘               │ 이 버튼은 │
+ (잠깐 떴다 사라짐)             │ ~해요     │
+                                └──────────┘</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Card · Panel · Widget · Container · Box</span></div>
+            <p class="dn-card-body">
+              <strong>Card (카드)</strong>: 관련 정보를 묶어서 보여주는 박스. 보통 테두리나 그림자가 있어요. 베이 관리자 할일 칸반 카드, 시간표 카드가 이거예요.<br><br>
+              <strong>Panel (패널)</strong>: Card보다 큰 구역. 특정 기능 묶음을 담는 영역. 뽀모도로 패널처럼 독립된 기능 섹션에 써요.<br><br>
+              <strong>Widget (위젯)</strong>: 독립적으로 동작하는 작은 UI 컴포넌트. 날씨 위젯, 달력 위젯처럼 "그 자체로 완결된 기능 덩어리"예요.<br><br>
+              <strong>Container (컨테이너)</strong>: 다른 요소들을 담는 껍데기. 내용보다 레이아웃을 잡는 역할이에요.<br><br>
+              <strong>Box / Wrapper (박스/래퍼)</strong>: Container와 거의 같은 의미. 요소를 감싸는 역할.
+            </p>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">FAB · Tab · Chip · Badge · Breadcrumb</span></div>
+            <p class="dn-card-body">
+              <strong>FAB (Floating Action Button)</strong>: 화면 위에 둥둥 떠있는 큰 원형 버튼. 베이 관리자 우측 하단의 뽀모도로 버튼, 💬 질문 저장 버튼이 FAB이에요.<br><br>
+              <strong>Tab (탭)</strong>: 여러 섹션을 전환하는 버튼. 베이 관리자 개발괴발 상단의 기초편/실전편/… 이 탭이에요.<br><br>
+              <strong>Chip (칩)</strong>: 작고 둥근 태그 모양 요소. 필터, 태그, 선택지 등에 써요. 베이 관리자 시간표 태그 칩이 이거예요.<br><br>
+              <strong>Badge (뱃지)</strong>: 숫자나 점으로 알림 개수를 표시하는 작은 표시. 카카오톡 앱 아이콘의 빨간 숫자, 개발괴발 탭의 N 표시가 뱃지예요.<br><br>
+              <strong>Breadcrumb (브레드크럼)</strong>: 현재 위치를 계층으로 보여주는 탐색 표시. <code class="dn-code">홈 &gt; 설정 &gt; 디자인</code> 같은 것.
+            </p>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Dropdown · Menu · Popover · Context Menu</span></div>
+            <p class="dn-card-body">
+              <strong>Dropdown (드롭다운)</strong>: 버튼을 클릭하면 아래로 펼쳐지는 선택 목록. <code class="dn-code">&lt;select&gt;</code> 태그나 커스텀 선택박스가 대표적.<br><br>
+              <strong>Menu (메뉴)</strong>: 선택 가능한 항목 목록. 사이드바, 드롭다운, 컨텍스트 메뉴 등 여러 형태로 나타나요.<br><br>
+              <strong>Popover (포오버)</strong>: 요소 근처에 말풍선처럼 뜨는 작은 패널. Tooltip보다 크고 더 많은 내용을 담아요.<br><br>
+              <strong>Context Menu (컨텍스트 메뉴)</strong>: 마우스 우클릭하면 나오는 메뉴. 모바일에서는 길게 누르면 나오는 메뉴가 이에 해당해요.
+            </p>
+          </div>
+
+          <!-- UI 레이아웃 퀴즈 -->
+          <div class="dn-card" style="margin-top:16px;">
+            <div class="dn-card-head"><span class="dn-card-title">✏️ UI 용어 퀴즈</span></div>
+            <div class="dn-quiz" id="dn-tq9">
+              <div class="dn-q-text">화면 아래에서 위로 밀려 올라오는 패널을 뭐라고 하나요?</div>
+              <div class="dn-opts">
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq9')">Popover</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq9')">Modal</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq9')">Bottom Sheet</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq9')">Drawer</button>
+              </div>
+              <div class="dn-quiz-exp" id="dn-tq9-exp">Bottom Sheet예요. 모바일에서 공유·정렬·옵션 패널로 자주 써요. Action Sheet도 비슷한 개념이에요.</div>
+            </div>
+            <div class="dn-quiz" id="dn-tq10">
+              <div class="dn-q-text">잠깐 떴다 사라지는 "저장됐어요 ✓" 같은 짧은 알림의 이름은?</div>
+              <div class="dn-opts">
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq10')">Banner</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq10')">Toast / Snackbar</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq10')">Dialog</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq10')">Tooltip</button>
+              </div>
+              <div class="dn-quiz-exp" id="dn-tq10-exp">Toast(또는 Snackbar)예요. 베이 관리자에서 할일·시간표 저장 후 뜨는 알림이 바로 토스트예요.</div>
+            </div>
+            <div class="dn-quiz" id="dn-tq11">
+              <div class="dn-q-text">베이 관리자 화면 우측 하단의 뽀모도로(⏰) 버튼은 어떤 UI 요소인가요?</div>
+              <div class="dn-opts">
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq11')">Widget</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq11')">Badge</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq11')">FAB (Floating Action Button)</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq11')">Chip</button>
+              </div>
+              <div class="dn-quiz-exp" id="dn-tq11-exp">FAB(Floating Action Button)이에요. 화면 위에 고정으로 떠있는 둥근 버튼이에요. 💬 질문 저장 버튼도 FAB이에요.</div>
+            </div>
+          </div>
+
         </div>
 
         <!-- ── Git 실전 탭 (Ch 15) ── -->
