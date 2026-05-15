@@ -9569,7 +9569,7 @@
       claude: '2026-05-13',
       git:    '2026-05-13',
       env:    '2026-05-13',
-      terms:  '2026-05-13',
+      terms:  '2026-05-15',
     };
     var dnQuizAnswered = {};
     var dnCurrentTab = 'dash';

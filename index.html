@@ -1893,6 +1893,148 @@ button.onclick = function(e) {
             </div>
           </div>
 
+          <!-- ── WYSIWYG · 에디터 · 렌더링 용어 ── -->
+          <div class="dn-card" style="margin-bottom:12px;margin-top:24px;"><strong>✍️ WYSIWYG · 에디터 · 렌더링 용어</strong></div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">WYSIWYG — "보이는 게 결과물이에요"</span><span class="dn-tag dn-tag-yellow">꼭 알기</span></div>
+            <p class="dn-card-body">
+              <strong>WYSIWYG</strong>은 <em>What You See Is What You Get</em>의 줄임말이에요. 발음은 <strong>"위지윅"</strong>이에요.<br><br>
+              편집 화면에서 보이는 그대로가 최종 결과물이 되는 방식이에요. 노션, 구글 독스, 워드처럼 굵게·기울임·색상을 적용하면 즉시 눈에 보이죠.<br><br>
+              반대 개념은 <strong>마크다운(Markdown)</strong>이나 <strong>HTML</strong>처럼 태그/기호로 작성하고 <em>렌더링 후</em>에야 결과를 볼 수 있는 방식이에요.
+            </p>
+            <div class="dn-pre" style="font-size:11px;line-height:1.8;">WYSIWYG 방식:
+편집창에서 → [굵게 버튼 클릭] → 즉시 굵게 보임 ✅
+
+Markdown 방식:
+편집창에서 → **굵게** 입력 → 렌더링 후 굵게 보임
+(편집 중엔 별표가 그대로 보임)</div>
+            <div class="dn-tip">노션이 WYSIWYG의 대표 예시예요. 베이 관리자 개발괴발 에디터도 일종의 WYSIWYG처럼 만들 수 있어요.</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Rich Text Editor vs Plain Text Editor vs Code Editor</span></div>
+            <p class="dn-card-body">
+              <strong>Plain Text Editor (플레인 텍스트 에디터)</strong>: 글자만 입력하는 기본 텍스트창. 서식 없음. 메모장, <code class="dn-code">&lt;textarea&gt;</code>가 여기에 해당해요.<br><br>
+              <strong>Rich Text Editor (리치 텍스트 에디터, RTE)</strong>: 굵게, 밑줄, 색상, 이미지 삽입 등 서식 기능이 있는 에디터. WYSIWYG 방식이에요. 노션, 구글 독스, 네이버 카페 글쓰기창이 대표적.<br><br>
+              <strong>Code Editor (코드 에디터)</strong>: 개발자용. 문법 강조(Syntax Highlighting), 자동완성, 들여쓰기 등 코딩에 특화된 에디터. VS Code, 클로드 코드 내부 편집기가 여기에 해당해요.
+            </p>
+            <div class="dn-pre" style="font-size:11px;line-height:1.7;">Plain Text    Rich Text       Code Editor
+┌──────────┐  ┌──────────────┐  ┌──────────────┐
+│안녕하세요 │  │ **안녕하세요**│  │function hi() │
+│오늘도    │  │   _오늘도_   │  │  console.log │
+│화이팅    │  │ 🎨 화이팅    │  │  ('hello')   │
+└──────────┘  └──────────────┘  └──────────────┘
+  서식 없음      서식 풍부        문법 강조</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Markdown (마크다운) — 가볍게 서식 쓰는 법</span></div>
+            <p class="dn-card-body">
+              <strong>#, **, -, []() 같은 기호</strong>로 서식을 표현하는 경량 문법이에요. WYSIWYG과 달리 텍스트로만 작성하고, 렌더링하면 예쁘게 변환돼요.<br><br>
+              GitHub README, 개발괴발 내 코드 설명, CLAUDE.md 모두 마크다운으로 쓰여 있어요.
+            </p>
+            <div class="dn-pre" style="font-size:11px;line-height:1.7;"># 제목        →  큰 제목
+**굵게**      →  굵게
+_기울임_      →  기울임
+- 항목        →  • 항목 (목록)
+[링크](url)   →  클릭 가능한 링크
+`코드`        →  코드 블록</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">렌더링(Rendering) — "코드를 눈에 보이는 화면으로"</span><span class="dn-tag dn-tag-purple">자주 나옴</span></div>
+            <p class="dn-card-body">
+              <strong>렌더링</strong>은 코드(HTML·CSS·마크다운)를 실제 화면으로 그려내는 과정이에요.<br><br>
+              • <strong>CSR (Client-Side Rendering)</strong>: 브라우저(클라이언트)가 JavaScript를 받아서 화면을 직접 그려요. 초기 로딩이 느릴 수 있지만 이후 페이지 전환이 빨라요. 베이 관리자가 이 방식이에요.<br><br>
+              • <strong>SSR (Server-Side Rendering)</strong>: 서버가 HTML을 미리 만들어서 브라우저에 보내줘요. 초기 로딩이 빠르고 검색엔진에 유리해요. Next.js가 대표적.<br><br>
+              • <strong>SSG (Static Site Generation)</strong>: 빌드할 때 HTML을 미리 다 만들어 저장해요. 속도 최강. 블로그나 문서 사이트에 적합해요.
+            </p>
+            <div class="dn-pre" style="font-size:11px;line-height:1.7;">CSR:  브라우저 → JS 실행 → 화면 그리기
+SSR:  서버 → HTML 완성 → 브라우저에 전송
+SSG:  빌드 시 HTML 생성 → CDN에 저장 → 즉시 전송</div>
+            <div class="dn-tip">GitHub Pages(베이 관리자 배포 방식)는 SSG에 가까워요. HTML 파일을 미리 올려두고 그대로 서빙해요.</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">CMS · Headless CMS · No-code · Low-code</span></div>
+            <p class="dn-card-body">
+              <strong>CMS (Content Management System)</strong>: 콘텐츠를 쉽게 관리하는 시스템. 코드 없이 글·이미지를 올리고 편집할 수 있어요. 워드프레스, 노션이 대표적이에요.<br><br>
+              <strong>Headless CMS</strong>: 콘텐츠 관리(백엔드)만 하고, 화면 표시(프론트엔드)는 개발자가 자유롭게 구성해요. 콘텐츠를 API로 가져다 쓰는 방식.<br><br>
+              <strong>No-code</strong>: 코드를 전혀 안 쓰고 드래그&드롭으로 앱·사이트를 만드는 방식. Webflow, Bubble이 대표적.<br><br>
+              <strong>Low-code</strong>: 대부분은 GUI로 만들고, 필요한 부분에만 코드를 조금 써요. No-code보다 유연하지만 배움이 더 필요해요.
+            </p>
+            <div class="dn-analogy">No-code = 레고 블록 조립 🧱 · Low-code = 레고 + 약간의 용접 🔧 · 코딩 = 처음부터 직접 제작 ⚙️</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Syntax Highlighting · Live Preview · Hot Reload</span></div>
+            <p class="dn-card-body">
+              <strong>Syntax Highlighting (문법 강조)</strong>: 코드에서 키워드, 문자열, 함수를 색깔로 구분해 보여주는 것. VS Code에서 function은 파란색, 문자열은 초록색이 되는 그거예요.<br><br>
+              <strong>Live Preview (라이브 프리뷰)</strong>: 코드를 수정하면 결과 화면이 실시간으로 바뀌는 기능. Codepen, Figma의 실시간 미리보기가 여기에 해당해요.<br><br>
+              <strong>Hot Reload (핫 리로드)</strong>: 개발 중 코드를 저장하면 브라우저 전체를 새로고침하지 않고 변경된 부분만 자동으로 반영하는 기능. React 개발 시 파일 저장하면 화면이 알아서 바뀌는 것.
+            </p>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Template · Boilerplate · Scaffold</span></div>
+            <p class="dn-card-body">
+              <strong>Template (템플릿)</strong>: 미리 만들어둔 틀. HTML 템플릿, 이메일 템플릿처럼 기본 구조가 잡혀 있어서 내용만 채우면 돼요.<br><br>
+              <strong>Boilerplate (보일러플레이트)</strong>: 프로젝트 시작 시 매번 필요한 반복 코드 묶음. "Create React App"으로 만들어지는 기본 파일들이 보일러플레이트예요.<br><br>
+              <strong>Scaffold (스캐폴드)</strong>: 프레임워크가 자동으로 기본 파일·폴더 구조를 생성해주는 것. <code class="dn-code">npx create-react-app</code>이 스캐폴딩이에요.
+            </p>
+            <div class="dn-analogy">Template = 빈칸 채우기 양식 📄 · Boilerplate = 항상 쓰는 기본 세팅 🔩 · Scaffold = 공사 시작 전 세우는 비계 🏗️</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">DOM · Virtual DOM · Shadow DOM</span><span class="dn-tag dn-tag-blue">개념</span></div>
+            <p class="dn-card-body">
+              <strong>DOM (Document Object Model)</strong>: 브라우저가 HTML을 읽어서 만드는 트리 구조 메모리 표현이에요. JavaScript가 <code class="dn-code">document.getElementById()</code>로 접근하는 그 구조예요.<br><br>
+              <strong>Virtual DOM</strong>: React 등이 쓰는 기법. DOM을 직접 바꾸는 게 느려서, 가상의 복사본에서 변경사항을 계산한 뒤 실제 DOM에 한 번에 반영해요.<br><br>
+              <strong>Shadow DOM</strong>: 컴포넌트 내부 DOM을 외부와 격리하는 기술. CSS가 밖으로 새지 않아요. 웹 컴포넌트 표준에 사용돼요.
+            </p>
+            <div class="dn-pre" style="font-size:11px;line-height:1.7;">DOM (브라우저 내부):
+&lt;html&gt;
+  └── &lt;body&gt;
+        └── &lt;div id="app"&gt;
+              └── &lt;button&gt;클릭&lt;/button&gt;
+
+JavaScript로 접근:
+document.getElementById('app')  // DOM 노드를 잡음</div>
+          </div>
+
+          <!-- WYSIWYG 퀴즈 -->
+          <div class="dn-card" style="margin-top:16px;">
+            <div class="dn-card-head"><span class="dn-card-title">✏️ WYSIWYG · 렌더링 퀴즈</span></div>
+            <div class="dn-quiz" id="dn-tq12">
+              <div class="dn-q-text">노션처럼 편집 화면에서 보이는 그대로 최종 결과가 되는 방식은?</div>
+              <div class="dn-opts">
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq12')">Markdown</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq12')">WYSIWYG</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq12')">SSR</button>
+              </div>
+              <div class="dn-quiz-exp" id="dn-tq12-exp">WYSIWYG(위지윅)이에요. What You See Is What You Get. 노션, 구글 독스가 대표적이에요.</div>
+            </div>
+            <div class="dn-quiz" id="dn-tq13">
+              <div class="dn-q-text">베이 관리자(GitHub Pages)가 사용하는 렌더링 방식에 가장 가까운 것은?</div>
+              <div class="dn-opts">
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq13')">SSR — 서버가 HTML을 매번 만들어 전송</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq13')">CSR + SSG — JS로 화면을 그리며, 파일은 미리 올려둠</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq13')">Headless CMS — API로 콘텐츠를 받아옴</button>
+              </div>
+              <div class="dn-quiz-exp" id="dn-tq13-exp">베이 관리자는 미리 만든 HTML·JS 파일을 GitHub Pages에 올려두고(SSG 개념), 브라우저에서 JS가 화면을 그리는(CSR) 방식이에요.</div>
+            </div>
+            <div class="dn-quiz" id="dn-tq14">
+              <div class="dn-q-text">코드를 저장하면 브라우저 전체 새로고침 없이 변경 부분만 자동 반영되는 기능은?</div>
+              <div class="dn-opts">
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq14')">Live Preview</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq14')">Syntax Highlighting</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq14')">Hot Reload</button>
+              </div>
+              <div class="dn-quiz-exp" id="dn-tq14-exp">Hot Reload예요. React 개발 서버에서 파일 저장하면 화면이 자동으로 바뀌는 그 기능이에요.</div>
+            </div>
+          </div>
+
         </div>
 
         <!-- ── Git 실전 탭 (Ch 15) ── -->
