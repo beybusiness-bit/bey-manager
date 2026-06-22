@@ -2731,19 +2731,25 @@ SQLite / PostgreSQL (데이터 저장)
     }
 
     function dnSyncNow() {
-      if (!window.FS || !FS.isConnected()) {
-        showAlert('Firebase 미연결', '사이드바 하단에서 Firebase에 먼저 연결해주세요.');
-        return;
-      }
+      // 독립 실행 모드: localStorage에만 저장
       localStorage.setItem('bae_done', JSON.stringify(dnDone));
-      FS.sync(['사용자설정']);
-      showToast('☁️ 진도를 Firestore에 저장했습니다', 'success');
+      showToast('💾 진도가 저장되었습니다', 'success');
     }
 
-    function dnAns(btn, isCorrect, qid) {
+    function dnAns(arg1, arg2, arg3) {
+      // 두 가지 호출 방식 지원:
+      // 구형: dnAns(btn, isCorrect, 'qid')  — .dn-quiz-opt 버튼
+      // 신형: dnAns('qid', btn, isCorrect)  — .dn-opt 버튼 (Ch 18+)
+      var btn, isCorrect, qid;
+      if (typeof arg1 === 'string') {
+        qid = arg1; btn = arg2; isCorrect = arg3;
+      } else {
+        btn = arg1; isCorrect = arg2; qid = arg3;
+      }
       if (dnQuizAnswered[qid]) return;
       dnQuizAnswered[qid] = true;
-      var opts = btn.parentElement.querySelectorAll('.dn-quiz-opt');
+      // 같은 부모 안의 선택지 버튼들 비활성화 (두 클래스 모두 지원)
+      var opts = btn.parentElement.querySelectorAll('.dn-quiz-opt, .dn-opt');
       opts.forEach(function(o) { o.disabled = true; });
       if (isCorrect) {
         btn.classList.add('correct');
@@ -2752,7 +2758,9 @@ SQLite / PostgreSQL (데이터 저장)
         btn.classList.add('wrong');
         var correctBtn = null;
         opts.forEach(function(o) {
-          if (o.getAttribute('onclick') && o.getAttribute('onclick').indexOf(',true,') !== -1) {
+          var oc = o.getAttribute('onclick') || '';
+          // 구형: ',true,' 패턴, 신형: ',this,true)' 패턴
+          if (oc.indexOf(',true,') !== -1 || oc.indexOf(',this,true)') !== -1) {
             o.classList.add('correct');
             correctBtn = o;
           }
