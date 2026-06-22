@@ -1,0 +1,2790 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📓 개발괴발 — 베이의 개발 학습 노트</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-yellow: #ffde59;
+      --primary-pink: #ffaade;
+      --primary-green: #c1ff72;
+      --bg-main: #fafafa;
+      --bg-card: #ffffff;
+      --bg-side: #fafafa;
+      --bg-hover: #f5f5f5;
+      --text-primary: #1a1a1a;
+      --text-secondary: #666666;
+      --text-tertiary: #aaaaaa;
+      --border-color: #e0e0e0;
+      --border-md: #d0d0d0;
+      --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --nav-width: 220px;
+      --button-radius: 8px;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg-main, #fafafa);
+      color: var(--text-primary, #1a1a1a);
+      line-height: 1.6;
+      font-size: 14px;
+      margin: 0;
+      padding: 0;
+    }
+    #devnotesPage {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 24px 20px 80px;
+    }
+    #devnotesPage .page-header h2 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 0 16px;
+    }
+    .tab-nav {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 0;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--text-secondary);
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-primary);
+      background: var(--bg-hover);
+    }
+
+    .tab-btn.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--primary-yellow);
+    }
+
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.3s;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+        .btn-confirm, .btn-cancel {
+      padding: 7px 14px;
+      border-radius: var(--button-radius);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+      line-height: 1.3;
+    }
+    .btn-cancel {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: inherit;
+    }
+    .btn-cancel:hover {
+      background: var(--bg-hover);
+    }
+    .btn-confirm {
+      background: var(--primary-btn-bg, var(--primary-yellow));
+      color: var(--primary-btn-color, inherit);
+      border: 1px solid var(--primary-btn-bg, var(--primary-yellow));
+    }
+    .btn-confirm:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+    /* 모달 안에서는 가로로 꽉 채우는 특수 케이스 */
+    .modal-actions .btn-confirm, .modal-actions .btn-cancel {
+      padding: 12px;
+      font-size: 14px;
+    }
+
+    /* 개발괴발 질문 저장 FAB */
+    #dnQuestionFab {
+      position: fixed;
+      bottom: 84px;
+      right: 24px;
+      display: none;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #5b4fd4;
+      border: none;
+      color: #fff;
+      font-size: 20px;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+      z-index: 1199;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    #dnQuestionFab:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(91,79,212,0.35); }
+
+    /* 개발괴발 질문 모달 */
+    #dnQuestionModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 1300;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #dnQuestionModalBox {
+      background: var(--card-bg, #fff);
+      border-radius: 14px;
+      padding: 20px;
+      width: min(420px, 92vw);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    }
+
+    /* 개발괴발 탭 NEW 뱃지 */
+    .dn-tab-new {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #e53935;
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      line-height: 1;
+      border-radius: 8px;
+      padding: 1px 4px;
+      margin-left: 4px;
+      vertical-align: middle;
+      letter-spacing: 0;
+    }
+    /* ── 개발괴발 (devnotes) 페이지 ── */
+    #devnotesPage .dn-progress-bar { height:4px;background:var(--border-color,#eee);border-radius:2px;overflow:hidden;margin-bottom:16px; }
+    #devnotesPage .dn-progress-fill { height:100%;background:var(--primary-yellow,#ffde59);border-radius:2px;transition:width .4s; }
+    #devnotesPage .dn-progress-label { font-size:12px;color:var(--text-secondary,#888);margin-bottom:6px;display:flex;justify-content:space-between; }
+    #devnotesPage .dn-tab-pane { display:none; }
+    #devnotesPage .dn-tab-pane.active { display:block; }
+    #devnotesPage .dn-card { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:10px;padding:14px 16px;margin-bottom:12px; }
+    #devnotesPage .dn-card-head { display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap; }
+    #devnotesPage .dn-card-title { font-size:14px;font-weight:700; }
+    #devnotesPage .dn-card-body { font-size:13.5px;color:var(--text-secondary,#888);line-height:1.8; }
+    #devnotesPage .dn-card-body strong { color:var(--text-primary,#222);font-weight:600; }
+    #devnotesPage .dn-tag { font-size:11px;padding:2px 9px;border-radius:20px;font-weight:600;white-space:nowrap; }
+    #devnotesPage .dn-tag-purple { background:#eeedfc;color:#3a30a8; }
+    #devnotesPage .dn-tag-green { background:#e2f5ec;color:#0f6044; }
+    #devnotesPage .dn-tag-amber { background:#fdf0db;color:#7d4a08; }
+    #devnotesPage .dn-tag-red { background:#fdecea;color:#922620; }
+    #devnotesPage .dn-tag-blue { background:#e5f0fa;color:#144e82; }
+    #devnotesPage .dn-tag-new { background:#d6f5e8;color:#0f6044; }
+    #devnotesPage code.dn-code { font-family:'DM Mono',monospace;font-size:12px;background:var(--card-bg,#f5f5f5);padding:1px 6px;border-radius:4px;border:1px solid var(--border-color,#eee); }
+    #devnotesPage .dn-pre { font-family:'DM Mono',monospace;font-size:12.5px;background:#1e1d1a;color:#d4d0c4;padding:12px 16px;border-radius:8px;margin:10px 0;overflow-x:auto;line-height:1.7;white-space:pre; }
+    #devnotesPage .dn-pre .cm { color:#7a7868; }
+    #devnotesPage .dn-pre .kw { color:#c792ea; }
+    #devnotesPage .dn-pre .fn { color:#82aaff; }
+    #devnotesPage .dn-pre .str { color:#c3e88d; }
+    #devnotesPage .dn-pre .num { color:#f78c6c; }
+    #devnotesPage .dn-tip { border-left:3px solid #5b4fd4;background:#eeedfc;border-radius:0 6px 6px 0;padding:10px 14px;margin-top:10px;font-size:13px;color:#3a30a8;line-height:1.65; }
+    #devnotesPage .dn-tip::before { content:"💡 "; }
+    #devnotesPage .dn-analogy { border-left:3px solid #1a8c60;background:#e2f5ec;border-radius:0 6px 6px 0;padding:10px 14px;margin-top:10px;font-size:13px;color:#0f6044;line-height:1.65; }
+    #devnotesPage .dn-analogy::before { content:"🔍 비유: ";font-weight:600; }
+    #devnotesPage .dn-warn { border-left:3px solid #b06a10;background:#fdf0db;border-radius:0 6px 6px 0;padding:10px 14px;margin-top:10px;font-size:13px;color:#7d4a08;line-height:1.65; }
+    #devnotesPage .dn-warn::before { content:"⚠️ 주의: ";font-weight:600; }
+    #devnotesPage .dn-scene { background:var(--card-bg,#f5f5f5);border:1px solid var(--border-color,#eee);border-radius:6px;padding:10px 14px;margin:10px 0;font-size:13.5px;color:var(--text-secondary,#888);line-height:1.75; }
+    #devnotesPage .dn-scene strong { color:var(--text-primary,#222); }
+    #devnotesPage .dn-ch-header { margin-bottom:1.25rem;padding-bottom:10px;border-bottom:1px solid var(--border-color,#eee);margin-top:1.5rem; }
+    #devnotesPage .dn-ch-header:first-child { margin-top:0; }
+    #devnotesPage .dn-ch-num { font-size:11px;color:var(--text-secondary,#888);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;display:flex;align-items:center;gap:8px; }
+    #devnotesPage .dn-badge-new { font-size:10px;background:#d6f5e8;color:#0f6044;padding:2px 7px;border-radius:8px;font-weight:700; }
+    #devnotesPage .dn-ch-title { font-size:20px;font-weight:700;line-height:1.3; }
+    #devnotesPage .dn-ch-desc { font-size:13px;color:var(--text-secondary,#888);margin-top:4px;line-height:1.6; }
+    #devnotesPage .dn-done-btn { display:flex;align-items:center;gap:8px;margin-top:1rem;margin-bottom:2rem;padding:.6rem 1.25rem;border-radius:8px;border:1.5px solid var(--border-color,#ddd);background:var(--card-bg,#fff);font-size:13.5px;font-weight:500;color:var(--text-secondary,#888);cursor:pointer;justify-content:center;width:100%;transition:all .15s; }
+    #devnotesPage .dn-done-btn:hover { border-color:#1a8c60;color:#1a8c60;background:#e2f5ec; }
+    #devnotesPage .dn-done-btn.checked { background:#e2f5ec;border-color:#1a8c60;color:#0f6044; }
+    #devnotesPage .dn-quiz-card { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:10px;padding:14px 16px;margin-bottom:12px; }
+    #devnotesPage .dn-quiz-q { font-size:13.5px;font-weight:600;margin-bottom:10px;line-height:1.5; }
+    #devnotesPage .dn-quiz-options { display:flex;flex-direction:column;gap:6px; }
+    #devnotesPage .dn-quiz-opt { background:var(--body-bg,#f7f6f2);border:1px solid var(--border-color,#eee);border-radius:6px;padding:8px 12px;font-size:13px;cursor:pointer;transition:all .12s;color:var(--text-secondary,#888);text-align:left; }
+    #devnotesPage .dn-quiz-opt:hover:not(:disabled) { border-color:#5b4fd4;color:var(--text-primary,#222); }
+    #devnotesPage .dn-quiz-opt.correct { background:#e2f5ec;border-color:#1a8c60;color:#0f6044;font-weight:600; }
+    #devnotesPage .dn-quiz-opt.wrong { background:#fdecea;border-color:#c0332a;color:#922620; }
+    #devnotesPage .dn-quiz-opt:disabled { cursor:default; }
+    #devnotesPage .dn-quiz-exp { margin-top:10px;font-size:13px;color:var(--text-secondary,#888);background:var(--body-bg,#f7f6f2);border-radius:6px;padding:8px 12px;display:none;line-height:1.65; }
+    #devnotesPage .dn-quiz-exp.show { display:block; }
+    #devnotesPage .dn-score-bar { background:var(--body-bg,#f5f5f5);border:1px solid var(--border-color,#eee);border-radius:10px;padding:10px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text-secondary,#888); }
+    #devnotesPage .dn-score-num { font-size:22px;font-weight:700;color:#3a30a8; }
+    #devnotesPage .dn-prac-card { background:#1e1d1a;border-radius:10px;padding:14px;margin-bottom:12px;color:#d4d0c4; }
+    #devnotesPage .dn-prac-head { display:flex;align-items:center;gap:8px;margin-bottom:8px; }
+    #devnotesPage .dn-prac-num { font-size:11px;background:#5b4fd4;color:#fff;padding:2px 8px;border-radius:20px;font-weight:600; }
+    #devnotesPage .dn-prac-title { font-size:14px;font-weight:700;color:#f0ede6; }
+    #devnotesPage .dn-prac-body { font-size:13px;line-height:1.75;color:#9a9688; }
+    #devnotesPage .dn-prac-body strong { color:#d4d0c4; }
+    #devnotesPage .dn-prac-hint { margin-top:10px;font-size:12px;color:#6a6858;border-top:1px solid #2e2c28;padding-top:8px; }
+    #devnotesPage .dn-prac-hint::before { content:"힌트: ";color:#8a7fd0;font-weight:600; }
+    #devnotesPage .dn-dash-big { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:10px;padding:14px 16px;margin-bottom:14px; }
+    #devnotesPage .dn-dash-big-title { font-size:14px;font-weight:700;margin-bottom:10px; }
+    #devnotesPage .dn-big-progress { display:flex;flex-direction:column;gap:8px; }
+    #devnotesPage .dn-big-p-row { display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-secondary,#888); }
+    #devnotesPage .dn-big-p-label { width:120px;min-width:120px; }
+    #devnotesPage .dn-big-p-track { flex:1;height:8px;background:var(--body-bg,#f5f5f5);border-radius:4px;overflow:hidden; }
+    #devnotesPage .dn-big-p-fill { height:100%;border-radius:4px;background:#1a8c60;transition:width .4s; }
+    #devnotesPage .dn-big-p-count { font-size:12px;width:32px;text-align:right;color:var(--text-secondary,#888); }
+    #devnotesPage .dn-dash-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:12px; }
+    #devnotesPage .dn-dash-card { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:4px; }
+    #devnotesPage .dn-dash-card.done { border-color:#1a8c60;background:#e2f5ec; }
+    #devnotesPage .dn-dash-card.in-progress { border-color:#7c5fd4;background:#f3f0fd; }
+    #devnotesPage .dn-dash-card-num { font-size:10px;font-weight:700;color:var(--text-secondary,#999);letter-spacing:.05em; }
+    #devnotesPage .dn-dash-card-title { font-size:12.5px;font-weight:600;line-height:1.4; }
+    #devnotesPage .dn-dash-card-status { font-size:11.5px;margin-top:2px; }
+    #devnotesPage .dn-dash-card.done .dn-dash-card-status { color:#0f6044; }
+    #devnotesPage .dn-dash-card.in-progress .dn-dash-card-status { color:#5b4fd4; }
+    #devnotesPage .dn-dash-card:not(.done):not(.in-progress) .dn-dash-card-status { color:var(--text-secondary,#999); }
+    #devnotesPage .dn-dash-goto { margin-top:6px;font-size:11.5px;padding:4px 10px;border-radius:6px;border:1px solid var(--border-color,#eee);background:transparent;cursor:pointer;color:var(--text-secondary,#888);transition:all .12s; }
+    #devnotesPage .dn-dash-goto:hover { background:var(--body-bg,#f5f5f5); }
+    #devnotesPage .dn-dash-goto.in-progress { border-color:#7c5fd4;color:#5b4fd4;background:#ede9fb; }
+    #devnotesPage .dn-dash-goto.in-progress:hover { background:#ddd6f8; }
+    #devnotesPage .dn-dash-actions { display:flex;gap:8px;flex-wrap:wrap;margin-top:4px; }
+    #devnotesPage .dn-ch-divider { border:none;border-top:1px solid var(--border-color,#eee);margin:1.5rem 0; }
+    #devnotesPage .dn-scene-label { font-size:12px;font-weight:700;color:var(--text-secondary,#999);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;padding:0; }
+
+    
+    #devnotesPage .dn-quiz { margin-bottom:14px; }
+    #devnotesPage .dn-q-text { font-size:13.5px;font-weight:600;margin-bottom:10px;line-height:1.5; }
+    #devnotesPage .dn-opts { display:flex;flex-direction:column;gap:6px; }
+    #devnotesPage .dn-opt { background:var(--bg-hover,#f7f6f2);border:1px solid var(--border-color,#eee);border-radius:6px;padding:8px 12px;font-size:13px;cursor:pointer;transition:all .12s;color:var(--text-secondary,#888);text-align:left;font-family:inherit; }
+    #devnotesPage .dn-opt:hover:not(:disabled) { border-color:#5b4fd4;color:var(--text-primary,#222); }
+    #devnotesPage .dn-opt.correct { background:#e2f5ec;border-color:#1a8c60;color:#0f6044;font-weight:600; }
+    #devnotesPage .dn-opt.wrong { background:#fdecea;border-color:#c0332a;color:#922620; }
+    #devnotesPage .dn-opt:disabled { cursor:default; }
+    #devnotesPage .dn-chapter { margin-bottom:8px; }
+    #devnotesPage .dn-tag-yellow { background:#fff8d6;color:#7a5c00; }
+
+    
+    #dnQuestionModal {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      z-index: 1300; display: flex; align-items: center; justify-content: center;
+    }
+    #dnQuestionModalBox {
+      background: #fff; border-radius: 14px; padding: 20px;
+      width: min(420px, 92vw); box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    }
+
+    /* scroll */
+    #devnotesPage { overflow-y: auto; }
+    @media (max-width: 600px) {
+      #devnotesPage { padding: 16px 12px 80px; }
+    }
+  </style>
+</head>
+<body>
+      <div id="devnotesPage" class="page">
+        <div class="page-header"><h2>📓 개발괴발</h2></div>
+        <div class="dn-progress-label"><span>전체 진도</span><span id="dn-prog-label">0 / 17</span></div>
+        <div class="dn-progress-bar"><div class="dn-progress-fill" id="dn-prog-fill" style="width:0%"></div></div>
+
+        <div class="tab-nav" style="margin-bottom:16px;overflow-x:auto;white-space:nowrap;">
+          <button class="tab-btn active" data-tab="dash" onclick="dnSwitchTab('dash')">📊 대시보드</button>
+          <button class="tab-btn" data-tab="basic" onclick="dnSwitchTab('basic')">📚 기초편</button>
+          <button class="tab-btn" data-tab="prac" onclick="dnSwitchTab('prac')">⚡ 실전편</button>
+          <button class="tab-btn" data-tab="adv" onclick="dnSwitchTab('adv')">🧠 심화편</button>
+          <button class="tab-btn" data-tab="claude" onclick="dnSwitchTab('claude')">🤖 클로드 활용</button>
+          <button class="tab-btn" data-tab="git" onclick="dnSwitchTab('git')">🌿 Git 실전</button>
+          <button class="tab-btn" data-tab="env" onclick="dnSwitchTab('env')">💻 개발 환경</button>
+          <button class="tab-btn" data-tab="terms" onclick="dnSwitchTab('terms')">📖 용어 사전</button>
+          <button class="tab-btn" data-tab="quiz" onclick="dnSwitchTab('quiz')">🎯 퀴즈·실습</button>
+        </div>
+
+        <!-- ── 대시보드 탭 ── -->
+        <div class="dn-tab-pane active" data-tab="dash">
+          <div class="dn-dash-big">
+            <div class="dn-dash-big-title">📈 섹션별 진도</div>
+            <div class="dn-big-progress">
+              <div class="dn-big-p-row"><span class="dn-big-p-label">기초편</span><div class="dn-big-p-track"><div class="dn-big-p-fill" id="dn-fill-basic" style="width:0%"></div></div><span class="dn-big-p-count" id="dn-cnt-basic">0/2</span></div>
+              <div class="dn-big-p-row"><span class="dn-big-p-label">실전편</span><div class="dn-big-p-track"><div class="dn-big-p-fill" id="dn-fill-prac" style="width:0%"></div></div><span class="dn-big-p-count" id="dn-cnt-prac">0/4</span></div>
+              <div class="dn-big-p-row"><span class="dn-big-p-label">심화편</span><div class="dn-big-p-track"><div class="dn-big-p-fill" id="dn-fill-adv" style="width:0%"></div></div><span class="dn-big-p-count" id="dn-cnt-adv">0/3</span></div>
+              <div class="dn-big-p-row"><span class="dn-big-p-label">클로드 활용</span><div class="dn-big-p-track"><div class="dn-big-p-fill" id="dn-fill-claude" style="width:0%"></div></div><span class="dn-big-p-count" id="dn-cnt-claude">0/3</span></div>
+              <div class="dn-big-p-row"><span class="dn-big-p-label">Git 실전</span><div class="dn-big-p-track"><div class="dn-big-p-fill" id="dn-fill-git" style="width:0%"></div></div><span class="dn-big-p-count" id="dn-cnt-git">0/1</span></div>
+              <div class="dn-big-p-row"><span class="dn-big-p-label">개발 환경 실전</span><div class="dn-big-p-track"><div class="dn-big-p-fill" id="dn-fill-env" style="width:0%"></div></div><span class="dn-big-p-count" id="dn-cnt-env">0/2</span></div>
+            </div>
+          </div>
+          <div class="dn-dash-grid" id="dn-dash-grid"></div>
+          <div class="dn-dash-actions">
+            <button onclick="dnResetAll()" style="padding:8px 14px;border-radius:6px;border:1px solid var(--border-color,#ddd);background:var(--card-bg,#fff);font-size:13px;color:var(--text-secondary,#888);cursor:pointer;">진도 초기화</button>
+            <button onclick="dnMarkAllDone()" style="padding:8px 14px;border-radius:6px;border:1px solid #1a8c60;background:#e2f5ec;font-size:13px;color:#0f6044;cursor:pointer;">전체 완료 표시</button>
+            <button onclick="dnSyncNow()" style="padding:8px 14px;border-radius:6px;border:1px solid #5b4fd4;background:#eeedfc;font-size:13px;color:#3a30a8;cursor:pointer;">☁️ 진도 동기화</button>
+          </div>
+        </div>
+
+        <!-- ── 기초편 탭 (Ch 1-2) ── -->
+        <div class="dn-tab-pane" data-tab="basic">
+          <!-- Ch 1 -->
+          <div class="dn-ch-header">
+            <div class="dn-ch-num">Chapter 1 · 기초편</div>
+            <div class="dn-ch-title">웹 앱은 어떻게 생겼나요?</div>
+            <div class="dn-ch-desc">웹 앱을 만들기 전에 전체 구조를 이해해두면 클로드에게 요청하고 설명하기가 훨씬 쉬워져요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">프론트엔드 (화면)</span><span class="dn-tag dn-tag-purple">꼭 알기</span></div>
+            <p class="dn-card-body">사용자 눈에 보이는 모든 것이에요. 버튼, 텍스트, 이미지, 입력창. HTML/CSS/JavaScript로 만들어지고 사용자의 <strong>브라우저</strong>에서 실행돼요.</p>
+            <div class="dn-analogy">식당의 홀 — 손님이 직접 보고 앉고 메뉴를 고르는 공간이에요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">백엔드 (서버)</span><span class="dn-tag dn-tag-green">알면 좋음</span></div>
+            <p class="dn-card-body">사용자 눈에 안 보이지만 실제 계산·저장·로그인 처리가 일어나는 곳이에요. Python, Node.js 같은 언어로 만들고 서버 컴퓨터에서 실행돼요.</p>
+            <div class="dn-analogy">식당의 주방 — 손님은 못 들어가지만 음식이 만들어지는 곳이에요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">데이터베이스 (DB)</span><span class="dn-tag dn-tag-green">알면 좋음</span></div>
+            <p class="dn-card-body">데이터를 저장하는 창고예요. 회원 정보, 게시글, 주문 내역 등이 여기에 저장돼요. 간단한 앱은 Google Sheets를 DB 대용으로 쓰기도 해요.</p>
+            <div class="dn-analogy">식당의 냉장고 — 재료(데이터)를 보관해두고 필요할 때 꺼내요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">클라이언트 vs 서버</span><span class="dn-tag dn-tag-purple">꼭 알기</span></div>
+            <p class="dn-card-body"><strong>클라이언트</strong>는 요청하는 쪽(브라우저, 앱)이고, <strong>서버</strong>는 응답하는 쪽이에요. "클라이언트 사이드 처리" = 서버 없이 브라우저에서만 실행된다는 뜻이에요.</p>
+            <div class="dn-tip">클로드가 "클라이언트에서 처리해요" 하면 = 내 브라우저에서만 동작하는 코드라는 뜻이에요. 서버 비용이 안 들어요.</div>
+          </div>
+          <button class="dn-done-btn" id="dn-done1" onclick="dnMarkDone(1)">이 챕터 읽었어요 ✓</button>
+
+          <!-- Ch 2 -->
+          <div class="dn-ch-header">
+            <div class="dn-ch-num">Chapter 2 · 기초편</div>
+            <div class="dn-ch-title">개발에서 자주 쓰는 언어들</div>
+            <div class="dn-ch-desc">언어 이름만 들어도 막막하죠. 각각 어떤 역할인지만 알면 충분해요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">HTML — 뼈대</span><span class="dn-tag dn-tag-purple">꼭 알기</span></div>
+            <p class="dn-card-body">"여기 제목", "여기 버튼", "여기 이미지" 구조를 잡아요. 꺾쇠(&lt; &gt;)로 감싸는 <strong>태그</strong>를 씁니다.</p>
+            <div class="dn-pre"><span class="cm">&lt;!-- 주석: 이런 식으로 생겼어요 --&gt;</span>
+&lt;<span class="kw">h1</span>&gt;안녕하세요&lt;/<span class="kw">h1</span>&gt;
+&lt;<span class="kw">button</span>&gt;클릭하기&lt;/<span class="kw">button</span>&gt;</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">CSS — 디자인</span><span class="dn-tag dn-tag-purple">꼭 알기</span></div>
+            <p class="dn-card-body">색, 폰트, 크기, 여백, 버튼 모양을 정해요. HTML이 뼈대라면 CSS는 옷이에요.</p>
+            <div class="dn-pre"><span class="kw">button</span> {
+  <span class="fn">background-color</span>: <span class="str">blue</span>;
+  <span class="fn">border-radius</span>: <span class="num">8px</span>;
+}</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">JavaScript (JS) — 동작</span><span class="dn-tag dn-tag-purple">꼭 알기</span></div>
+            <p class="dn-card-body">버튼 클릭 반응, 데이터 계산, 서버 통신이 JS로 이루어져요. 세 언어 중 가장 복잡하지만 클로드가 전부 써줘요.</p>
+            <div class="dn-tip">"JS", "자바스크립트", "스크립트"는 모두 같은 말이에요. Java와는 완전히 다른 언어예요 — 이름만 비슷해요!</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">TypeScript (TS)</span><span class="dn-tag dn-tag-amber">나중에</span></div>
+            <p class="dn-card-body">JavaScript에 타입 체크 기능을 추가한 언어예요. 클로드가 TS로 코드를 쓰기도 해요. "JS랑 거의 같은데 더 엄격한 것"으로 이해하면 충분해요.</p>
+            <div class="dn-tip">클로드가 <code class="dn-code">.ts</code> 파일을 만들었다면 TypeScript예요. 당황하지 말아요 — JS처럼 쓰면 돼요.</div>
+          </div>
+          <button class="dn-done-btn" id="dn-done2" onclick="dnMarkDone(2)">이 챕터 읽었어요 ✓</button>
+        </div>
+
+        <!-- ── 실전편 탭 (Ch 3-6) ── -->
+        <div class="dn-tab-pane" data-tab="prac">
+          <!-- Ch 3 -->
+          <div class="dn-ch-header">
+            <div class="dn-ch-num">Chapter 3 · 실전편</div>
+            <div class="dn-ch-title">클로드가 준 코드, 어떻게 읽나요?</div>
+            <div class="dn-ch-desc">직접 짤 줄 몰라도 구조를 눈으로 읽을 수 있으면 대화가 훨씬 쉬워져요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">함수 (function)</span><span class="dn-tag dn-tag-purple">핵심 개념</span></div>
+            <p class="dn-card-body">어떤 작업을 묶어서 이름을 붙인 것이에요. <code class="dn-code">()</code>가 붙어 있으면 함수 호출이에요.</p>
+            <div class="dn-pre"><span class="kw">function</span> <span class="fn">greet</span>(name) {
+  <span class="kw">return</span> <span class="str">"안녕, "</span> + name;
+}
+<span class="fn">greet</span>(<span class="str">"베이"</span>); <span class="cm">// → "안녕, 베이"</span></div>
+            <div class="dn-analogy">레시피 카드. 이름을 붙여두고 필요할 때마다 꺼내 써요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">변수 (variable)</span><span class="dn-tag dn-tag-purple">핵심 개념</span></div>
+            <p class="dn-card-body">값을 담아두는 이름표예요. <code class="dn-code">const</code>는 변경 불가, <code class="dn-code">let</code>은 변경 가능.</p>
+            <div class="dn-pre"><span class="kw">const</span> appName = <span class="str">"베이 앱"</span>; <span class="cm">// 안 바뀜</span>
+<span class="kw">let</span> count = <span class="num">0</span>;             <span class="cm">// 바뀔 수 있음</span>
+count = count + <span class="num">1</span>;         <span class="cm">// 이제 1</span></div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">조건문 (if)</span><span class="dn-tag dn-tag-purple">핵심 개념</span></div>
+            <p class="dn-card-body">"만약 ~이면 이렇게"를 표현해요. 거의 모든 코드에 등장해요.</p>
+            <div class="dn-pre"><span class="kw">if</span> (isLoggedIn) {
+  <span class="fn">showDashboard</span>();
+} <span class="kw">else</span> {
+  <span class="fn">showLoginPage</span>();
+}</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">화살표 함수 (Arrow Function)</span><span class="dn-tag dn-tag-green">자주 보임</span></div>
+            <p class="dn-card-body">함수를 짧게 쓰는 문법이에요. 클로드가 자주 씁니다.</p>
+            <div class="dn-pre"><span class="cm">// 일반 함수와 같은 동작이에요</span>
+<span class="kw">const</span> <span class="fn">add</span> = (a, b) =&gt; a + b;
+<span class="cm">// 또는</span>
+items.<span class="fn">map</span>(item =&gt; item.name)</div>
+            <div class="dn-tip"><code class="dn-code">=&gt;</code> 가 보이면 "아, 함수구나"라고 인식하면 돼요.</div>
+          </div>
+          <button class="dn-done-btn" id="dn-done3" onclick="dnMarkDone(3)">이 챕터 읽었어요 ✓</button>
+
+          <!-- Ch 4 -->
+          <div class="dn-ch-header">
+            <div class="dn-ch-num">Chapter 4 · 실전편</div>
+            <div class="dn-ch-title">에러 메시지 해석하기</div>
+            <div class="dn-ch-desc">빨간 글씨가 떠도 당황하지 말아요. 패턴만 알면 겁이 훨씬 덜 나요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">에러 메시지 구조</span><span class="dn-tag dn-tag-purple">핵심 패턴</span></div>
+            <div class="dn-scene">
+              <strong>에러 종류</strong>: 뭐가 잘못됐는지 (예: <code class="dn-code">TypeError</code>)<br>
+              <strong>에러 내용</strong>: 구체적으로 어떤 문제인지<br>
+              <strong>위치</strong>: 몇 번째 줄에서 났는지 (<code class="dn-code">at line 23</code>)
+            </div>
+            <div class="dn-tip">전부 이해 안 해도 돼요. 에러 메시지 <strong>전체를 복사</strong>해서 클로드에게 주면 돼요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">자주 보는 에러 종류</span><span class="dn-tag dn-tag-amber">참고용</span></div>
+            <p class="dn-card-body">
+              <code class="dn-code">is not defined</code> → 없는 변수·함수를 썼어요<br>
+              <code class="dn-code">Cannot read properties of undefined</code> → 값이 없는데 뭔가 꺼내려 했어요<br>
+              <code class="dn-code">SyntaxError</code> → 괄호가 안 닫혔거나 오타<br>
+              <code class="dn-code">404 Not Found</code> → 요청한 주소·파일이 없어요<br>
+              <code class="dn-code">401 Unauthorized</code> → 로그인 필요 or 권한 없음<br>
+              <code class="dn-code">500 Internal Server Error</code> → 서버 쪽 문제
+            </p>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">콘솔(Console) 여는 법</span><span class="dn-tag dn-tag-purple">꼭 알기</span></div>
+            <p class="dn-card-body"><strong>Windows/Linux</strong>: <code class="dn-code">F12</code> → Console 탭<br><strong>Mac</strong>: <code class="dn-code">Cmd + Option + J</code></p>
+            <div class="dn-tip">앱이 이상하면 콘솔부터 열어요. 빨간 글씨 = 에러, 노란 글씨 = 경고예요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">"빌드 실패" vs "런타임 에러"</span><span class="dn-tag dn-tag-green">구분 팁</span></div>
+            <p class="dn-card-body">
+              <strong>빌드 에러</strong>: 앱을 시작하기 전에 나는 에러. 문법 오류가 많아요. 터미널에 떠요.<br>
+              <strong>런타임 에러</strong>: 앱이 실행 중에 나는 에러. 특정 동작을 할 때 터져요. 콘솔에 떠요.
+            </p>
+            <div class="dn-tip">터미널이 빨개서 앱이 아예 안 켜진다 = 빌드 에러. 앱은 켜졌는데 버튼 누를 때 터진다 = 런타임 에러.</div>
+          </div>
+          <button class="dn-done-btn" id="dn-done4" onclick="dnMarkDone(4)">이 챕터 읽었어요 ✓</button>
+
+          <!-- Ch 5 -->
+          <div class="dn-ch-header">
+            <div class="dn-ch-num">Chapter 5 · 실전편</div>
+            <div class="dn-ch-title">파일, 폴더 구조와 배포</div>
+            <div class="dn-ch-desc">프로젝트 파일 구조를 알면 클로드가 뭘 만들고 있는지 훨씬 쉽게 파악돼요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">기본 웹앱 파일 구조</span><span class="dn-tag dn-tag-purple">꼭 알기</span></div>
+            <div class="dn-pre">my-app/
+├── index.html    <span class="cm"># 시작 페이지</span>
+├── style.css     <span class="cm"># 디자인</span>
+├── script.js     <span class="cm"># 기능</span>
+└── images/       <span class="cm"># 이미지 폴더</span></div>
+            <div class="dn-tip">단일 HTML 파일 앱은 CSS·JS를 HTML 안에 전부 넣기도 해요. 간단한 앱에 많이 쓰이는 방식이에요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">로컬 vs 배포</span><span class="dn-tag dn-tag-purple">꼭 알기</span></div>
+            <p class="dn-card-body">
+              <strong>로컬(local)</strong>: 내 컴퓨터에서만 돌아가요. 주소가 <code class="dn-code">localhost:3000</code>처럼 생겼어요.<br><br>
+              <strong>배포(deploy)</strong>: 인터넷 서버에 올려서 누구나 접속 가능. 실제 URL이 생겨요.
+            </p>
+            <div class="dn-tip">"로컬에서는 되는데 배포 후에 안 돼요"는 매우 흔한 상황이에요. 환경이 달라서 생기는 문제예요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">무료 배포 도구</span><span class="dn-tag dn-tag-purple">꼭 알기</span></div>
+            <p class="dn-card-body">
+              <strong>GitHub Pages</strong>: HTML 파일 무료 배포. 정적 사이트에 딱이에요.<br>
+              <strong>Vercel / Netlify</strong>: React 같은 복잡한 앱도 무료 배포 가능. 더 추천.<br>
+              <strong>Replit</strong>: 코딩 + 배포를 한 곳에서.
+            </p>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Git과 GitHub</span><span class="dn-tag dn-tag-green">알면 좋음</span></div>
+            <p class="dn-card-body"><strong>Git</strong>: 코드 변경 내역을 저장하는 도구. 버전 관리.<br><strong>GitHub</strong>: Git 코드를 인터넷에 올려두는 곳. Vercel 배포 연결도 여기서.</p>
+            <div class="dn-analogy">Git = 저장 버튼. GitHub = 클라우드. 언제든 이전 상태로 되돌릴 수 있어요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">환경변수 (API Key 보안)</span><span class="dn-tag dn-tag-green">알면 좋음</span></div>
+            <p class="dn-card-body">API 키 같은 비밀 정보는 코드에 직접 넣으면 안 돼요. <code class="dn-code">.env</code> 파일에 따로 보관해요.</p>
+            <div class="dn-warn">API 키를 코드에 넣고 GitHub에 올리면 누구나 볼 수 있어요. 이렇게 하면 키가 탈취당할 수 있어요.</div>
+          </div>
+          <button class="dn-done-btn" id="dn-done5" onclick="dnMarkDone(5)">이 챕터 읽었어요 ✓</button>
+
+          <!-- Ch 6 -->
+          <div class="dn-ch-header">
+            <div class="dn-ch-num">Chapter 6 · 실전편</div>
+            <div class="dn-ch-title">데이터가 어떻게 움직이나요?</div>
+            <div class="dn-ch-desc">"데이터를 어디서 가져오고, 어디에 저장하지?" 이 흐름을 알면 앱 전체 구조가 보여요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">fetch / API 호출</span><span class="dn-tag dn-tag-purple">핵심 개념</span></div>
+            <p class="dn-card-body">외부 서버에 데이터를 요청하는 행위예요.</p>
+            <div class="dn-pre"><span class="kw">const</span> response = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'https://api.example.com'</span>);
+<span class="kw">const</span> data = <span class="kw">await</span> response.<span class="fn">json</span>();</div>
+            <div class="dn-scene">
+              <strong>요청(Request)</strong>: "이 데이터 줘"<br>
+              <strong>응답(Response)</strong>: 서버가 데이터를 돌려줌<br>
+              <strong>JSON</strong>: 주고받는 데이터 형식
+            </div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">JSON 형식</span><span class="dn-tag dn-tag-purple">꼭 알기</span></div>
+            <div class="dn-pre">{
+  <span class="str">"name"</span>: <span class="str">"베이"</span>,
+  <span class="str">"skills"</span>: [<span class="str">"기획"</span>, <span class="str">"디자인"</span>]
+}
+<span class="cm">// data.name → "베이"</span>
+<span class="cm">// data.skills[0] → "기획"</span></div>
+            <div class="dn-tip"><code class="dn-code">{ }</code>는 객체(하나의 덩어리), <code class="dn-code">[ ]</code>는 배열(목록). 이 두 가지가 JSON의 전부예요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">동기 vs 비동기 / async·await</span><span class="dn-tag dn-tag-green">개념 정리</span></div>
+            <p class="dn-card-body">API 요청은 시간이 걸려서 <strong>비동기</strong>로 처리해요. <code class="dn-code">await</code>을 붙이면 "이 작업 끝날 때까지 기다려"예요.</p>
+            <div class="dn-analogy">카페 진동벨. 커피 나올 때까지 기다리는 대신 자리에 앉아 다른 일 하다가 벨 울리면 가져오는 방식이에요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">localStorage</span><span class="dn-tag dn-tag-green">알면 유용</span></div>
+            <p class="dn-card-body">서버 없이 브라우저에 데이터를 저장해요. 탭 닫아도 유지. 다른 기기에서는 안 보여요.</p>
+            <div class="dn-pre"><span class="fn">localStorage</span>.<span class="fn">setItem</span>(<span class="str">'key'</span>, <span class="str">'value'</span>); <span class="cm">// 저장</span>
+<span class="fn">localStorage</span>.<span class="fn">getItem</span>(<span class="str">'key'</span>);           <span class="cm">// 불러오기</span></div>
+          </div>
+          <button class="dn-done-btn" id="dn-done6" onclick="dnMarkDone(6)">이 챕터 읽었어요 ✓</button>
+        </div>
+
+        <!-- ── 심화편 탭 (Ch 7-9) ── -->
+        <div class="dn-tab-pane" data-tab="adv">
+          <!-- Ch 7 -->
+          <div class="dn-ch-header">
+            <div class="dn-ch-num">Chapter 7 · 심화편</div>
+            <div class="dn-ch-title">구조 관련 용어 심화</div>
+            <div class="dn-ch-desc">React를 쓰거나 클로드가 설명할 때 자주 나오는 구조 단어들이에요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">컴포넌트 (Component)</span><span class="dn-tag dn-tag-purple">핵심 개념</span></div>
+            <p class="dn-card-body">화면을 이루는 독립적인 조각이에요. 헤더, 버튼, 카드 각각이 컴포넌트예요. 한 번 만들면 여러 곳에서 재사용 가능해요.</p>
+            <div class="dn-analogy">레고 블록. 블록 하나하나를 조립해서 전체 앱을 만들어요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">상태 (State)</span><span class="dn-tag dn-tag-purple">핵심 개념</span></div>
+            <p class="dn-card-body">앱이 지금 기억하는 값이에요. 상태가 바뀌면 화면이 자동으로 다시 그려져요(리렌더링).</p>
+            <div class="dn-analogy">신호등 색. 빨강→초록으로 바뀌면(상태 변화) 자동차가 반응(화면 변화)해요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">props (프롭스)</span><span class="dn-tag dn-tag-amber">React 용어</span></div>
+            <p class="dn-card-body">부모 컴포넌트가 자식에게 전달하는 설정값이에요.</p>
+            <div class="dn-pre">&lt;<span class="kw">Button</span> color=<span class="str">"blue"</span> text=<span class="str">"확인"</span> /&gt;</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">DOM</span><span class="dn-tag dn-tag-green">알면 좋음</span></div>
+            <p class="dn-card-body">브라우저가 HTML을 읽어서 만든 구조예요. JS는 DOM을 통해 화면 요소를 읽고 바꿔요.<br>"DOM을 직접 조작한다" = JS로 HTML 요소를 직접 건드린다는 뜻이에요.</p>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">라이브러리 vs 프레임워크</span><span class="dn-tag dn-tag-green">개념 정리</span></div>
+            <p class="dn-card-body">
+              <strong>라이브러리</strong>: 필요한 도구를 가져다 쓰는 것. 내가 주도권을 가져요. (React, Chart.js)<br>
+              <strong>프레임워크</strong>: 틀이 정해져 있고 그 안에서 코드를 채워요. (Next.js, Django)
+            </p>
+            <div class="dn-analogy">라이브러리 = 마트에서 재료 골라 요리. 프레임워크 = 밀키트, 순서 정해짐.</div>
+          </div>
+          <button class="dn-done-btn" id="dn-done7" onclick="dnMarkDone(7)">이 챕터 읽었어요 ✓</button>
+
+          <!-- Ch 8 -->
+          <div class="dn-ch-header">
+            <div class="dn-ch-num">Chapter 8 · 심화편</div>
+            <div class="dn-ch-title">앱 종류와 기술 스택</div>
+            <div class="dn-ch-desc">어떤 앱을 만들 건지 정확히 표현하면 클로드가 훨씬 적합한 방향을 제안할 수 있어요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">기술 스택 (Tech Stack)</span><span class="dn-tag dn-tag-purple">필수 용어</span></div>
+            <p class="dn-card-body">앱을 만드는 데 쓰인 기술들의 조합이에요. "어떤 스택 쓸까요?" = 어떤 언어·프레임워크로 만들지 결정하자는 거예요.</p>
+            <div class="dn-scene">
+              <strong>간단한 웹앱</strong>: HTML + CSS + JS 단일 파일<br>
+              <strong>React 앱</strong>: React + Tailwind CSS + Vercel<br>
+              <strong>풀스택</strong>: Next.js + PostgreSQL + Vercel
+            </div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">정적 vs 동적 웹사이트</span><span class="dn-tag dn-tag-purple">핵심 구분</span></div>
+            <p class="dn-card-body">
+              <strong>정적(Static)</strong>: 내용이 고정. 포트폴리오, 소개 페이지. GitHub Pages로 배포.<br>
+              <strong>동적(Dynamic)</strong>: 로그인, 실시간 데이터. 서버 필요.
+            </p>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">웹앱 vs 모바일앱 vs 데스크톱앱</span><span class="dn-tag dn-tag-purple">종류 구분</span></div>
+            <p class="dn-card-body">
+              <strong>웹앱</strong>: 브라우저. 설치 불필요. 진입 장벽 가장 낮음.<br>
+              <strong>모바일앱</strong>: 스마트폰 설치. React Native, Flutter.<br>
+              <strong>데스크톱앱</strong>: PC 설치. Electron으로 웹 기술로도 가능.
+            </p>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">npm / 패키지</span><span class="dn-tag dn-tag-green">알면 좋음</span></div>
+            <p class="dn-card-body"><code class="dn-code">npm install 패키지명</code> = "이 도구 설치해줘". npm은 JS 도구들의 앱스토어 같은 곳이에요.</p>
+            <div class="dn-tip"><code class="dn-code">package.json</code>은 "이 프로젝트에 필요한 도구 목록"이에요. <code class="dn-code">npm install</code> 하면 이걸 보고 자동 설치해요.</div>
+          </div>
+          <button class="dn-done-btn" id="dn-done8" onclick="dnMarkDone(8)">이 챕터 읽었어요 ✓</button>
+
+          <!-- Ch 9 -->
+          <div class="dn-ch-header">
+            <div class="dn-ch-num">Chapter 9 · 심화편 <span class="dn-badge-new">NEW</span></div>
+            <div class="dn-ch-title">개발 흐름과 필수 도구들</div>
+            <div class="dn-ch-desc">클로드와 실제 개발할 때 흐름이 어떻게 돌아가는지, 어떤 도구들이 등장하는지 알아두면 덜 헷갈려요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">개발 → 테스트 → 배포 사이클</span><span class="dn-tag dn-tag-purple">전체 흐름</span></div>
+            <div class="dn-scene">
+              <strong>1. 로컬 개발</strong>: 내 컴퓨터에서 코드 작성 + 브라우저로 확인<br>
+              <strong>2. 테스트</strong>: 기능이 제대로 동작하는지 직접 눌러보기<br>
+              <strong>3. 배포</strong>: GitHub → Vercel 등으로 인터넷에 공개<br>
+              <strong>4. 유지보수</strong>: 버그 수정, 기능 추가 → 1번으로
+            </div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">터미널 기본 명령어</span><span class="dn-tag dn-tag-green">알면 유용</span></div>
+            <div class="dn-pre"><span class="fn">ls</span>          <span class="cm"># 현재 폴더 파일 목록</span>
+<span class="fn">cd</span> 폴더명   <span class="cm"># 폴더 이동</span>
+<span class="fn">pwd</span>         <span class="cm"># 지금 내 위치</span>
+<span class="fn">npm install</span> <span class="cm"># 패키지 설치</span>
+<span class="fn">npm run dev</span> <span class="cm"># 개발 서버 시작</span></div>
+            <div class="dn-tip">클로드 코드가 대부분 대신 실행해줘요. 명령어를 외울 필요는 없고 "이런 게 있구나" 정도로만 알아도 충분해요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">리팩토링 (Refactoring)</span><span class="dn-tag dn-tag-amber">자주 나오는 단어</span></div>
+            <p class="dn-card-body">기능은 그대로 두고 코드를 더 깔끔하게 정리하는 작업이에요. 사용자 입장에서는 아무것도 안 바뀌어요.</p>
+            <div class="dn-tip">클로드가 "리팩토링 해드릴까요?" = 기능 변경 없이 코드 정리. 동의하면 해달라고 해요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">빌드 (Build)</span><span class="dn-tag dn-tag-amber">자주 나오는 단어</span></div>
+            <p class="dn-card-body">개발용 코드를 배포용 최적화 파일로 변환하는 과정이에요. <code class="dn-code">npm run build</code>로 실행하고, Vercel은 자동으로 해줘요.</p>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">의존성 (Dependency)</span><span class="dn-tag dn-tag-green">알면 좋음</span></div>
+            <p class="dn-card-body">"이 프로젝트가 동작하기 위해 필요한 외부 라이브러리들"이에요. <code class="dn-code">package.json</code>의 <code class="dn-code">dependencies</code> 항목에 적혀 있어요.</p>
+            <div class="dn-tip">클로드가 "의존성 설치해야 해요" 하면 = <code class="dn-code">npm install</code> 실행하라는 뜻이에요.</div>
+          </div>
+          <button class="dn-done-btn" id="dn-done9" onclick="dnMarkDone(9)">이 챕터 읽었어요 ✓</button>
+        </div>
+
+        <!-- ── 클로드 활용 탭 (Ch 10-12) ── -->
+        <div class="dn-tab-pane" data-tab="claude">
+          <!-- Ch 10 -->
+          <div class="dn-ch-header">
+            <div class="dn-ch-num">Chapter 10 · 클로드 활용 <span class="dn-badge-new">NEW</span></div>
+            <div class="dn-ch-title">클로드와 잘 소통하는 법</div>
+            <div class="dn-ch-desc">같은 요청도 어떻게 하느냐에 따라 결과가 크게 달라요. 이 패턴들을 익히면 개발 속도가 눈에 띄게 빨라져요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">클로드는 대화를 닫으면 잊어요</span><span class="dn-tag dn-tag-red">반드시 알기</span></div>
+            <p class="dn-card-body">새 대화를 시작할 때는 항상 배경 설명을 먼저 해줘야 해요.</p>
+            <div class="dn-scene">
+              <strong>나쁜 예</strong>: "그거 고쳐줘" (뭐가 뭔지 모름)<br><br>
+              <strong>좋은 예</strong>: "HTML+JS로 만든 할 일 앱이 있어. 완료 버튼 누르면 취소선이 생겨야 하는데 아무 반응이 없어. 코드 붙여넣을게: [코드]"
+            </div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">에러는 메시지 전체를 그대로 주기</span><span class="dn-tag dn-tag-purple">핵심 습관</span></div>
+            <div class="dn-scene">
+              <strong>나쁜 예</strong>: "에러 났어. 뭔가 undefined 어쩌구 하던데"<br><br>
+              <strong>좋은 예</strong>: "이 에러 뜨는데:<br>TypeError: Cannot read properties of undefined (reading 'map')<br>at App.js:23:15"
+            </div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">원하는 결과를 구체적으로 묘사하기</span><span class="dn-tag dn-tag-purple">핵심 습관</span></div>
+            <div class="dn-scene">
+              <strong>모호한 요청</strong>: "예쁘게 만들어줘"<br><br>
+              <strong>좋은 요청</strong>: "배경은 어두운 남색, 카드는 흰색으로. 애플 홈페이지처럼 여백이 넉넉한 스타일"<br><br>
+              <strong>또는</strong>: "노션처럼 심플하게, 장식 없이 텍스트 중심"
+            </div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">단계적으로 만들기</span><span class="dn-tag dn-tag-purple">핵심 습관</span></div>
+            <div class="dn-scene">
+              한 기능씩 → 확인 → 다음 기능 순서가 가장 안정적이에요.<br><br>
+              <strong>추천 흐름</strong>:<br>
+              1단계: "기본 레이아웃만 먼저" → 확인<br>
+              2단계: "데이터 추가 기능 넣어줘" → 확인<br>
+              3단계: "삭제 기능 추가해줘" → 확인
+            </div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">모르는 용어는 바로 물어보기</span><span class="dn-tag dn-tag-green">소통 팁</span></div>
+            <div class="dn-scene">
+              "방금 말한 미들웨어가 뭐야?" ← 바로 물어보기 OK<br>
+              "버튼 눌렀을 때 그 상자 같은 게 나오는 것 있잖아" ← 이렇게 설명해도 이해해요<br>
+              "저번에 비슷한 거 만들었는데 그때랑 같은 방식으로" ← 코드 붙여넣어야 해요 (기억 못함)
+            </div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">답변이 이해 안 될 때</span><span class="dn-tag dn-tag-blue">대화 팁</span></div>
+            <p class="dn-card-body">
+              "더 쉽게 설명해줘" — 난이도 낮춰달라고<br>
+              "비유로 설명해줘" — 비전공자 언어로<br>
+              "한 단계씩 설명해줘" — 순서대로 쪼개서<br>
+              "이 부분만 다시 설명해줘" — 특정 부분 재요청
+            </p>
+          </div>
+          <button class="dn-done-btn" id="dn-done10" onclick="dnMarkDone(10)">이 챕터 읽었어요 ✓</button>
+
+          <!-- Ch 11 -->
+          <div class="dn-ch-header">
+            <div class="dn-ch-num">Chapter 11 · 클로드 활용 <span class="dn-badge-new">NEW</span></div>
+            <div class="dn-ch-title">클로드 코드 잘 쓰는 법</div>
+            <div class="dn-ch-desc">클로드 코드는 터미널에서 실제 파일을 만들고 앱을 실행해줘요. 이 채팅창과는 다르게 동작해요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">클로드(채팅) vs 클로드 코드(터미널)</span><span class="dn-tag dn-tag-red">반드시 알기</span></div>
+            <div class="dn-scene">
+              <strong>claude.ai 채팅 (지금 여기)</strong><br>
+              설명, 기획, 코드 초안 검토, 개념 이해, 막힐 때 상담<br><br>
+              <strong>클로드 코드 (터미널)</strong><br>
+              실제 파일 생성, 폴더 구성, 패키지 설치, 앱 실행, 코드 수정
+            </div>
+            <div class="dn-tip">기획하고 방향 잡을 때 → 여기. 실제 코드 짜고 파일 만들 때 → 클로드 코드. 이 패턴이 효율적이에요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">CLAUDE.md 파일</span><span class="dn-tag dn-tag-purple">핵심 도구</span></div>
+            <p class="dn-card-body">클로드 코드가 프로젝트 시작 시 제일 먼저 읽는 설명서예요. 잘 써두면 매번 설명 안 해도 돼요.</p>
+            <div class="dn-scene">
+              CLAUDE.md에 써두면 좋은 것:<br>
+              - 이 앱이 어떤 앱인지 (목적, 사용자)<br>
+              - 기술 스택 (React? 순수 HTML?)<br>
+              - 코딩 스타일 규칙 (한국어 주석, 탭 크기 등)<br>
+              - 하면 안 되는 것 (예: 외부 CSS 프레임워크 쓰지 말기)
+            </div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">클로드 코드 요청 패턴</span><span class="dn-tag dn-tag-green">실전 팁</span></div>
+            <div class="dn-scene">
+              <strong>기능 추가</strong>: "현재 앱에 검색 기능 추가해줘. 입력창에 치면 목록이 필터링되게"<br><br>
+              <strong>버그 수정</strong>: "버튼 클릭 시 페이지가 새로고침돼. 막아줘"<br><br>
+              <strong>전체 제작</strong>: "사용자가 메모 작성·저장할 수 있는 웹앱. localStorage 사용"
+            </div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">클로드 코드가 파일 여러 개를 만들 때</span><span class="dn-tag dn-tag-green">상황 대처</span></div>
+            <p class="dn-card-body">클로드 코드가 한 번에 파일을 여러 개 만들고 수정할 때, 어떤 파일을 왜 만들었는지 물어봐도 돼요.</p>
+            <div class="dn-tip">"방금 만든 파일들 각각 뭐 하는 건지 설명해줘" — 이렇게 물어보면 각 파일의 역할을 설명해줘요.</div>
+          </div>
+          <button class="dn-done-btn" id="dn-done11" onclick="dnMarkDone(11)">이 챕터 읽었어요 ✓</button>
+
+          <!-- Ch 12 -->
+          <div class="dn-ch-header">
+            <div class="dn-ch-num">Chapter 12 · 클로드 활용 <span class="dn-badge-new">NEW</span></div>
+            <div class="dn-ch-title">헷갈리기 쉬운 용어 주의보</div>
+            <div class="dn-ch-desc">비슷해 보이지만 다른 것들, 자주 혼동되는 개념들을 모았어요. 클로드와 대화할 때 이걸 알면 오해가 줄어요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Java vs JavaScript</span><span class="dn-tag dn-tag-red">완전히 다름</span></div>
+            <p class="dn-card-body">이름만 비슷하고 완전히 다른 언어예요. Java는 주로 기업용 백엔드나 안드로이드 앱, JavaScript는 웹 프론트엔드에 써요. 혼동하는 사람이 정말 많아요.</p>
+            <div class="dn-tip">웹 개발 맥락에서 "스크립트", "JS" = JavaScript예요. Java를 쓸 일은 거의 없어요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">라이브러리 vs 프레임워크 (다시)</span><span class="dn-tag dn-tag-amber">자주 혼동</span></div>
+            <p class="dn-card-body">
+              둘 다 "남이 만들어둔 코드 모음"이지만 주도권이 달라요.<br><br>
+              <strong>라이브러리</strong>: 내가 필요할 때 불러 써요. (React, Lodash)<br>
+              <strong>프레임워크</strong>: 프레임워크 규칙에 맞게 내 코드를 끼워 넣어요. (Next.js, Vue)
+            </p>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">서버 vs 서버리스 (Serverless)</span><span class="dn-tag dn-tag-amber">자주 혼동</span></div>
+            <p class="dn-card-body">
+              <strong>서버</strong>: 24시간 돌아가는 컴퓨터.<br>
+              <strong>서버리스</strong>: 서버가 없는 게 아니라, 내가 직접 서버를 관리 안 해도 되는 방식이에요. Vercel이 대표적이에요.
+            </p>
+            <div class="dn-tip">Vercel에 배포하면 "서버리스 배포"예요. 서버가 없는 게 아니라 Vercel이 대신 관리해줘요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">실행 vs 배포 vs 빌드</span><span class="dn-tag dn-tag-amber">자주 혼동</span></div>
+            <p class="dn-card-body">
+              <strong>실행 (run)</strong>: 지금 내 컴퓨터에서 앱을 켜는 것. <code class="dn-code">npm run dev</code><br>
+              <strong>빌드 (build)</strong>: 배포용 파일로 변환하는 것. <code class="dn-code">npm run build</code><br>
+              <strong>배포 (deploy)</strong>: 빌드된 파일을 인터넷 서버에 올리는 것.
+            </p>
+            <div class="dn-analogy">실행 = 집에서 요리 맛보기. 빌드 = 포장하기. 배포 = 배달 보내기.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">반환(return) vs 출력(console.log)</span><span class="dn-tag dn-tag-green">코드 읽기 팁</span></div>
+            <p class="dn-card-body">
+              <strong>return</strong>: 함수가 값을 돌려주는 것. 다른 코드에서 그 값을 쓸 수 있어요.<br>
+              <strong>console.log</strong>: 개발자 콘솔에 확인용으로 출력하는 것. 실제 앱 화면과는 무관해요.
+            </p>
+            <div class="dn-tip">클로드가 <code class="dn-code">console.log</code>를 많이 쓴다면 디버깅(문제 확인)용이에요. 배포 전에 지워도 되는 코드예요.</div>
+          </div>
+          <button class="dn-done-btn" id="dn-done12" onclick="dnMarkDone(12)">이 챕터 읽었어요 ✓</button>
+
+          <!-- Ch 19 -->
+          <div class="dn-ch-header">
+            <div class="dn-ch-num">Chapter 19 · 클로드 활용 <span class="dn-badge-new">NEW</span></div>
+            <div class="dn-ch-title">에이전트 · 스킬 · 멀티에이전트</div>
+            <div class="dn-ch-desc">클로드 코드는 혼자 일하기도 하고, 여러 클로드를 팀처럼 굴리기도 해요. 이 구조를 알면 더 복잡한 작업도 맡길 수 있어요.</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">에이전트(Agent)란?</span><span class="dn-tag dn-tag-yellow">꼭 알기</span></div>
+            <p class="dn-card-body">
+              에이전트는 <strong>"도구를 직접 쓰면서 스스로 판단하고 행동하는 클로드"</strong>예요.<br><br>
+              일반 채팅에서 클로드는 텍스트 답변만 해요. 하지만 클로드 코드(에이전트 모드)에서는 파일을 읽고, 코드를 수정하고, 터미널 명령을 실행하고, 결과를 확인하면서 작업을 완성해요.<br><br>
+              <strong>서브에이전트(Sub-agent)</strong>: 주 클로드 인스턴스가 별도의 클로드 프로세스를 띄워서 하위 작업을 위임하는 방식이에요. 주 에이전트는 지휘자, 서브에이전트는 실제 실행자예요.
+            </p>
+            <div class="dn-pre" style="font-size:11px;line-height:1.7;">         ┌─────────────────────┐
+         │    주 에이전트 (나)  │
+         │ "이 작업 셋으로 나눠" │
+         └──────┬──────┬───────┘
+                │      │      │
+       ┌────────┘  ┌───┘  ┌───┘
+       ▼           ▼      ▼
+ ┌──────────┐ ┌──────────┐ ┌──────────┐
+ │서브에이전트│ │서브에이전트│ │서브에이전트│
+ │프론트엔드  │ │백엔드 분석 │ │DB 스키마  │
+ │코드 분석  │ │          │ │분석      │
+ └──────────┘ └──────────┘ └──────────┘
+       ↓           ↓           ↓
+         결과를 주 에이전트에게 보고</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">단일 루프 vs 멀티에이전트</span></div>
+            <p class="dn-card-body">
+              <strong>단일 루프 (보통 방식)</strong><br>
+              하나의 클로드가 하나의 대화 창에서 순서대로 일해요. 컨텍스트(기억 공간)가 하나여서, 작업이 길어지면 앞 내용을 잊기 시작해요.<br><br>
+              <strong>멀티에이전트</strong><br>
+              여러 클로드가 각자 독립된 컨텍스트를 갖고 병렬로 일해요. 큰 작업을 쪼개서 동시에 처리하니 빠르고, 각자 맡은 부분에 집중할 수 있어요.
+            </p>
+            <div class="dn-tip">베이 관리자 세션에서 "에이전트 사용 중…" 메시지가 뜨면, 주 클로드가 서브에이전트를 띄워서 코드 탐색 같은 작업을 맡긴 거예요.</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">클로드가 자동으로 에이전트를 쓰는 상황</span></div>
+            <p class="dn-card-body">
+              직접 요청하지 않아도 클로드가 스스로 판단해서 서브에이전트를 활용해요:<br><br>
+              • <strong>대규모 코드베이스 분석</strong> — 파일이 많아서 동시에 여러 곳을 탐색할 때<br>
+              • <strong>긴 작업을 독립 단계로 쪼갤 수 있을 때</strong> — "앱 전체 리팩토링" 같은 요청<br>
+              • <strong>컨텍스트 창이 넘칠 것 같을 때</strong> — 대화가 너무 길어져서 기억이 부족할 때
+            </p>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">직접 멀티에이전트 요청하기</span><span class="dn-tag dn-tag-green">실전 팁</span></div>
+            <p class="dn-card-body">프롬프트에서 직접 병렬 작업을 요청할 수 있어요:</p>
+            <div class="dn-scene">
+              "이 작업을 병렬 서브에이전트로 나눠서 처리해줘.<br>
+              에이전트1: 프론트엔드 코드 분석<br>
+              에이전트2: 백엔드 API 분석<br>
+              에이전트3: DB 스키마 분석"
+            </div>
+            <p class="dn-card-body" style="margin-top:8px;">
+              또는 <code class="dn-code">/agents</code> 명령(최근 추가)으로 특정 역할에 특화된 커스텀 에이전트를 정의해서 반복 사용할 수도 있어요.
+            </p>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">스킬(Skill) vs 에이전트(Agent)</span><span class="dn-tag dn-tag-purple">자주 혼동</span></div>
+            <p class="dn-card-body">이름이 비슷해 보이지만 완전히 다른 개념이에요.</p>
+            <div class="dn-pre" style="font-size:11px;line-height:1.8;">┌─────────┬───────────────────────┬───────────────────────┐
+│         │ 스킬 (Skill)           │ 에이전트 (Agent)       │
+├─────────┼───────────────────────┼───────────────────────┤
+│ 정체    │ 마크다운 지시 파일       │ 별도 Claude 프로세스   │
+│ 역할    │ "어떻게 해야 하는지"     │ 실제로 작업을 수행      │
+│         │  가이드                │                       │
+│ 예시    │ docx 만드는 법,         │ 코드 분석, 테스트 실행  │
+│         │ PDF 다루는 법           │ 파일 수정              │
+│ 메모리  │ 컨텍스트에 로드됨        │ 독립 컨텍스트 보유     │
+└─────────┴───────────────────────┴───────────────────────┘</div>
+            <div class="dn-analogy">스킬 = 레시피북 📖 &nbsp;·&nbsp; 에이전트 = 요리사 👨‍🍳</div>
+          </div>
+
+          <!-- Ch 19 퀴즈 -->
+          <div class="dn-card dn-quiz-card">
+            <div class="dn-card-head"><span class="dn-card-title">✏️ 확인 퀴즈</span></div>
+            <div class="dn-quiz" id="dn-q19-1">
+              <div class="dn-q-text">주 에이전트가 별도의 클로드 프로세스를 띄워 하위 작업을 맡기는 방식을 뭐라고 하나요?</div>
+              <div class="dn-opts">
+                <button class="dn-opt" onclick="dnAns('dn-q19-1',this,false)">스킬(Skill)</button>
+                <button class="dn-opt" onclick="dnAns('dn-q19-1',this,true)">서브에이전트(Sub-agent)</button>
+                <button class="dn-opt" onclick="dnAns('dn-q19-1',this,false)">MCP 도구</button>
+              </div>
+            </div>
+            <div class="dn-quiz" id="dn-q19-2">
+              <div class="dn-q-text">스킬(Skill)의 정체는 무엇인가요?</div>
+              <div class="dn-opts">
+                <button class="dn-opt" onclick="dnAns('dn-q19-2',this,false)">독립된 Claude 프로세스</button>
+                <button class="dn-opt" onclick="dnAns('dn-q19-2',this,true)">마크다운 지시 파일 ("어떻게 할지" 가이드)</button>
+                <button class="dn-opt" onclick="dnAns('dn-q19-2',this,false)">GitHub에 올리는 코드</button>
+              </div>
+            </div>
+          </div>
+
+          <button class="dn-done-btn" id="dn-done19" onclick="dnMarkDone(19)">이 챕터 읽었어요 ✓</button>
+
+          <!-- Ch 20 -->
+          <div class="dn-ch-header">
+            <div class="dn-ch-num">Chapter 20 · 클로드 활용 <span class="dn-badge-new">NEW</span></div>
+            <div class="dn-ch-title">CLAUDE.md 제대로 쓰기 + 참고 링크</div>
+            <div class="dn-ch-desc">CLAUDE.md는 클로드에게 주는 "팀 온보딩 문서"예요. 잘 쓸수록 매 세션마다 설명하는 시간이 줄어요.</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">CLAUDE.md 기본 역할</span><span class="dn-tag dn-tag-yellow">꼭 알기</span></div>
+            <p class="dn-card-body">
+              클로드 코드는 세션을 시작할 때 프로젝트 루트의 <code class="dn-code">CLAUDE.md</code> 파일을 <strong>자동으로 읽어요.</strong><br><br>
+              • 매번 "이 앱은 뭐야?"를 설명하지 않아도 돼요<br>
+              • "이건 하면 안 돼"를 기억시킬 수 있어요<br>
+              • 코딩 스타일, 배포 방법, 자주 쓰는 명령어를 저장해요<br><br>
+              베이 관리자의 CLAUDE.md가 바로 이 역할이에요. 지금 이 세션도 그 파일을 읽고 시작했어요.
+            </p>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">CLAUDE.md 권장 구성</span><span class="dn-tag dn-tag-purple">실전 팁</span></div>
+            <p class="dn-card-body">CLAUDE.md에 넣으면 좋은 섹션들이에요:</p>
+            <div class="dn-pre" style="font-size:11px;line-height:1.8;"># 프로젝트 기본 정보
+- 앱 이름, 목적, 사용자
+- 기술 스택 (React? 순수 HTML? Firebase?)
+- 배포 URL
+
+# 아키텍처 요약
+- 파일 구조 (index.html, app.js, styles.css)
+- 데이터 저장 방식 (localStorage? Firestore?)
+
+# 절대 금지 사항  ← 이게 특히 중요!
+- toISOString() 쓰지 말기 (시차 문제)
+- innerHTML에 null 체크 생략 금지
+
+# 자주 쓰는 명령어
+- 로컬 서버: python3 -m http.server 8000
+- 문법 검사: node --check app.js
+- 배포: sh .git/push.sh origin main
+
+# 다음 세션 시작점  ← 세션 간 기억 역할
+- 어디까지 했는지
+- 다음에 할 일</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">CLAUDE.md 심화 — 멀티에이전트 설계 명시하기</span><span class="dn-tag dn-tag-blue">고급</span></div>
+            <p class="dn-card-body">
+              CLAUDE.md에 에이전트 지시를 명시해두면, 클로드가 자동으로 그 방식으로 일해요:
+            </p>
+            <div class="dn-scene">
+              ## 에이전트 전략<br><br>
+              복잡한 작업은 다음 방식으로 분리해:<br>
+              - 탐색 작업: Explore 서브에이전트 사용<br>
+              - 코드 리뷰: 독립 에이전트로 검토<br>
+              - 대규모 리팩토링: 파일별 병렬 처리
+            </div>
+            <p class="dn-card-body" style="margin-top:8px;">
+              <strong>실제 베이 관리자 CLAUDE.md에는</strong> 이런 내용들이 들어 있어요:<br>
+              • push 방법 (push.sh 사용)<br>
+              • 수정 방식 (Edit 도구, 라인 번호 기반 금지)<br>
+              • 세션 마무리 루틴 (CLAUDE.md 갱신 순서)<br>
+              • 교훈 섹션 (과거 실수 기록)
+            </p>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">CLAUDE.md 작성 팁 모음</span></div>
+            <p class="dn-card-body">
+              <strong>✅ 잘 쓰는 법</strong><br>
+              • "금지 사항"을 명확하게 — "~~하지 말 것" 형식이 가장 효과적<br>
+              • 자주 쓰는 명령어는 그대로 복사해서 붙여넣기<br>
+              • 세션 끝날 때 "다음 시작점" 섹션을 업데이트하면 기억 지속<br>
+              • 교훈(실수한 것) 섹션을 만들면 같은 실수 반복 방지<br><br>
+              <strong>❌ 잘못된 패턴</strong><br>
+              • 너무 길게 쓰면 토큰 낭비 (핵심만)<br>
+              • "~해줘요"처럼 부드럽게 쓰면 명령으로 인식 약해짐<br>
+              • 업데이트 안 하면 outdated 정보가 클로드를 헷갈리게 함
+            </p>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">📚 공식 참고 링크</span><span class="dn-tag dn-tag-green">바로가기</span></div>
+            <p class="dn-card-body">클로드 코드를 더 깊게 배우려면 여기서 시작해요:</p>
+            <div class="dn-scene" style="line-height:2;">
+              <strong>공식 문서</strong><br>
+              <a href="https://docs.anthropic.com/ko/docs/claude-code/overview" target="_blank" rel="noopener" style="color:var(--primary-yellow,#ffde59);text-decoration:underline;">📖 Claude Code 공식 가이드 (한국어)</a><br>
+              <a href="https://docs.anthropic.com/ko/docs/claude-code/memory" target="_blank" rel="noopener" style="color:var(--primary-yellow,#ffde59);text-decoration:underline;">📖 CLAUDE.md(Memory) 공식 문서</a><br>
+              <a href="https://docs.anthropic.com/ko/docs/claude-code/sub-agents" target="_blank" rel="noopener" style="color:var(--primary-yellow,#ffde59);text-decoration:underline;">📖 서브에이전트 공식 문서</a><br>
+              <a href="https://docs.anthropic.com/ko/docs/claude-code/mcp" target="_blank" rel="noopener" style="color:var(--primary-yellow,#ffde59);text-decoration:underline;">📖 MCP 연결 공식 문서</a><br><br>
+              <strong>GitHub (소스코드·이슈·예제)</strong><br>
+              <a href="https://github.com/anthropics/claude-code" target="_blank" rel="noopener" style="color:var(--primary-yellow,#ffde59);text-decoration:underline;">🐙 anthropics/claude-code</a><br><br>
+              <strong>커뮤니티</strong><br>
+              <a href="https://www.anthropic.com/discord" target="_blank" rel="noopener" style="color:var(--primary-yellow,#ffde59);text-decoration:underline;">💬 Anthropic 디스코드 (#claude-code 채널)</a><br>
+              <a href="https://x.com/AnthropicAI" target="_blank" rel="noopener" style="color:var(--primary-yellow,#ffde59);text-decoration:underline;">🐦 @AnthropicAI (X/트위터)</a><br>
+              <a href="https://x.com/simonw" target="_blank" rel="noopener" style="color:var(--primary-yellow,#ffde59);text-decoration:underline;">🐦 @simonw — 실사용 팁 자주 공유</a>
+            </div>
+          </div>
+
+          <!-- Ch 20 퀴즈 -->
+          <div class="dn-card dn-quiz-card">
+            <div class="dn-card-head"><span class="dn-card-title">✏️ 확인 퀴즈</span></div>
+            <div class="dn-quiz" id="dn-q20-1">
+              <div class="dn-q-text">CLAUDE.md에 넣었을 때 가장 효과적인 항목은?</div>
+              <div class="dn-opts">
+                <button class="dn-opt" onclick="dnAns('dn-q20-1',this,false)">클로드에 대한 칭찬과 감사 인사</button>
+                <button class="dn-opt" onclick="dnAns('dn-q20-1',this,true)">절대 금지 사항과 자주 쓰는 명령어</button>
+                <button class="dn-opt" onclick="dnAns('dn-q20-1',this,false)">앱의 디자인 스케치 이미지</button>
+              </div>
+            </div>
+            <div class="dn-quiz" id="dn-q20-2">
+              <div class="dn-q-text">멀티에이전트를 쓰면 좋은 상황이 아닌 것은?</div>
+              <div class="dn-opts">
+                <button class="dn-opt" onclick="dnAns('dn-q20-2',this,false)">파일이 매우 많은 코드베이스를 분석할 때</button>
+                <button class="dn-opt" onclick="dnAns('dn-q20-2',this,false)">긴 작업을 독립적 단계로 쪼갤 수 있을 때</button>
+                <button class="dn-opt" onclick="dnAns('dn-q20-2',this,true)">버튼 색깔 하나만 바꿀 때</button>
+              </div>
+            </div>
+          </div>
+
+          <button class="dn-done-btn" id="dn-done20" onclick="dnMarkDone(20)">이 챕터 읽었어요 ✓</button>
+        </div>
+
+        <!-- ── 퀴즈·실습 탭 (진도 미포함) ── -->
+        <div class="dn-tab-pane" data-tab="quiz">
+          <div class="dn-tip" style="margin-bottom:20px;">📝 퀴즈·실습은 <strong>진도에 포함되지 않아요.</strong> 각 섹션 학습 후 여기서 실력을 확인하세요.</div>
+          <!-- Ch 13 -->
+          <div class="dn-ch-header">
+            <div class="dn-ch-num">퀴즈</div>
+            <div class="dn-ch-title">개념 퀴즈</div>
+            <div class="dn-ch-desc">틀려도 괜찮아요. 해설을 읽으면서 이해하면 돼요.</div>
+          </div>
+          <div class="dn-score-bar"><span>맞힌 문제:</span><span class="dn-score-num" id="dn-score-num">0</span><span>/ <span id="dn-total-num">0</span></span></div>
+
+          <div class="dn-quiz-card">
+            <p class="dn-quiz-q">Q1. "클라이언트 사이드에서 처리한다"는 말의 뜻은?</p>
+            <div class="dn-quiz-options">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-q1')">A. 서버 컴퓨터에서 실행된다</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-q1')">B. 사용자의 브라우저에서 실행된다</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-q1')">C. 데이터베이스에서 처리된다</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-q1-exp">클라이언트 = 브라우저(사용자 기기)예요. 서버 없이 브라우저에서만 실행된다는 뜻이에요.</div>
+          </div>
+
+          <div class="dn-quiz-card">
+            <p class="dn-quiz-q">Q2. <code class="dn-code">const</code>와 <code class="dn-code">let</code>의 차이는?</p>
+            <div class="dn-quiz-options">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-q2')">A. const는 숫자, let은 문자에 써요</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-q2')">B. const는 변경 불가, let은 변경 가능</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-q2')">C. 차이 없어요</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-q2-exp">const(상수)는 한 번 정하면 변경 불가. let은 나중에 값을 바꿀 수 있어요.</div>
+          </div>
+
+          <div class="dn-quiz-card">
+            <p class="dn-quiz-q">Q3. 앱에서 빨간 에러가 떴어요. 가장 먼저 해야 할 행동은?</p>
+            <div class="dn-quiz-options">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-q3')">A. 처음부터 다시 만든다</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-q3')">B. F12 콘솔 탭에서 에러 메시지 전체를 복사한다</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-q3')">C. 브라우저를 껐다 켠다</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-q3-exp">콘솔(F12)에서 에러 전체를 복사해서 클로드에게 주는 게 가장 빠른 해결법이에요.</div>
+          </div>
+
+          <div class="dn-quiz-card">
+            <p class="dn-quiz-q">Q4. Java와 JavaScript의 관계는?</p>
+            <div class="dn-quiz-options">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-q4')">A. JavaScript는 Java의 최신 버전이다</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-q4')">B. Java는 JavaScript의 줄임말이다</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-q4')">C. 이름만 비슷하고 완전히 다른 언어다</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-q4-exp">Java와 JavaScript는 완전히 다른 언어예요. 이름이 비슷한 건 마케팅 이유 때문이에요.</div>
+          </div>
+
+          <div class="dn-quiz-card">
+            <p class="dn-quiz-q">Q5. "상태(State)가 바뀌었다"는 말의 의미는?</p>
+            <div class="dn-quiz-options">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-q5')">A. 코드 파일이 수정됐다</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-q5')">B. 앱이 기억하는 값이 변해서 화면이 다시 그려진다</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-q5')">C. 배포가 완료됐다</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-q5-exp">상태(state)는 앱이 현재 기억하는 값이에요. 상태가 바뀌면 React 등은 자동으로 화면을 다시 그려줘요(리렌더링).</div>
+          </div>
+
+          <div class="dn-quiz-card">
+            <p class="dn-quiz-q">Q6. "빌드(build)"란 무엇인가요?</p>
+            <div class="dn-quiz-options">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-q6')">A. 앱을 인터넷에 올리는 것</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-q6')">B. 내 컴퓨터에서 앱을 켜는 것</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-q6')">C. 개발용 코드를 배포용 최적화 파일로 변환하는 것</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-q6-exp">빌드는 개발용 코드를 배포 가능한 형태로 변환하는 과정이에요. 실행(내 컴퓨터에서 켜기)과 배포(인터넷에 올리기) 사이에 있어요.</div>
+          </div>
+
+          <div class="dn-quiz-card">
+            <p class="dn-quiz-q">Q7. CLAUDE.md 파일의 역할은?</p>
+            <div class="dn-quiz-options">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-q7')">A. 에러 로그를 기록하는 파일이다</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-q7')">B. 클로드 코드가 프로젝트 시작 시 읽는 설명서다</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-q7')">C. 배포 설정 파일이다</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-q7-exp">CLAUDE.md는 클로드 코드가 제일 먼저 읽는 지침서예요. 앱 설명, 기술 스택, 규칙을 써두면 매번 설명 안 해도 돼요.</div>
+          </div>
+
+          <div class="dn-quiz-card">
+            <p class="dn-quiz-q">Q8. "리팩토링(Refactoring)을 해드릴까요?"라는 클로드 제안의 의미는?</p>
+            <div class="dn-quiz-options">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-q8')">A. 기능을 추가한다</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-q8')">B. 기능은 그대로, 코드를 더 깔끔하게 정리한다</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-q8')">C. 앱을 처음부터 다시 만든다</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-q8-exp">리팩토링은 기능 변경 없이 코드 구조를 개선하는 작업이에요. 사용자 입장에서는 아무것도 안 바뀌어요.</div>
+          </div>
+
+          <!-- Ch 14 -->
+          <div class="dn-ch-header" style="margin-top:32px;">
+            <div class="dn-ch-num">실습 과제</div>
+            <div class="dn-ch-title">실습 과제</div>
+            <div class="dn-ch-desc">클로드에게 직접 요청해보는 과제들이에요. 막히면 언제든지 여기 채팅창으로 돌아와서 물어봐요.</div>
+          </div>
+
+          <div class="dn-prac-card">
+            <div class="dn-prac-head"><span class="dn-prac-num">실습 01</span><span class="dn-prac-title">Hello World 만들기</span></div>
+            <p class="dn-prac-body"><strong>요청할 내용</strong>: "배경이 어두운 남색이고 가운데에 '안녕, 베이!'라고 흰 글씨로 적힌 HTML 파일 하나 만들어줘"<br><br>만들어진 HTML 파일을 브라우저에서 열어봐요.</p>
+            <p class="dn-prac-hint">HTML 파일을 더블클릭하거나 VS Code에서 열면 브라우저로 미리보기 가능해요.</p>
+          </div>
+
+          <div class="dn-prac-card">
+            <div class="dn-prac-head"><span class="dn-prac-num">실습 02</span><span class="dn-prac-title">버튼 클릭 카운터</span></div>
+            <p class="dn-prac-body"><strong>요청할 내용</strong>: "버튼 누르면 숫자가 올라가는 카운터 앱. +1, -1, 리셋 버튼 세 개. 단일 HTML 파일로"<br><br>완성 후 "-1 눌렀을 때 0 아래로 안 내려가도록 수정"을 추가 요청해봐요.</p>
+            <p class="dn-prac-hint">단계적으로 기능 추가하는 게 실제 개발 패턴이에요.</p>
+          </div>
+
+          <div class="dn-prac-card">
+            <div class="dn-prac-head"><span class="dn-prac-num">실습 03</span><span class="dn-prac-title">에러 재현 + 해결</span></div>
+            <p class="dn-prac-body"><strong>요청할 내용</strong>: "의도적으로 에러나는 JS 코드 예시 하나 만들어줘. 콘솔 에러 확인하고 고치는 연습 하려고"<br><br>F12 콘솔에서 에러 메시지 확인 → 복사 → 클로드에게 붙여넣어 해결해봐요.</p>
+            <p class="dn-prac-hint">이 연습 한 번이면 에러 앞에서 당황하는 게 크게 줄어요.</p>
+          </div>
+
+          <div class="dn-prac-card">
+            <div class="dn-prac-head"><span class="dn-prac-num">실습 04</span><span class="dn-prac-title">간단한 API 연결</span></div>
+            <p class="dn-prac-body"><strong>요청할 내용</strong>: "버튼 누르면 랜덤 명언 가져와서 화면에 표시하는 웹앱. 무료 API 사용해서"<br><br>API 연결 후, JSON 응답 구조를 클로드에게 설명해달라고 해봐요.</p>
+            <p class="dn-prac-hint">에러가 나도 당황하지 말고 콘솔 메시지를 클로드에게 바로 줘요.</p>
+          </div>
+
+          <div class="dn-prac-card">
+            <div class="dn-prac-head"><span class="dn-prac-num">실습 05</span><span class="dn-prac-title">CLAUDE.md 파일 작성</span></div>
+            <p class="dn-prac-body"><strong>요청할 내용</strong>: "내가 만드는 앱 설명할게: [앱 설명]. 이 정보로 클로드 코드용 CLAUDE.md 파일 내용 작성해줘"<br><br>생성된 CLAUDE.md를 보면서 빠진 내용 추가해봐요.</p>
+            <p class="dn-prac-hint">CLAUDE.md 한 번 잘 만들어두면 새 대화마다 설명하는 수고를 크게 줄일 수 있어요.</p>
+          </div>
+
+          <div class="dn-prac-card">
+            <div class="dn-prac-head"><span class="dn-prac-num">도전 실습</span><span class="dn-prac-title">미니 앱 전체 사이클</span></div>
+            <p class="dn-prac-body">
+              <strong>목표</strong>: 할 일 목록 앱 (To-do App)<br>
+              <strong>기능</strong>: 추가, 완료 체크, 삭제, localStorage 저장<br>
+              <strong>배포</strong>: GitHub Pages 또는 Vercel로 실제 URL 만들기<br><br>
+              한 번에 다 만들려 하지 말고 기능 하나씩 붙여나가요.
+            </p>
+            <p class="dn-prac-hint">이 과제를 끝내면 개발 → 배포 전체 흐름을 한 번 경험한 거예요.</p>
+          </div>
+
+        </div>
+
+        <!-- ── 용어 사전 탭 ── -->
+        <div class="dn-tab-pane" data-tab="terms">
+          <div class="dn-ch-header">
+            <div class="dn-ch-num">참고 자료 · 진도 미포함</div>
+            <div class="dn-ch-title">개발 용어 사전</div>
+            <div class="dn-ch-desc">개발하다 보면 자주 나오는 용어들이에요. 처음엔 몰라도 괜찮고, 나오면 여기서 찾아보면 돼요.</div>
+          </div>
+
+          <!-- 기본 개념 -->
+          <div class="dn-card" style="margin-bottom:12px;"><strong>🎯 기본 개념</strong></div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>엣지케이스 / Edge Case</strong>
+            <p style="margin:6px 0 4px;">일반적이지 않은 극단적인 입력이나 상황. 정상 케이스는 잘 되는데 특정 조건에서만 터지는 버그의 원인.</p>
+            <div class="dn-tip">예: 나이 입력칸에 0이나 999를 넣으면? / 이름에 이모지를 넣으면? / 리스트가 비어있으면?</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>레거시 코드 / Legacy Code</strong>
+            <p style="margin:6px 0 4px;">오래되어서 고치기 무서운 코드. 잘 돌아가고 있어서 건드리기 애매한 것들. "왜 이렇게 짰지?"가 자주 나옴.</p>
+            <div class="dn-tip">클로드한테 "이 코드 레거시라 손대기 싫은데 여기만 살짝 고칠 수 있어?" 이렇게 말할 수 있어요.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>리팩토링 / Refactoring</strong>
+            <p style="margin:6px 0 4px;">기능은 그대로인데 코드 구조를 깔끔하게 개선하는 것. 결과는 같은데 코드가 더 읽기 쉬워짐.</p>
+            <div class="dn-tip">사용자 입장에서는 아무 변화도 없음. 개발자 입장에서는 나중에 수정하기 쉬워짐.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>보일러플레이트 / Boilerplate</strong>
+            <p style="margin:6px 0 4px;">새 프로젝트 시작할 때 매번 반복해서 쓰는 기본 틀 코드. 내용은 거의 안 바뀌는 설정, 선언 같은 것들.</p>
+            <div class="dn-pre">// 이런 거: 항상 파일 맨 위에 똑같이 들어가는 것들
+'use strict';
+import React from 'react';</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>하드코딩 / Hardcoding</strong>
+            <p style="margin:6px 0 4px;">값을 변수로 빼지 않고 코드 안에 직접 박아넣는 것. 나중에 바꾸려면 코드를 직접 열어야 해서 불편함.</p>
+            <div class="dn-pre">// 하드코딩 (나쁜 예)
+if (userAge &gt; 19) { ... }
+
+// 변수로 뺀 것 (좋은 예)
+const ADULT_AGE = 19;
+if (userAge &gt; ADULT_AGE) { ... }</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>마이그레이션 / Migration</strong>
+            <p style="margin:6px 0 4px;">데이터나 시스템을 한 곳에서 다른 곳으로 옮기는 것. 베이 관리자도 localStorage → Firestore 마이그레이션을 했어요.</p>
+            <div class="dn-tip">이사 개념이에요. 짐(데이터)을 새 집(새 DB)으로 옮기는 것.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>기술 부채 / Tech Debt</strong>
+            <p style="margin:6px 0 4px;">빠르게 개발하려고 대충 짠 코드. 지금은 잘 돌아가지만 나중에 반드시 고쳐야 하는 것. 금전적 부채처럼 이자가 붙음.</p>
+            <div class="dn-tip">클로드가 "지금은 이렇게 하고 나중에 리팩토링 하는 게 나을 것 같아요" 할 때가 기술 부채를 만드는 순간.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>컨벤션 / Convention</strong>
+            <p style="margin:6px 0 4px;">팀이나 언어에서 암묵적으로 정한 코딩 규칙. 강제는 아니지만 안 따르면 이상하게 보임.</p>
+            <div class="dn-tip">예: 변수명은 camelCase, 상수는 UPPER_SNAKE_CASE, 파일명은 kebab-case 등.</div>
+          </div>
+
+          <!-- 함수와 비동기 -->
+          <div class="dn-card" style="margin-bottom:12px;margin-top:20px;"><strong>⚡ 함수와 비동기</strong></div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>콜백 / Callback</strong>
+            <p style="margin:6px 0 4px;">나중에 호출되도록 함수에 넘겨주는 함수. "이거 끝나면 이 함수 불러줘"의 개념.</p>
+            <div class="dn-pre">// "파일 읽기 끝나면 이 함수(콜백)를 실행해줘"
+readFile('data.txt', function(result) {
+  console.log(result); // 이게 콜백
+});</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>비동기 / Async · Await</strong>
+            <p style="margin:6px 0 4px;">기다리지 않고 다음 코드 실행. 서버 응답 기다리는 동안 화면이 멈추지 않는 이유. await은 "여기서만 기다려".</p>
+            <div class="dn-pre">// await 없이 → 데이터 오기 전에 실행됨 (버그)
+// await 있음 → 데이터 올 때까지 기다렸다가 실행
+const data = await fetch('/api/items');</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>사이드 이펙트 / Side Effect</strong>
+            <p style="margin:6px 0 4px;">함수가 반환값 외에 외부에 영향을 주는 것. localStorage 저장, 화면 업데이트, 콘솔 출력 등. 많을수록 예측하기 어려워짐.</p>
+            <div class="dn-tip">클로드가 "이 함수에 사이드 이펙트가 있어요"라고 하면: 이 함수가 뭔가를 바꾼다는 뜻.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>클로저 / Closure</strong>
+            <p style="margin:6px 0 4px;">함수가 만들어질 때의 주변 변수를 기억하는 것. 함수가 사라져도 그 변수는 살아있음.</p>
+            <div class="dn-pre">function counter() {
+  let count = 0; // 이 변수를
+  return function() { count++; return count; }; // 이 함수가 기억함
+}</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>재귀 / Recursion</strong>
+            <p style="margin:6px 0 4px;">함수가 자기 자신을 호출하는 것. 폴더 안에 폴더가 있는 구조나, 트리 구조 탐색에 자주 씀.</p>
+            <div class="dn-warn">⚠️ 종료 조건이 없으면 무한 루프 → 스택 오버플로우 오류 발생</div>
+          </div>
+
+          <!-- 자료구조 -->
+          <div class="dn-card" style="margin-bottom:12px;margin-top:20px;"><strong>🗄️ 자료구조</strong></div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>스택 / Stack</strong>
+            <p style="margin:6px 0 4px;">마지막에 넣은 게 먼저 나오는 구조 (LIFO). 브라우저 뒤로가기, Ctrl+Z 실행취소가 이 방식.</p>
+            <div class="dn-tip">접시를 쌓으면 맨 위(마지막 올린 것)부터 꺼내는 것과 같아요.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>큐 / Queue</strong>
+            <p style="margin:6px 0 4px;">먼저 넣은 게 먼저 나오는 구조 (FIFO). 줄 서기랑 같음. 네트워크 요청 대기열, 알림 발송 순서에 사용.</p>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>해시맵 / HashMap (객체)</strong>
+            <p style="margin:6px 0 4px;">key-value 쌍의 저장 구조. JavaScript의 객체(Object)가 해시맵이에요. key로 값을 바로 꺼낼 수 있어 빠름.</p>
+            <div class="dn-pre">const map = { 'apple': 1200, 'banana': 800 };
+console.log(map['apple']); // → 1200</div>
+          </div>
+
+          <!-- 웹과 API -->
+          <div class="dn-card" style="margin-bottom:12px;margin-top:20px;"><strong>🌐 웹과 API</strong></div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>엔드포인트 / Endpoint</strong>
+            <p style="margin:6px 0 4px;">API에서 특정 기능을 담당하는 URL 주소. "이 주소로 요청 보내면 이 기능을 해줌".</p>
+            <div class="dn-pre">GET  /api/users          ← 유저 목록
+POST /api/users          ← 유저 추가
+DELETE /api/users/123    ← 특정 유저 삭제</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>페이로드 / Payload</strong>
+            <p style="margin:6px 0 4px;">요청이나 응답에 실제로 담기는 데이터. 택배로 치면 박스(HTTP 요청) 안에 들어있는 내용물(payload).</p>
+            <div class="dn-pre">// POST 요청 시 body에 담기는 payload
+{ "name": "베이", "email": "bae@example.com" }</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>환경변수 / Environment Variable</strong>
+            <p style="margin:6px 0 4px;">코드 밖에 저장하는 설정값. API 키, 비밀번호처럼 코드에 직접 쓰면 안 되는 것들을 여기에 보관.</p>
+            <div class="dn-pre">// .env 파일 (절대 GitHub에 올리면 안 됨)
+FIREBASE_API_KEY=AIzaSy...
+DATABASE_URL=https://...
+
+// 코드에서 읽기
+process.env.FIREBASE_API_KEY</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>웹훅 / Webhook</strong>
+            <p style="margin:6px 0 4px;">이벤트가 발생하면 자동으로 특정 URL을 호출해주는 것. 내가 폴링(계속 물어보기)하는 게 아니라 상대방이 알려줌.</p>
+            <div class="dn-tip">예: GitHub에서 코드 push되면 → 자동으로 배포 서버에 알림 전송</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>미들웨어 / Middleware</strong>
+            <p style="margin:6px 0 4px;">요청과 응답 사이에 끼어서 처리하는 함수. 로그인 확인, 로그 기록, 데이터 검증 등을 요청마다 공통으로 처리할 때 씀.</p>
+            <div class="dn-tip">공항 보안 검색대처럼, 요청이 목적지에 도달하기 전에 거쳐야 하는 관문들.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>멱등성 / Idempotent</strong>
+            <p style="margin:6px 0 4px;">같은 요청을 여러 번 해도 결과가 같은 성질. GET, PUT은 멱등, POST는 아님 (누를 때마다 새로 생성됨).</p>
+            <div class="dn-tip">결제 버튼을 실수로 두 번 눌러도 한 번만 결제돼야 → 멱등성이 중요한 이유</div>
+          </div>
+
+          <!-- 개발 문화 -->
+          <div class="dn-card" style="margin-bottom:12px;margin-top:20px;"><strong>🛠️ 개발 문화와 도구</strong></div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>모킹 / Mocking</strong>
+            <p style="margin:6px 0 4px;">실제 데이터나 API 대신 가짜로 만들어서 테스트하는 것. 서버가 아직 없어도 프론트 개발 가능하게 해줌.</p>
+            <div class="dn-tip">클로드가 "일단 목업 데이터로 개발하고 나중에 실제 API 연결할게요"라고 하면 이 뜻.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>CI/CD</strong>
+            <p style="margin:6px 0 4px;">Continuous Integration / Continuous Deployment. 코드 올리면 자동으로 테스트하고 배포하는 파이프라인. GitHub Actions 같은 것.</p>
+            <div class="dn-tip">베이 관리자는 main에 push하면 GitHub Pages가 자동 배포되는데, 이게 간단한 CD예요.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>스코프 / Scope</strong>
+            <p style="margin:6px 0 4px;">변수가 살아있는 범위. 함수 안에서 만든 변수는 함수 밖에서 쓸 수 없음. 이걸 모르면 "변수가 왜 없다고 하지?" 버그가 생김.</p>
+            <div class="dn-pre">function hello() {
+  const name = '베이'; // 함수 스코프 안
+}
+console.log(name); // ❌ 오류 — 밖에서 접근 불가</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>디펜던시 / Dependency</strong>
+            <p style="margin:6px 0 4px;">내 코드가 의존하는 외부 라이브러리. `npm install`로 설치하는 것들. 너무 많으면 유지보수가 어렵고, 보안 이슈가 생길 수 있음.</p>
+            <div class="dn-tip">package.json에 적힌 것들이 모두 디펜던시예요.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>스택 오버플로우 / Stack Overflow</strong>
+            <p style="margin:6px 0 4px;">함수 호출이 너무 많이 쌓여서 메모리가 넘치는 오류. 주로 재귀함수에서 종료 조건을 빠트렸을 때 발생.</p>
+            <div class="dn-warn">⚠️ 사이트 stackoverflow.com과 동음이의어! 개발자들이 에러 해결법 찾는 사이트 이름이 이 오류에서 유래.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>리그레션 / Regression</strong>
+            <p style="margin:6px 0 4px;">이전에 잘 되던 기능이 수정 후에 망가지는 것. 버그를 고쳤더니 다른 버그가 생기는 상황.</p>
+            <div class="dn-tip">클로드가 "리그레션이 없는지 테스트해보세요"라고 하면: 기존에 잘 되던 것도 확인하세요 라는 뜻.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>롤백 / Rollback</strong>
+            <p style="margin:6px 0 4px;">배포 후 문제가 생겨서 이전 버전으로 되돌리는 것. git revert나 이전 버전 재배포로 실행.</p>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>핫픽스 / Hotfix</strong>
+            <p style="margin:6px 0 4px;">배포 중인 서비스에 긴급한 버그가 생겼을 때 빠르게 고치는 패치. 다음 정기 배포를 기다릴 수 없을 때 씀.</p>
+          </div>
+
+          <!-- 자주 쓰는 구조 -->
+          <div class="dn-card" style="margin-bottom:12px;margin-top:20px;"><strong>🏗️ 자주 쓰는 구조와 패턴</strong></div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>플랫(Flat) vs 트리(Tree) 구조</strong>
+            <p style="margin:6px 0 4px;">플랫: 모든 항목이 같은 레벨. 트리: 부모-자식 계층이 있음. 오늘 만든 연결 할일이 플랫 구조예요.</p>
+            <div class="dn-pre">// 트리: A → B → C (계층이 깊어짐)
+// 플랫: A → B, A → C (항상 A 아래)
+A
+├── B  ← A의 자식
+└── C  ← B에서 만들었지만 A의 자식</div>
+            <div class="dn-tip">관리가 단순할 땐 플랫이 좋아요. GitHub Issues의 sub-issue, Linear의 subtask 모두 플랫 구조예요.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>1:N / N:N 관계</strong>
+            <p style="margin:6px 0 4px;">데이터 간의 연결 방식. 1:N은 하나가 여럿을 가짐. N:N은 서로 여럿이 연결됨.</p>
+            <div class="dn-pre">// 1:N: 카테고리 1개 → 일상 종류 여러 개
+// N:N: 할일 ↔ 태그 (할일에 태그 여러 개, 태그도 여러 할일에 붙음)</div>
+            <div class="dn-tip">베이 관리자에서: 시간표(1) : 일정(N), 카테고리(1) : 일상종류(N) 이 1:N 관계예요.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>상태 머신 / State Machine</strong>
+            <p style="margin:6px 0 4px;">정해진 상태들과 전환 규칙의 집합. 지금 어떤 상태이고, 어떤 조건에서 다음 상태로 바뀌는지 정의함.</p>
+            <div class="dn-pre">// 뽀모도로 상태 머신
+idle → work → break → work → longbreak → ...
+할일: pending → in-progress → done</div>
+            <div class="dn-tip">클로드가 "이건 상태 머신으로 관리하는 게 좋겠어요"라고 하면: 상태가 많고 전환 규칙이 복잡할 때예요.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>싱글톤 / Singleton</strong>
+            <p style="margin:6px 0 4px;">앱 전체에서 딱 하나만 존재하는 인스턴스. 전역 설정, DB 연결처럼 중복 생성하면 안 되는 것에 씀.</p>
+            <div class="dn-tip">베이 관리자의 FS 객체(Firebase 연결)가 싱글톤이에요. 여러 곳에서 쓰지만 연결은 하나.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>옵저버 패턴 / Observer Pattern</strong>
+            <p style="margin:6px 0 4px;">어떤 값이 바뀌면 구독 중인 여러 곳에 자동으로 알려주는 구조. 이벤트 리스너, Firebase의 onSnapshot이 이 패턴.</p>
+            <div class="dn-pre">// "상태 바뀌면 알려줘" 구독
+firebase.auth().onAuthStateChanged(function(user) {
+  // 로그인 상태 바뀔 때마다 자동 호출 ← 옵저버
+});</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>낙관적 업데이트 / Optimistic Update</strong>
+            <p style="margin:6px 0 4px;">서버 응답을 기다리지 않고 UI를 먼저 바꾸는 것. 빠르게 느껴지지만 실패하면 롤백해야 함.</p>
+            <div class="dn-tip">좋아요 버튼 누르면 즉시 하트가 채워지고, 서버 실패 시 되돌아오는 것이 낙관적 업데이트예요.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>단방향 데이터 흐름 / Unidirectional Data Flow</strong>
+            <p style="margin:6px 0 4px;">데이터가 한 방향으로만 흐르는 구조. 상태(state) → UI 렌더링 → 이벤트 → 상태 변경. React/Vue의 핵심 개념.</p>
+            <div class="dn-pre">// 상태 → 화면 (단방향)
+workItems → renderWorkPage() → 화면 표시
+버튼 클릭 → workItems 변경 → renderWorkPage() 재실행</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>SSOT / Single Source of Truth</strong>
+            <p style="margin:6px 0 4px;">데이터의 유일한 원본을 한 곳에만 두는 원칙. 두 곳에 같은 데이터가 있으면 동기화 문제가 생김.</p>
+            <div class="dn-tip">베이 관리자 CLAUDE.md 첫 줄에 "SSOT"라고 되어있어요 — 프로젝트 지침의 단일 원본이라는 뜻.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <strong>이벤트 버블링 / Event Bubbling</strong>
+            <p style="margin:6px 0 4px;">자식 요소의 이벤트가 부모로 전파되는 것. 카드 안의 버튼 클릭이 카드 클릭도 같이 발생시키는 이유.</p>
+            <div class="dn-pre">// 버블링 막기
+button.onclick = function(e) {
+  e.stopPropagation(); // 부모로 전파 차단
+  doSomething();
+};</div>
+            <div class="dn-tip">베이 관리자 코드에 onclick="event.stopPropagation()"이 많은데, 다 이 이유예요.</div>
+          </div>
+
+          <!-- 용어 사전 퀴즈 -->
+          <div class="dn-ch-header" style="margin-top:32px;">
+            <div class="dn-ch-num">📝 용어 확인 퀴즈</div>
+            <div class="dn-ch-title">얼마나 익혔나 확인해봐요</div>
+          </div>
+          <div class="dn-card" style="margin-bottom:12px;">
+            <p class="dn-q-text">Q. 기능은 그대로인데 코드 구조를 깔끔하게 개선하는 것을 뭐라고 할까요?</p>
+            <div class="dn-quiz-opts">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq1')">마이그레이션</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq1')">리팩토링</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq1')">롤백</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq1')">하드코딩</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-tq1-exp">리팩토링(Refactoring)은 결과는 동일하게 유지하면서 코드 품질을 개선하는 것이에요.</div>
+          </div>
+          <div class="dn-card" style="margin-bottom:12px;">
+            <p class="dn-q-text">Q. 값을 변수로 빼지 않고 코드 안에 직접 박아넣는 것을 뭐라고 해요?</p>
+            <div class="dn-quiz-opts">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq2')">보일러플레이트</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq2')">엣지케이스</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq2')">하드코딩</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq2')">클로저</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-tq2-exp">하드코딩(Hardcoding)이에요. 값을 상수나 환경변수로 빼는 게 좋은 습관이에요.</div>
+          </div>
+          <div class="dn-card" style="margin-bottom:12px;">
+            <p class="dn-q-text">Q. API에서 특정 기능을 담당하는 URL 주소를 뭐라고 해요?</p>
+            <div class="dn-quiz-opts">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq3')">페이로드</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq3')">엔드포인트</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq3')">웹훅</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq3')">미들웨어</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-tq3-exp">엔드포인트(Endpoint)예요. /api/users 같은 URL 경로 하나하나가 엔드포인트예요.</div>
+          </div>
+          <div class="dn-card" style="margin-bottom:12px;">
+            <p class="dn-q-text">Q. 이전에 잘 되던 기능이 수정 후에 망가지는 것을 뭐라고 해요?</p>
+            <div class="dn-quiz-opts">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq4')">핫픽스</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq4')">기술 부채</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq4')">리그레션</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq4')">사이드 이펙트</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-tq4-exp">리그레션(Regression)이에요. 수정 전에 잘 되던 기능이 수정 후에 망가지는 것. 테스트가 중요한 이유예요.</div>
+          </div>
+          <div class="dn-card" style="margin-bottom:12px;">
+            <p class="dn-q-text">Q. 코드 밖에 저장하는 API 키, 비밀번호 같은 설정값을 뭐라고 해요?</p>
+            <div class="dn-quiz-opts">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq5')">디펜던시</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq5')">환경변수</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq5')">컨벤션</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq5')">레거시</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-tq5-exp">환경변수(Environment Variable)예요. .env 파일에 저장하고 절대 GitHub에 올리면 안 돼요!</div>
+          </div>
+          <div class="dn-card" style="margin-bottom:12px;">
+            <p class="dn-q-text">Q. 먼저 넣은 것이 먼저 나오는 자료구조는?</p>
+            <div class="dn-quiz-opts">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq6')">스택(Stack)</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq6')">큐(Queue)</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq6')">해시맵(HashMap)</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq6')">클로저(Closure)</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-tq6-exp">큐(Queue)예요. FIFO(First In, First Out). 줄 서기랑 같아요. 스택은 반대로 LIFO(마지막에 넣은 게 먼저 나옴).</div>
+          </div>
+          <div class="dn-card" style="margin-bottom:12px;">
+            <p class="dn-q-text">Q. Firebase의 onAuthStateChanged처럼, 값이 바뀌면 구독한 곳에 자동으로 알려주는 패턴은?</p>
+            <div class="dn-quiz-opts">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq7')">싱글톤 패턴</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq7')">옵저버 패턴</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq7')">상태 머신</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq7')">낙관적 업데이트</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-tq7-exp">옵저버 패턴(Observer Pattern)이에요. 이벤트 리스너, onSnapshot, onAuthStateChanged 모두 이 패턴으로 동작해요.</div>
+          </div>
+          <div class="dn-card" style="margin-bottom:12px;">
+            <p class="dn-q-text">Q. 카드 안의 버튼을 클릭했는데 카드 클릭 이벤트까지 같이 발생하는 현상은?</p>
+            <div class="dn-quiz-opts">
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq8')">사이드 이펙트</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq8')">리그레션</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq8')">이벤트 버블링</button>
+              <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq8')">멱등성</button>
+            </div>
+            <div class="dn-quiz-exp" id="dn-tq8-exp">이벤트 버블링(Event Bubbling)이에요. e.stopPropagation()으로 막을 수 있어요. 베이 관리자 코드에도 여러 군데 쓰였어요.</div>
+          </div>
+
+          <!-- ── UI 레이아웃 용어 ── -->
+          <div class="dn-card" style="margin-bottom:12px;margin-top:24px;"><strong>🖼️ UI 레이아웃 용어 — 화면의 영역들</strong></div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">화면 구조 한눈에 보기</span><span class="dn-tag dn-tag-yellow">꼭 알기</span></div>
+            <p class="dn-card-body">앱 화면은 이름 붙은 영역들로 나뉘어 있어요. 아래 그림으로 전체 구조를 먼저 잡아봐요.</p>
+            <div class="dn-pre" style="font-size:11.5px;line-height:1.7;">┌─────────────────────────────────────┐
+│              Header / Navbar         │  ← 상단 고정 영역
+│─────────┬───────────────────────────│
+│         │                           │
+│ Sidebar │      Main Content         │  ← 본문 영역
+│  (Nav)  │                           │
+│         │   ┌─────────────────┐     │
+│         │   │   Card / Panel  │     │  ← 정보 묶음
+│         │   └─────────────────┘     │
+│         │                           │
+│─────────┴───────────────────────────│
+│              Footer                 │  ← 하단 고정 영역
+└─────────────────────────────────────┘
+              ↓ (모바일에서는)
+┌─────────────────────┐
+│     Top Bar         │  ← 모바일 상단 바 (햄버거+제목)
+│─────────────────────│
+│                     │
+│   Main Content      │
+│                     │
+│─────────────────────│
+│  Bottom Navigation  │  ← 하단 탭바 (인스타그램 하단처럼)
+└─────────────────────┘
+        ↑ 위에서 올라오는
+   ┌─────────────────┐
+   │  Bottom Sheet   │  ← 아래에서 올라오는 패널
+   └─────────────────┘</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Header · Navbar · Top Bar</span></div>
+            <p class="dn-card-body">
+              모두 "화면 위쪽에 고정된 영역"이에요. 차이는 미묘해요.<br><br>
+              <strong>Header (헤더)</strong>: 페이지 최상단 영역. 로고, 제목, 로그인 버튼 등이 들어가요.<br>
+              <strong>Navbar (내비바)</strong>: Navigation Bar의 줄임. 메뉴·링크가 있는 탐색 바. Header 안에 있는 경우도 많아요.<br>
+              <strong>Top Bar</strong>: 주로 모바일 앱에서 상단 고정 바를 부르는 말. 베이 관리자 모바일 상단에 있는 그거예요.<br>
+              <strong>App Bar</strong>: 모바일 앱에서 Top Bar와 거의 같은 의미로 써요.
+            </p>
+            <div class="dn-tip">베이 관리자 코드에서 <code class="dn-code">#mobileTopBar</code>가 바로 이 Top Bar예요. 모바일에서만 보여요.</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Footer · Bottom Bar · Bottom Navigation</span></div>
+            <p class="dn-card-body">
+              <strong>Footer (푸터)</strong>: 페이지 맨 아래 영역. 저작권, 링크, 회사 정보 등이 들어가요. 웹사이트에서 자주 보여요.<br><br>
+              <strong>Bottom Bar</strong>: 모바일 화면 아래에 고정된 바.<br><br>
+              <strong>Bottom Navigation (바텀 내비)</strong>: 모바일 앱에서 화면 하단에 탭 아이콘들이 줄지어 있는 것. 인스타그램·유튜브 하단 메뉴가 대표적이에요.<br><br>
+              <strong>Tab Bar</strong>: Bottom Navigation과 거의 같은 의미. iOS에서 자주 쓰는 표현이에요.
+            </p>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Sidebar · Drawer · Side Menu</span></div>
+            <p class="dn-card-body">
+              <strong>Sidebar (사이드바)</strong>: 화면 옆(주로 왼쪽)에 있는 보조 영역. 베이 관리자의 왼쪽 메뉴가 사이드바예요.<br><br>
+              <strong>Drawer (드로어)</strong>: 평소엔 숨겨져 있다가 햄버거 버튼을 누르면 옆에서 밀려나오는 메뉴. 모바일에서 사이드바를 이렇게 구현해요.<br><br>
+              <strong>Side Menu</strong>: Drawer, Sidebar와 거의 같은 뜻으로 혼용돼요.
+            </p>
+            <div class="dn-pre" style="font-size:11px;line-height:1.6;">← 닫힘               열림 →
+┌──┬──────────┐    ┌────────┬───────┐
+│  │          │    │Sidebar │ Main  │
+│  │  Main    │    │ Menu   │Content│
+│  │ Content  │    │ 홈     │       │
+│  │          │    │ 설정   │       │
+└──┴──────────┘    └────────┴───────┘
+ 햄버거 닫힘              열린 상태</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Modal · Dialog · Popup · Overlay</span><span class="dn-tag dn-tag-purple">자주 혼동</span></div>
+            <p class="dn-card-body">
+              모두 "현재 화면 위에 떠있는 무언가"예요. 미묘하게 달라요.<br><br>
+              <strong>Modal (모달)</strong>: 화면 중앙에 뜨는 창. 뒤 배경이 어두워지고, 이걸 닫기 전까지 다른 조작이 막혀요. "삭제할까요?" 확인창이 대표적.<br><br>
+              <strong>Dialog (다이얼로그)</strong>: Modal과 거의 같은 말. "모달 다이얼로그"라고도 해요. Windows의 경고창 같은 것.<br><br>
+              <strong>Popup (팝업)</strong>: 원래는 새 브라우저 창을 여는 거지만, 요즘은 Modal과 거의 같은 뜻으로 혼용돼요.<br><br>
+              <strong>Overlay (오버레이)</strong>: 화면 위에 반투명하게 덮이는 레이어 전체를 뜻해요. Modal을 띄울 때 배경에 깔리는 어두운 부분이 오버레이예요.
+            </p>
+            <div class="dn-pre" style="font-size:11px;line-height:1.6;">┌──────────────────────────────┐
+│  (Overlay — 어두운 배경)     │
+│    ┌────────────────────┐    │
+│    │      Modal         │    │
+│    │  "정말 삭제할까요?" │    │
+│    │  [취소]  [삭제]    │    │
+│    └────────────────────┘    │
+└──────────────────────────────┘</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Bottom Sheet · Action Sheet</span><span class="dn-tag dn-tag-blue">모바일 필수</span></div>
+            <p class="dn-card-body">
+              <strong>Bottom Sheet (바텀 시트)</strong>: 화면 아래에서 위로 밀려 올라오는 패널이에요. 모바일 앱에서 자주 써요. 공유하기, 정렬 옵션 등을 보여줄 때 많이 사용해요.<br><br>
+              <strong>Action Sheet (액션 시트)</strong>: Bottom Sheet와 비슷한데, 주로 iOS에서 "이 중에 뭘 할까요?" 선택지를 보여줄 때 써요. 사진 앱에서 "사진 저장 / 공유 / 삭제" 같은 것.
+            </p>
+            <div class="dn-pre" style="font-size:11px;line-height:1.6;">┌─────────────────┐
+│   Main Content  │   ← 평소
+└─────────────────┘
+
+┌─────────────────┐
+│   Main Content  │
+│░░░░░░░░░░░░░░░░░│   ← 바텀 시트 올라올 때
+│ ─ ─ ─ ─ ─ ─ ─  │     (배경 어두워짐)
+│  Bottom Sheet   │
+│  공유하기       │
+│  링크 복사      │
+│  삭제           │
+└─────────────────┘</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Toast · Snackbar · Tooltip · Banner</span></div>
+            <p class="dn-card-body">
+              <strong>Toast (토스트)</strong>: 화면 아래(또는 위)에 잠깐 나타났다 사라지는 짧은 알림. "저장됐어요 ✓" 같은 것. 베이 관리자의 작업 완료 알림이 토스트예요.<br><br>
+              <strong>Snackbar (스낵바)</strong>: Toast와 거의 같아요. Google(Android)에서 쓰는 표현. 때로는 "실행 취소" 버튼이 달려있기도 해요.<br><br>
+              <strong>Tooltip (툴팁)</strong>: 요소에 마우스를 올리면 나오는 작은 설명 풍선. 버튼의 title 속성이 대표적.<br><br>
+              <strong>Banner (배너)</strong>: 화면 상단(또는 하단)에 길게 가로질러 표시되는 알림 바. "쿠키 동의", "앱 업데이트" 등에 많이 써요.
+            </p>
+            <div class="dn-pre" style="font-size:11px;line-height:1.6;">Toast/Snackbar:          Tooltip:
+┌───────────────┐        [버튼] ← 마우스 올리면
+│ ✓ 저장됐어요  │               ┌──────────┐
+└───────────────┘               │ 이 버튼은 │
+ (잠깐 떴다 사라짐)             │ ~해요     │
+                                └──────────┘</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Card · Panel · Widget · Container · Box</span></div>
+            <p class="dn-card-body">
+              <strong>Card (카드)</strong>: 관련 정보를 묶어서 보여주는 박스. 보통 테두리나 그림자가 있어요. 베이 관리자 할일 칸반 카드, 시간표 카드가 이거예요.<br><br>
+              <strong>Panel (패널)</strong>: Card보다 큰 구역. 특정 기능 묶음을 담는 영역. 뽀모도로 패널처럼 독립된 기능 섹션에 써요.<br><br>
+              <strong>Widget (위젯)</strong>: 독립적으로 동작하는 작은 UI 컴포넌트. 날씨 위젯, 달력 위젯처럼 "그 자체로 완결된 기능 덩어리"예요.<br><br>
+              <strong>Container (컨테이너)</strong>: 다른 요소들을 담는 껍데기. 내용보다 레이아웃을 잡는 역할이에요.<br><br>
+              <strong>Box / Wrapper (박스/래퍼)</strong>: Container와 거의 같은 의미. 요소를 감싸는 역할.
+            </p>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">FAB · Tab · Chip · Badge · Breadcrumb</span></div>
+            <p class="dn-card-body">
+              <strong>FAB (Floating Action Button)</strong>: 화면 위에 둥둥 떠있는 큰 원형 버튼. 베이 관리자 우측 하단의 뽀모도로 버튼, 💬 질문 저장 버튼이 FAB이에요.<br><br>
+              <strong>Tab (탭)</strong>: 여러 섹션을 전환하는 버튼. 베이 관리자 개발괴발 상단의 기초편/실전편/… 이 탭이에요.<br><br>
+              <strong>Chip (칩)</strong>: 작고 둥근 태그 모양 요소. 필터, 태그, 선택지 등에 써요. 베이 관리자 시간표 태그 칩이 이거예요.<br><br>
+              <strong>Badge (뱃지)</strong>: 숫자나 점으로 알림 개수를 표시하는 작은 표시. 카카오톡 앱 아이콘의 빨간 숫자, 개발괴발 탭의 N 표시가 뱃지예요.<br><br>
+              <strong>Breadcrumb (브레드크럼)</strong>: 현재 위치를 계층으로 보여주는 탐색 표시. <code class="dn-code">홈 &gt; 설정 &gt; 디자인</code> 같은 것.
+            </p>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Dropdown · Menu · Popover · Context Menu</span></div>
+            <p class="dn-card-body">
+              <strong>Dropdown (드롭다운)</strong>: 버튼을 클릭하면 아래로 펼쳐지는 선택 목록. <code class="dn-code">&lt;select&gt;</code> 태그나 커스텀 선택박스가 대표적.<br><br>
+              <strong>Menu (메뉴)</strong>: 선택 가능한 항목 목록. 사이드바, 드롭다운, 컨텍스트 메뉴 등 여러 형태로 나타나요.<br><br>
+              <strong>Popover (포오버)</strong>: 요소 근처에 말풍선처럼 뜨는 작은 패널. Tooltip보다 크고 더 많은 내용을 담아요.<br><br>
+              <strong>Context Menu (컨텍스트 메뉴)</strong>: 마우스 우클릭하면 나오는 메뉴. 모바일에서는 길게 누르면 나오는 메뉴가 이에 해당해요.
+            </p>
+          </div>
+
+          <!-- UI 레이아웃 퀴즈 -->
+          <div class="dn-card" style="margin-top:16px;">
+            <div class="dn-card-head"><span class="dn-card-title">✏️ UI 용어 퀴즈</span></div>
+            <div class="dn-quiz" id="dn-tq9">
+              <div class="dn-q-text">화면 아래에서 위로 밀려 올라오는 패널을 뭐라고 하나요?</div>
+              <div class="dn-opts">
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq9')">Popover</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq9')">Modal</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq9')">Bottom Sheet</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq9')">Drawer</button>
+              </div>
+              <div class="dn-quiz-exp" id="dn-tq9-exp">Bottom Sheet예요. 모바일에서 공유·정렬·옵션 패널로 자주 써요. Action Sheet도 비슷한 개념이에요.</div>
+            </div>
+            <div class="dn-quiz" id="dn-tq10">
+              <div class="dn-q-text">잠깐 떴다 사라지는 "저장됐어요 ✓" 같은 짧은 알림의 이름은?</div>
+              <div class="dn-opts">
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq10')">Banner</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq10')">Toast / Snackbar</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq10')">Dialog</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq10')">Tooltip</button>
+              </div>
+              <div class="dn-quiz-exp" id="dn-tq10-exp">Toast(또는 Snackbar)예요. 베이 관리자에서 할일·시간표 저장 후 뜨는 알림이 바로 토스트예요.</div>
+            </div>
+            <div class="dn-quiz" id="dn-tq11">
+              <div class="dn-q-text">베이 관리자 화면 우측 하단의 뽀모도로(⏰) 버튼은 어떤 UI 요소인가요?</div>
+              <div class="dn-opts">
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq11')">Widget</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq11')">Badge</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq11')">FAB (Floating Action Button)</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq11')">Chip</button>
+              </div>
+              <div class="dn-quiz-exp" id="dn-tq11-exp">FAB(Floating Action Button)이에요. 화면 위에 고정으로 떠있는 둥근 버튼이에요. 💬 질문 저장 버튼도 FAB이에요.</div>
+            </div>
+          </div>
+
+          <!-- ── WYSIWYG · 에디터 · 렌더링 용어 ── -->
+          <div class="dn-card" style="margin-bottom:12px;margin-top:24px;"><strong>✍️ WYSIWYG · 에디터 · 렌더링 용어</strong></div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">WYSIWYG — "보이는 게 결과물이에요"</span><span class="dn-tag dn-tag-yellow">꼭 알기</span></div>
+            <p class="dn-card-body">
+              <strong>WYSIWYG</strong>은 <em>What You See Is What You Get</em>의 줄임말이에요. 발음은 <strong>"위지윅"</strong>이에요.<br><br>
+              편집 화면에서 보이는 그대로가 최종 결과물이 되는 방식이에요. 노션, 구글 독스, 워드처럼 굵게·기울임·색상을 적용하면 즉시 눈에 보이죠.<br><br>
+              반대 개념은 <strong>마크다운(Markdown)</strong>이나 <strong>HTML</strong>처럼 태그/기호로 작성하고 <em>렌더링 후</em>에야 결과를 볼 수 있는 방식이에요.
+            </p>
+            <div class="dn-pre" style="font-size:11px;line-height:1.8;">WYSIWYG 방식:
+편집창에서 → [굵게 버튼 클릭] → 즉시 굵게 보임 ✅
+
+Markdown 방식:
+편집창에서 → **굵게** 입력 → 렌더링 후 굵게 보임
+(편집 중엔 별표가 그대로 보임)</div>
+            <div class="dn-tip">노션이 WYSIWYG의 대표 예시예요. 베이 관리자 개발괴발 에디터도 일종의 WYSIWYG처럼 만들 수 있어요.</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Rich Text Editor vs Plain Text Editor vs Code Editor</span></div>
+            <p class="dn-card-body">
+              <strong>Plain Text Editor (플레인 텍스트 에디터)</strong>: 글자만 입력하는 기본 텍스트창. 서식 없음. 메모장, <code class="dn-code">&lt;textarea&gt;</code>가 여기에 해당해요.<br><br>
+              <strong>Rich Text Editor (리치 텍스트 에디터, RTE)</strong>: 굵게, 밑줄, 색상, 이미지 삽입 등 서식 기능이 있는 에디터. WYSIWYG 방식이에요. 노션, 구글 독스, 네이버 카페 글쓰기창이 대표적.<br><br>
+              <strong>Code Editor (코드 에디터)</strong>: 개발자용. 문법 강조(Syntax Highlighting), 자동완성, 들여쓰기 등 코딩에 특화된 에디터. VS Code, 클로드 코드 내부 편집기가 여기에 해당해요.
+            </p>
+            <div class="dn-pre" style="font-size:11px;line-height:1.7;">Plain Text    Rich Text       Code Editor
+┌──────────┐  ┌──────────────┐  ┌──────────────┐
+│안녕하세요 │  │ **안녕하세요**│  │function hi() │
+│오늘도    │  │   _오늘도_   │  │  console.log │
+│화이팅    │  │ 🎨 화이팅    │  │  ('hello')   │
+└──────────┘  └──────────────┘  └──────────────┘
+  서식 없음      서식 풍부        문법 강조</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Markdown (마크다운) — 가볍게 서식 쓰는 법</span></div>
+            <p class="dn-card-body">
+              <strong>#, **, -, []() 같은 기호</strong>로 서식을 표현하는 경량 문법이에요. WYSIWYG과 달리 텍스트로만 작성하고, 렌더링하면 예쁘게 변환돼요.<br><br>
+              GitHub README, 개발괴발 내 코드 설명, CLAUDE.md 모두 마크다운으로 쓰여 있어요.
+            </p>
+            <div class="dn-pre" style="font-size:11px;line-height:1.7;"># 제목        →  큰 제목
+**굵게**      →  굵게
+_기울임_      →  기울임
+- 항목        →  • 항목 (목록)
+[링크](url)   →  클릭 가능한 링크
+`코드`        →  코드 블록</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">렌더링(Rendering) — "코드를 눈에 보이는 화면으로"</span><span class="dn-tag dn-tag-purple">자주 나옴</span></div>
+            <p class="dn-card-body">
+              <strong>렌더링</strong>은 코드(HTML·CSS·마크다운)를 실제 화면으로 그려내는 과정이에요.<br><br>
+              • <strong>CSR (Client-Side Rendering)</strong>: 브라우저(클라이언트)가 JavaScript를 받아서 화면을 직접 그려요. 초기 로딩이 느릴 수 있지만 이후 페이지 전환이 빨라요. 베이 관리자가 이 방식이에요.<br><br>
+              • <strong>SSR (Server-Side Rendering)</strong>: 서버가 HTML을 미리 만들어서 브라우저에 보내줘요. 초기 로딩이 빠르고 검색엔진에 유리해요. Next.js가 대표적.<br><br>
+              • <strong>SSG (Static Site Generation)</strong>: 빌드할 때 HTML을 미리 다 만들어 저장해요. 속도 최강. 블로그나 문서 사이트에 적합해요.
+            </p>
+            <div class="dn-pre" style="font-size:11px;line-height:1.7;">CSR:  브라우저 → JS 실행 → 화면 그리기
+SSR:  서버 → HTML 완성 → 브라우저에 전송
+SSG:  빌드 시 HTML 생성 → CDN에 저장 → 즉시 전송</div>
+            <div class="dn-tip">GitHub Pages(베이 관리자 배포 방식)는 SSG에 가까워요. HTML 파일을 미리 올려두고 그대로 서빙해요.</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">CMS · Headless CMS · No-code · Low-code</span></div>
+            <p class="dn-card-body">
+              <strong>CMS (Content Management System)</strong>: 콘텐츠를 쉽게 관리하는 시스템. 코드 없이 글·이미지를 올리고 편집할 수 있어요. 워드프레스, 노션이 대표적이에요.<br><br>
+              <strong>Headless CMS</strong>: 콘텐츠 관리(백엔드)만 하고, 화면 표시(프론트엔드)는 개발자가 자유롭게 구성해요. 콘텐츠를 API로 가져다 쓰는 방식.<br><br>
+              <strong>No-code</strong>: 코드를 전혀 안 쓰고 드래그&드롭으로 앱·사이트를 만드는 방식. Webflow, Bubble이 대표적.<br><br>
+              <strong>Low-code</strong>: 대부분은 GUI로 만들고, 필요한 부분에만 코드를 조금 써요. No-code보다 유연하지만 배움이 더 필요해요.
+            </p>
+            <div class="dn-analogy">No-code = 레고 블록 조립 🧱 · Low-code = 레고 + 약간의 용접 🔧 · 코딩 = 처음부터 직접 제작 ⚙️</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Syntax Highlighting · Live Preview · Hot Reload</span></div>
+            <p class="dn-card-body">
+              <strong>Syntax Highlighting (문법 강조)</strong>: 코드에서 키워드, 문자열, 함수를 색깔로 구분해 보여주는 것. VS Code에서 function은 파란색, 문자열은 초록색이 되는 그거예요.<br><br>
+              <strong>Live Preview (라이브 프리뷰)</strong>: 코드를 수정하면 결과 화면이 실시간으로 바뀌는 기능. Codepen, Figma의 실시간 미리보기가 여기에 해당해요.<br><br>
+              <strong>Hot Reload (핫 리로드)</strong>: 개발 중 코드를 저장하면 브라우저 전체를 새로고침하지 않고 변경된 부분만 자동으로 반영하는 기능. React 개발 시 파일 저장하면 화면이 알아서 바뀌는 것.
+            </p>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Template · Boilerplate · Scaffold</span></div>
+            <p class="dn-card-body">
+              <strong>Template (템플릿)</strong>: 미리 만들어둔 틀. HTML 템플릿, 이메일 템플릿처럼 기본 구조가 잡혀 있어서 내용만 채우면 돼요.<br><br>
+              <strong>Boilerplate (보일러플레이트)</strong>: 프로젝트 시작 시 매번 필요한 반복 코드 묶음. "Create React App"으로 만들어지는 기본 파일들이 보일러플레이트예요.<br><br>
+              <strong>Scaffold (스캐폴드)</strong>: 프레임워크가 자동으로 기본 파일·폴더 구조를 생성해주는 것. <code class="dn-code">npx create-react-app</code>이 스캐폴딩이에요.
+            </p>
+            <div class="dn-analogy">Template = 빈칸 채우기 양식 📄 · Boilerplate = 항상 쓰는 기본 세팅 🔩 · Scaffold = 공사 시작 전 세우는 비계 🏗️</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">DOM · Virtual DOM · Shadow DOM</span><span class="dn-tag dn-tag-blue">개념</span></div>
+            <p class="dn-card-body">
+              <strong>DOM (Document Object Model)</strong>: 브라우저가 HTML을 읽어서 만드는 트리 구조 메모리 표현이에요. JavaScript가 <code class="dn-code">document.getElementById()</code>로 접근하는 그 구조예요.<br><br>
+              <strong>Virtual DOM</strong>: React 등이 쓰는 기법. DOM을 직접 바꾸는 게 느려서, 가상의 복사본에서 변경사항을 계산한 뒤 실제 DOM에 한 번에 반영해요.<br><br>
+              <strong>Shadow DOM</strong>: 컴포넌트 내부 DOM을 외부와 격리하는 기술. CSS가 밖으로 새지 않아요. 웹 컴포넌트 표준에 사용돼요.
+            </p>
+            <div class="dn-pre" style="font-size:11px;line-height:1.7;">DOM (브라우저 내부):
+&lt;html&gt;
+  └── &lt;body&gt;
+        └── &lt;div id="app"&gt;
+              └── &lt;button&gt;클릭&lt;/button&gt;
+
+JavaScript로 접근:
+document.getElementById('app')  // DOM 노드를 잡음</div>
+          </div>
+
+          <!-- WYSIWYG 퀴즈 -->
+          <div class="dn-card" style="margin-top:16px;">
+            <div class="dn-card-head"><span class="dn-card-title">✏️ WYSIWYG · 렌더링 퀴즈</span></div>
+            <div class="dn-quiz" id="dn-tq12">
+              <div class="dn-q-text">노션처럼 편집 화면에서 보이는 그대로 최종 결과가 되는 방식은?</div>
+              <div class="dn-opts">
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq12')">Markdown</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq12')">WYSIWYG</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq12')">SSR</button>
+              </div>
+              <div class="dn-quiz-exp" id="dn-tq12-exp">WYSIWYG(위지윅)이에요. What You See Is What You Get. 노션, 구글 독스가 대표적이에요.</div>
+            </div>
+            <div class="dn-quiz" id="dn-tq13">
+              <div class="dn-q-text">베이 관리자(GitHub Pages)가 사용하는 렌더링 방식에 가장 가까운 것은?</div>
+              <div class="dn-opts">
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq13')">SSR — 서버가 HTML을 매번 만들어 전송</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq13')">CSR + SSG — JS로 화면을 그리며, 파일은 미리 올려둠</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq13')">Headless CMS — API로 콘텐츠를 받아옴</button>
+              </div>
+              <div class="dn-quiz-exp" id="dn-tq13-exp">베이 관리자는 미리 만든 HTML·JS 파일을 GitHub Pages에 올려두고(SSG 개념), 브라우저에서 JS가 화면을 그리는(CSR) 방식이에요.</div>
+            </div>
+            <div class="dn-quiz" id="dn-tq14">
+              <div class="dn-q-text">코드를 저장하면 브라우저 전체 새로고침 없이 변경 부분만 자동 반영되는 기능은?</div>
+              <div class="dn-opts">
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq14')">Live Preview</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,false,'dn-tq14')">Syntax Highlighting</button>
+                <button class="dn-quiz-opt" onclick="dnAns(this,true,'dn-tq14')">Hot Reload</button>
+              </div>
+              <div class="dn-quiz-exp" id="dn-tq14-exp">Hot Reload예요. React 개발 서버에서 파일 저장하면 화면이 자동으로 바뀌는 그 기능이에요.</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ── Git 실전 탭 (Ch 15) ── -->
+        <div class="dn-tab-pane" data-tab="git">
+          <div class="dn-ch-header" style="margin-top:0">
+            <div class="dn-ch-num">Chapter 15 · Git 실전 <span class="dn-badge-new">NEW</span></div>
+            <div class="dn-ch-title">브랜치 · PR · merge · diff</div>
+            <div class="dn-ch-desc">실제 세션에서 막혔던 부분이에요. "왜 갑자기 브랜치가 생겼지?", "PR이 뭐야?", "merge는 어떻게 해?" — 이 챕터 하나로 정리해요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">브랜치 (Branch)란?</span><span class="dn-tag dn-tag-purple">핵심 개념</span></div>
+            <p class="dn-card-body">코드의 <strong>복사본 작업 공간</strong>이에요. 원본(main)을 건드리지 않고 새 기능을 시험해볼 수 있어요.</p>
+            <div class="dn-analogy">문서 편집할 때 "원본은 두고 사본에서 수정해봐" 하는 것과 같아요.</div>
+            <div class="dn-pre"><span class="cm"># 새 브랜치 만들고 이동</span>
+<span class="fn">git checkout</span> -b feature/login
+<span class="cm"># 이제 이 브랜치에서 작업 → main은 그대로</span></div>
+            <div class="dn-tip">클로드 코드가 자동으로 브랜치를 만들기도 해요. 왜 main이 아닌 다른 브랜치인지 물어보면 이유를 설명해줘요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">main 브랜치가 특별한 이유</span><span class="dn-tag dn-tag-purple">꼭 알기</span></div>
+            <p class="dn-card-body"><strong>main</strong>은 "완성된, 실제 서비스에 올라가는" 브랜치예요. 여기에 직접 작업하면 실수했을 때 돌이키기 어려워요.</p>
+            <div class="dn-scene">
+              <strong>혼자 개발할 때</strong>: main에 직접 작업해도 사실 큰 문제는 없어요.<br>
+              <strong>협업하거나 안전하게 할 때</strong>: 브랜치 → PR → merge 흐름을 써요.
+            </div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">merge란?</span><span class="dn-tag dn-tag-purple">핵심 개념</span></div>
+            <p class="dn-card-body">브랜치에서 작업한 내용을 다른 브랜치(보통 main)에 <strong>합치는</strong> 것이에요.</p>
+            <div class="dn-pre"><span class="fn">git checkout</span> main      <span class="cm"># main으로 이동</span>
+<span class="fn">git merge</span> feature/login <span class="cm"># feature 내용을 main에 합치기</span></div>
+            <div class="dn-analogy">사본에서 수정한 내용을 원본 문서에 적용하는 것이에요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">PR (Pull Request)란?</span><span class="dn-tag dn-tag-purple">핵심 개념</span></div>
+            <p class="dn-card-body">"내 브랜치 내용을 main에 합쳐도 될까요?"라고 <strong>요청하는 것</strong>이에요. GitHub에서 하는 작업이에요.</p>
+            <div class="dn-scene">
+              <strong>PR 흐름:</strong><br>
+              1. 브랜치에서 작업 완료<br>
+              2. GitHub에서 PR 생성<br>
+              3. diff 확인 (무엇이 바뀌었는지 검토)<br>
+              4. 문제 없으면 merge 버튼 클릭
+            </div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">diff란?</span><span class="dn-tag dn-tag-green">알면 좋음</span></div>
+            <p class="dn-card-body"><strong>변경 사항의 차이</strong>를 보여주는 것이에요. 어떤 줄이 추가됐는지(초록), 삭제됐는지(빨강).</p>
+            <div class="dn-pre"><span class="cm"># PR에서 이런 식으로 표시돼요</span>
+- 이 줄은 삭제됐어요  (빨간색)
++ 이 줄이 추가됐어요  (초록색)</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">push vs pull</span><span class="dn-tag dn-tag-green">헷갈리는 쌍</span></div>
+            <p class="dn-card-body">
+              <strong>push</strong>: 내 컴퓨터(로컬)의 코드를 GitHub(원격)에 올리는 것<br>
+              <strong>pull</strong>: GitHub(원격)의 코드를 내 컴퓨터(로컬)로 내려받는 것
+            </p>
+            <div class="dn-pre"><span class="fn">git push</span> origin main  <span class="cm"># 로컬 → GitHub</span>
+<span class="fn">git pull</span> origin main  <span class="cm"># GitHub → 로컬</span></div>
+            <div class="dn-analogy">push = 구글 드라이브에 업로드. pull = 구글 드라이브에서 다운로드.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">commit이란?</span><span class="dn-tag dn-tag-purple">꼭 알기</span></div>
+            <p class="dn-card-body">변경 사항을 <strong>저장 + 메모</strong>하는 것이에요. 게임 세이브 포인트처럼 커밋 시점으로 언제든 돌아갈 수 있어요.</p>
+            <div class="dn-pre"><span class="fn">git add</span> .                        <span class="cm"># 변경된 파일 선택</span>
+<span class="fn">git commit</span> -m <span class="str">"로그인 기능 추가"</span>  <span class="cm"># 저장 + 메모</span></div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">전체 흐름 한눈에 보기</span><span class="dn-tag dn-tag-purple">정리</span></div>
+            <div class="dn-scene">
+              <strong>혼자 개발하는 가장 간단한 흐름:</strong><br>
+              코드 수정 → <code class="dn-code">git add .</code> → <code class="dn-code">git commit -m "메모"</code> → <code class="dn-code">git push</code> → 배포 자동 업데이트<br><br>
+              <strong>브랜치를 쓰는 안전한 흐름:</strong><br>
+              새 브랜치 생성 → 코드 수정 → commit → push → GitHub에서 PR 생성 → diff 확인 → merge → main 배포
+            </div>
+          </div>
+          <div class="dn-card" style="margin-top:8px;">
+            <div class="dn-card-head"><span class="dn-card-title">📸 실제 상황: "main에 머지할까요?" 대화창</span><span class="dn-tag dn-tag-purple">실전 독해</span></div>
+            <p class="dn-card-body">클로드 코드가 feature 브랜치에서 작업하다가 main에 합칠 때 이런 대화창을 띄워요. 용어를 하나씩 뜯어볼게요.</p>
+            <div class="dn-scene">
+              <strong>"main이 뒤처져있고 분기점만 있으므로"</strong>란?<br><br>
+              feature 브랜치가 생긴 이후 main에 아무 커밋도 없었다는 뜻이에요.<br>
+              즉, main과 feature가 같은 지점에서 출발했고 main은 그 자리에 멈춰있는 상태.
+            </div>
+            <div class="dn-pre"><span class="cm"># main이 뒤처진 상황 (Fast-forward 가능한 상태)</span>
+main:    A → B                    ← 여기서 멈춤
+feature: A → B → C → D → E      ← 여기까지 왔음
+
+<span class="cm"># main이 분기한 상황 (3-way merge 필요)</span>
+main:    A → B → X → Y           ← main도 앞으로 나감
+feature: A → B → C → D           ← feature도 나감
+                    ↑ B가 분기점</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <div class="dn-card-head"><span class="dn-card-title">Fast-forward 머지</span><span class="dn-tag dn-tag-purple">권장 방식</span></div>
+            <p class="dn-card-body">main이 뒤처져 있을 때, feature 커밋들을 그대로 main에 이어 붙이는 것. 합쳤다는 흔적(머지 커밋)이 없어서 히스토리가 깔끔해요.</p>
+            <div class="dn-pre"><span class="cm"># 전: main은 B, feature는 E까지</span>
+main:    A → B
+feature: A → B → C → D → E
+
+<span class="cm"># Fast-forward 머지 후: main이 E까지 쭉 이어짐</span>
+main:    A → B → C → D → E  ✓ 깔끔!</div>
+            <div class="dn-tip">혼자 작업할 땐 거의 항상 이 방식이 좋아요. "충돌 없이 깔끔하게 머지"가 되는 조건이기도 해요.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <div class="dn-card-head"><span class="dn-card-title">PR 만들어서 머지</span><span class="dn-tag dn-tag-green">검토 포함</span></div>
+            <p class="dn-card-body">GitHub에서 PR(Pull Request)을 생성하고, diff를 확인한 뒤 머지 버튼을 누르는 방식. 한 단계가 더 있지만 변경 내용을 눈으로 확인할 수 있어요.</p>
+            <div class="dn-scene">
+              혼자 개발: PR 없이 Fast-forward가 더 빠름<br>
+              팀 개발: PR이 필수 — 다른 사람이 코드 리뷰 후 머지
+            </div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <div class="dn-card-head"><span class="dn-card-title">cherry-pick</span><span class="dn-tag dn-tag-green">선택적 가져오기</span></div>
+            <p class="dn-card-body">브랜치 전체를 머지하는 게 아니라 <strong>특정 커밋만 골라서</strong> 다른 브랜치에 가져오는 것.</p>
+            <div class="dn-pre"><span class="cm"># feature에 커밋이 3개 있는데 그 중 하나만 main에 가져오고 싶을 때</span>
+<span class="fn">git cherry-pick</span> abc1234  <span class="cm"># 커밋 해시 지정</span></div>
+            <div class="dn-tip">버그 수정 커밋만 급하게 main에 반영해야 할 때 씁니다. 체리를 하나씩 골라 담는 것처럼요.</div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <div class="dn-card-head"><span class="dn-card-title">커밋 해시 (Commit Hash)</span><span class="dn-tag dn-tag-green">알면 좋음</span></div>
+            <p class="dn-card-body">각 커밋에 자동으로 붙는 고유 ID. git log를 보면 옆에 긴 영숫자가 붙어요. cherry-pick 같은 명령에서 "어떤 커밋인지" 특정할 때 씁니다.</p>
+            <div class="dn-pre"><span class="fn">git log</span> --oneline
+<span class="cm">abc1234 로그인 기능 추가      ← 여기서 abc1234가 해시
+def5678 버그 수정
+ghi9012 초기 설정</span></div>
+          </div>
+
+          <div class="dn-card" style="margin-bottom:10px;">
+            <div class="dn-card-head"><span class="dn-card-title">머지 충돌 (Merge Conflict)</span><span class="dn-tag dn-tag-purple">꼭 알기</span></div>
+            <p class="dn-card-body">두 브랜치가 <strong>같은 파일의 같은 줄</strong>을 다르게 수정했을 때 발생. Git이 "어떤 걸 쓸지 나는 모르겠으니 직접 골라"라고 멈추는 상황.</p>
+            <div class="dn-pre"><span class="cm"># 충돌이 나면 파일 안에 이런 표시가 생겨요</span>
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD (현재 브랜치)
+이쪽 내용
+=======
+저쪽 내용
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; feature/login (합치려는 브랜치)</div>
+            <div class="dn-warn">⚠️ 충돌이 나면 파일을 직접 열어서 원하는 내용만 남기고 나머지 표시를 지운 뒤, 다시 커밋해야 해요.</div>
+          </div>
+
+          <button class="dn-done-btn" id="dn-done15" onclick="dnMarkDone(15)">이 챕터 읽었어요 ✓</button>
+        </div>
+
+        <!-- ── 개발 환경 탭 (Ch 16-17) ── -->
+        <div class="dn-tab-pane" data-tab="env">
+          <!-- Ch 16 -->
+          <div class="dn-ch-header" style="margin-top:0">
+            <div class="dn-ch-num">Chapter 16 · 개발 환경 실전 <span class="dn-badge-new">NEW</span></div>
+            <div class="dn-ch-title">작업하다 갑자기 튀어나오는 개념들</div>
+            <div class="dn-ch-desc">클로드 코드랑 실제로 개발하다 보면 "이게 뭐지?" 싶은 단어들이 갑자기 등장해요. 브랜치·PR 정도 수준의 것들만 골라서 정리했어요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">HEAD</span><span class="dn-tag dn-tag-purple">자주 보임</span></div>
+            <p class="dn-card-body">지금 내가 작업하고 있는 <strong>현재 위치</strong>예요. "로컬 HEAD ↔ origin 동기화 완료"는 내 컴퓨터와 GitHub가 같은 상태라는 뜻이에요.</p>
+            <div class="dn-tip">대부분 신경 안 써도 돼요. 클로드가 "HEAD가 어쩌구" 하면 그냥 "현재 위치" 정도로 이해하면 충분해요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">origin</span><span class="dn-tag dn-tag-purple">자주 보임</span></div>
+            <p class="dn-card-body">GitHub에 있는 내 레포지토리(원격 저장소)의 <strong>별명</strong>이에요. <code class="dn-code">git push origin main</code>은 "origin(GitHub)의 main 브랜치에 올려줘"라는 뜻이에요.</p>
+            <div class="dn-pre"><span class="fn">git push</span> <span class="str">origin</span> main   <span class="cm"># origin = GitHub 주소의 별명</span>
+<span class="fn">git pull</span> <span class="str">origin</span> main   <span class="cm"># GitHub에서 내려받기</span></div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">충돌 (Conflict)</span><span class="dn-tag dn-tag-red">당황하지 말기</span></div>
+            <p class="dn-card-body">merge할 때 <strong>같은 줄을 두 곳에서 다르게 수정</strong>했을 때 발생해요. Git이 "어느 걸 써야 해요?"라고 묻는 상황이에요.</p>
+            <div class="dn-scene">
+              충돌이 나면 파일 안에 이런 표시가 생겨요:<br><br>
+              <code class="dn-code">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</code><br>
+              내 버전의 코드<br>
+              <code class="dn-code">=======</code><br>
+              상대방의 코드<br>
+              <code class="dn-code">&gt;&gt;&gt;&gt;&gt;&gt;&gt; feature/login</code>
+            </div>
+            <div class="dn-tip">충돌 났을 때 클로드에게 "충돌 났어, 파일 보여줄게"라고 하면 해결해줘요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">스테이징 영역 (git add가 왜 따로 있냐)</span><span class="dn-tag dn-tag-green">궁금했을 것</span></div>
+            <p class="dn-card-body"><code class="dn-code">git add</code>는 "이 파일을 다음 커밋에 포함할게"라고 <strong>선택</strong>하는 단계예요. 수정한 파일이 10개여도 그 중 3개만 골라서 커밋할 수 있어요.</p>
+            <div class="dn-analogy">택배 포장. 물건을 박스에 넣고(add) 테이프로 봉하는(commit) 두 단계예요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">포트 (Port) — localhost:3000의 3000</span><span class="dn-tag dn-tag-purple">자주 보임</span></div>
+            <p class="dn-card-body">같은 컴퓨터에서 여러 서버를 동시에 실행하기 위한 <strong>번호</strong>예요.</p>
+            <div class="dn-scene">
+              <code class="dn-code">localhost:3000</code> → 3000번 포트에서 실행 중인 앱<br>
+              <code class="dn-code">localhost:8080</code> → 8080번 포트에서 실행 중인 앱
+            </div>
+            <div class="dn-tip">"포트 3000이 이미 사용 중" 에러 = 이미 그 번호로 다른 앱이 실행되고 있다는 뜻이에요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">환경 (Environment) — dev / staging / production</span><span class="dn-tag dn-tag-purple">꼭 알기</span></div>
+            <div class="dn-scene">
+              <strong>development (dev)</strong>: 개발 중인 환경. 내 컴퓨터. 막 고쳐도 됨.<br>
+              <strong>staging</strong>: 배포 전 테스트 환경. 실제랑 똑같이 만들어둔 테스트 공간.<br>
+              <strong>production (prod)</strong>: 실제 사용자가 쓰는 환경. 신중하게 다뤄야 함.
+            </div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">CORS 에러</span><span class="dn-tag dn-tag-red">자주 만남</span></div>
+            <p class="dn-card-body">브라우저가 <strong>다른 주소의 서버</strong>에 요청할 때 막히는 보안 정책이에요.</p>
+            <div class="dn-tip">CORS 에러 나면 클로드에게 에러 메시지 그대로 붙여넣으면 돼요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">캐시 (Cache)</span><span class="dn-tag dn-tag-green">알면 유용</span></div>
+            <p class="dn-card-body">속도를 위해 데이터를 미리 저장해두는 것이에요. "수정했는데 변경이 안 보여요" 현상의 원인이 되기도 해요.</p>
+            <div class="dn-tip">브라우저 캐시 지우기: <code class="dn-code">Ctrl+Shift+R</code> (강력 새로고침).</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">토큰 (Token) vs API 키</span><span class="dn-tag dn-tag-green">알면 좋음</span></div>
+            <p class="dn-card-body">
+              <strong>API 키</strong>: 서비스에 접근하는 영구적인 비밀번호 같은 것.<br>
+              <strong>토큰(Token)</strong>: 로그인 후 임시로 발급되는 출입증. 보통 시간이 지나면 만료돼요.
+            </p>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">.env 파일 vs Secrets</span><span class="dn-tag dn-tag-purple">꼭 구분하기</span></div>
+            <p class="dn-card-body">
+              <strong>.env 파일</strong>: 내 컴퓨터(로컬)에서 쓰는 비밀 설정 파일. GitHub에 올리면 안 돼요.<br>
+              <strong>Secrets (GitHub / Vercel)</strong>: 배포 환경에서 쓰는 비밀 설정.
+            </p>
+            <div class="dn-warn">.gitignore 파일에 <code class="dn-code">.env</code>가 들어 있어야 GitHub에 안 올라가요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">CRUD</span><span class="dn-tag dn-tag-purple">꼭 알기</span></div>
+            <p class="dn-card-body">데이터를 다루는 <strong>4가지 기본 동작</strong>의 앞글자를 딴 말이에요.</p>
+            <div class="dn-scene">
+              <strong>C</strong>reate — 만들기 (게시글 쓰기, 회원가입, 할 일 추가)<br>
+              <strong>R</strong>ead — 읽기 (목록 불러오기, 상세 페이지 보기)<br>
+              <strong>U</strong>pdate — 수정하기 (게시글 편집, 프로필 변경)<br>
+              <strong>D</strong>elete — 삭제하기 (게시글 지우기, 계정 탈퇴)
+            </div>
+            <div class="dn-analogy">노션 데이터베이스로 비유하면: 행 추가(C) / 내용 보기(R) / 셀 수정(U) / 행 삭제(D)예요.</div>
+          </div>
+          <button class="dn-done-btn" id="dn-done16" onclick="dnMarkDone(16)">이 챕터 읽었어요 ✓</button>
+
+          <!-- Ch 17 -->
+          <div class="dn-ch-header">
+            <div class="dn-ch-num">Chapter 17 · 개발 환경 실전 <span class="dn-badge-new">NEW</span></div>
+            <div class="dn-ch-title">브랜치 실전 생존 가이드</div>
+            <div class="dn-ch-desc">브랜치 때문에 작업 내용이 유실되거나, 어느 브랜치에 있는지 몰라 혼란스러웠던 경험 — 이 챕터 하나로 정리해요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">지금 내가 어느 브랜치에 있는지 항상 확인하기</span><span class="dn-tag dn-tag-red">가장 중요</span></div>
+            <p class="dn-card-body">작업 시작 전에 현재 브랜치를 확인하는 습관이 가장 중요해요. 모르고 엉뚱한 브랜치에서 작업하면 나중에 꼬여요.</p>
+            <div class="dn-pre"><span class="fn">git branch</span>        <span class="cm"># 브랜치 목록 + 현재 위치(* 표시)</span>
+<span class="fn">git status</span>        <span class="cm"># 현재 브랜치 + 변경된 파일 목록</span></div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">클로드 코드가 브랜치를 자동으로 만드는 이유</span><span class="dn-tag dn-tag-purple">꼭 알기</span></div>
+            <p class="dn-card-body">클로드 코드는 작업할 때 <strong>자동으로 새 브랜치를 만들기도</strong> 해요. main을 보호하고 작업 단위를 분리하기 위해서예요.</p>
+            <div class="dn-tip">클로드 코드가 새 브랜치를 만들었다면 작업 후 반드시 "이 브랜치 main에 merge해줘"라고 말해야 해요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">작업 내용이 사라진 것처럼 보일 때</span><span class="dn-tag dn-tag-red">유실 사고 원인 1</span></div>
+            <p class="dn-card-body">브랜치를 이동하면 파일 내용이 그 브랜치 상태로 바뀌어요. 사라진 게 아니라 다른 브랜치에 있는 거예요.</p>
+            <div class="dn-pre"><span class="cm"># 내가 작업하던 브랜치로 다시 이동</span>
+<span class="fn">git checkout</span> feature/내가-작업하던-브랜치
+<span class="cm"># 브랜치 목록 모를 때</span>
+<span class="fn">git branch</span></div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">커밋 안 하고 브랜치 이동하면 생기는 일</span><span class="dn-tag dn-tag-red">유실 사고 원인 2</span></div>
+            <div class="dn-scene">
+              <strong>안전한 브랜치 이동 순서:</strong><br>
+              1. 작업 완료<br>
+              2. <code class="dn-code">git add .</code> → <code class="dn-code">git commit -m "작업 내용"</code> (저장 먼저)<br>
+              3. 그 다음 <code class="dn-code">git checkout 다른브랜치</code>
+            </div>
+            <div class="dn-warn">커밋하지 않고 브랜치를 이동하는 건 위험해요. 이동하기 전에 항상 커밋하거나, stash를 쓰세요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">stash — 임시 저장</span><span class="dn-tag dn-tag-green">유용한 도구</span></div>
+            <p class="dn-card-body">커밋하기엔 애매한데 일단 작업 내용을 잠깐 치워둘 때 쓰는 <strong>임시 보관함</strong>이에요.</p>
+            <div class="dn-pre"><span class="fn">git stash</span>        <span class="cm"># 현재 변경사항 임시 저장 (작업 공간 깨끗해짐)</span>
+<span class="fn">git stash pop</span>    <span class="cm"># 임시 저장한 내용 다시 꺼내기</span></div>
+            <div class="dn-analogy">서랍에 잠깐 넣어두기. 나중에 꺼내면 그대로 있어요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">reset — 가장 위험한 명령어</span><span class="dn-tag dn-tag-red">위험</span></div>
+            <div class="dn-scene">
+              <strong>git reset --soft</strong>: 커밋만 취소, 파일 변경사항은 남아있음 (비교적 안전)<br><br>
+              <strong>git reset --mixed</strong>: 커밋 취소 + add도 취소, 파일은 남아있음<br><br>
+              <strong>git reset --hard</strong>: 커밋 취소 + 파일 변경사항까지 전부 삭제 (위험!)
+            </div>
+            <div class="dn-warn">클로드 코드가 reset을 하려고 할 때 <strong>어떤 종류인지, 어떤 커밋으로 돌아가는지</strong> 꼭 물어봐요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">작업 흐름 — 클로드 코드와 안전하게 쓰는 패턴</span><span class="dn-tag dn-tag-purple">추천 루틴</span></div>
+            <div class="dn-scene">
+              <strong>매 작업 시작 전</strong><br>
+              → "지금 브랜치 상태 확인해줘" (현재 위치 파악)<br><br>
+              <strong>기능 하나 만들 때</strong><br>
+              → "새 브랜치 만들어서 [기능] 작업 시작해줘"<br><br>
+              <strong>작업 중간중간</strong><br>
+              → "지금까지 작업 커밋해줘" (중간 저장)<br><br>
+              <strong>기능 완성됐을 때</strong><br>
+              → "main에 merge하고 브랜치 정리해줘"<br><br>
+              <strong>세션 끝내기 전</strong><br>
+              → "커밋 안 된 내용 있으면 커밋하고 push까지 해줘"
+            </div>
+            <div class="dn-warn">세션을 그냥 닫기 전에 반드시 커밋·push 여부를 확인해요. 이게 유실 사고의 거의 모든 원인이에요.</div>
+          </div>
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">이 상황 전체를 베이 언어로 정리</span><span class="dn-tag dn-tag-purple">스크린샷 해석</span></div>
+            <div class="dn-scene">
+              <strong>"브랜치 분기 문제가 있네요. merge로 해결하고, tool로 진행할게요."</strong><br>
+              → 브랜치가 꼬여있어서 먼저 합치는 작업(merge)을 하고, 그 다음에 파일을 직접 수정할게요.<br><br>
+              <strong>"워킹 트리가 깨끗하네요."</strong><br>
+              → 커밋 안 된 변경사항은 없어요. 일단 안전한 상태예요.<br><br>
+              <strong>"로컬 main이 origin/main과 완전히 다른 히스토리를 가지고 있어요"</strong><br>
+              → 내 컴퓨터의 코드 기록이랑 GitHub의 코드 기록이 서로 달라요.<br><br>
+              <strong>"로컬을 origin/main으로 리셋할게요."</strong><br>
+              → GitHub 기준으로 내 컴퓨터를 강제로 맞출게요. ⚠️ 로컬에만 있던 작업 내용은 사라져요.
+            </div>
+            <div class="dn-warn">다음번에 클로드 코드가 "리셋할게요"라고 하면 — 바로 진행하지 말고 "리셋하면 사라지는 내 작업이 있어?" 먼저 물어봐요.</div>
+          </div>
+          <button class="dn-done-btn" id="dn-done17" onclick="dnMarkDone(17)">이 챕터 읽었어요 ✓</button>
+
+          <!-- ── Chapter 18 ── -->
+          <div class="dn-chapter">
+            <div class="dn-ch-num">Chapter 18 · 개발 환경 실전 <span class="dn-badge-new">NEW</span></div>
+            <div class="dn-ch-title">클로드 코드 웹 환경 이해하기</div>
+
+            <div class="dn-card">
+              <div class="dn-card-head"><span class="dn-card-title">Remote(클라우드) vs Local(로컬) — 클로드가 돌아가는 곳</span><span class="dn-tag dn-tag-yellow">꼭 알기</span></div>
+              <p class="dn-card-body">
+                클로드 코드를 <strong>어디서 여냐</strong>에 따라 실행 환경이 완전히 달라요.<br><br>
+                <strong>Remote(클라우드) ☁️</strong>: <code class="dn-code">claude.ai/code</code>에서 열면 클로드가 <strong>클라우드 서버</strong>(인터넷 어딘가에 있는 컴퓨터)에서 실행돼요. 지금 이 베이 관리자 개발이 바로 이 방식이에요.<br><br>
+                <strong>Local(로컬) 💻</strong>: 내 Mac 터미널에서 <code class="dn-code">claude</code> 명령어로 열면 클로드가 <strong>내 컴퓨터 안</strong>에서 실행돼요. 내 Git 계정, 내 비밀번호, 내 파일 등을 직접 사용할 수 있어요.<br><br>
+                핵심 차이: Remote 환경에서는 클로드가 내 GitHub 계정에 직접 접근할 권한이 없어요. 그래서 push 방식이나 브랜치 전략이 달라지는 거예요.
+              </p>
+              <div class="dn-tip">
+                "스크린샷에 Remote(☁️) 표시가 있어요" → 지금 클라우드 서버에서 클로드가 실행 중이라는 뜻이에요.
+              </div>
+            </div>
+
+            <div class="dn-card">
+              <div class="dn-card-head"><span class="dn-card-title">feature 브랜치 자동 생성 (claude/이름-랜덤코드)</span><span class="dn-tag dn-tag-purple">꼭 알기</span></div>
+              <p class="dn-card-body">
+                웹(Remote) 환경에서 클로드는 <strong>main 브랜치에 직접 작업하지 않아요.</strong> 대신 매 세션마다 임시 브랜치를 자동으로 만들어요.<br><br>
+                형식: <code class="dn-code">claude/작업이름-랜덤코드</code><br>
+                예: <code class="dn-code">claude/setup-environment-detection-MYc81</code><br><br>
+                <strong>왜 이렇게 하냐면?</strong><br>
+                main 브랜치는 실제 서비스에 배포되는 중요한 브랜치예요. 작업 중인 미완성 코드가 바로 main에 들어가면 앱이 깨질 수 있어요. 그래서 별도 브랜치에서 작업하고, 완성되면 검토 후 합치는 방식을 써요.
+              </p>
+              <div class="dn-pre"><span class="cm"># 현재 브랜치 확인</span>
+<span class="fn">git branch</span>  <span class="cm"># * claude/setup-environment-... 처럼 뜨면 feature 브랜치</span>
+<span class="fn">git branch</span>  <span class="cm"># * main 이면 main 브랜치</span></div>
+            </div>
+
+            <div class="dn-card">
+              <div class="dn-card-head"><span class="dn-card-title">git push 403 에러 — "웹 환경에서 main에 직접 push 안 돼요"</span><span class="dn-tag dn-tag-red">자주 만남</span></div>
+              <p class="dn-card-body">
+                <code class="dn-code">git push origin main</code>을 실행했을 때 <strong>403 에러</strong>가 뜨는 건 "권한이 없어요"라는 뜻이에요.<br><br>
+                웹(Remote) 환경에서는 클로드가 GitHub 계정을 직접 갖고 있지 않아서 main 브랜치에 바로 push할 권한이 없어요.<br><br>
+                <strong>해결 흐름:</strong><br>
+                1️⃣ feature 브랜치에 push (이건 가능해요)<br>
+                2️⃣ PR(Pull Request) 생성 — "이 브랜치를 main에 합쳐도 될까요?" 요청<br>
+                3️⃣ 검토 후 머지(merge) — feature 브랜치가 main에 합쳐짐<br>
+                4️⃣ GitHub Pages가 main 기준으로 자동 배포
+              </p>
+              <div class="dn-tip">베이 관리자에서는 push.sh 스크립트를 써서 이 문제를 우회하고 있어요. 클로드가 알아서 처리하니 신경 안 써도 돼요.</div>
+            </div>
+
+            <div class="dn-card">
+              <div class="dn-card-head"><span class="dn-card-title">MCP 도구 (mcp__github__ 등) — 클로드의 손발</span><span class="dn-tag dn-tag-blue">개념</span></div>
+              <p class="dn-card-body">
+                <strong>MCP(Model Context Protocol)</strong>는 클로드가 외부 서비스를 직접 다룰 수 있게 해주는 연결 규격이에요.<br><br>
+                <code class="dn-code">mcp__github__</code>: GitHub에서 PR 만들기, 머지하기, 이슈 보기 등을 클로드가 직접 실행<br>
+                <code class="dn-code">mcp__notion__</code>: Notion 페이지 읽기/쓰기<br>
+                <code class="dn-code">mcp__firebase__</code>: Firestore 데이터 읽기/쓰기 (연결하면 저장된 질문 바로 확인 가능!)<br><br>
+                MCP가 없으면 클로드는 코드 파일만 수정할 수 있어요. MCP가 있으면 GitHub, Notion, Firebase 같은 외부 서비스까지 직접 조작할 수 있어요.<br><br>
+                <strong>설정 방법:</strong> <code class="dn-code">~/.claude/settings.json</code>에 MCP 서버를 등록하면, 다음 세션부터 해당 도구가 활성화돼요.
+              </p>
+              <div class="dn-tip">클로드가 대화 중에 <code class="dn-code">mcp__github__create_pull_request</code> 같은 걸 쓴다면, GitHub MCP 도구로 PR을 만들고 있다는 뜻이에요.</div>
+            </div>
+
+            <!-- 퀴즈 -->
+            <div class="dn-card dn-quiz-card">
+              <div class="dn-card-head"><span class="dn-card-title">✏️ 확인 퀴즈</span></div>
+              <div class="dn-quiz" id="dn-q18-1">
+                <div class="dn-q-text">claude.ai/code 웹에서 클로드를 사용할 때의 환경은?</div>
+                <div class="dn-opts">
+                  <button class="dn-opt" onclick="dnAns('dn-q18-1',this,false)">Local — 내 컴퓨터에서 실행</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q18-1',this,true)">Remote — 클라우드 서버에서 실행</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q18-1',this,false)">환경은 항상 동일하다</button>
+                </div>
+              </div>
+              <div class="dn-quiz" id="dn-q18-2">
+                <div class="dn-q-text">웹 환경에서 git push origin main을 했을 때 403 에러가 뜨는 이유는?</div>
+                <div class="dn-opts">
+                  <button class="dn-opt" onclick="dnAns('dn-q18-2',this,false)">인터넷이 끊겨서</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q18-2',this,false)">main 브랜치가 삭제되어서</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q18-2',this,true)">클라우드 환경에서는 GitHub main에 직접 push할 권한이 없어서</button>
+                </div>
+              </div>
+              <div class="dn-quiz" id="dn-q18-3">
+                <div class="dn-q-text">MCP(Model Context Protocol)는 무엇인가요?</div>
+                <div class="dn-opts">
+                  <button class="dn-opt" onclick="dnAns('dn-q18-3',this,false)">코드를 자동으로 리뷰해주는 AI 기능</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q18-3',this,true)">클로드가 GitHub·Notion 등 외부 서비스를 직접 다룰 수 있게 해주는 연결 규격</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q18-3',this,false)">Git 브랜치를 자동으로 만들어주는 명령어</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+          <button class="dn-done-btn" id="dn-done18" onclick="dnMarkDone(18)">이 챕터 읽었어요 ✓</button>
+
+          <!-- ── Chapter 21 ── -->
+          <div class="dn-chapter">
+            <div class="dn-ch-num">Chapter 21 · 개발 환경 실전 <span class="dn-badge-new">NEW</span></div>
+            <div class="dn-ch-title">정적 웹앱 vs 서버 기반 웹앱</div>
+
+            <div class="dn-card">
+              <div class="dn-card-head"><span class="dn-card-title">index.html 방식 vs .bat 방식 — 뭐가 다른 거야?</span><span class="dn-tag dn-tag-yellow">꼭 알기</span></div>
+              <p class="dn-card-body">
+                둘 다 "웹앱"이지만 구동 방식이 완전히 달라요.
+              </p>
+              <div class="dn-pre" style="font-size:11px;line-height:1.9;">┌──────────────┬───────────────────┬───────────────────────┐
+│              │ index.html 방식   │ .bat 방식             │
+├──────────────┼───────────────────┼───────────────────────┤
+│ 실행         │ 파일 더블클릭     │ .bat 실행 후 브라우저 │
+│ 필요 환경   │ 브라우저만 있으면 │ Node.js·Python 등     │
+│              │ 됨                │ 별도 설치 필요        │
+│ 동작 위치   │ 브라우저 내부     │ 내 컴퓨터 로컬 서버   │
+│ 장점        │ 설치 없이 간단    │ 기능 확장성 높음      │
+│ 단점        │ 일부 고급 기능    │ 초기 설정 번거로움    │
+│              │ 제한             │                       │
+└──────────────┴───────────────────┴───────────────────────┘</div>
+            </div>
+
+            <div class="dn-card">
+              <div class="dn-card-head"><span class="dn-card-title">정적 웹앱 (Static Web App) — index.html 방식</span></div>
+              <p class="dn-card-body">
+                HTML·CSS·JS 파일만으로 구성되고, <strong>브라우저가 직접 읽어서 실행</strong>해요.<br>서버가 필요 없어요.
+              </p>
+              <div class="dn-pre" style="font-size:11px;line-height:1.7;">프로젝트/
+├── index.html
+├── style.css
+└── script.js
+
+실행 방법:
+index.html 더블클릭 → Chrome이 열림 → 웹앱 실행 ✅</div>
+              <div class="dn-tip">베이 관리자가 바로 이 방식이에요. GitHub Pages에 HTML·CSS·JS 파일을 올려두면 끝이에요.</div>
+            </div>
+
+            <div class="dn-card">
+              <div class="dn-card-head"><span class="dn-card-title">.bat 파일이란? — 서버 기반 웹앱의 시작점</span></div>
+              <p class="dn-card-body">
+                <strong>.bat(배치 파일, Batch File)</strong>은 Windows에서 명령어 여러 개를 자동으로 실행해주는 파일이에요.<br><br>
+                서버 기반 웹앱은 브라우저 외에 <strong>내 컴퓨터에서 서버가 먼저 켜져 있어야</strong> 해요. .bat는 그 서버를 자동으로 시작해주는 역할이에요.
+              </p>
+              <div class="dn-pre" style="font-size:11px;line-height:1.7;"><span class="cm"># start.bat (Node.js 서버 시작)</span>
+@echo off
+npm install     <span class="cm"># 필요한 라이브러리 설치</span>
+npm run dev     <span class="cm"># 개발 서버 실행</span>
+pause
+
+실행하면:
+Node.js 실행 → 웹 서버 시작 → localhost:3000 열림
+→ 브라우저에서 웹앱 접속
+
+<span class="cm"># 또는 Python 서버</span>
+python app.py   <span class="cm"># Flask 서버 시작 → localhost:5000</span></div>
+              <div class="dn-pre" style="font-size:11px;line-height:1.7;margin-top:8px;">서버 기반 프로젝트 구조:
+프로젝트/
+├── install.bat    <span class="cm"># 라이브러리 설치용</span>
+├── start.bat      <span class="cm"># 서버 시작용</span>
+├── package.json   <span class="cm"># 라이브러리 목록</span>
+├── src/           <span class="cm"># 소스코드</span>
+└── public/        <span class="cm"># 정적 파일</span></div>
+            </div>
+
+            <div class="dn-card">
+              <div class="dn-card-head"><span class="dn-card-title">어떤 기능이 필요할 때 서버가 생기나요?</span><span class="dn-tag dn-tag-purple">핵심 판단 기준</span></div>
+              <p class="dn-card-body">
+                <strong>HTML 방식으로 충분한 경우:</strong><br>
+                계산기, 간단한 폼, 단순 정보 표시, localStorage 저장, 베이 관리자처럼 Firebase 직접 연동<br><br>
+                <strong>서버(Node.js·Python 등)가 필요해지는 경우:</strong><br>
+                회원가입·로그인, 여러 사람이 공유하는 DB, 파일 업로드, 이메일 발송, 결제 처리, API 키를 숨겨야 할 때
+              </p>
+              <div class="dn-pre" style="font-size:11px;line-height:1.7;">HTML 방식으로 OK:          서버가 필요한 순간:
+┌────────────────────┐     ┌────────────────────────┐
+│ ✅ 계산기          │     │ 🔒 회원가입·로그인     │
+│ ✅ 할일 목록       │     │ 🗃️  공유 데이터베이스   │
+│ ✅ 로컬 메모장     │     │ 📧 이메일 발송         │
+│ ✅ 베이 관리자     │     │ 💳 결제 처리           │
+│   (Firebase 연동)  │     │ 🔑 API 키 보호         │
+└────────────────────┘     └────────────────────────┘</div>
+            </div>
+
+            <div class="dn-card">
+              <div class="dn-card-head"><span class="dn-card-title">서버 기반 기술 스택의 흐름</span></div>
+              <p class="dn-card-body">프로젝트가 커질수록 이런 구조가 생겨요:</p>
+              <div class="dn-pre" style="font-size:11px;line-height:1.7;">간단한 앱:
+HTML + CSS + JS → index.html
+
+규모 있는 앱:
+React (화면 담당)
+    ↕
+Node.js + Express (서버 담당)
+    ↕
+SQLite / PostgreSQL (데이터 저장)
+→ .bat 또는 npm run dev로 실행
+
+초대형 앱:
+마이크로서비스 + Docker + CI/CD
+→ DevOps 영역</div>
+              <div class="dn-analogy">정적 웹앱 = 자판기 (전기만 꽂으면 됨) 🏧 · 서버 기반 웹앱 = 카페 (바리스타·기계·재료 전부 필요) ☕</div>
+            </div>
+
+            <!-- 퀴즈 -->
+            <div class="dn-card dn-quiz-card">
+              <div class="dn-card-head"><span class="dn-card-title">✏️ 확인 퀴즈</span></div>
+              <div class="dn-quiz" id="dn-q21-1">
+                <div class="dn-q-text">index.html을 더블클릭해서 실행하는 웹앱의 특징은?</div>
+                <div class="dn-opts">
+                  <button class="dn-opt" onclick="dnAns('dn-q21-1',this,false)">Node.js가 반드시 설치되어 있어야 한다</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q21-1',this,true)">브라우저만 있으면 바로 실행 가능하다</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q21-1',this,false)">localhost 주소로 접속해야 한다</button>
+                </div>
+              </div>
+              <div class="dn-quiz" id="dn-q21-2">
+                <div class="dn-q-text">다음 중 서버(Node.js 등)가 반드시 필요한 기능은?</div>
+                <div class="dn-opts">
+                  <button class="dn-opt" onclick="dnAns('dn-q21-2',this,false)">계산기 기능</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q21-2',this,false)">localStorage에 메모 저장</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q21-2',this,true)">여러 사람이 공유하는 회원가입·로그인</button>
+                </div>
+              </div>
+              <div class="dn-quiz" id="dn-q21-3">
+                <div class="dn-q-text">Windows의 .bat 파일 역할은?</div>
+                <div class="dn-opts">
+                  <button class="dn-opt" onclick="dnAns('dn-q21-3',this,false)">웹 브라우저를 대체하는 실행 파일</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q21-3',this,true)">명령어 여러 개를 자동으로 실행해주는 스크립트</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q21-3',this,false)">HTML 파일을 압축하는 도구</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+          <button class="dn-done-btn" id="dn-done21" onclick="dnMarkDone(21)">이 챕터 읽었어요 ✓</button>
+        </div>
+
+      </div>
+
+
+
+  <button id="dnQuestionFab" onclick="dnOpenQuestionModal()" title="질문 저장하기">💬</button>
+  <div id="dnQuestionModal" style="display:none;" onclick="if(event.target===this)dnCloseQuestionModal()">
+    <div id="dnQuestionModalBox">
+      <div style="font-weight:700;font-size:15px;margin-bottom:12px;">💬 질문 / 메모 저장</div>
+      <textarea id="dnQuestionText" placeholder="궁금한 점, 헷갈리는 내용, 나중에 찾아볼 것 등을 자유롭게 적어요." rows="5" style="width:100%;box-sizing:border-box;padding:10px;border:1.5px solid var(--border-color,#e0e0e0);border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;"></textarea>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+        <button class="btn-cancel" onclick="dnCloseQuestionModal()">취소</button>
+        <button class="btn-confirm" onclick="dnSubmitQuestion()">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+
+    function today() {
+      var d = new Date();
+      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    }
+
+
+    var _toastTimer;
+    function showToast(msg, type) {
+      var t = document.getElementById('_toast');
+      if (!t) {
+        t = document.createElement('div');
+        t.id = '_toast';
+        t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:9999;transition:opacity .3s;white-space:nowrap;';
+        document.body.appendChild(t);
+      }
+      t.textContent = msg;
+      t.style.opacity = '1';
+      clearTimeout(_toastTimer);
+      _toastTimer = setTimeout(function(){ t.style.opacity='0'; }, 2500);
+    }
+
+
+    function showConfirm(title, message, callback) {
+      if (confirm(title + '\n' + message)) callback(true);
+      else callback(false);
+    }
+
+    var dnDone = JSON.parse(localStorage.getItem('bae_done') || '{}');
+    var dnQuizScores = {};
+    var dnNoteLogs = [];   // [{ id, type:'question'|'mistake', content, quizId, questionText, myAnswer, correctAnswer, createdAt, reviewed }]
+    var dnSeenVersions = JSON.parse(localStorage.getItem('dnSeenVersions') || '{}');
+
+    // 섹션별 콘텐츠 버전 — 내용 추가 시 해당 섹션 날짜 업데이트
+    var DN_SECTION_VERSIONS = {
+      basic:  '2026-05-01',
+      prac:   '2026-05-01',
+      adv:    '2026-05-01',
+      claude: '2026-05-13',
+      git:    '2026-05-13',
+      env:    '2026-06-15',
+      terms:  '2026-05-15',
+    };
+    var dnQuizAnswered = {};
+    var dnCurrentTab = 'dash';
+
+    var DN_CHAPTERS = [
+      null,
+      {title:'웹의 구조', section:'basic'},
+      {title:'개발 언어 입문', section:'basic'},
+      {title:'코드 읽는 법', section:'prac'},
+      {title:'에러 해석하기', section:'prac'},
+      {title:'파일과 배포', section:'prac'},
+      {title:'데이터 흐름', section:'prac'},
+      {title:'구조 용어 심화', section:'adv'},
+      {title:'앱 종류와 기술 스택', section:'adv'},
+      {title:'개발 흐름과 도구', section:'adv'},
+      {title:'클로드 소통법', section:'claude'},
+      {title:'클로드 코드 활용', section:'claude'},
+      {title:'용어 혼동 주의보', section:'claude'},
+      {title:'에이전트·스킬·멀티에이전트', section:'claude'},
+      {title:'CLAUDE.md 심화 + 참고 링크', section:'claude'},
+      {title:'개념 퀴즈', section:'quiz', quizOnly:true},
+      {title:'실습 과제', section:'quiz', quizOnly:true},
+      {title:'브랜치·PR·merge·diff', section:'git'},
+      {title:'갑자기 튀어나오는 개념들', section:'env'},
+      {title:'브랜치 실전 생존 가이드', section:'env'},
+      {title:'클로드 코드 웹 환경 이해하기', section:'env'},
+      {title:'정적 웹앱 vs 서버 기반 웹앱', section:'env'},
+    ];
+
+    var DN_SECTIONS = {
+      basic: {label:'기초편', total:2, ids:[1,2]},
+      prac:  {label:'실전편', total:4, ids:[3,4,5,6]},
+      adv:   {label:'심화편', total:3, ids:[7,8,9]},
+      claude:{label:'클로드 활용', total:5, ids:[10,11,12,19,20]},
+      git:   {label:'Git 실전', total:1, ids:[15]},
+      env:   {label:'개발 환경 실전', total:4, ids:[16,17,18,21]},
+    };
+
+    function dnSave() { localStorage.setItem('bae_done', JSON.stringify(dnDone)); }
+
+    function dnMarkDone(idx) {
+      dnDone[idx] = true; dnSave();
+      var btn = document.getElementById('dn-done' + idx);
+      if (btn) { btn.classList.add('checked'); btn.textContent = '✓ 읽었어요!'; }
+      dnUpdateAll();
+    }
+
+    function dnSwitchTab(tabKey) {
+      dnCurrentTab = tabKey;
+      document.querySelectorAll('#devnotesPage .tab-btn').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.tab === tabKey);
+      });
+      document.querySelectorAll('#devnotesPage .dn-tab-pane').forEach(function(p) {
+        p.classList.toggle('active', p.dataset.tab === tabKey);
+      });
+      if (tabKey === 'dash') dnUpdateAll();
+      dnMarkSectionSeen(tabKey);
+      dnUpdateTabBadges();
+      document.getElementById('devnotesPage').scrollTop = 0;
+    }
+
+    function dnUpdateAll() {
+      var total = 0, doneCount = 0;
+      for (var i = 1; i < DN_CHAPTERS.length; i++) {
+        if (!DN_CHAPTERS[i] || DN_CHAPTERS[i].quizOnly) continue;
+        total++;
+        if (dnDone[i]) doneCount++;
+      }
+
+      var progFill = document.getElementById('dn-prog-fill');
+      var progLabel = document.getElementById('dn-prog-label');
+      if (progFill) progFill.style.width = (total ? doneCount / total * 100 : 0) + '%';
+      if (progLabel) progLabel.textContent = doneCount + ' / ' + total;
+
+      for (var i = 1; i < DN_CHAPTERS.length; i++) {
+        if (!DN_CHAPTERS[i] || DN_CHAPTERS[i].quizOnly) continue;
+        var donBtn = document.getElementById('dn-done' + i);
+        if (donBtn && dnDone[i]) { donBtn.classList.add('checked'); donBtn.textContent = '✓ 읽었어요!'; }
+      }
+
+      Object.keys(DN_SECTIONS).forEach(function(sec) {
+        var s = DN_SECTIONS[sec];
+        var cnt = s.ids.filter(function(i) { return dnDone[i]; }).length;
+        var fill = document.getElementById('dn-fill-' + sec);
+        var cntEl = document.getElementById('dn-cnt-' + sec);
+        if (fill) fill.style.width = (cnt / s.total * 100) + '%';
+        if (cntEl) cntEl.textContent = cnt + '/' + s.total;
+      });
+
+      var grid = document.getElementById('dn-dash-grid');
+      if (grid) {
+        // 섹션별 진행 상태 미리 계산
+        var secProgress = {};
+        Object.keys(DN_SECTIONS).forEach(function(sec) {
+          var s = DN_SECTIONS[sec];
+          var cnt = s.ids.filter(function(i) { return dnDone[i]; }).length;
+          secProgress[sec] = { done: cnt, total: s.total };
+        });
+
+        var html = '';
+        for (var j = 1; j <= 21; j++) {
+          var ch = DN_CHAPTERS[j];
+          if (ch.quizOnly) continue;
+          var isDone = dnDone[j];
+          var sec = ch.section;
+          var sp = secProgress[sec] || { done: 0, total: 1 };
+          var secPartial = !isDone && sp.done > 0;  // 이 챕터는 미완료지만 섹션 내 다른 챕터는 완료된 상태
+          var secLabel = DN_SECTIONS[sec] ? DN_SECTIONS[sec].label : '';
+          var cardClass = 'dn-dash-card' + (isDone ? ' done' : secPartial ? ' in-progress' : '');
+          html += '<div class="' + cardClass + '">';
+          html += '<div class="dn-dash-card-num">Ch ' + j + ' · ' + secLabel + '</div>';
+          html += '<div class="dn-dash-card-title">' + ch.title + '</div>';
+          html += '<div class="dn-dash-card-status">' + (isDone ? '✓ 완료' : '● 미완료') + '</div>';
+          var tabKey = sec === 'basic' ? 'basic' : sec === 'prac' ? 'prac' : sec === 'adv' ? 'adv' : sec === 'claude' ? 'claude' : sec === 'git' ? 'git' : 'env';
+          var btnClass = 'dn-dash-goto' + (secPartial ? ' in-progress' : '');
+          var btnLabel = isDone ? '복습하기' : secPartial ? '학습 중' : '바로가기';
+          html += '<button class="' + btnClass + '" onclick="dnSwitchTab(\'' + tabKey + '\');">' + btnLabel + '</button>';
+          html += '</div>';
+        }
+        grid.innerHTML = html;
+      }
+    }
+
+    function dnResetAll() {
+      showConfirm('진도 초기화', '개발괴발 진도를 초기화할까요?', function(ok) {
+        if (!ok) return;
+        dnDone = {}; dnSave(); dnUpdateAll();
+      });
+    }
+
+    function dnMarkAllDone() {
+      for (var i = 1; i < DN_CHAPTERS.length; i++) {
+        if (DN_CHAPTERS[i] && !DN_CHAPTERS[i].quizOnly) dnDone[i] = true;
+      }
+      dnSave(); dnUpdateAll();
+    }
+
+    function dnSaveNoteLogs() {
+      localStorage.setItem('dnNoteLogs', JSON.stringify(dnNoteLogs));
+
+    }
+
+    function dnOpenQuestionModal() {
+      var modal = document.getElementById('dnQuestionModal');
+      if (!modal) return;
+      modal.style.display = 'flex';
+      var ta = document.getElementById('dnQuestionText');
+      if (ta) { ta.value = ''; ta.focus(); }
+    }
+
+    function dnCloseQuestionModal() {
+      var modal = document.getElementById('dnQuestionModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function dnSubmitQuestion() {
+      var ta = document.getElementById('dnQuestionText');
+      var text = ta ? ta.value.trim() : '';
+      if (!text) return;
+      var entry = { id: 'q-' + Date.now(), type: 'question', content: text, createdAt: new Date().toISOString(), reviewed: false };
+      dnNoteLogs.push(entry);
+      dnSaveNoteLogs();
+      dnCloseQuestionModal();
+      showToast('💬 질문이 저장됐어요!', 'success');
+    }
+
+    function dnAutoSaveMistake(qid, questionText, myAnswer, correctAnswer) {
+      var entry = {
+        id: 'w-' + Date.now(), type: 'mistake', quizId: qid,
+        questionText: questionText, myAnswer: myAnswer, correctAnswer: correctAnswer,
+        createdAt: new Date().toISOString(), reviewed: false
+      };
+      dnNoteLogs.push(entry);
+      dnSaveNoteLogs();
+    }
+
+    function dnMarkSectionSeen(tabKey) {
+      if (!DN_SECTION_VERSIONS[tabKey]) return;
+      dnSeenVersions[tabKey] = DN_SECTION_VERSIONS[tabKey];
+      localStorage.setItem('dnSeenVersions', JSON.stringify(dnSeenVersions));
+
+    }
+
+    function dnUpdateTabBadges() {
+      document.querySelectorAll('#devnotesPage .tab-btn[data-tab]').forEach(function(btn) {
+        var tab = btn.dataset.tab;
+        var ver = DN_SECTION_VERSIONS[tab];
+        var seen = dnSeenVersions[tab];
+        var hasNew = ver && seen && seen < ver;
+        var existing = btn.querySelector('.dn-tab-new');
+        if (hasNew && !existing) {
+          var badge = document.createElement('span');
+          badge.className = 'dn-tab-new';
+          badge.textContent = 'N';
+          btn.appendChild(badge);
+        } else if (!hasNew && existing) {
+          existing.remove();
+        }
+      });
+    }
+
+    function dnSyncNow() {
+      if (!window.FS || !FS.isConnected()) {
+        showAlert('Firebase 미연결', '사이드바 하단에서 Firebase에 먼저 연결해주세요.');
+        return;
+      }
+      localStorage.setItem('bae_done', JSON.stringify(dnDone));
+      FS.sync(['사용자설정']);
+      showToast('☁️ 진도를 Firestore에 저장했습니다', 'success');
+    }
+
+    function dnAns(btn, isCorrect, qid) {
+      if (dnQuizAnswered[qid]) return;
+      dnQuizAnswered[qid] = true;
+      var opts = btn.parentElement.querySelectorAll('.dn-quiz-opt');
+      opts.forEach(function(o) { o.disabled = true; });
+      if (isCorrect) {
+        btn.classList.add('correct');
+        dnQuizScores[qid] = true;
+      } else {
+        btn.classList.add('wrong');
+        var correctBtn = null;
+        opts.forEach(function(o) {
+          if (o.getAttribute('onclick') && o.getAttribute('onclick').indexOf(',true,') !== -1) {
+            o.classList.add('correct');
+            correctBtn = o;
+          }
+        });
+        // 오답 자동 저장
+        var card = btn.closest('.dn-card');
+        var qText = card ? (card.querySelector('.dn-q-text') ? card.querySelector('.dn-q-text').textContent.trim() : '') : '';
+        dnAutoSaveMistake(qid, qText, btn.textContent.trim(), correctBtn ? correctBtn.textContent.trim() : '');
+      }
+      var exp = document.getElementById(qid + '-exp');
+      if (exp) exp.classList.add('show');
+      var correct = Object.values(dnQuizScores).length;
+      var totalQ = Object.keys(dnQuizAnswered).length;
+      var scoreEl = document.getElementById('dn-score-num');
+      var totalEl = document.getElementById('dn-total-num');
+      if (scoreEl) scoreEl.textContent = correct;
+      if (totalEl) totalEl.textContent = totalQ;
+    }
+
+
+    // ── 초기화 ──
+    window.addEventListener('DOMContentLoaded', function() {
+      // FAB 항상 보이게
+      var fab = document.getElementById('dnQuestionFab');
+      if (fab) fab.style.display = 'flex';
+      // devnotesPage 항상 활성화
+      var pg = document.getElementById('devnotesPage');
+      if (pg) pg.classList.add('active');
+      dnUpdateAll();
+      dnUpdateTabBadges();
+      dnSwitchTab('dash');
+    });
+  </script>
+</body>
+</html>
