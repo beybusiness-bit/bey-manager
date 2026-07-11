@@ -2407,13 +2407,84 @@ ghi9012 초기 설정</span></div>
               <div class="dn-card-head"><span class="dn-card-title">MCP 도구 (mcp__github__ 등) — 클로드의 손발</span><span class="dn-tag dn-tag-blue">개념</span></div>
               <p class="dn-card-body">
                 <strong>MCP(Model Context Protocol)</strong>는 클로드가 외부 서비스를 직접 다룰 수 있게 해주는 연결 규격이에요.<br><br>
-                <code class="dn-code">mcp__github__</code>: GitHub에서 PR 만들기, 머지하기, 이슈 보기 등을 클로드가 직접 실행<br>
-                <code class="dn-code">mcp__notion__</code>: Notion 페이지 읽기/쓰기<br>
-                <code class="dn-code">mcp__firebase__</code>: Firestore 데이터 읽기/쓰기 (연결하면 저장된 질문 바로 확인 가능!)<br><br>
-                MCP가 없으면 클로드는 코드 파일만 수정할 수 있어요. MCP가 있으면 GitHub, Notion, Firebase 같은 외부 서비스까지 직접 조작할 수 있어요.<br><br>
+                <div class="dn-pre">
+클로드 (Claude Code)
+    │
+    ├── 파일 수정 (Edit/Write) ──→ 로컬 파일만 변경
+    │
+    └── MCP 도구 ──→ 외부 서비스 직접 조작
+         ├── mcp__github__  : PR 만들기, 이슈 보기, 파일 올리기
+         ├── mcp__notion__  : Notion 페이지 읽기/쓰기
+         ├── mcp__slack__   : Slack 메시지 보내기
+         └── mcp__firebase__: Firestore 데이터 읽기/쓰기
+                </div>
+                <br>MCP가 없으면 클로드는 코드 파일만 수정할 수 있어요. MCP가 있으면 GitHub, Notion, Slack 같은 외부 서비스까지 직접 조작할 수 있어요.<br><br>
                 <strong>설정 방법:</strong> <code class="dn-code">~/.claude/settings.json</code>에 MCP 서버를 등록하면, 다음 세션부터 해당 도구가 활성화돼요.
               </p>
               <div class="dn-tip">클로드가 대화 중에 <code class="dn-code">mcp__github__create_pull_request</code> 같은 걸 쓴다면, GitHub MCP 도구로 PR을 만들고 있다는 뜻이에요.</div>
+            </div>
+
+            <div class="dn-card">
+              <div class="dn-card-head"><span class="dn-card-title">mcp__github__push_files — git push의 대안이자 함정</span><span class="dn-tag dn-tag-red">실제 사고 사례</span></div>
+              <p class="dn-card-body">
+                git push가 막혔을 때(403, push.sh 없음 등), 클로드는 <code class="dn-code">mcp__github__push_files</code>라는 MCP 도구를 대신 쓸 수 있어요.<br><br>
+                <strong>작동 방식 비교:</strong><br>
+                <div class="dn-pre">
+git push 방식:
+  로컬 git 히스토리 → GitHub 서버로 전송
+  (git 자격증명 필요)
+
+mcp__github__push_files 방식:
+  파일 내용(텍스트)을 JSON으로 직접 GitHub API에 전송
+  (git 자격증명 불필요, MCP 권한만 있으면 됨)
+                </div>
+                <br>
+                <strong>⚠️ 실제 사고 사례 (베이 관리자 2026-07-11):</strong><br>
+                git push가 실패하자 클로드가 mcp__github__push_files를 사용했는데, 파일 내용(content 파라미터)에 실제 파일 내용 대신 <strong>셸 명령어 문자열</strong>을 그대로 넣는 실수를 저질렀어요.<br><br>
+                <div class="dn-pre">
+❌ 잘못된 호출 (실제 일어난 일):
+push_files({
+  path: "app.js",
+  content: "$(cat /some/path/app.js)"  ← 셸 명령어 문자열!
+})
+
+→ GitHub의 app.js가 9,869줄 → 1줄로 줄어듦
+→ 사이트 완전히 깨짐
+
+✅ 올바른 호출:
+push_files({
+  path: "app.js",
+  content: "실제 파일의 전체 텍스트 내용..."
+})
+                </div>
+                <br>
+                MCP 도구의 파라미터는 JSON이에요. <strong>JSON 안에서는 셸 문법(<code>$(cat ...)</code>)이 실행되지 않아요.</strong><br>
+                파일 내용을 넣으려면 실제로 파일을 읽어서(Read 도구) 그 내용을 그대로 넣어야 해요.
+              </p>
+              <div class="dn-tip">이 사고로 배운 것 — mcp__github__push_files는 강력하지만, 파일이 크면 Read 도구로 먼저 읽은 뒤 내용을 넣어야 해요. 셸의 <code>$(cat file)</code> 문법은 MCP 파라미터 안에서 절대 작동하지 않아요.</div>
+            </div>
+
+            <div class="dn-card">
+              <div class="dn-card-head"><span class="dn-card-title">push 시점 — 매번 vs 쌓아두기</span><span class="dn-tag dn-tag-blue">워크플로우</span></div>
+              <p class="dn-card-body">
+                베이 관리자에서는 아래 워크플로우를 사용해요.<br><br>
+                <div class="dn-pre">
+[기본 흐름]
+수정 요청 → 코드 수정 → git commit (로컬에 저장)
+                    ↑ 여러 번 반복
+베이님 "푸시해줘" → git push / mcp push (GitHub에 올림)
+
+[왜 이렇게 하나?]
+• 매번 push하면 중간 상태가 사이트에 바로 반영돼 버림
+• 여러 수정을 커밋으로만 쌓아두다가 한꺼번에 push
+• "배포 = push" 라고 이해하면 쉬워요
+                </div>
+                <br>
+                <strong>git commit vs git push 차이:</strong><br>
+                <code class="dn-code">git commit</code> — 변경사항을 <strong>로컬(내 컴퓨터/서버)</strong>에 저장. GitHub엔 안 올라감.<br>
+                <code class="dn-code">git push</code> — 로컬 커밋들을 <strong>GitHub</strong>에 업로드. GitHub Pages가 자동 배포.
+              </p>
+              <div class="dn-tip">commit은 "저장하기", push는 "제출하기"로 생각하면 돼요. 저장은 자주, 제출은 때가 됐을 때!</div>
             </div>
 
             <!-- 퀴즈 -->
@@ -2441,6 +2512,22 @@ ghi9012 초기 설정</span></div>
                   <button class="dn-opt" onclick="dnAns('dn-q18-3',this,false)">코드를 자동으로 리뷰해주는 AI 기능</button>
                   <button class="dn-opt" onclick="dnAns('dn-q18-3',this,true)">클로드가 GitHub·Notion 등 외부 서비스를 직접 다룰 수 있게 해주는 연결 규격</button>
                   <button class="dn-opt" onclick="dnAns('dn-q18-3',this,false)">Git 브랜치를 자동으로 만들어주는 명령어</button>
+                </div>
+              </div>
+              <div class="dn-quiz" id="dn-q18-4">
+                <div class="dn-q-text">mcp__github__push_files를 쓸 때 content 파라미터에 $(cat app.js)를 넣으면?</div>
+                <div class="dn-opts">
+                  <button class="dn-opt" onclick="dnAns('dn-q18-4',this,false)">app.js 파일 내용이 GitHub에 올라간다</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q18-4',this,true)">$(cat app.js)라는 문자열 자체가 GitHub에 올라가 파일이 깨진다</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q18-4',this,false)">에러가 발생해서 아무것도 안 올라간다</button>
+                </div>
+              </div>
+              <div class="dn-quiz" id="dn-q18-5">
+                <div class="dn-q-text">git commit과 git push의 차이는?</div>
+                <div class="dn-opts">
+                  <button class="dn-opt" onclick="dnAns('dn-q18-5',this,false)">둘 다 GitHub에 파일을 올린다</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q18-5',this,true)">commit은 로컬 저장, push는 GitHub 업로드</button>
+                  <button class="dn-opt" onclick="dnAns('dn-q18-5',this,false)">commit은 삭제, push는 복원이다</button>
                 </div>
               </div>
             </div>
