@@ -2035,6 +2035,144 @@ document.getElementById('app')  // DOM 노드를 잡음</div>
             </div>
           </div>
 
+          <!-- 🗄️ 스키마·DB 구조 섹션 -->
+          <div class="dn-section-divider" style="margin-top:28px;">🗄️ 스키마 &amp; 데이터베이스 구조</div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">스키마(Schema)란?</span><span class="dn-tag dn-tag-yellow">꼭 알기</span></div>
+            <p class="dn-card-body">
+              <strong>스키마 = 데이터 저장 설계도</strong><br><br>
+              데이터베이스에 데이터를 넣기 전에 "어떤 상자를, 몇 단계로, 어떤 이름으로, 어떤 항목을 담아서 쌓을 것인가"를 미리 정해놓은 청사진이에요.<br><br>
+              <div class="dn-pre">
+예시: 쇼핑몰 앱의 스키마
+┌─────────────────────────────────────────┐
+│  brands (브랜드 상자)                    │
+│  ├── id, name, logo                     │
+│  └── products (상품 상자)               │
+│       ├── id, name, price, brandId      │
+│       └── skus (옵션 상자)              │
+│            ├── id, color, size          │
+│            └── units (재고 상자)        │
+│                 └── id, qty, location   │
+└─────────────────────────────────────────┘</div>
+              <br>
+              스키마를 미리 정해두면:<br>
+              • 개발할 때 "이 데이터 어디에 저장하지?" 고민이 줄어요<br>
+              • 클로드한테 "DB 스키마는 CLAUDE.md 참고해" 하면 일관성 있게 코드를 짜줘요<br>
+              • 나중에 다른 사람(또는 미래의 나)이 구조를 금방 파악할 수 있어요
+            </p>
+            <div class="dn-analogy">엑셀로 치면 "어떤 시트를 만들고, 각 시트에 어떤 열(컬럼)을 둘 것인가"를 먼저 정해놓은 것이에요.</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">관계형 DB vs 문서형 DB — 스키마 모양이 달라요</span><span class="dn-tag dn-tag-blue">개념</span></div>
+            <p class="dn-card-body">
+              <div class="dn-pre">
+관계형(SQL) DB — 엑셀처럼 표 구조, 컬럼 미리 고정
+┌──────┬──────────┬───────┬────────┐
+│  id  │   name   │ price │ brandId│
+├──────┼──────────┼───────┼────────┤
+│  1   │ 나이키 신발│ 80000 │   3   │
+│  2   │ 아디다스 T│ 45000 │   1   │
+└──────┴──────────┴───────┴────────┘
+→ 항목 추가하려면 테이블 구조를 바꿔야 함
+
+문서형(NoSQL) DB — 상자 안에 상자, 자유로운 구조
+products/
+  product_1: {
+    name: "나이키 신발",
+    price: 80000,
+    skus: [           ← 하위 데이터를 바로 넣을 수 있음
+      { color: "흰색", size: 270 },
+      { color: "검정", size: 275 }
+    ]
+  }
+→ 항목 추가가 유연, 문서마다 다른 필드 가능</div>
+              <br>
+              베이 관리자는 <strong>Firestore(문서형)</strong>를 써요.
+            </p>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">Firestore 용어 — 컬렉션 · 문서 · 필드 · 서브컬렉션</span><span class="dn-tag dn-tag-purple">Firestore 전용</span></div>
+            <p class="dn-card-body">
+              <div class="dn-pre">
+Firestore 계층 구조
+┌──────────────────────────────────────┐
+│ 컬렉션 (Collection) = 폴더           │
+│  └── 문서 (Document) = 파일          │
+│        └── 필드 (Field) = 항목       │
+│              └── 서브컬렉션 (선택)   │
+└──────────────────────────────────────┘
+
+베이 관리자 실제 구조:
+컬렉션: bey-manager
+  └── 문서: habits  → 필드: { habits: [...] }
+  └── 문서: settings → 필드: { designSettings, menus, ... }</div>
+              <br>
+              <strong>컬렉션</strong> — 같은 종류 문서들을 모은 폴더<br>
+              <strong>문서</strong> — 실제 데이터가 담긴 파일 (ID로 구분)<br>
+              <strong>필드</strong> — 문서 안의 항목 하나 (이름·가격·날짜 등)<br>
+              <strong>서브컬렉션</strong> — 문서 안의 또 다른 컬렉션 (brands → products → skus처럼 중첩할 때)
+            </p>
+            <div class="dn-tip">베이 관리자는 bey-manager 컬렉션 하나에 여러 문서를 넣는 "평평한" 구조예요. 다른 앱은 brands → products → skus처럼 깊게 중첩하기도 해요.</div>
+          </div>
+
+          <div class="dn-card">
+            <div class="dn-card-head"><span class="dn-card-title">스키마를 CLAUDE.md에 적어두는 이유</span><span class="dn-tag dn-tag-blue">실전 팁</span></div>
+            <p class="dn-card-body">
+              클로드는 매 세션을 새로 시작해요. 스키마가 CLAUDE.md에 없으면 "이 앱은 데이터를 어떻게 저장하지?"를 매번 파악해야 해요.<br><br>
+              <div class="dn-pre">
+✅ 스키마가 CLAUDE.md에 있을 때:
+  베이님: "상품에 태그 기능 추가해줘"
+  클로드: CLAUDE.md → products 구조 파악
+         → tags: [] 필드 추가 코드 바로 작성
+
+❌ 스키마가 없을 때:
+  클로드: "products 어디에 있죠? 구조가 어떻게 돼요?" ← 먼저 질문</div>
+              <br>
+              CLAUDE.md 스키마 작성 예시:<br>
+              <div class="dn-pre">
+## DB 스키마 (Firestore)
+컬렉션: products
+  - id: string
+  - name: string
+  - price: number
+  - brandId: string   (→ brands 컬렉션 참조)
+  서브컬렉션: skus
+    - id, color, size, units[]</div>
+            </p>
+          </div>
+
+          <!-- 퀴즈 -->
+          <div class="dn-card dn-quiz-card">
+            <div class="dn-card-head"><span class="dn-card-title">✏️ 확인 퀴즈</span></div>
+            <div class="dn-quiz" id="dn-tq15">
+              <div class="dn-q-text">스키마(Schema)를 가장 잘 설명한 것은?</div>
+              <div class="dn-opts">
+                <button class="dn-opt" onclick="dnAns('dn-tq15',this,false)">데이터베이스에 실제로 저장된 데이터</button>
+                <button class="dn-opt" onclick="dnAns('dn-tq15',this,true)">데이터를 어떤 구조로 저장할지 미리 정한 설계도</button>
+                <button class="dn-opt" onclick="dnAns('dn-tq15',this,false)">데이터베이스에 접속하는 비밀번호</button>
+              </div>
+            </div>
+            <div class="dn-quiz" id="dn-tq16">
+              <div class="dn-q-text">Firestore에서 "같은 종류 문서들을 모아두는 폴더" 역할은?</div>
+              <div class="dn-opts">
+                <button class="dn-opt" onclick="dnAns('dn-tq16',this,false)">필드 (Field)</button>
+                <button class="dn-opt" onclick="dnAns('dn-tq16',this,false)">문서 (Document)</button>
+                <button class="dn-opt" onclick="dnAns('dn-tq16',this,true)">컬렉션 (Collection)</button>
+              </div>
+            </div>
+            <div class="dn-quiz" id="dn-tq17">
+              <div class="dn-q-text">brands → products → skus처럼 컬렉션 안에 또 컬렉션을 중첩하는 것을?</div>
+              <div class="dn-opts">
+                <button class="dn-opt" onclick="dnAns('dn-tq17',this,false)">멀티컬렉션</button>
+                <button class="dn-opt" onclick="dnAns('dn-tq17',this,true)">서브컬렉션 (Sub-collection)</button>
+                <button class="dn-opt" onclick="dnAns('dn-tq17',this,false)">스키마 테이블</button>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <!-- ── Git 실전 탭 (Ch 15) ── -->
