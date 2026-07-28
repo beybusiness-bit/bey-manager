@@ -7791,9 +7791,9 @@
         if (item.date && item.date < todayStr && isPending) {
           actionHtml += '<button style="' + btnStyle + '" onclick="moveDetailItemToDate(\'' + id + '\',\'' + todayStr + '\',\'오늘\')">오늘 다시 하기</button>';
         }
-        if (item.date && item.date === todayStr && isPending && new Date().getHours() >= 22) {
+        if (item.date && item.date === todayStr && isPending) {
           var tomorrow = addDays(todayStr, 1);
-          actionHtml += '<button style="' + btnStyle + '" onclick="moveDetailItemToDate(\'' + id + '\',\'' + tomorrow + '\',\'내일\')">내일 마저 하기</button>';
+          actionHtml += '<button style="' + btnStyle + '" onclick="moveDetailItemToDate(\'' + id + '\',\'' + tomorrow + '\',\'내일\')">내일 하기</button>';
         }
         actionRow.innerHTML = actionHtml;
       }
