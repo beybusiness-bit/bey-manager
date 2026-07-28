@@ -2871,6 +2871,7 @@ SQLite / PostgreSQL (데이터 저장)
           <button class="tab-btn active" onclick="showSettingsSection('profile')">👤 프로필 설정</button>
           <button class="tab-btn" onclick="showSettingsSection('menu')">📋 메뉴 관리</button>
           <button class="tab-btn" onclick="showSettingsSection('design')">🎨 디자인 설정</button>
+          <button class="tab-btn" onclick="showSettingsSection('work')">🧑‍🚒 일 설정</button>
           <button class="tab-btn" onclick="showSettingsSection('pomodoro')">⏱ 뽀모도로</button>
           <button class="tab-btn" onclick="showSettingsSection('notify')">🔔 알림 설정</button>
           <button class="tab-btn" onclick="showSettingsSection('data')">📦 데이터 관리</button>
@@ -3090,6 +3091,24 @@ SQLite / PostgreSQL (데이터 저장)
           <div style="display: flex; gap: 12px; margin-top: 24px;">
             <button class="btn-cancel" style="padding: 10px 20px; border-radius: var(--button-radius); cursor: pointer; font-size: 14px; background: transparent; border: 1px solid var(--border-color);" onclick="resetDesign()">기본값으로 초기화</button>
           </div>
+          </div>
+        </div>
+
+        <!-- 일 설정 섹션 -->
+        <div id="settingsWorkSection" class="tab-content">
+          <h3>🧑‍🚒 일 설정</h3>
+          <div class="design-group" style="margin-bottom:24px;">
+            <h4 style="font-size:15px;margin-bottom:12px;">하루 할일 추가 한도</h4>
+            <div class="design-row">
+              <label class="design-label">일반 할일 추가 개수</label>
+              <div class="design-control">
+                <input type="number" class="input-field" id="workDailyLimitInput" min="1" max="20" value="3" style="width:80px;">
+                <span style="font-size:12px;color:var(--text-secondary);margin-left:8px;">개 (기본: 3개)</span>
+              </div>
+            </div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;">변경 시 <b>다음날부터</b> 적용됩니다. 이전 날짜의 할일에는 영향을 주지 않습니다.</div>
+            <div id="workLimitStatus" style="font-size:13px;margin-bottom:16px;"></div>
+            <button class="btn-confirm" onclick="saveWorkDailyLimit()">저장</button>
           </div>
         </div>
 
