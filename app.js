@@ -1678,6 +1678,7 @@
       loadPomodoroLogs();
       loadProfile();
       loadDesignSettings();
+      loadWorkSettings();
       loadPomodoroSettings();
       loadNotificationSettings();
       /* 뽀모도로 초기 상태 설정 */
@@ -3327,7 +3328,7 @@
           profilePhoto: localStorage.getItem('profilePhoto') || null
         };
         ['designSettings','menuCustomizations','myEmojis','tagColorOverrides',
-         'pomodoroSettings','notificationSettings','favoritePages','bae_done','dnSeenVersions'].forEach(function(k) {
+         'workSettings','pomodoroSettings','notificationSettings','favoritePages','bae_done','dnSeenVersions'].forEach(function(k) {
           var v = localStorage.getItem(k);
           if (v !== null) { try { s[k] = JSON.parse(v); } catch(e) { s[k] = v; } }
         });
@@ -3415,6 +3416,7 @@
             if (sm.menuCustomizations !== undefined) { localStorage.setItem('menuCustomizations', JSON.stringify(sm.menuCustomizations)); loadMenus(); renderSidebar(); }
             if (sm.myEmojis) localStorage.setItem('myEmojis', JSON.stringify(sm.myEmojis));
             if (sm.tagColorOverrides) localStorage.setItem('tagColorOverrides', JSON.stringify(sm.tagColorOverrides));
+            if (sm.workSettings) { Object.assign(workSettings, sm.workSettings); localStorage.setItem('workSettings', JSON.stringify(workSettings)); }
             if (sm.pomodoroSettings) { Object.assign(pomodoroSettings, sm.pomodoroSettings); localStorage.setItem('pomodoroSettings', JSON.stringify(pomodoroSettings)); }
             if (sm.notificationSettings) { Object.assign(notificationSettings, sm.notificationSettings); localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings)); }
             if (sm.favoritePages) { favoritePages = sm.favoritePages; localStorage.setItem('favoritePages', JSON.stringify(favoritePages)); }
@@ -5728,21 +5730,57 @@
         menuItems[2].classList.add('active');
         document.getElementById('settingsDesignSection').classList.add('active');
         renderDesignSettings();
-      } else if (sectionName === 'pomodoro' && menuItems[3]) {
+      } else if (sectionName === 'work' && menuItems[3]) {
         menuItems[3].classList.add('active');
+        document.getElementById('settingsWorkSection').classList.add('active');
+        renderWorkSettings();
+      } else if (sectionName === 'pomodoro' && menuItems[4]) {
+        menuItems[4].classList.add('active');
         document.getElementById('settingsPomodoroSection').classList.add('active');
         renderPomodoroSettingsSection();
-      } else if (sectionName === 'notify' && menuItems[4]) {
-        menuItems[4].classList.add('active');
+      } else if (sectionName === 'notify' && menuItems[5]) {
+        menuItems[5].classList.add('active');
         document.getElementById('settingsNotifySection').classList.add('active');
         renderNotifySettings();
-      } else if (sectionName === 'data' && menuItems[5]) {
-        menuItems[5].classList.add('active');
+      } else if (sectionName === 'data' && menuItems[6]) {
+        menuItems[6].classList.add('active');
         document.getElementById('settingsDataSection').classList.add('active');
         setExportDateRange('all');
       }
 
       updateProfileDisplay();
+    }
+
+    function renderWorkSettings() {
+      var inp = document.getElementById('workDailyLimitInput');
+      if (inp) inp.value = workSettings.dailyLimit;
+      var statusEl = document.getElementById('workLimitStatus');
+      if (statusEl) {
+        statusEl.innerHTML = '현재 적용 중: <b>' + workSettings.dailyLimit + '개</b>' +
+          (workSettings.dailyLimitSince && workSettings.dailyLimitSince > '2000-01-01'
+            ? ' <span style="color:var(--text-secondary)">(' + workSettings.dailyLimitSince + '부터 적용됨)</span>'
+            : '');
+      }
+    }
+
+    function saveWorkDailyLimit() {
+      var inp = document.getElementById('workDailyLimitInput');
+      if (!inp) return;
+      var val = parseInt(inp.value, 10);
+      if (isNaN(val) || val < 1 || val > 20) {
+        showToast('⚠️ 1~20 사이로 입력해주세요');
+        return;
+      }
+      var tomorrow = (function() {
+        var d = new Date();
+        d.setDate(d.getDate() + 1);
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      })();
+      workSettings.dailyLimit = val;
+      workSettings.dailyLimitSince = tomorrow;
+      saveWorkSettings();
+      renderWorkSettings();
+      showToast('✅ 저장되었습니다. ' + tomorrow + '부터 하루 ' + val + '개로 적용됩니다.');
     }
 
     function renderPomodoroSettingsSection() {
@@ -6920,7 +6958,7 @@
         return;
       }
       var normalCount = workItems.filter(function(it) { return it.date === targetDate && !it.isBonus; }).length;
-      var normalSlots = Math.max(0, 3 - normalCount);
+      var normalSlots = Math.max(0, getDailyWorkLimit(targetDate) - normalCount);
       var availBonus  = getAvailableBonusSlots(targetDate);
       var totalSlots  = normalSlots + availBonus;
       if (eligible.length > totalSlots) {
@@ -6986,7 +7024,7 @@
       var targetItems = workItems.filter(function(it) {
         return it.date === targetDate && !it.parentId;
       });
-      var normalSlots = 3;
+      var normalSlots = getDailyWorkLimit(targetDate);
       var normalCount = targetItems.filter(function(it) { return !it.isBonus; }).length;
       if (!item.isBonus && normalCount >= normalSlots) {
         showAlert('이동 불가', label + '의 일반 할일 슬롯이 가득 차 있습니다.');
@@ -7256,7 +7294,7 @@
       var prevDate = addDays(workSelectedDate, -1);
       var nextDate = addDays(workSelectedDate, 1);
       var availBonus = getAvailableBonusSlots(workSelectedDate);
-      var canAddNormal = normalItems.length < 3;
+      var canAddNormal = normalItems.length < getDailyWorkLimit(workSelectedDate);
 
       var html = '<div class="work-today">';
       html += '<div class="work-date-nav">';
@@ -7457,7 +7495,7 @@
       var targetDate = dateStr || null;
       if (targetDate) {
         var normalItems = workItems.filter(function(it) { return it.date === targetDate && !it.isBonus; });
-        if (normalItems.length >= 3) {
+        if (normalItems.length >= getDailyWorkLimit(targetDate)) {
           var availBonus = getAvailableBonusSlots(targetDate);
           if (availBonus <= 0) {
             showToast('이 날의 슬롯이 꽉 찼습니다', 'warning');
@@ -7845,7 +7883,7 @@
         } else {
           dayItems.forEach(function(it) { html += renderWorkWeekMiniCard(it); });
           var normalCnt = dayItems.filter(function(it) { return !it.isBonus; }).length;
-          if (normalCnt < 3) html += '<div class="work-week-add" onclick="event.stopPropagation();showAddWorkItemModal(\'' + ds + '\')">+</div>';
+          if (normalCnt < getDailyWorkLimit(ds)) html += '<div class="work-week-add" onclick="event.stopPropagation();showAddWorkItemModal(\'' + ds + '\')">+</div>';
         }
         html += '</div></div>';
       }
@@ -8147,7 +8185,7 @@
       if (!ids.length) { showToast('배정할 항목을 선택하세요', 'warning'); return; }
       var targetDate = dateInput.value;
       var normalCount = workItems.filter(function(it) { return it.date === targetDate && !it.isBonus; }).length;
-      var normalSlots = Math.max(0, 3 - normalCount);
+      var normalSlots = Math.max(0, getDailyWorkLimit(targetDate) - normalCount);
       var availBonus = getAvailableBonusSlots(targetDate);
       var totalSlots = normalSlots + availBonus;
       var dp = targetDate.split('-');
@@ -8287,6 +8325,32 @@
     // ========================================
     // 뽀모도로 타이머
     // ========================================
+
+    var workSettings = {
+      dailyLimit: 3,
+      dailyLimitSince: '2000-01-01',
+    };
+
+    function getDailyWorkLimit(dateStr) {
+      if (!dateStr) return workSettings.dailyLimit;
+      if (workSettings.dailyLimitSince && dateStr >= workSettings.dailyLimitSince) return workSettings.dailyLimit;
+      return 3;
+    }
+
+    function loadWorkSettings() {
+      try {
+        var saved = JSON.parse(localStorage.getItem('workSettings') || 'null');
+        if (saved) {
+          if (saved.dailyLimit) workSettings.dailyLimit = saved.dailyLimit;
+          if (saved.dailyLimitSince) workSettings.dailyLimitSince = saved.dailyLimitSince;
+        }
+      } catch(e) {}
+    }
+
+    function saveWorkSettings() {
+      localStorage.setItem('workSettings', JSON.stringify(workSettings));
+      if (window.FS && FS.isConnected()) FS.sync(['사용자설정']);
+    }
 
     var pomodoroSettings = {
       workMin: 25,
