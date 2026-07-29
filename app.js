@@ -8164,15 +8164,20 @@
         var it = workItems.find(function(x) { return x.id === id; });
         return it ? (it.emoji || '📋') + ' ' + it.title : id;
       });
-      showConfirm('선택한 할일 ' + basketSelected.length + '개를 삭제하시겠어요?\n\n' + names.join('\n'), function() {
-        basketSelected.forEach(function(id) {
-          workItems = workItems.filter(function(x) { return x.id !== id && x.parentId !== id; });
-        });
-        basketSelected = [];
-        saveWorkItems();
-        showToast('삭제했어요', 'success');
-        renderWorkBasketTab();
-      });
+      showConfirm(
+        '선택한 할일 ' + basketSelected.length + '개를 삭제하시겠어요?',
+        names.map(function(n) { return '• ' + n; }).join('<br>'),
+        function(ok) {
+          if (!ok) return;
+          basketSelected.forEach(function(id) {
+            workItems = workItems.filter(function(x) { return x.id !== id && x.parentId !== id; });
+          });
+          basketSelected = [];
+          saveWorkItems();
+          showToast('삭제했어요');
+          renderWorkBasketTab();
+        }
+      );
     }
 
     function basketUpdateSelection() { /* 호환성 유지용 — renderWorkBasketTab()이 대체 */ }
