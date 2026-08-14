@@ -139,15 +139,16 @@
       <div class="mobile-top-title" id="mobileTopTitle">베이 관리자</div>
     </div>
 
-    <!-- 햄버거 버튼 -->
-    <button class="sidebar-toggle-btn" id="sidebarToggleBtn" onclick="toggleSidebar()">
-      <span id="sidebarToggleIcon">✕</span>
-    </button>
+    <!-- 모바일 사이드바 배경 오버레이 -->
+    <div id="sidebar-backdrop" onclick="closeSidebar()"></div>
 
     <!-- 사이드바 -->
     <aside class="sidebar" id="sidebar">
       <div class="logo-wrap">
-        <div class="logo">베이 관리자</div>
+        <div class="sidebar-header-row">
+          <div class="logo">베이 관리자</div>
+          <button class="sidebar-collapse-btn" onclick="toggleSidebarCollapse()" title="사이드바 접기/펼치기">‹</button>
+        </div>
         <div class="profile-section">
           <div class="profile-photo-wrap" onclick="openProfileSettings()">
             <div class="profile-photo" id="sidebarProfilePhoto">
