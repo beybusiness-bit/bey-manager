@@ -7036,7 +7036,7 @@
 
         // 오늘 추가 버튼
         h += '<div style="margin-top:12px;">';
-        h += '<button class="btn-confirm" onclick="btGoToDay(\'' + today() + '\')" style="width:100%;">+ 오늘 매출 추가하기</button>';
+        h += '<button class="btn-add-card" onclick="btGoToDay(\'' + today() + '\')"><span class="btn-add-card-plus">+</span>오늘 매출 추가하기</button>';
         h += '</div>';
       }
 
