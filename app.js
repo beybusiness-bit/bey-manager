@@ -6429,6 +6429,8 @@
     var btDailyOffset = 0;       // offset from current period
     var btActionPeriod = 'quarter'; // 'day'|'week'|'month'|'quarter'
     var btActionOffset = 0;
+    var btDailyFilterCat = '__all'; // '__all' | catId
+    var btActionFilterCat = '__all';
 
     // 기간 범위 계산 (daily / action 탭 공용)
     function btPeriodRange(period, offset) {
@@ -6901,6 +6903,22 @@
         var dateEntry = btDailyEntries.find(function(e) { return e.date === btInputDate; });
         var items = dateEntry ? (dateEntry.items || []) : [];
 
+        // 카테고리 필터 버튼
+        if (cats.length > 0) {
+          h += '<div class="bt-cat-filter-bar">';
+          var allItemCount = items.length;
+          h += '<button class="bt-cat-filter-btn' + (btDailyFilterCat==='__all'?' active':'') + '" onclick="btSetDailyFilter(\'__all\')">전체 <span class="bt-filter-count">' + allItemCount + '</span></button>';
+          cats.forEach(function(cat) {
+            var cnt = items.filter(function(it){ return it.catId === cat.id; }).length;
+            var isActive = btDailyFilterCat === cat.id;
+            h += '<button class="bt-cat-filter-btn' + (isActive?' active':'') + '" style="' + (isActive?'background:'+cat.color+';border-color:'+cat.color+';color:#222;':'--cat-hover:'+cat.color+';') + '" onclick="btSetDailyFilter(\'' + cat.id + '\')">';
+            h += cat.icon + ' ' + escapeHtml(cat.name) + ' <span class="bt-filter-count">' + cnt + '</span>';
+            h += '</button>';
+          });
+          h += '</div>';
+        }
+
+        // 요약 (전체 기준)
         if (items.length) {
           var dayCalc = btCalcPeriod([{ date: btInputDate, items: items }]);
           h += '<div class="bt-day-summary">';
@@ -6910,39 +6928,26 @@
           h += '</div>';
         }
 
-        // 카테고리별 그룹
-        var grouped = {}, uncatItems = [];
-        items.forEach(function(item, idx) {
-          if (item.catId) { if (!grouped[item.catId]) grouped[item.catId] = []; grouped[item.catId].push({ item: item, idx: idx }); }
-          else uncatItems.push({ item: item, idx: idx });
-        });
+        // 필터 적용된 항목 flat grid
+        var visItems = items.reduce(function(acc, item, idx) {
+          if (btDailyFilterCat === '__all' || item.catId === btDailyFilterCat || (btDailyFilterCat === '__none' && !item.catId)) {
+            acc.push({ item: item, idx: idx });
+          }
+          return acc;
+        }, []);
 
         if (cats.length === 0 && items.length === 0) {
           h += '<div class="bt-empty">설정 탭에서 카테고리를 먼저 추가하세요.</div>';
         } else {
-          cats.forEach(function(cat) {
-            var catItems = grouped[cat.id] || [];
-            h += '<div class="bt-group-header" style="color:' + cat.color + '">' + cat.icon + ' ' + escapeHtml(cat.name) + '</div>';
-            h += '<div class="bt-item-grid">';
-            catItems.forEach(function(entry) {
-              if (btEditItemDate === btInputDate && btEditItemIdx === entry.idx) h += '<div class="bt-item-grid-span">' + btBuildItemForm(entry.item, entry.idx) + '</div>';
-              else h += btBuildItemCard(entry.item, entry.idx);
-            });
-            h += '</div>';
+          h += '<div class="bt-item-grid">';
+          visItems.forEach(function(entry) {
+            if (btEditItemDate === btInputDate && btEditItemIdx === entry.idx) h += '<div class="bt-item-grid-span">' + btBuildItemForm(entry.item, entry.idx) + '</div>';
+            else h += btBuildItemCard(entry.item, entry.idx);
           });
-          if (uncatItems.length) {
-            h += '<div class="bt-group-header">기타</div><div class="bt-item-grid">';
-            uncatItems.forEach(function(entry) {
-              if (btEditItemDate === btInputDate && btEditItemIdx === entry.idx) h += '<div class="bt-item-grid-span">' + btBuildItemForm(entry.item, entry.idx) + '</div>';
-              else h += btBuildItemCard(entry.item, entry.idx);
-            });
-            h += '</div>';
+          if (btAddingItem && btEditItemDate === null) h += '<div class="bt-item-grid-span">' + btBuildItemForm(null, null) + '</div>';
+          if (!btAddingItem || btEditItemDate !== null) {
+            h += '<button class="btn-add-card" onclick="btStartAddItem()"><span class="btn-add-card-plus">+</span>매출 추가</button>';
           }
-        }
-        if (btAddingItem && btEditItemDate === null) h += btBuildItemForm(null, null);
-        if (!btAddingItem || btEditItemDate !== null) {
-          h += '<div class="bt-item-grid" style="margin-top:8px;">';
-          h += '<button class="btn-add-card" onclick="btStartAddItem()"><span class="btn-add-card-plus">+</span>매출 추가</button>';
           h += '</div>';
         }
 
@@ -7307,48 +7312,45 @@
 
       if (btAddingAction && !btEditActionId) h += btBuildActionForm(null);
 
-      // 기간으로 필터된 actionsByCat
+      // 기간 필터 액션
       var filtActions = btActions.filter(function(a) {
         if (!a.date) return btActionPeriod === 'quarter';
         return a.date >= aRange.start && a.date <= aRange.end;
       });
-      var filtByCat = {};
-      filtActions.forEach(function(a) {
-        var key = a.catId || '__none';
-        if (!filtByCat[key]) filtByCat[key] = [];
-        filtByCat[key].push(a);
+
+      // 카테고리 필터 버튼
+      if (cats.length > 0) {
+        h += '<div class="bt-cat-filter-bar">';
+        h += '<button class="bt-cat-filter-btn' + (btActionFilterCat==='__all'?' active':'') + '" onclick="btSetActionFilter(\'__all\')">전체 <span class="bt-filter-count">' + filtActions.length + '</span></button>';
+        cats.forEach(function(cat) {
+          var cnt = filtActions.filter(function(a){ return a.catId === cat.id; }).length;
+          var isActive = btActionFilterCat === cat.id;
+          h += '<button class="bt-cat-filter-btn' + (isActive?' active':'') + '" style="' + (isActive?'background:'+cat.color+';border-color:'+cat.color+';color:#222;':'--cat-hover:'+cat.color+';') + '" onclick="btSetActionFilter(\'' + cat.id + '\')">';
+          h += cat.icon + ' ' + escapeHtml(cat.name) + ' <span class="bt-filter-count">' + cnt + '</span>';
+          h += '</button>';
+        });
+        h += '</div>';
+      }
+
+      if (btAddingAction && !btEditActionId) h += btBuildActionForm(null);
+
+      // 필터 적용 후 flat grid
+      var visActions = filtActions.filter(function(a) {
+        if (btActionFilterCat === '__all') return true;
+        return a.catId === btActionFilterCat;
       });
 
-      // 카테고리별 그룹 표시 (빈 카테고리도 항상 표시)
       if (cats.length === 0 && btActions.length === 0) {
         h += '<div class="bt-empty">설정 탭에서 카테고리를 먼저 추가하세요.</div>';
       } else {
-        cats.forEach(function(cat) {
-          var catActions = filtByCat[cat.id] || [];
-          h += '<div class="bt-group-header" style="color:' + cat.color + '">' + cat.icon + ' ' + escapeHtml(cat.name) + '</div>';
-          h += '<div class="bt-action-grid">';
-          catActions.forEach(function(action) {
-            if (btEditActionId === action.id) h += '<div class="bt-item-grid-span">' + btBuildActionForm(action) + '</div>';
-            else h += btBuildActionCard(action);
-          });
-          h += '</div>';
+        h += '<div class="bt-action-grid">';
+        visActions.forEach(function(action) {
+          if (btEditActionId === action.id) h += '<div class="bt-item-grid-span">' + btBuildActionForm(action) + '</div>';
+          else h += btBuildActionCard(action);
         });
-        // 카테고리 없는 액션
-        var noCat = filtByCat['__none'] || [];
-        if (noCat.length) {
-          h += '<div class="bt-group-header">카테고리 미지정</div>';
-          h += '<div class="bt-action-grid">';
-          noCat.forEach(function(action) {
-            if (btEditActionId === action.id) h += '<div class="bt-item-grid-span">' + btBuildActionForm(action) + '</div>';
-            else h += btBuildActionCard(action);
-          });
-          h += '</div>';
+        if (!btAddingAction || btEditActionId) {
+          h += '<button class="btn-add-card" onclick="btStartAddAction()"><span class="btn-add-card-plus">+</span>액션 추가</button>';
         }
-      }
-      // + 카드
-      if (!btAddingAction || btEditActionId) {
-        h += '<div class="bt-action-grid" style="margin-top:8px;">';
-        h += '<button class="btn-add-card" onclick="btStartAddAction()"><span class="btn-add-card-plus">+</span>액션 추가</button>';
         h += '</div>';
       }
       return h;
@@ -7356,6 +7358,8 @@
 
     function btSetActionPeriod(p) { btActionPeriod = p; btActionOffset = 0; btRenderCurrentTab(); }
     function btChangeActionOffset(delta, reset) { btActionOffset = reset ? 0 : btActionOffset + delta; btRenderCurrentTab(); }
+    function btSetDailyFilter(catId) { btDailyFilterCat = catId; btRenderCurrentTab(); }
+    function btSetActionFilter(catId) { btActionFilterCat = catId; btRenderCurrentTab(); }
 
     function btBuildActionCard(action) {
       var cat = btConfig && btConfig.categories.find(function(c) { return c.id === action.catId; });
