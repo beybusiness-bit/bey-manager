@@ -6705,6 +6705,84 @@
         h += '</div>';
       }
 
+      // ─ 동적 목표 재계산 (run-rate) ─
+      if (q && mTarget > 0) {
+        var qTotalTarget = mTarget * 3;
+        // 분기 전체 실적
+        var qAllEntries = btEntriesInRange(q.startDate, q.endDate);
+        var qActual = btCalcPeriod(qAllEntries).revenue;
+        var qRemaining = Math.max(0, qTotalTarget - qActual);
+
+        // 남은 일수 (오늘부터 분기 종료일까지)
+        var todayD = new Date(today() + 'T00:00:00');
+        var endD = new Date(q.endDate + 'T00:00:00');
+        var totalQDays = Math.max(1, Math.round((new Date(q.endDate+'T00:00:00') - new Date(q.startDate+'T00:00:00')) / 86400000) + 1);
+        var remainingDays = Math.max(0, Math.round((endD - todayD) / 86400000) + 1);
+        var elapsedDays = totalQDays - remainingDays;
+
+        // 분기 목표 대비 전체 달성률
+        var qPct = Math.min(200, Math.round(qActual / qTotalTarget * 100));
+        var qBar = Math.min(100, qPct);
+
+        h += '<div class="bt-runrate-card">';
+        h += '<div class="bt-section-title" style="margin-bottom:10px;">🎯 분기 목표 트래킹</div>';
+
+        // 분기 전체 진행 바
+        h += '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">';
+        h += '<span>' + q.name + ' — ' + btFmtW(qActual) + ' / ' + btFmtW(qTotalTarget) + '</span>';
+        h += '<span class="bt-goal-pct' + (qPct >= 100 ? ' hit' : '') + '" style="font-size:14px;">' + qPct + '%</span>';
+        h += '</div>';
+        h += '<div class="bt-progress-wrap" style="margin-bottom:12px;"><div class="bt-progress-bar' + (qPct >= 100 ? ' full' : '') + '" style="width:' + qBar + '%"></div></div>';
+
+        // 기간 경과 바 (시간 흐름)
+        var timePct = Math.min(100, Math.round(elapsedDays / totalQDays * 100));
+        h += '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-secondary,#888);margin-bottom:3px;">';
+        h += '<span>기간 경과 ' + elapsedDays + '일 / ' + totalQDays + '일</span>';
+        h += '<span>남은 기간 ' + remainingDays + '일</span>';
+        h += '</div>';
+        h += '<div class="bt-progress-wrap" style="height:6px;margin-bottom:14px;background:var(--border-color,#eee);">';
+        h += '<div style="height:100%;background:var(--text-secondary,#bbb);border-radius:6px;width:' + timePct + '%;transition:width .4s;"></div>';
+        h += '</div>';
+
+        if (remainingDays > 0 && qRemaining > 0) {
+          // run-rate 계산
+          var dailyNeeded  = Math.round(qRemaining / remainingDays);
+          var weeklyNeeded = Math.round(dailyNeeded * 7);
+          var monthlyNeeded = Math.round(dailyNeeded * 30);
+
+          // 현재 pace (지금까지 일평균)
+          var dailyPace = elapsedDays > 0 ? Math.round(qActual / elapsedDays) : 0;
+          var paceVsNeeded = dailyNeeded > 0 ? Math.round(dailyPace / dailyNeeded * 100) : 0;
+          var isBehind = dailyPace < dailyNeeded;
+
+          h += '<div class="bt-runrate-grid">';
+          h += '<div class="bt-runrate-item">';
+          h += '<div class="bt-runrate-val">' + btFmtW(dailyNeeded) + '</div>';
+          h += '<div class="bt-runrate-label">일평균 필요 매출</div>';
+          h += '</div>';
+          h += '<div class="bt-runrate-item">';
+          h += '<div class="bt-runrate-val">' + btFmtW(weeklyNeeded) + '</div>';
+          h += '<div class="bt-runrate-label">주간 필요 매출</div>';
+          h += '</div>';
+          h += '<div class="bt-runrate-item">';
+          h += '<div class="bt-runrate-val">' + btFmtW(monthlyNeeded) + '</div>';
+          h += '<div class="bt-runrate-label">월간 필요 매출</div>';
+          h += '</div>';
+          h += '<div class="bt-runrate-item' + (isBehind ? ' behind' : ' ahead') + '">';
+          h += '<div class="bt-runrate-val">' + btFmtW(dailyPace) + '</div>';
+          h += '<div class="bt-runrate-label">현재 일평균 페이스</div>';
+          h += '<div class="bt-runrate-badge">' + (isBehind ? '▼ 목표 대비 ' + (100-paceVsNeeded) + '% 부족' : '▲ 목표 초과 중') + '</div>';
+          h += '</div>';
+          h += '</div>';
+        } else if (qRemaining <= 0) {
+          h += '<div class="bt-runrate-done">🎉 분기 목표 달성! 남은 목표 없음</div>';
+        } else {
+          h += '<div class="bt-runrate-done" style="color:var(--text-secondary,#888);">분기가 아직 시작되지 않았습니다.</div>';
+        }
+
+        h += '</div>'; // bt-runrate-card
+      }
+
       // 차트 (주/월 단위에서만)
       if (btDashPeriod !== 'day') {
         h += '<div class="bt-chart-wrap">';

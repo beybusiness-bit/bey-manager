@@ -3810,6 +3810,18 @@
     .bt-gap-deficit { color:#e53935;font-weight:700; }
     .bt-gap-surplus { color:#1a8c60;font-weight:700; }
     .bt-progress-bar.full { background:#1a8c60; }
+    /* Run-rate 카드 */
+    .bt-runrate-card { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:12px;padding:16px;margin:14px 0; }
+    .bt-runrate-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:4px; }
+    .bt-runrate-item { background:var(--body-bg,#f5f5f5);border-radius:10px;padding:12px 14px;text-align:center; }
+    .bt-runrate-item.behind { background:rgba(229,57,53,0.07);border:1px solid rgba(229,57,53,0.2); }
+    .bt-runrate-item.ahead  { background:rgba(26,140,96,0.07);border:1px solid rgba(26,140,96,0.2); }
+    .bt-runrate-val { font-size:18px;font-weight:800;color:var(--text-primary,#222);line-height:1.2;margin-bottom:4px; }
+    .bt-runrate-label { font-size:11px;color:var(--text-secondary,#888); }
+    .bt-runrate-badge { font-size:10px;font-weight:700;margin-top:4px; }
+    .bt-runrate-item.behind .bt-runrate-badge { color:#e53935; }
+    .bt-runrate-item.ahead  .bt-runrate-badge { color:#1a8c60; }
+    .bt-runrate-done { text-align:center;padding:12px;font-size:14px;font-weight:600; }
     .bt-auto-calc { font-size:13px;color:var(--text-secondary,#888);padding:8px 10px;background:var(--body-bg,#f5f5f5);border-radius:8px;min-height:36px;display:flex;align-items:center; }
     .bt-auto-calc.filled { background:color-mix(in srgb,var(--primary-yellow,#ffde59) 18%,transparent);color:var(--text-primary,#222); }
     .bt-form-actions { display:flex;gap:8px;margin-top:4px; }
