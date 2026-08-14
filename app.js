@@ -6652,8 +6652,8 @@
       // KPI 카드
       h += '<div class="bt-kpi-row">';
       h += btKpiCard('매출', btFmtW(calc.revenue), '');
-      h += btKpiCard('순이익', btFmtW(calc.margin - fcProrated), (calc.margin - fcProrated) >= 0 ? 'positive' : 'negative');
-      h += btKpiCard('마진', btFmtW(calc.margin), '');
+      h += btKpiCard('순수익', btFmtW(calc.margin - fcProrated), (calc.margin - fcProrated) >= 0 ? 'positive' : 'negative');
+      h += btKpiCard('수익', btFmtW(calc.margin), '');
       h += btKpiCard('고정비 배분', btFmtW(fcProrated), '');
       h += '</div>';
 
@@ -6676,33 +6676,52 @@
         h += '</div>';
       }
 
-      // 액션플랜 vs 실제 (카테고리별)
+      // 액션플랜 vs 실제 (카테고리별) — 카테고리가 있으면 항상 표시
       var cats = (btConfig && btConfig.categories) || [];
       var bycat = btCalcByCategory(entries);
       var actionsByCat = btActionsByCategory();
-      var hasCatData = cats.some(function(c) { return bycat[c.id] || actionsByCat[c.id]; });
 
-      if (hasCatData || Object.keys(actionsByCat).length > 0) {
+      if (cats.length > 0) {
         h += '<div class="bt-section-title" style="margin-top:20px;">카테고리별 실적 / 액션플랜</div>';
         h += '<div class="bt-cat-compare-grid">';
 
-        // 등록된 카테고리
         cats.forEach(function(cat) {
           var actual = bycat[cat.id] || { revenue: 0, margin: 0, units: 0 };
           var catActions = (actionsByCat[cat.id] || []).filter(function(a) {
-            if (!a.date) return true; // 날짜 없으면 항상 표시
+            if (!a.date) return true;
             return a.date >= range.start && a.date <= range.end;
           });
           var planRevenue = catActions.reduce(function(s, a) { return s + btActionRevenue(a); }, 0);
           var planUnits = catActions.reduce(function(s, a) { return s + (Number(a.targetUnits) || 0); }, 0);
-          if (!actual.revenue && !planRevenue && !catActions.length) return;
+
+          // 달성률 계산
+          var pct = planRevenue > 0 ? Math.min(200, Math.round(actual.revenue / planRevenue * 100)) : null;
+          var pctBar = pct !== null ? Math.min(100, pct) : 0;
+
           h += '<div class="bt-cat-compare-card">';
-          h += '<div class="bt-cat-compare-header" style="color:' + cat.color + '">' + cat.icon + ' ' + escapeHtml(cat.name) + '</div>';
+          h += '<div class="bt-cat-compare-header" style="color:' + cat.color + '">' + cat.icon + ' ' + escapeHtml(cat.name);
+          if (pct !== null) h += '<span class="bt-goal-pct' + (pct >= 100 ? ' hit' : '') + '" style="margin-left:auto;font-size:12px;">' + pct + '%</span>';
+          h += '</div>';
+
+          // 달성 진행 바 (플랜이 있을 때만)
+          if (planRevenue > 0) {
+            h += '<div class="bt-progress-wrap" style="margin:6px 0 10px;"><div class="bt-progress-bar" style="width:' + pctBar + '%"></div></div>';
+          }
+
           h += '<div class="bt-cat-compare-body">';
-          h += '<div class="bt-compare-row"><span class="bt-compare-label">실제 매출</span><span class="bt-compare-val">' + btFmtW(actual.revenue) + '</span></div>';
-          if (planRevenue) h += '<div class="bt-compare-row plan"><span class="bt-compare-label">액션 목표</span><span class="bt-compare-val">' + btFmtW(planRevenue) + '</span></div>';
-          if (actual.units || planUnits) h += '<div class="bt-compare-row"><span class="bt-compare-label">실제 / 목표 건수</span><span class="bt-compare-val">' + btFmtN(actual.units) + (planUnits ? ' / ' + btFmtN(planUnits) : '') + '</span></div>';
-          if (actual.margin) h += '<div class="bt-compare-row"><span class="bt-compare-label">마진</span><span class="bt-compare-val">' + btFmtW(actual.margin) + '</span></div>';
+          // 실제 vs 목표 매출 한 줄로
+          if (planRevenue > 0) {
+            h += '<div class="bt-compare-row"><span class="bt-compare-label">실제 매출</span><span class="bt-compare-val">' + btFmtW(actual.revenue) + '<span style="color:var(--text-secondary);font-weight:400;font-size:11px;"> / ' + btFmtW(planRevenue) + '</span></span></div>';
+          } else {
+            h += '<div class="bt-compare-row"><span class="bt-compare-label">실제 매출</span><span class="bt-compare-val">' + btFmtW(actual.revenue) + '</span></div>';
+          }
+          // 건수 (있을 때만)
+          if (actual.units || planUnits) {
+            h += '<div class="bt-compare-row"><span class="bt-compare-label">건수</span><span class="bt-compare-val">' + btFmtN(actual.units) + (planUnits ? '<span style="color:var(--text-secondary);font-size:11px;"> / 목표 ' + btFmtN(planUnits) + '</span>' : '') + '</span></div>';
+          }
+          // 마진
+          if (actual.margin) h += '<div class="bt-compare-row"><span class="bt-compare-label">수익</span><span class="bt-compare-val">' + btFmtW(actual.margin) + '</span></div>';
+          // 액션 칩
           if (catActions.length) {
             h += '<div class="bt-compare-actions">';
             catActions.slice(0, 2).forEach(function(a) {
@@ -6710,6 +6729,8 @@
             });
             if (catActions.length > 2) h += '<div class="bt-compare-action-chip more">+' + (catActions.length - 2) + '건</div>';
             h += '</div>';
+          } else if (!actual.revenue) {
+            h += '<div style="font-size:12px;color:var(--text-secondary);padding-top:4px;">아직 실적 없음</div>';
           }
           h += '</div></div>';
         });
@@ -6760,30 +6781,31 @@
         var dayCalc = btCalcPeriod([{ date: btInputDate, items: items }]);
         h += '<div class="bt-day-summary">';
         h += '<span>매출 <strong>' + btFmtW(dayCalc.revenue) + '</strong></span>';
-        h += '<span>마진 <strong>' + btFmtW(dayCalc.margin) + '</strong></span>';
+        h += '<span>수익 <strong>' + btFmtW(dayCalc.margin) + '</strong></span>';
         h += '<span>' + items.length + '건</span>';
         h += '</div>';
       }
 
-      // 카테고리별 그룹으로 표시
-      if (items.length) {
-        // 카테고리별 그룹화
-        var grouped = {};
-        var uncatItems = [];
-        items.forEach(function(item, idx) {
-          if (item.catId) {
-            if (!grouped[item.catId]) grouped[item.catId] = [];
-            grouped[item.catId].push({ item: item, idx: idx });
-          } else {
-            uncatItems.push({ item: item, idx: idx });
-          }
-        });
+      // 카테고리별 그룹으로 표시 (빈 카테고리도 항상 표시)
+      var grouped = {};
+      var uncatItems = [];
+      items.forEach(function(item, idx) {
+        if (item.catId) {
+          if (!grouped[item.catId]) grouped[item.catId] = [];
+          grouped[item.catId].push({ item: item, idx: idx });
+        } else {
+          uncatItems.push({ item: item, idx: idx });
+        }
+      });
 
+      if (cats.length === 0 && items.length === 0) {
+        h += '<div class="bt-empty">설정 탭에서 카테고리를 먼저 추가하세요.</div>';
+      } else {
         cats.forEach(function(cat) {
-          if (!grouped[cat.id]) return;
+          var catItems = grouped[cat.id] || [];
           h += '<div class="bt-group-header" style="color:' + cat.color + '">' + cat.icon + ' ' + escapeHtml(cat.name) + '</div>';
           h += '<div class="bt-item-grid">';
-          grouped[cat.id].forEach(function(entry) {
+          catItems.forEach(function(entry) {
             if (btEditItemDate === btInputDate && btEditItemIdx === entry.idx) {
               h += '<div class="bt-item-grid-span">' + btBuildItemForm(entry.item, entry.idx) + '</div>';
             } else {
@@ -6804,8 +6826,6 @@
           });
           h += '</div>';
         }
-      } else {
-        h += '<div class="bt-empty">이 날 입력된 매출이 없습니다.</div>';
       }
 
       // 추가 폼 (그리드 바깥 전체 너비)
@@ -6845,7 +6865,7 @@
       h += '</div>';
       h += '<div class="bt-item-totals">';
       h += '<span>매출 <strong>' + btFmtW(rev) + '</strong></span>';
-      h += '<span>마진 <strong' + (margin < 0 ? ' style="color:#e53935"' : '') + '>' + btFmtW(margin) + '</strong></span>';
+      h += '<span>수익 <strong' + (margin < 0 ? ' style="color:#e53935"' : '') + '>' + btFmtW(margin) + '</strong></span>';
       h += '</div>';
       if (item.memo) {
         h += '<div class="bt-item-memo">' + escapeHtml(item.memo) + '</div>';
@@ -6924,7 +6944,7 @@
       var el = document.getElementById('btAutoCalcResult');
       if (!el) return;
       if (!rev) { el.innerHTML = '건수 × 가격 입력 시 자동 계산'; el.className = 'bt-auto-calc'; return; }
-      el.innerHTML = '매출 <b>' + btFmtW(rev) + '</b> &nbsp; 마진 <b' + (margin < 0 ? ' style="color:#e53935"' : '') + '>' + btFmtW(margin) + '</b>';
+      el.innerHTML = '매출 <b>' + btFmtW(rev) + '</b> &nbsp; 수익 <b' + (margin < 0 ? ' style="color:#e53935"' : '') + '>' + btFmtW(margin) + '</b>';
       el.className = 'bt-auto-calc filled';
     }
 
@@ -7031,39 +7051,38 @@
 
       if (btAddingAction && !btEditActionId) h += btBuildActionForm(null);
 
-      // 카테고리별 그룹 표시
-      var hasAny = false;
-      cats.forEach(function(cat) {
-        var catActions = actionsByCat[cat.id] || [];
-        if (!catActions.length) return;
-        hasAny = true;
-        h += '<div class="bt-group-header" style="color:' + cat.color + '">' + cat.icon + ' ' + escapeHtml(cat.name) + '</div>';
-        h += '<div class="bt-action-grid">';
-        catActions.forEach(function(action) {
-          if (btEditActionId === action.id) {
-            h += '<div class="bt-item-grid-span">' + btBuildActionForm(action) + '</div>';
-          } else {
-            h += btBuildActionCard(action);
-          }
+      // 카테고리별 그룹 표시 (빈 카테고리도 항상 표시)
+      if (cats.length === 0 && btActions.length === 0) {
+        h += '<div class="bt-empty">설정 탭에서 카테고리를 먼저 추가하세요.</div>';
+      } else {
+        cats.forEach(function(cat) {
+          var catActions = actionsByCat[cat.id] || [];
+          h += '<div class="bt-group-header" style="color:' + cat.color + '">' + cat.icon + ' ' + escapeHtml(cat.name) + '</div>';
+          h += '<div class="bt-action-grid">';
+          catActions.forEach(function(action) {
+            if (btEditActionId === action.id) {
+              h += '<div class="bt-item-grid-span">' + btBuildActionForm(action) + '</div>';
+            } else {
+              h += btBuildActionCard(action);
+            }
+          });
+          h += '</div>';
         });
-        h += '</div>';
-      });
-      // 카테고리 없는 액션
-      var noCat = actionsByCat['__none'] || [];
-      if (noCat.length) {
-        hasAny = true;
-        h += '<div class="bt-group-header">카테고리 미지정</div>';
-        h += '<div class="bt-action-grid">';
-        noCat.forEach(function(action) {
-          if (btEditActionId === action.id) {
-            h += '<div class="bt-item-grid-span">' + btBuildActionForm(action) + '</div>';
-          } else {
-            h += btBuildActionCard(action);
-          }
-        });
-        h += '</div>';
+        // 카테고리 없는 액션
+        var noCat = actionsByCat['__none'] || [];
+        if (noCat.length) {
+          h += '<div class="bt-group-header">카테고리 미지정</div>';
+          h += '<div class="bt-action-grid">';
+          noCat.forEach(function(action) {
+            if (btEditActionId === action.id) {
+              h += '<div class="bt-item-grid-span">' + btBuildActionForm(action) + '</div>';
+            } else {
+              h += btBuildActionCard(action);
+            }
+          });
+          h += '</div>';
+        }
       }
-      if (!hasAny) h += '<div class="bt-empty">아직 액션플랜이 없습니다.</div>';
       // + 카드 (추가 폼 열려있지 않을 때만)
       if (!btAddingAction || btEditActionId) {
         h += '<div class="bt-action-grid" style="margin-top:8px;">';
@@ -7092,7 +7111,7 @@
       if (planRev) {
         h += '<div class="bt-item-totals" style="margin-top:8px;">';
         h += '<span>목표 매출 <strong>' + btFmtW(planRev) + '</strong></span>';
-        h += '<span>목표 마진 <strong>' + btFmtW(planMargin) + '</strong></span>';
+        h += '<span>목표 수익 <strong>' + btFmtW(planMargin) + '</strong></span>';
         h += '</div>';
       }
       h += '</div>';
@@ -7131,7 +7150,7 @@
       var el = document.getElementById('btActAutoResult');
       if (!el) return;
       if (!rev) { el.innerHTML = ''; el.className = 'bt-auto-calc'; return; }
-      el.innerHTML = '목표 매출 <b>' + btFmtW(rev) + '</b> &nbsp; 목표 마진 <b' + (margin < 0 ? ' style="color:#e53935"' : '') + '>' + btFmtW(margin) + '</b>';
+      el.innerHTML = '목표 매출 <b>' + btFmtW(rev) + '</b> &nbsp; 목표 수익 <b' + (margin < 0 ? ' style="color:#e53935"' : '') + '>' + btFmtW(margin) + '</b>';
       el.className = 'bt-auto-calc filled';
     }
 
@@ -7340,7 +7359,7 @@
       // 마진율 설명 박스
       h += '<div class="bt-info-box" style="margin-bottom:10px;">';
       h += '<strong>기본 마진율</strong>이란? 입력 시 단위 원가를 비워두면 이 비율을 사용해 <em>원가 = 객단가 × (1 - 마진율%)</em>로 자동 계산합니다.<br>';
-      h += '예: 마진율 27% → 객단가 10,000원짜리 상품의 원가는 7,300원, 순이익은 2,700원으로 계산됩니다.<br>';
+      h += '예: 마진율 27% → 객단가 10,000원짜리 상품의 원가는 7,300원, 수익은 2,700원으로 계산됩니다.<br>';
       h += '단위 원가를 직접 입력하면 마진율은 무시됩니다. 입력 규칙을 특별히 지정하지 않아도 되는 카테고리는 비워두세요.';
       h += '</div>';
       h += '<div class="bt-form-row"><label>기본 마진율 (%) — 비워두면 항목 입력 시 원가를 직접 입력</label>';
