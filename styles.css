@@ -3791,7 +3791,10 @@
     .bt-auto-calc { font-size:13px;color:var(--text-secondary,#888);padding:8px 10px;background:var(--body-bg,#f5f5f5);border-radius:8px;min-height:36px;display:flex;align-items:center; }
     .bt-auto-calc.filled { background:color-mix(in srgb,var(--primary-yellow,#ffde59) 18%,transparent);color:var(--text-primary,#222); }
     .bt-form-actions { display:flex;gap:8px;margin-top:4px; }
-    .bt-add-btn { margin-bottom:12px; }
+    /* 카드 스타일 추가 버튼 (아이템 그리드 마지막에 배치) */
+    .btn-add-card { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:2px dashed var(--border-color,#ddd);border-radius:12px;background:transparent;color:var(--text-secondary,#888);cursor:pointer;padding:16px;font-size:13px;font-weight:600;transition:all .15s;min-height:80px;width:100%;box-sizing:border-box; }
+    .btn-add-card:hover { border-color:var(--primary-yellow,#ffde59);background:color-mix(in srgb,var(--primary-yellow,#ffde59) 10%,transparent);color:var(--text-primary,#222); }
+    .btn-add-card-plus { font-size:26px;font-weight:300;line-height:1;color:inherit; }
     /* 액션 그리드 (데스크탑 2열) */
     .bt-action-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-bottom:4px; }
     .bt-action-card { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:12px;padding:12px 14px; }
