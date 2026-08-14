@@ -3777,6 +3777,7 @@
     .bt-num-val { font-size:13px;font-weight:600; }
     .bt-item-totals { display:flex;gap:14px;font-size:13px;padding-top:8px;border-top:1px solid var(--border-color,#eee); }
     .bt-item-memo { margin-top:8px;font-size:12.5px;color:var(--text-secondary,#666);background:var(--body-bg,#f8f8f8);border-radius:7px;padding:6px 10px;border-left:3px solid var(--border-color,#ddd); }
+    .bt-card-date { font-size:11px;font-weight:700;color:var(--text-secondary,#999);background:var(--body-bg,#f2f2f2);padding:2px 6px;border-radius:5px;white-space:nowrap;flex-shrink:0; }
     /* 폼 */
     .bt-item-form { background:var(--card-bg,#fff);border:1px solid var(--primary-yellow,#ffde59);border-radius:12px;padding:14px;margin-bottom:10px; }
     .bt-form-row { display:flex;flex-direction:column;gap:4px;margin-bottom:10px; }

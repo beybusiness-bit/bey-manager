@@ -2190,8 +2190,9 @@
 
     // 페이지 항목 위에서의 dragover (삽입 위치 표시)
     function mmPageDragOver(e, targetId, targetGroup) {
+      e.preventDefault(); // 항상 — drop 이벤트가 발화되도록 (group 드래그 시에도 필요)
       if (__mmDragType !== 'page' || targetId === __mmDragId) return;
-      e.preventDefault(); e.stopPropagation();
+      e.stopPropagation(); // page 드래그일 때만 버블링 차단
       _mmClearIndicators();
       var el = document.querySelector('[data-mm-type="page"][data-mm-id="' + targetId + '"]');
       if (!el) return;
@@ -2201,8 +2202,9 @@
 
     // 페이지 항목에 drop
     function mmPageDrop(e, targetId, targetGroup) {
-      e.preventDefault(); e.stopPropagation();
+      // group 드래그 중이면 버블링 허용 → mmGroupDrop이 처리
       if (__mmDragType !== 'page' || !__mmDragId || targetId === __mmDragId) return;
+      e.preventDefault(); e.stopPropagation();
       _mmClearIndicators();
 
       // 소스 그룹에서 페이지 제거
@@ -2268,8 +2270,9 @@
 
     // 그룹 자식 영역에 drop (그룹 맨 아래에 추가)
     function mmZoneDrop(e, groupId) {
-      e.preventDefault(); e.stopPropagation();
+      // group 드래그 중이면 버블링 허용 → mmGroupDrop이 처리
       if (__mmDragType !== 'page' || !__mmDragId || !groupId) return;
+      e.preventDefault(); e.stopPropagation();
       if (__mmDragSrcGroup === groupId) { mmDragEnd(); return; } // 같은 그룹이면 무시
       _mmClearIndicators();
 
@@ -6982,77 +6985,44 @@
         h += '<span>' + entries.reduce(function(s,e){ return s+(e.items||[]).length; }, 0) + '건</span>';
         h += '</div>';
 
-        if (btDailyPeriod === 'week') {
-          // 7일 목록
-          var d = new Date(range.start + 'T00:00:00');
-          var endD = new Date(range.end + 'T00:00:00');
-          var WD = ['일','월','화','수','목','금','토'];
-          while (d <= endD) {
-            var ds = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-            var entry = btDailyEntries.find(function(e){ return e.date === ds; });
-            var dayItems = entry ? (entry.items || []) : [];
-            var dayCalc = dayItems.length ? btCalcPeriod([{date:ds,items:dayItems}]) : {revenue:0,margin:0};
-            var isToday = ds === today();
-            h += '<div class="bt-week-day-row' + (isToday?' is-today':'') + '">';
-            h += '<div class="bt-week-day-label">' + WD[d.getDay()] + ' ' + ds.slice(5) + (isToday?' <span class="bt-today-badge">오늘</span>':'') + '</div>';
-            h += '<div class="bt-week-day-info">';
-            if (dayItems.length) h += '<span>매출 <strong>' + btFmtW(dayCalc.revenue) + '</strong> · ' + dayItems.length + '건</span>';
-            else h += '<span class="bt-muted">없음</span>';
-            h += '</div>';
-            h += '<button class="bt-day-add-btn" onclick="btGoToDay(\'' + ds + '\')">+ 추가</button>';
-            h += '</div>';
-            d.setDate(d.getDate() + 1);
-          }
-        } else if (btDailyPeriod === 'month') {
-          // 날짜별 목록 (카테고리별 간략 요약)
-          var d = new Date(range.start + 'T00:00:00');
-          var endD = new Date(range.end + 'T00:00:00');
-          var WD2 = ['일','월','화','수','목','금','토'];
-          while (d <= endD) {
-            var ds = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-            var entry = btDailyEntries.find(function(e){ return e.date === ds; });
-            var dayItems = entry ? (entry.items || []) : [];
-            var dayCalc = dayItems.length ? btCalcPeriod([{date:ds,items:dayItems}]) : {revenue:0,margin:0};
-            var isToday = ds === today();
-            h += '<div class="bt-week-day-row' + (isToday?' is-today':'') + '">';
-            h += '<div class="bt-week-day-label">' + ds.slice(8) + '일 (' + WD2[d.getDay()] + ')' + (isToday?' <span class="bt-today-badge">오늘</span>':'') + '</div>';
-            h += '<div class="bt-week-day-info">';
-            if (dayItems.length) h += '<span>매출 <strong>' + btFmtW(dayCalc.revenue) + '</strong> · ' + dayItems.length + '건</span>';
-            else h += '<span class="bt-muted">없음</span>';
-            h += '</div>';
-            h += '<button class="bt-day-add-btn" onclick="btGoToDay(\'' + ds + '\')">+ 추가</button>';
-            h += '</div>';
-            d.setDate(d.getDate() + 1);
-          }
-        } else {
-          // 분기 뷰 — 월별 요약
-          var d0 = new Date(range.start + 'T00:00:00');
-          var eD = new Date(range.end + 'T00:00:00');
-          var curMonth = -1;
-          while (d0 <= eD) {
-            var m = d0.getMonth(), yr = d0.getFullYear();
-            if (m !== curMonth) {
-              curMonth = m;
-              var mStart = yr+'-'+String(m+1).padStart(2,'0')+'-01';
-              var mLast = new Date(yr, m+1, 0);
-              var mEnd = yr+'-'+String(m+1).padStart(2,'0')+'-'+String(mLast.getDate()).padStart(2,'0');
-              var mEntries = btEntriesInRange(mStart, mEnd);
-              var mCalc = btCalcPeriod(mEntries);
-              var isCurMonth = (yr === new Date(today()+'T00:00:00').getFullYear() && m === new Date(today()+'T00:00:00').getMonth());
-              h += '<div class="bt-week-day-row' + (isCurMonth?' is-today':'') + '">';
-              h += '<div class="bt-week-day-label">' + yr + '년 '+(m+1)+'월' + (isCurMonth?' <span class="bt-today-badge">현재</span>':'') + '</div>';
-              h += '<div class="bt-week-day-info">';
-              if (mCalc.revenue) h += '<span>매출 <strong>' + btFmtW(mCalc.revenue) + '</strong></span>';
-              else h += '<span class="bt-muted">없음</span>';
-              h += '</div>';
-              h += '<button class="bt-day-add-btn" onclick="btGoToDay(\'' + today() + '\')">+ 추가</button>';
-              h += '</div>';
-            }
-            d0.setMonth(d0.getMonth() + 1);
-          }
+        // 기간 내 전체 아이템 수집 (날짜순)
+        var allPeriodItems = [];
+        entries.slice().sort(function(a,b){ return a.date > b.date ? 1 : -1; }).forEach(function(entry) {
+          (entry.items || []).forEach(function(item, idx) {
+            allPeriodItems.push({ item: item, idx: idx, date: entry.date });
+          });
+        });
+
+        // 카테고리 필터 칩
+        if (cats.length > 0) {
+          h += '<div class="bt-cat-filter-bar">';
+          h += '<button class="bt-cat-filter-btn' + (btDailyFilterCat==='__all'?' active':'') + '" onclick="btSetDailyFilter(\'__all\')">전체 <span class="bt-filter-count">' + allPeriodItems.length + '</span></button>';
+          cats.forEach(function(cat) {
+            var cnt = allPeriodItems.filter(function(x){ return x.item.catId === cat.id; }).length;
+            var isActive = btDailyFilterCat === cat.id;
+            h += '<button class="bt-cat-filter-btn' + (isActive?' active':'') + '" style="' + (isActive?'background:'+cat.color+';border-color:'+cat.color+';color:#222;':'') + '" onclick="btSetDailyFilter(\'' + cat.id + '\')">';
+            h += cat.icon + ' ' + escapeHtml(cat.name) + ' <span class="bt-filter-count">' + cnt + '</span>';
+            h += '</button>';
+          });
+          h += '</div>';
         }
 
-        // 글로벌 추가 버튼 (오늘 날짜로)
+        var visPeriodItems = allPeriodItems.filter(function(x) {
+          if (btDailyFilterCat === '__all') return true;
+          return x.item.catId === btDailyFilterCat || (btDailyFilterCat === '__none' && !x.item.catId);
+        });
+
+        if (visPeriodItems.length === 0) {
+          h += '<div class="bt-empty">이 기간에 기록된 달성 내용이 없습니다.</div>';
+        } else {
+          h += '<div class="bt-item-grid">';
+          visPeriodItems.forEach(function(x) {
+            h += btBuildItemCard(x.item, x.idx, x.date);
+          });
+          h += '</div>';
+        }
+
+        // 오늘 추가 버튼
         h += '<div style="margin-top:12px;">';
         h += '<button class="btn-confirm" onclick="btGoToDay(\'' + today() + '\')" style="width:100%;">+ 오늘 매출 추가하기</button>';
         h += '</div>';
@@ -7063,9 +7033,27 @@
 
     function btSetDailyPeriod(p) { btDailyPeriod = p; btDailyOffset = 0; btAddingItem = false; btEditItemDate = null; btEditItemIdx = null; btRenderCurrentTab(); }
     function btChangeDailyOffset(delta, reset) { btDailyOffset = reset ? 0 : btDailyOffset + delta; btRenderCurrentTab(); }
-    function btGoToDay(date) { btInputDate = date; btDailyPeriod = 'day'; btDailyOffset = 0; btStartAddItem(); }
+    function _btDayOffset(date) {
+      var todayMs = new Date(today() + 'T00:00:00').getTime();
+      var targetMs = new Date(date + 'T00:00:00').getTime();
+      return Math.round((targetMs - todayMs) / 86400000);
+    }
+    function btGoToDay(date) {
+      btInputDate = date; btDailyOffset = _btDayOffset(date);
+      btDailyPeriod = 'day'; btStartAddItem();
+    }
+    // 기간뷰에서 수정 버튼 클릭 시 → 해당 날짜 일뷰로 이동 후 편집 폼 열기
+    function btEditItemInDay(date, idx) {
+      btInputDate = date; btDailyOffset = _btDayOffset(date);
+      btDailyPeriod = 'day'; btAddingItem = false;
+      btEditItemDate = date; btEditItemIdx = idx;
+      btRenderCurrentTab();
+      setTimeout(btAutoCalcDisplay, 50);
+    }
 
-    function btBuildItemCard(item, idx) {
+    // date: 기간뷰에서 해당 카드의 실제 날짜 (일뷰에서는 생략 → btInputDate 사용)
+    function btBuildItemCard(item, idx, date) {
+      var cardDate = date || btInputDate;
       var cat = btConfig && btConfig.categories.find(function(c) { return c.id === item.catId; });
       var rev = btItemRevenue(item);
       var cst = btItemCost(item);
@@ -7075,10 +7063,14 @@
       var unitCost  = item.unitCost !== undefined ? Number(item.unitCost) : (units > 0 ? Math.round(cst / units) : 0);
       var h = '<div class="bt-item-card" style="--bt-cat-color:' + (cat ? cat.color : '#ddd') + '">';
       h += '<div class="bt-item-header">';
+      h += '<div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">';
       h += '<span class="bt-item-cat" style="color:' + (cat ? cat.color : '#888') + '">' + (cat ? cat.icon : '📦') + ' ' + (cat ? escapeHtml(cat.name) : '기타') + '</span>';
+      if (date) h += '<span class="bt-card-date">' + date.slice(5).replace('-', '/') + '</span>';
+      h += '</div>';
       h += '<div class="bt-item-actions">';
-      h += '<button class="btn-icon" onclick="btStartEditItem(\'' + btInputDate + '\',' + idx + ')">✏️</button>';
-      h += '<button class="btn-icon" onclick="btDeleteItem(\'' + btInputDate + '\',' + idx + ')">🗑️</button>';
+      // 기간뷰에서 수정: 해당 날짜의 일뷰로 이동 후 편집 폼 열기
+      h += '<button class="btn-icon" onclick="' + (date ? 'btEditItemInDay(\'' + cardDate + '\',' + idx + ')' : 'btStartEditItem(\'' + cardDate + '\',' + idx + ')') + '">✏️</button>';
+      h += '<button class="btn-icon" onclick="btDeleteItem(\'' + cardDate + '\',' + idx + ')">🗑️</button>';
       h += '</div></div>';
       h += '<div class="bt-item-nums">';
       h += '<div class="bt-num-row"><span class="bt-num-label">건수</span><span class="bt-num-val">' + btFmtN(units) + (cat ? cat.unitLabel : '건') + '</span></div>';
