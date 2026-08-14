@@ -1724,6 +1724,16 @@
     }
 
     function loadMenus() {
+      // 1순위: 사용자가 구조(순서/그룹)까지 바꾼 menuStructure 사용
+      var savedStructure = localStorage.getItem('menuStructure');
+      if (savedStructure) {
+        try {
+          var parsed = JSON.parse(savedStructure);
+          menus = _mergeNewDefaultPages(parsed, DEFAULT_MENUS);
+          return;
+        } catch(e) {}
+      }
+      // 2순위: DEFAULT_MENUS + 이름/아이콘 diff(menuCustomizations) 적용 (기존 방식)
       menus = JSON.parse(JSON.stringify(DEFAULT_MENUS));
       var saved = localStorage.getItem('menuCustomizations');
       if (saved) {
@@ -1742,7 +1752,35 @@
       }
     }
 
+    // menuStructure에 없는 DEFAULT_MENUS 항목을 보충 (Claude가 새 페이지 추가 시)
+    function _mergeNewDefaultPages(saved, defaults) {
+      var savedIds = {};
+      saved.forEach(function(item) {
+        savedIds[item.id] = true;
+        if (item.children) item.children.forEach(function(c) { savedIds[c.id] = true; });
+      });
+      defaults.forEach(function(defItem) {
+        if (!savedIds[defItem.id]) {
+          var clone = JSON.parse(JSON.stringify(defItem));
+          clone.order = saved.length;
+          saved.push(clone);
+        } else if (defItem.type === 'group' && defItem.children) {
+          var savedGroup = saved.find(function(s) { return s.id === defItem.id; });
+          defItem.children.forEach(function(defChild) {
+            if (!savedIds[defChild.id] && savedGroup) {
+              if (!savedGroup.children) savedGroup.children = [];
+              savedGroup.children.push(JSON.parse(JSON.stringify(defChild)));
+            }
+          });
+        }
+      });
+      return saved;
+    }
+
     function saveMenus() {
+      // 전체 구조 저장 (순서·그룹 변경 지원)
+      localStorage.setItem('menuStructure', JSON.stringify(menus));
+      // 이름/아이콘 diff도 병행 저장 (Firestore 하위 호환)
       var customizations = {};
       (function calcDiff(current, defList) {
         current.forEach(function(m) {
@@ -1985,28 +2023,49 @@
       if (!container) return;
 
       const sorted = menuDraft.slice().sort(function(a, b) { return a.order - b.order; });
-      let html = '<p class="mm-hint">이름과 이모지만 변경할 수 있습니다. 메뉴 구성은 고정되어 있습니다.</p>';
+      let html = '<p class="mm-hint">이름·이모지 변경 + <span style="font-weight:600">≡ 드래그</span>로 순서·그룹 이동. 새 항목 추가·삭제 불가.</p>';
       html += '<div class="mm-list">';
 
       sorted.forEach(function(item) {
+        var isFixed = (item.id === 'home' || item.id === 'settings');
+
         if (item.type === 'group') {
           const sortedChildren = (item.children || []).slice().sort(function(a, b) { return a.order - b.order; });
-          html += '<div class="mm-group">';
+          html += '<div class="mm-group" data-mm-type="group" data-mm-id="' + item.id + '"'
+            + ' draggable="true"'
+            + ' ondragstart="mmDragStart(event,&apos;group&apos;,&apos;' + item.id + '&apos;,null)"'
+            + ' ondragover="mmGroupDragOver(event,&apos;' + item.id + '&apos;)"'
+            + ' ondrop="mmGroupDrop(event,&apos;' + item.id + '&apos;)"'
+            + ' ondragend="mmDragEnd()">';
           html += '  <div class="mm-group-header">';
+          html += '    <span class="mm-drag-handle" title="드래그로 그룹 순서 변경">≡</span>';
           html += '    <button class="mm-emoji-btn" onclick="openMmEmojiPicker(&apos;group&apos;,&apos;' + item.id + '&apos;,&apos;&apos;)">' + renderEmoji(item.icon) + '</button>';
           html += '    <input class="mm-name-input" value="' + escapeHtml(item.name) + '" oninput="updateMmGroupName(&apos;' + item.id + '&apos;,this.value)" placeholder="대분류명">';
           html += '  </div>';
-          html += '  <div class="mm-children">';
+          html += '  <div class="mm-children" data-mm-group="' + item.id + '"'
+            + ' ondragover="mmZoneDragOver(event,&apos;' + item.id + '&apos;)"'
+            + ' ondrop="mmZoneDrop(event,&apos;' + item.id + '&apos;)">';
           sortedChildren.forEach(function(child) {
-            html += '    <div class="mm-menu-item">';
+            html += '    <div class="mm-menu-item" data-mm-type="page" data-mm-id="' + child.id + '" data-mm-group="' + item.id + '"'
+              + ' draggable="true"'
+              + ' ondragstart="mmDragStart(event,&apos;page&apos;,&apos;' + child.id + '&apos;,&apos;' + item.id + '&apos;)"'
+              + ' ondragover="mmPageDragOver(event,&apos;' + child.id + '&apos;,&apos;' + item.id + '&apos;)"'
+              + ' ondrop="mmPageDrop(event,&apos;' + child.id + '&apos;,&apos;' + item.id + '&apos;)"'
+              + ' ondragend="mmDragEnd()">';
+            html += '      <span class="mm-drag-handle" title="드래그로 위치·그룹 변경">≡</span>';
             html += '      <button class="mm-emoji-btn mm-emoji-btn-sm" onclick="openMmEmojiPicker(&apos;menu&apos;,&apos;' + item.id + '&apos;,&apos;' + child.id + '&apos;)">' + renderEmoji(child.icon) + '</button>';
             html += '      <input class="mm-name-input" value="' + escapeHtml(child.name) + '" oninput="updateMmMenuName(&apos;' + item.id + '&apos;,&apos;' + child.id + '&apos;,this.value)" placeholder="메뉴명">';
             html += '    </div>';
           });
+          if (sortedChildren.length === 0) {
+            html += '    <div class="mm-empty-zone">메뉴를 여기로 드래그하세요</div>';
+          }
           html += '  </div>';
           html += '</div>';
+
         } else if (item.type === 'page') {
-          html += '<div class="mm-top-page">';
+          html += '<div class="mm-top-page' + (isFixed ? ' mm-fixed' : '') + '">';
+          html += '  <span class="mm-drag-placeholder"></span>';
           html += '  <button class="mm-emoji-btn" onclick="openMmEmojiPicker(&apos;top&apos;,&apos;' + item.id + '&apos;,&apos;&apos;)">' + renderEmoji(item.icon) + '</button>';
           html += '  <input class="mm-name-input" value="' + escapeHtml(item.name) + '" oninput="updateMmTopName(&apos;' + item.id + '&apos;,this.value)" placeholder="메뉴명">';
           html += '  <span class="mm-fixed-badge">고정</span>';
@@ -2073,11 +2132,159 @@
     }
 
     function saveMmDraft() {
+      // 드래그로 바꾼 순서를 .order에 반영하고 저장
+      _mmReorder();
       menus = JSON.parse(JSON.stringify(menuDraft));
       saveMenus();
       if (window.FS && FS.isConnected()) FS.sync();
       renderSidebar();
       showToast('메뉴 설정 저장 완료');
+    }
+
+    // ========================
+    // 메뉴 관리 DnD
+    // ========================
+    var __mmDragType = null;   // 'page' | 'group'
+    var __mmDragId   = null;
+    var __mmDragSrcGroup = null;
+
+    function mmDragStart(e, type, id, srcGroup) {
+      // 드래그 핸들(≡)에서 시작한 경우만 허용
+      if (!e.target.classList.contains('mm-drag-handle')) {
+        e.preventDefault();
+        return;
+      }
+      __mmDragType = type;
+      __mmDragId = id;
+      __mmDragSrcGroup = srcGroup;
+      e.dataTransfer.effectAllowed = 'move';
+      // 드래그 중인 요소에 반투명 효과
+      var el = (type === 'group')
+        ? document.querySelector('[data-mm-type="group"][data-mm-id="' + id + '"]')
+        : document.querySelector('[data-mm-type="page"][data-mm-id="' + id + '"]');
+      if (el) setTimeout(function() { el.classList.add('mm-dragging'); }, 0);
+    }
+
+    function mmDragEnd() {
+      document.querySelectorAll('.mm-dragging,.mm-drop-above,.mm-drop-below,.mm-drop-zone-active')
+        .forEach(function(el) {
+          el.classList.remove('mm-dragging','mm-drop-above','mm-drop-below','mm-drop-zone-active');
+        });
+      __mmDragType = null; __mmDragId = null; __mmDragSrcGroup = null;
+    }
+
+    function _mmClearIndicators() {
+      document.querySelectorAll('.mm-drop-above,.mm-drop-below,.mm-drop-zone-active').forEach(function(el) {
+        el.classList.remove('mm-drop-above','mm-drop-below','mm-drop-zone-active');
+      });
+    }
+
+    // 페이지 항목 위에서의 dragover (삽입 위치 표시)
+    function mmPageDragOver(e, targetId, targetGroup) {
+      if (__mmDragType !== 'page' || targetId === __mmDragId) return;
+      e.preventDefault(); e.stopPropagation();
+      _mmClearIndicators();
+      var el = document.querySelector('[data-mm-type="page"][data-mm-id="' + targetId + '"]');
+      if (!el) return;
+      var mid = el.getBoundingClientRect().top + el.getBoundingClientRect().height / 2;
+      el.classList.add(e.clientY < mid ? 'mm-drop-above' : 'mm-drop-below');
+    }
+
+    // 페이지 항목에 drop
+    function mmPageDrop(e, targetId, targetGroup) {
+      e.preventDefault(); e.stopPropagation();
+      if (__mmDragType !== 'page' || !__mmDragId || targetId === __mmDragId) return;
+      _mmClearIndicators();
+
+      // 소스 그룹에서 페이지 제거
+      var srcGrp = menuDraft.find(function(m) { return m.id === __mmDragSrcGroup; });
+      if (!srcGrp || !srcGrp.children) return;
+      var si = srcGrp.children.findIndex(function(c) { return c.id === __mmDragId; });
+      if (si < 0) return;
+      var page = srcGrp.children.splice(si, 1)[0];
+
+      // 대상 그룹 찾기
+      var tgtGrp = menuDraft.find(function(m) {
+        return m.children && m.children.some(function(c) { return c.id === targetId; });
+      });
+      if (!tgtGrp) { srcGrp.children.splice(si, 0, page); mmDragEnd(); return; }
+
+      var tgtEl = document.querySelector('[data-mm-type="page"][data-mm-id="' + targetId + '"]');
+      var after = tgtEl ? e.clientY >= tgtEl.getBoundingClientRect().top + tgtEl.getBoundingClientRect().height / 2 : false;
+      var ti = tgtGrp.children.findIndex(function(c) { return c.id === targetId; });
+      tgtGrp.children.splice(after ? ti + 1 : ti, 0, page);
+      _mmReorder();
+      __mmDragType = null; __mmDragId = null; __mmDragSrcGroup = null;
+      renderMenuManager();
+    }
+
+    // 그룹 위에서의 dragover (그룹 순서 변경용)
+    function mmGroupDragOver(e, groupId) {
+      if (__mmDragType !== 'group' || groupId === __mmDragId) return;
+      e.preventDefault();
+      _mmClearIndicators();
+      var el = document.querySelector('[data-mm-type="group"][data-mm-id="' + groupId + '"]');
+      if (!el) return;
+      var mid = el.getBoundingClientRect().top + el.getBoundingClientRect().height / 2;
+      el.classList.add(e.clientY < mid ? 'mm-drop-above' : 'mm-drop-below');
+    }
+
+    // 그룹에 drop (그룹 순서 변경)
+    function mmGroupDrop(e, groupId) {
+      e.preventDefault(); e.stopPropagation();
+      if (__mmDragType !== 'group' || !__mmDragId || groupId === __mmDragId) return;
+      _mmClearIndicators();
+
+      var si = menuDraft.findIndex(function(m) { return m.id === __mmDragId; });
+      if (si < 0) return;
+      var group = menuDraft.splice(si, 1)[0];
+
+      var tgtEl = document.querySelector('[data-mm-type="group"][data-mm-id="' + groupId + '"]');
+      var after = tgtEl ? e.clientY >= tgtEl.getBoundingClientRect().top + tgtEl.getBoundingClientRect().height / 2 : false;
+      var ti = menuDraft.findIndex(function(m) { return m.id === groupId; });
+      menuDraft.splice(after ? ti + 1 : ti, 0, group);
+      _mmReorder();
+      __mmDragType = null; __mmDragId = null; __mmDragSrcGroup = null;
+      renderMenuManager();
+    }
+
+    // 그룹 자식 영역 위에서의 dragover (빈 그룹 또는 맨 아래로 이동)
+    function mmZoneDragOver(e, groupId) {
+      if (__mmDragType !== 'page') return;
+      e.preventDefault(); e.stopPropagation();
+      _mmClearIndicators();
+      var zone = document.querySelector('.mm-children[data-mm-group="' + groupId + '"]');
+      if (zone) zone.classList.add('mm-drop-zone-active');
+    }
+
+    // 그룹 자식 영역에 drop (그룹 맨 아래에 추가)
+    function mmZoneDrop(e, groupId) {
+      e.preventDefault(); e.stopPropagation();
+      if (__mmDragType !== 'page' || !__mmDragId || !groupId) return;
+      if (__mmDragSrcGroup === groupId) { mmDragEnd(); return; } // 같은 그룹이면 무시
+      _mmClearIndicators();
+
+      var srcGrp = menuDraft.find(function(m) { return m.id === __mmDragSrcGroup; });
+      if (!srcGrp || !srcGrp.children) return;
+      var si = srcGrp.children.findIndex(function(c) { return c.id === __mmDragId; });
+      if (si < 0) return;
+      var page = srcGrp.children.splice(si, 1)[0];
+
+      var tgtGrp = menuDraft.find(function(m) { return m.id === groupId; });
+      if (!tgtGrp) { srcGrp.children.splice(si, 0, page); mmDragEnd(); return; }
+      if (!tgtGrp.children) tgtGrp.children = [];
+      tgtGrp.children.push(page);
+      _mmReorder();
+      __mmDragType = null; __mmDragId = null; __mmDragSrcGroup = null;
+      renderMenuManager();
+    }
+
+    // order 필드를 배열 위치 기준으로 재계산
+    function _mmReorder() {
+      menuDraft.forEach(function(item, i) {
+        item.order = i;
+        if (item.children) item.children.forEach(function(child, j) { child.order = j; });
+      });
     }
 
     function updateMenuIcon(menuId, icon) {
@@ -3302,7 +3509,7 @@
           profileQuote: localStorage.getItem('profileQuote') || '',
           profilePhoto: localStorage.getItem('profilePhoto') || null
         };
-        ['designSettings','menuCustomizations','myEmojis','tagColorOverrides',
+        ['designSettings','menuCustomizations','menuStructure','myEmojis','tagColorOverrides',
          'workSettings','pomodoroSettings','notificationSettings','favoritePages','bae_done','dnSeenVersions'].forEach(function(k) {
           var v = localStorage.getItem(k);
           if (v !== null) { try { s[k] = JSON.parse(v); } catch(e) { s[k] = v; } }
@@ -3388,7 +3595,9 @@
             if (sm.profileQuote !== undefined) localStorage.setItem('profileQuote', sm.profileQuote);
             if (sm.profilePhoto) localStorage.setItem('profilePhoto', sm.profilePhoto);
             if (sm.designSettings) { designSettings = sm.designSettings; localStorage.setItem('designSettings', JSON.stringify(designSettings)); applyDesignSettings(); }
-            if (sm.menuCustomizations !== undefined) { localStorage.setItem('menuCustomizations', JSON.stringify(sm.menuCustomizations)); loadMenus(); renderSidebar(); }
+            if (sm.menuStructure !== undefined) localStorage.setItem('menuStructure', JSON.stringify(sm.menuStructure));
+            if (sm.menuCustomizations !== undefined) localStorage.setItem('menuCustomizations', JSON.stringify(sm.menuCustomizations));
+            if (sm.menuStructure !== undefined || sm.menuCustomizations !== undefined) { loadMenus(); renderSidebar(); }
             if (sm.myEmojis) localStorage.setItem('myEmojis', JSON.stringify(sm.myEmojis));
             if (sm.tagColorOverrides) localStorage.setItem('tagColorOverrides', JSON.stringify(sm.tagColorOverrides));
             if (sm.workSettings) { Object.assign(workSettings, sm.workSettings); localStorage.setItem('workSettings', JSON.stringify(workSettings)); }
