@@ -1775,28 +1775,15 @@
     }
 
     function loadSidebarState() {
-      const saved = localStorage.getItem('isSidebarCollapsed');
-      if (saved) {
-        try {
-          isSidebarCollapsed = JSON.parse(saved);
-          if (isSidebarCollapsed) {
-            document.getElementById('sidebar').classList.add('collapsed');
-            document.getElementById('sidebarToggleBtn').classList.remove('expanded');
-            document.getElementById('sidebarToggleIcon').textContent = '☰';
-            document.getElementById('sidebarToggleBtn').style.left = '16px';
-          } else {
-            document.getElementById('sidebarToggleBtn').classList.add('expanded');
-            document.getElementById('sidebarToggleIcon').textContent = '✕';
-            document.getElementById('sidebarToggleBtn').style.left = (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-width')) - 48) + "px";
-          }
-        } catch (e) {
-          // 기본값 유지
+      // 데스크탑에서만 collapsed 상태 복원 (모바일은 항상 닫힌 상태로 시작)
+      if (_isMobile()) return;
+      try {
+        var saved = localStorage.getItem('isSidebarCollapsed');
+        isSidebarCollapsed = saved ? JSON.parse(saved) : false;
+        if (isSidebarCollapsed) {
+          document.getElementById('sidebar').classList.add('collapsed');
         }
-      } else {
-        const navWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-width'));
-        document.getElementById('sidebarToggleBtn').style.left = (navWidth - 48) + "px";
-        document.getElementById('sidebarToggleBtn').classList.add('expanded');
-      }
+      } catch(e) {}
     }
 
     // ========================================
@@ -1831,7 +1818,7 @@
           
           html += '<div class="nav-item" data-page="' + page.id + '" onclick="navigateTo(\'' + page.id + '\')">';
           html += '  <span class="nav-icon">' + page.icon + '</span>';
-          html += '  <span>' + page.name + '</span>';
+          html += '  <span class="nav-label">' + page.name + '</span>';
           html += '  <span class="favorite-star active" onclick="event.stopPropagation(); toggleFavorite(\'' + page.id + '\')">★</span>';
           html += '</div>';
         });
@@ -1847,7 +1834,7 @@
           
           html += '<div class="nav-item" data-page="' + menu.id + '" onclick="navigateTo(\'' + menu.id + '\')">';
           html += '  <span class="nav-icon">' + menu.icon + '</span>';
-          html += '  <span>' + menu.name + '</span>';
+          html += '  <span class="nav-label">' + menu.name + '</span>';
           html += '  <span class="favorite-star ' + (isFavorite ? 'active' : '') + '" onclick="event.stopPropagation(); toggleFavorite(\'' + menu.id + '\')">' + (isFavorite ? '★' : '☆') + '</span>';
           html += '</div>';
           
@@ -1858,7 +1845,7 @@
           html += '  <div class="nav-group-header" onclick="toggleGroup(\'' + menu.id + '\')">';
           html += '    <div style="display: flex; align-items: center; gap: 8px;">';
           html += '      <span class="nav-icon">' + menu.icon + '</span>';
-          html += '      <span>' + menu.name + '</span>';
+          html += '      <span class="nav-label">' + menu.name + '</span>';
           html += '    </div>';
           html += '    <span class="nav-group-toggle">' + (isExpanded ? '▼' : '▶') + '</span>';
           html += '  </div>';
@@ -1872,7 +1859,7 @@
                 
                 html += '    <div class="nav-item nav-item-child" data-page="' + child.id + '" onclick="navigateTo(\'' + child.id + '\')">';
                 html += '      <span class="nav-icon">' + child.icon + '</span>';
-                html += '      <span>' + child.name + '</span>';
+                html += '      <span class="nav-label">' + child.name + '</span>';
                 html += '      <span class="favorite-star ' + (isFavorite ? 'active' : '') + '" onclick="event.stopPropagation(); toggleFavorite(\'' + child.id + '\')">' + (isFavorite ? '★' : '☆') + '</span>';
                 html += '    </div>';
               }
@@ -1916,40 +1903,30 @@
       renderSidebar();
     }
 
+    function _isMobile() { return window.innerWidth <= 768; }
+
+    // 모바일: 슬라이드 오버레이 열기/닫기
     function toggleSidebar() {
-      isSidebarCollapsed = !isSidebarCollapsed;
-      localStorage.setItem('isSidebarCollapsed', JSON.stringify(isSidebarCollapsed));
-
-      const sidebar = document.getElementById('sidebar');
-      const toggleBtn = document.getElementById('sidebarToggleBtn');
-      const toggleIcon = document.getElementById('sidebarToggleIcon');
-
-      if (isSidebarCollapsed) {
-        sidebar.classList.add('collapsed');
-        toggleBtn.classList.remove('expanded');
-        toggleIcon.textContent = '☰';
-        toggleBtn.style.left = '16px';
-      } else {
-        sidebar.classList.remove('collapsed');
-        toggleBtn.classList.add('expanded');
-        toggleIcon.textContent = '✕';
-        const navWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-width'));
-        toggleBtn.style.left = (navWidth - 48) + "px";
-      }
+      var sidebar = document.getElementById('sidebar');
+      var backdrop = document.getElementById('sidebar-backdrop');
+      var isOpen = sidebar.classList.toggle('open');
+      if (backdrop) backdrop.classList.toggle('open', isOpen);
     }
 
-    // 사이드바 펼친 상태에서 외부 클릭/터치 시 접기
-    document.addEventListener('click', function(e) {
-      if (isSidebarCollapsed) return;
-      const sidebar = document.getElementById('sidebar');
-      if (!sidebar) return;
-      // composedPath()로 원본 경로 확인 (renderSidebar() 후 e.target이 DOM에서 분리돼도 안전)
-      var path = e.composedPath ? e.composedPath() : [];
-      var inSidebar = path.some(function(el) { return el === sidebar; }) || sidebar.contains(e.target);
-      if (inSidebar) return;
-      if (e.target.closest && (e.target.closest('.sidebar-toggle-btn') || e.target.closest('.mobile-top-bar'))) return;
-      toggleSidebar();
-    });
+    function closeSidebar() {
+      var sidebar = document.getElementById('sidebar');
+      var backdrop = document.getElementById('sidebar-backdrop');
+      sidebar.classList.remove('open');
+      if (backdrop) backdrop.classList.remove('open');
+    }
+
+    // 데스크탑: 아이콘 전용 60px 접기 토글
+    function toggleSidebarCollapse() {
+      isSidebarCollapsed = !isSidebarCollapsed;
+      try { localStorage.setItem('isSidebarCollapsed', JSON.stringify(isSidebarCollapsed)); } catch(e) {}
+      var sidebar = document.getElementById('sidebar');
+      sidebar.classList.toggle('collapsed', isSidebarCollapsed);
+    }
 
     // ========================================
     // 네비게이션
@@ -1981,9 +1958,7 @@
       var dnFab = document.getElementById('dnQuestionFab');
       if (dnFab) dnFab.style.display = (pageId === 'devnotes') ? 'flex' : 'none';
 
-      if (window.innerWidth <= 768) {
-        toggleSidebar();
-      }
+      closeSidebar();  // 모바일에서 사이드바 자동 닫기 (데스크탑에서는 무효)
     }
 
     function updateMobileTopTitle() {
