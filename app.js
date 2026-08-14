@@ -6808,11 +6808,16 @@
         h += '<div class="bt-empty">이 날 입력된 매출이 없습니다.</div>';
       }
 
-      // 추가 폼 / 버튼
+      // 추가 폼 (그리드 바깥 전체 너비)
       if (btAddingItem && btEditItemDate === null) {
         h += btBuildItemForm(null, null);
-      } else {
-        h += '<button class="btn-primary bt-add-btn" onclick="btStartAddItem()">+ 매출 추가</button>';
+      }
+
+      // + 카드 (추가 중일 때는 숨김)
+      if (!btAddingItem || btEditItemDate !== null) {
+        h += '<div class="bt-item-grid" style="margin-top:8px;">';
+        h += '<button class="btn-add-card" onclick="btStartAddItem()"><span class="btn-add-card-plus">+</span>매출 추가</button>';
+        h += '</div>';
       }
 
       return h;
@@ -6993,7 +6998,7 @@
       showToast('매출 저장됨');
     }
     function btDeleteItem(date, idx) {
-      showConfirmModal('이 항목을 삭제할까요?', function() {
+      showConfirm('삭제 확인', '이 항목을 삭제할까요?', function(ok) { if (!ok) return;
         var entryIdx = btDailyEntries.findIndex(function(e) { return e.date === date; });
         if (entryIdx < 0) return;
         btDailyEntries[entryIdx].items.splice(idx, 1);
@@ -7024,7 +7029,6 @@
       var actionsByCat = btActionsByCategory();
       var h = '';
 
-      h += '<button class="btn-primary bt-add-btn" onclick="btStartAddAction()">+ 액션 추가</button>';
       if (btAddingAction && !btEditActionId) h += btBuildActionForm(null);
 
       // 카테고리별 그룹 표시
@@ -7059,7 +7063,13 @@
         });
         h += '</div>';
       }
-      if (!hasAny) h += '<div class="bt-empty">등록된 액션플랜이 없습니다.</div>';
+      if (!hasAny) h += '<div class="bt-empty">아직 액션플랜이 없습니다.</div>';
+      // + 카드 (추가 폼 열려있지 않을 때만)
+      if (!btAddingAction || btEditActionId) {
+        h += '<div class="bt-action-grid" style="margin-top:8px;">';
+        h += '<button class="btn-add-card" onclick="btStartAddAction()"><span class="btn-add-card-plus">+</span>액션 추가</button>';
+        h += '</div>';
+      }
       return h;
     }
 
@@ -7130,7 +7140,7 @@
     function btCancelAction() { btAddingAction = false; btEditActionId = null; btRenderCurrentTab(); }
     function btSaveAction(id) {
       var name = (document.getElementById('btActName') || {}).value || '';
-      if (!name.trim()) { showAlertModal('액션명을 입력해주세요.'); return; }
+      if (!name.trim()) { showAlert('입력 오류', '액션명을 입력해주세요.'); return; }
       var action = {
         id: id || btGenId('btact'),
         name: name.trim(),
@@ -7150,7 +7160,7 @@
       saveBt(); btRenderCurrentTab(); showToast('액션 저장됨');
     }
     function btDeleteAction(id) {
-      showConfirmModal('이 액션을 삭제할까요?', function() {
+      showConfirm('삭제 확인', '이 액션을 삭제할까요?', function(ok) { if (!ok) return;
         btActions = btActions.filter(function(a) { return a.id !== id; });
         saveBt(); btRenderCurrentTab(); showToast('삭제됨');
       });
@@ -7159,22 +7169,28 @@
     // ── 분기 ──
     function btBuildQuarters() {
       var qs = btConfig ? (btConfig.quarters || []) : [];
-      var h = '<button class="btn-primary bt-add-btn" onclick="btStartAddQuarter()">+ 분기 추가</button>';
+      var h = '';
       if (btAddingQuarter && !btEditQuarterId) h += btBuildQuarterForm(null);
-      if (!qs.length) {
-        h += '<div class="bt-empty">등록된 분기가 없습니다.</div>';
-      } else {
+      if (qs.length) {
         h += '<div class="bt-section-title">분기 설정 및 현황</div>';
         h += '<div class="bt-quarter-grid">';
         qs.forEach(function(q) {
           if (btEditQuarterId === q.id) { h += '<div class="bt-item-grid-span">' + btBuildQuarterForm(q) + '</div>'; return; }
           h += btBuildQuarterCard(q);
         });
+        // + 카드
+        if (!btAddingQuarter || btEditQuarterId) {
+          h += '<button class="btn-add-card" onclick="btStartAddQuarter()"><span class="btn-add-card-plus">+</span>분기 추가</button>';
+        }
         h += '</div>';
-        // 분기 목표 계산 방식 안내
         h += '<div class="bt-info-box">';
         h += '<strong>📊 대시보드 목표 적용 방식</strong><br>';
         h += '대시보드에서 <em>이번 달</em>은 월 목표 그대로, <em>이번 주</em>는 월 목표 ÷ 30 × 7일, <em>오늘</em>은 ÷ 30 × 1일로 비례 계산됩니다.';
+        h += '</div>';
+      } else {
+        h += '<div class="bt-quarter-grid">';
+        h += '<div class="bt-empty" style="padding:20px 0;"></div>';
+        if (!btAddingQuarter) h += '<button class="btn-add-card" onclick="btStartAddQuarter()"><span class="btn-add-card-plus">+</span>분기 추가</button>';
         h += '</div>';
       }
       return h;
@@ -7222,7 +7238,7 @@
     function btCancelQuarter() { btAddingQuarter = false; btEditQuarterId = null; btRenderCurrentTab(); }
     function btSaveQuarter(id) {
       var name = (document.getElementById('btQName') || {}).value || '';
-      if (!name.trim()) { showAlertModal('분기 이름을 입력해주세요.'); return; }
+      if (!name.trim()) { showAlert('입력 오류', '분기 이름을 입력해주세요.'); return; }
       var q = {
         id: id || btGenId('btq'),
         name: name.trim(),
@@ -7241,7 +7257,7 @@
       saveBt(); btRenderCurrentTab(); showToast('분기 저장됨');
     }
     function btDeleteQuarter(id) {
-      showConfirmModal('이 분기를 삭제할까요?', function() {
+      showConfirm('삭제 확인', '이 분기를 삭제할까요?', function(ok) { if (!ok) return;
         btConfig.quarters = btConfig.quarters.filter(function(q) { return q.id !== id; });
         saveBt(); btRenderCurrentTab(); showToast('삭제됨');
       });
@@ -7253,7 +7269,6 @@
 
       // 카테고리
       h += '<div class="bt-section-title">카테고리</div>';
-      h += '<button class="btn-primary bt-add-btn" onclick="btStartAddCat()">+ 카테고리 추가</button>';
       if (btAddingCat && !btEditCatId) h += btBuildCatForm(null);
       var cats = btConfig ? (btConfig.categories || []) : [];
       h += '<div class="bt-settings-cat-grid">';
@@ -7264,12 +7279,14 @@
           h += btBuildCatRow(cat);
         }
       });
+      // + 카드
+      if (!btAddingCat || btEditCatId) {
+        h += '<button class="btn-add-card" onclick="btStartAddCat()"><span class="btn-add-card-plus">+</span>카테고리 추가</button>';
+      }
       h += '</div>';
-      if (!cats.length) h += '<div class="bt-empty">카테고리가 없습니다.</div>';
 
       // 고정비
       h += '<div class="bt-section-title" style="margin-top:24px;">고정비</div>';
-      h += '<button class="btn-primary bt-add-btn" onclick="btStartAddCost()">+ 고정비 추가</button>';
       if (btAddingCost && !btEditCostId) h += btBuildCostForm(null);
       var fcs = btConfig ? (btConfig.fixedCosts || []) : [];
       h += '<div class="bt-settings-cat-grid">';
@@ -7280,8 +7297,11 @@
           h += btBuildCostRow(fc);
         }
       });
+      // + 카드
+      if (!btAddingCost || btEditCostId) {
+        h += '<button class="btn-add-card" onclick="btStartAddCost()"><span class="btn-add-card-plus">+</span>고정비 추가</button>';
+      }
       h += '</div>';
-      if (!fcs.length) h += '<div class="bt-empty">고정비가 없습니다.</div>';
       var total = btFixedCostTotal();
       h += '<div class="bt-cost-total">월 고정비 합계: <strong>' + btFmtW(total) + '</strong></div>';
 
@@ -7345,7 +7365,7 @@
     function btCancelCat() { btAddingCat = false; btEditCatId = null; btRenderCurrentTab(); }
     function btSaveCat(id) {
       var name = (document.getElementById('btCatName') || {}).value || '';
-      if (!name.trim()) { showAlertModal('카테고리 이름을 입력하세요.'); return; }
+      if (!name.trim()) { showAlert('입력 오류', '카테고리 이름을 입력하세요.'); return; }
       var rateEl = document.getElementById('btCatRate');
       var rateStr = rateEl ? rateEl.value : '';
       var marginRate = rateStr !== '' ? parseFloat(rateStr) / 100 : null;
@@ -7369,7 +7389,7 @@
       saveBt(); btRenderCurrentTab(); showToast('카테고리 저장됨');
     }
     function btDeleteCat(id) {
-      showConfirmModal('이 카테고리를 삭제할까요? 연관된 입력 데이터의 카테고리 표시는 변경됩니다.', function() {
+      showConfirm('삭제 확인', '이 카테고리를 삭제할까요? 연관된 입력 데이터의 카테고리 표시는 변경됩니다.', function(ok) { if (!ok) return;
         btConfig.categories = btConfig.categories.filter(function(c) { return c.id !== id; });
         saveBt(); btRenderCurrentTab(); showToast('삭제됨');
       });
@@ -7397,7 +7417,7 @@
     function btCancelCost() { btAddingCost = false; btEditCostId = null; btRenderCurrentTab(); }
     function btSaveCost(id) {
       var name = (document.getElementById('btFcName') || {}).value || '';
-      if (!name.trim()) { showAlertModal('항목명을 입력하세요.'); return; }
+      if (!name.trim()) { showAlert('입력 오류', '항목명을 입력하세요.'); return; }
       var fc = {
         id: id || btGenId('btfc'),
         name: name.trim(),
@@ -7414,7 +7434,7 @@
       saveBt(); btRenderCurrentTab(); showToast('고정비 저장됨');
     }
     function btDeleteCost(id) {
-      showConfirmModal('이 고정비를 삭제할까요?', function() {
+      showConfirm('삭제 확인', '이 고정비를 삭제할까요?', function(ok) { if (!ok) return;
         btConfig.fixedCosts = btConfig.fixedCosts.filter(function(f) { return f.id !== id; });
         saveBt(); btRenderCurrentTab(); showToast('삭제됨');
       });
@@ -7569,7 +7589,7 @@
       }
 
       if (activeHabits.length === 0) {
-        html += '<div class="empty-state"><p>이 날 할 습관이 없습니다.</p><button class="btn-primary" onclick="switchHabitView(\'list\')">+ 습관 추가하기</button></div>';
+        html += '<div class="empty-state"><p>이 날 할 습관이 없습니다.</p><button class="btn-confirm" onclick="switchHabitView(\'list\')">+ 습관 추가하기</button></div>';
       } else {
         html += '<div class="habit-today-list">';
         activeHabits.forEach(function(h) {
@@ -7760,7 +7780,7 @@
 
       var html = '<div class="habit-list-wrap">';
 
-      /* ── 컨트롤 바 (검색/정렬 + 추가 버튼) ── */
+      /* ── 컨트롤 바 (검색/정렬) ── */
       html += '<div class="work-list-controls" style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">';
       html += '<input class="input-field" style="flex:1;min-width:0;height:34px;padding:6px 10px;font-size:13px;" placeholder="습관 검색..." value="' + escapeHtml(habitListSearch) + '" oninput="habitListSetSearch(this.value)">';
       html += '<select class="input-field" style="width:auto;height:34px;padding:4px 8px;font-size:13px;" onchange="habitListSetSort(this.value)">';
@@ -7768,7 +7788,6 @@
       html += '<option value="name"' + (habitListSort==='name'?' selected':'') + '>이름순</option>';
       html += '<option value="streak"' + (habitListSort==='streak'?' selected':'') + '>연속일순</option>';
       html += '</select>';
-      html += '<button class="btn-confirm" style="white-space:nowrap;flex-shrink:0;" onclick="openHabitForm(null)">+ 습관 추가</button>';
       html += '</div>';
 
       /* ── 선택 바 ── */
@@ -7782,9 +7801,7 @@
       }
       html += '</div>';
 
-      if (habits.length === 0) {
-        html += '<div class="empty-state"><p>아직 등록된 습관이 없습니다.</p></div>';
-      } else if (pageItems.length === 0) {
+      if (pageItems.length === 0 && habits.length > 0) {
         html += '<div class="empty-state"><p>검색 결과가 없습니다.</p></div>';
       } else {
         html += '<div class="habit-grid">';
@@ -7806,6 +7823,7 @@
           html += '<div class="habit-grid-color-bar" style="background:' + (h.color || '#ffde59') + '"></div>';
           html += '</div>';
         });
+        html += '<button class="btn-add-card" onclick="openHabitForm(null)"><span class="btn-add-card-plus">+</span><span>습관 추가</span></button>';
         html += '</div>';
       }
 
@@ -10790,14 +10808,14 @@
       html += '<option value="count_desc"' + (quirkListSort==='count_desc'?' selected':'') + '>많은순</option>';
       html += '<option value="count_asc"' + (quirkListSort==='count_asc'?' selected':'') + '>적은순</option>';
       html += '</select>';
-      html += '<button class="btn-primary" onclick="openQuirkForm(null)" style="white-space:nowrap;">+ 자세히 추가</button>';
+      html += '<button class="btn-confirm" onclick="openQuirkForm(null)" style="white-space:nowrap;flex-shrink:0;">+ 자세히 추가</button>';
       html += '</div>';
 
       html += pagerHtml;
 
       if (!quirks.length) {
         html += '<div class="empty-state"><p>버릇이 없습니다.<br>위에서 버릇을 추가해보세요.</p></div>';
-      } else if (!pageItems.length) {
+      } else if (!pageItems.length && quirks.length > 0) {
         html += '<div class="empty-state"><p>검색 결과가 없습니다.</p></div>';
       } else {
         html += '<div class="quirk-list-grid">';
@@ -10813,6 +10831,7 @@
           if (q.memo) html += '<div class="quirk-card-memo">' + escapeHtml(q.memo.substring(0, 28)) + (q.memo.length > 28 ? '…' : '') + '</div>';
           html += '</div>';
         });
+        html += '<button class="btn-add-card" onclick="openQuirkForm(null)"><span class="btn-add-card-plus">+</span><span>자세히 추가</span></button>';
         html += '</div>';
       }
 
