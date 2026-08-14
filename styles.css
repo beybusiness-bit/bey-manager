@@ -3748,7 +3748,7 @@
     /* 카테고리 비교 그리드 (데스크탑 2열) */
     .bt-cat-compare-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-bottom:10px; }
     .bt-cat-compare-card { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:12px;padding:12px 14px; }
-    .bt-cat-compare-header { font-size:14px;font-weight:700;margin-bottom:8px; }
+    .bt-cat-compare-header { font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px; }
     .bt-cat-compare-body { display:flex;flex-direction:column;gap:4px; }
     .bt-compare-row { display:flex;justify-content:space-between;font-size:13px; }
     .bt-compare-row.plan { color:var(--text-secondary,#888);font-style:italic; }
