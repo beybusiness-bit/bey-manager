@@ -26,8 +26,7 @@
         id: 'group-sos', type: 'group', icon: '💚', name: '조난 구조 중', order: 1,
         children: [
           { id: 'work', type: 'page', icon: '🧑‍🚒', name: '일', slug: 'work', order: 0 },
-          { id: 'habit', type: 'page', icon: '🍎', name: '습관', slug: 'habit', order: 1 },
-          { id: 'quirk', type: 'page', icon: '🔁', name: '버릇', slug: 'quirk', order: 2 },
+          { id: 'quirk', type: 'page', icon: '🔁', name: '버릇', slug: 'quirk', order: 1 },
         ]
       },
       {
@@ -39,11 +38,12 @@
       {
         id: 'group-storage', type: 'group', icon: '🎁', name: '보관보관', order: 3,
         children: [
-          { id: 'daily', type: 'page', icon: '📅', name: '시간표', slug: 'daily', order: 0 },
-          { id: 'recipe', type: 'page', icon: '🍳', name: '레시피', slug: 'recipe', order: 1 },
-          { id: 'money', type: 'page', icon: '💰', name: '금전', slug: 'money', order: 2 },
-          { id: 'todo', type: 'page', icon: '📝', name: '할일', slug: 'todo', order: 3 },
-          { id: 'idea', type: 'page', icon: '💡', name: '아이디어', slug: 'idea', order: 4 },
+          { id: 'habit', type: 'page', icon: '🍎', name: '습관', slug: 'habit', order: 0 },
+          { id: 'daily', type: 'page', icon: '📅', name: '시간표', slug: 'daily', order: 1 },
+          { id: 'recipe', type: 'page', icon: '🍳', name: '레시피', slug: 'recipe', order: 2 },
+          { id: 'money', type: 'page', icon: '💰', name: '금전', slug: 'money', order: 3 },
+          { id: 'todo', type: 'page', icon: '📝', name: '할일', slug: 'todo', order: 4 },
+          { id: 'idea', type: 'page', icon: '💡', name: '아이디어', slug: 'idea', order: 5 },
         ]
       },
       { id: 'settings', type: 'page', icon: '⚙️', name: '설정', slug: 'settings', order: 4 },
