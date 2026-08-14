@@ -6916,6 +6916,26 @@
       '#fd79a8','#e84393','#00b894','#fdcb6e','#dfe6e9'
     ];
 
+    // 새 할일 생성 시 랜덤으로 배정할 이모지 풀
+    var WORK_EMOJI_POOL = [
+      '📝','✅','🎯','💡','📊','🔧','💻','📱','🎨','📚',
+      '🚀','⚡','🔍','💬','📌','⚙️','🎵','📷','💪','🌟',
+      '🔑','📦','🛠️','✨','🎉','📢','🔔','💰','🏆','⭐',
+      '🔥','💎','🌈','🧩','🎭','🏃','🌊','🎪','🦋','🍀',
+      '🎬','🎤','🖊️','📐','🔬','🌿','🍕','☕','🎸','🏅'
+    ];
+
+    function randomWorkEmoji() {
+      return WORK_EMOJI_POOL[Math.floor(Math.random() * WORK_EMOJI_POOL.length)];
+    }
+
+    function hexToRgba(hex, alpha) {
+      var r = parseInt(hex.slice(1,3), 16);
+      var g = parseInt(hex.slice(3,5), 16);
+      var b = parseInt(hex.slice(5,7), 16);
+      return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+    }
+
     function emojiToWorkColor(emoji) {
       var s = emoji || '📋';
       var hash = 0;
@@ -7227,7 +7247,7 @@
       var parent = getParentTask(item);
       var html = '<div class="work-kanban-card' + (isDone ? ' done' : '') + (item.isBonus ? ' bonus' : '') + (item.parentId ? ' linked' : '') + '"'
         + ' data-id="' + item.id + '"'
-        + ' style="border-left:3px solid ' + color + '"'
+        + ' style="background:' + hexToRgba(color, 0.13) + '"'
         + ' draggable="true"'
         + ' ondragstart="workDragStart(event,\'' + item.id + '\',\'' + status + '\')"'
         + ' ondragend="workDragEnd(event)"'
@@ -7518,19 +7538,21 @@
     var _workModalBasketSelectedId = null;
 
     function openWorkItemModal(dateStr, isBonus, parentId) {
-      var parentEmoji = '📋';
+      var initEmoji;
       if (parentId) {
         var par = workItems.find(function(it) { return it.id === parentId; });
-        if (par && par.emoji) parentEmoji = par.emoji;
+        initEmoji = (par && par.emoji) ? par.emoji : randomWorkEmoji();
+      } else {
+        initEmoji = randomWorkEmoji();
       }
-      workItemDraft = { emoji: parentEmoji, color: null, isBonus: !!isBonus, date: dateStr || null, parentId: parentId || null };
+      workItemDraft = { emoji: initEmoji, color: null, isBonus: !!isBonus, date: dateStr || null, parentId: parentId || null };
       workItemEditId = null;
       _workModalBasketSelectedId = null;
       var modal = document.getElementById('workItemModal');
       /* 제목 */
       var titleText = parentId ? '연결 할일 추가' : (isBonus ? '⭐ 보너스 할일 추가' : (dateStr ? '할일 추가' : '바구니에 할일 추가'));
       document.getElementById('workItemModalTitle').textContent = titleText;
-      document.getElementById('workEmojiBtn').innerHTML = parentEmoji;
+      document.getElementById('workEmojiBtn').innerHTML = initEmoji;
       document.getElementById('workTitleInput').value = '';
       document.getElementById('workMemoInput').value = '';
       /* 상위 할일 표시 — 반드시 명시적으로 숨기거나 채움 */
