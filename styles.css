@@ -3718,3 +3718,71 @@
     #devnotesPage .dn-dash-actions { display:flex;gap:8px;flex-wrap:wrap;margin-top:4px; }
     #devnotesPage .dn-ch-divider { border:none;border-top:1px solid var(--border-color,#eee);margin:1.5rem 0; }
     #devnotesPage .dn-scene-label { font-size:12px;font-weight:700;color:var(--text-secondary,#999);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;padding:0; }
+
+    /* ========================================
+       돈을 벌자 — 매출 트래커
+       ======================================== */
+    #business-trackerPage .bt-dashboard { padding: 4px 0; }
+    .bt-section-title { font-size: 13px; font-weight: 700; color: var(--text-secondary, #888); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; margin-top: 4px; }
+    .bt-kpi-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-bottom: 12px; }
+    .bt-kpi-card { background: var(--card-bg, #fff); border: 1px solid var(--border-color, #eee); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+    .bt-kpi-val { font-size: 20px; font-weight: 700; color: var(--text-primary, #222); }
+    .bt-kpi-val.positive { color: #1a8c60; }
+    .bt-kpi-val.negative { color: #e53935; }
+    .bt-kpi-label { font-size: 12px; color: var(--text-secondary, #888); }
+    .bt-progress-wrap { height: 10px; background: var(--body-bg, #f5f5f5); border-radius: 6px; overflow: hidden; margin-bottom: 6px; }
+    .bt-progress-bar { height: 100%; background: var(--primary-yellow, #ffde59); border-radius: 6px; transition: width .4s; max-width: 100%; }
+    .bt-cat-list { display: flex; flex-direction: column; gap: 6px; }
+    .bt-cat-row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--card-bg, #fff); border: 1px solid var(--border-color, #eee); border-radius: 10px; }
+    .bt-cat-icon { font-size: 1.3em; flex-shrink: 0; }
+    .bt-cat-name { flex: 1; font-size: 14px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bt-cat-val { font-size: 14px; font-weight: 700; white-space: nowrap; }
+    .bt-cat-units { font-size: 12px; color: var(--text-secondary, #888); white-space: nowrap; }
+    .bt-recent-list { display: flex; flex-direction: column; gap: 6px; }
+    .bt-recent-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--card-bg, #fff); border: 1px solid var(--border-color, #eee); border-radius: 10px; cursor: pointer; transition: background .1s; }
+    .bt-recent-row:hover { background: var(--body-bg, #f5f5f5); }
+    .bt-recent-date { font-size: 13px; font-weight: 600; min-width: 90px; }
+    .bt-recent-rev { font-size: 14px; font-weight: 700; flex: 1; }
+    .bt-recent-items { font-size: 12px; color: var(--text-secondary, #888); }
+    /* 날짜 네비 */
+    .bt-date-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .bt-date-input { font-size: 14px; padding: 6px 10px; border: 1px solid var(--border-color, #ddd); border-radius: 8px; background: var(--card-bg, #fff); color: var(--text-primary, #222); flex: 1; min-width: 130px; }
+    .bt-day-summary { display: flex; gap: 16px; font-size: 14px; font-weight: 600; padding: 8px 12px; background: color-mix(in srgb, var(--primary-yellow, #ffde59) 20%, transparent); border-radius: 10px; margin-bottom: 10px; }
+    /* 아이템 카드 */
+    .bt-item-card { background: var(--card-bg, #fff); border: 1px solid var(--border-color, #eee); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; }
+    .bt-item-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .bt-item-cat { font-size: 13px; font-weight: 700; }
+    .bt-item-actions { display: flex; gap: 4px; }
+    .bt-item-nums { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; }
+    .bt-item-memo { margin-top: 8px; font-size: 12.5px; color: var(--text-secondary, #666); background: var(--body-bg, #f8f8f8); border-radius: 7px; padding: 6px 10px; border-left: 3px solid var(--border-color, #ddd); }
+    /* 폼 */
+    .bt-item-form { background: var(--card-bg, #fff); border: 1px solid var(--primary-yellow, #ffde59); border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+    .bt-form-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+    .bt-form-row label { font-size: 12px; font-weight: 600; color: var(--text-secondary, #888); }
+    .bt-select { font-size: 14px; padding: 8px 10px; border: 1px solid var(--border-color, #ddd); border-radius: 8px; background: var(--card-bg, #fff); color: var(--text-primary, #222); width: 100%; }
+    .bt-input { font-size: 14px; padding: 8px 10px; border: 1px solid var(--border-color, #ddd); border-radius: 8px; background: var(--card-bg, #fff); color: var(--text-primary, #222); width: 100%; box-sizing: border-box; }
+    .bt-cost-mode-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .bt-mode-btn { font-size: 12px; padding: 5px 12px; border: 1px solid var(--border-color, #ddd); border-radius: 20px; background: transparent; cursor: pointer; color: var(--text-secondary, #888); transition: all .12s; }
+    .bt-mode-btn.active { background: var(--primary-yellow, #ffde59); border-color: var(--primary-yellow, #ffde59); color: #222; font-weight: 600; }
+    .bt-form-actions { display: flex; gap: 8px; margin-top: 4px; }
+    .bt-add-btn { margin-bottom: 12px; }
+    /* 액션플랜 */
+    .bt-action-list { display: flex; flex-direction: column; gap: 8px; }
+    .bt-action-card { background: var(--card-bg, #fff); border: 1px solid var(--border-color, #eee); border-radius: 12px; padding: 12px 14px; }
+    .bt-action-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .bt-action-name { font-size: 15px; font-weight: 700; }
+    .bt-action-cat { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+    .bt-action-meta { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; color: var(--text-secondary, #777); }
+    /* 분기 */
+    .bt-quarter-card { background: var(--card-bg, #fff); border: 1px solid var(--border-color, #eee); border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+    .bt-quarter-card.active-quarter { border-color: var(--primary-yellow, #ffde59); background: color-mix(in srgb, var(--primary-yellow, #ffde59) 8%, var(--card-bg, #fff)); }
+    .bt-quarter-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .bt-quarter-name { font-size: 15px; font-weight: 700; }
+    .bt-quarter-meta { font-size: 12px; color: var(--text-secondary, #888); margin-bottom: 8px; }
+    .bt-quarter-nums { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; margin-bottom: 8px; }
+    .bt-badge { font-size: 10px; font-weight: 700; background: var(--primary-yellow, #ffde59); color: #222; padding: 2px 7px; border-radius: 20px; margin-left: 6px; }
+    /* 설정 */
+    .bt-settings-row { min-height: 44px; }
+    .bt-settings-meta { font-size: 12px; color: var(--text-secondary, #888); margin-left: auto; white-space: nowrap; }
+    .bt-cost-total { font-size: 14px; padding: 10px 14px; border-radius: 10px; background: var(--body-bg, #f5f5f5); margin-top: 10px; }
+    .bt-empty { color: var(--text-secondary, #aaa); font-size: 14px; padding: 24px 0; text-align: center; }
