@@ -6457,12 +6457,20 @@
         var first = new Date(year, month, 1), last = new Date(year, month+1, 0);
         return { start: fmt(first), end: fmt(last), label: year+'년 '+(month+1)+'월', days: last.getDate(), year: year, month: month };
       }
-      // quarter
-      var q = btGetCurrentQuarter();
-      if (q) return { start: q.startDate, end: q.endDate, label: q.name, days: 90, quarterTarget: q.monthlyTargetRevenue * 3 };
+      // quarter — offset은 설정된 분기 목록에서의 인덱스 이동량 (0=현재분기)
+      var allQs = (btConfig && btConfig.quarters) ? btConfig.quarters.slice().sort(function(a,b){ return a.startDate > b.startDate ? 1 : -1; }) : [];
+      if (allQs.length > 0) {
+        var tStr = t, curQIdx = -1;
+        allQs.forEach(function(qObj, i) { if (qObj.startDate <= tStr && qObj.endDate >= tStr) curQIdx = i; });
+        if (curQIdx < 0) curQIdx = allQs.length - 1; // 현재 분기 없으면 마지막 분기
+        var targetQIdx = Math.max(0, Math.min(allQs.length - 1, curQIdx + (offset||0)));
+        var qObj = allQs[targetQIdx];
+        return { start: qObj.startDate, end: qObj.endDate, label: qObj.name, days: 90, quarterTarget: (qObj.monthlyTargetRevenue||0)*3, qIdx: targetQIdx, qTotal: allQs.length };
+      }
+      // 분기 미설정 시 현재 달력 분기
       var d2 = new Date(t), qm = Math.floor(d2.getMonth()/3)*3;
-      var qs = new Date(d2.getFullYear(), qm, 1), qe = new Date(d2.getFullYear(), qm+3, 0);
-      return { start: fmt(qs), end: fmt(qe), label: 'Q'+(Math.floor(qm/3)+1), days: 90 };
+      var qs2 = new Date(d2.getFullYear(), qm, 1), qe2 = new Date(d2.getFullYear(), qm+3, 0);
+      return { start: fmt(qs2), end: fmt(qe2), label: 'Q'+(Math.floor(qm/3)+1), days: 90, qIdx: 0, qTotal: 1 };
     }
 
     function btGenId(prefix) {
@@ -6891,15 +6899,20 @@
       });
       h += '</div>';
 
+      // ─ 통합 기간 네비 (일/주/월/분기 공통) ─
+      var range = btPeriodRange(btDailyPeriod, btDailyOffset);
+      if (btDailyPeriod === 'day') btInputDate = range.start; // offset 방식으로 btInputDate 동기화
+      var dCanPrev = btDailyPeriod !== 'quarter' || range.qIdx > 0;
+      var dCanNext = btDailyPeriod !== 'quarter' || range.qIdx < range.qTotal - 1;
+      h += '<div class="bt-date-nav">';
+      h += '<button class="btn-icon"' + (!dCanPrev ? ' disabled style="opacity:.35;cursor:default"' : '') + ' onclick="btChangeDailyOffset(-1)">◀</button>';
+      h += '<span style="font-weight:600;padding:0 8px;">' + range.label + '</span>';
+      h += '<button class="btn-icon"' + (!dCanNext ? ' disabled style="opacity:.35;cursor:default"' : '') + ' onclick="btChangeDailyOffset(1)">▶</button>';
+      h += '<button class="btn-icon" onclick="btChangeDailyOffset(0,true)">' + (btDailyPeriod === 'day' ? '오늘' : '현재') + '</button>';
+      h += '</div>';
+
       if (btDailyPeriod === 'day') {
         // ─ 일 뷰 ─
-        h += '<div class="bt-date-nav">';
-        h += '<button class="btn-icon" onclick="btChangeDate(-1)">◀</button>';
-        h += '<input type="date" class="bt-date-input" value="' + btInputDate + '" onchange="btSetDate(this.value)">';
-        h += '<button class="btn-icon" onclick="btChangeDate(1)">▶</button>';
-        h += '<button class="btn-icon" onclick="btSetDate(\'' + today() + '\')">오늘</button>';
-        h += '</div>';
-
         var dateEntry = btDailyEntries.find(function(e) { return e.date === btInputDate; });
         var items = dateEntry ? (dateEntry.items || []) : [];
 
@@ -6953,17 +6966,8 @@
 
       } else {
         // ─ 주/월/분기 뷰 ─
-        var range = btPeriodRange(btDailyPeriod, btDailyOffset);
         var entries = btEntriesInRange(range.start, range.end);
         var periodCalc = btCalcPeriod(entries);
-
-        // 기간 네비
-        h += '<div class="bt-date-nav">';
-        h += '<button class="btn-icon" onclick="btChangeDailyOffset(-1)">◀</button>';
-        h += '<span style="font-weight:600;padding:0 8px;">' + range.label + '</span>';
-        h += '<button class="btn-icon" onclick="btChangeDailyOffset(1)">▶</button>';
-        h += '<button class="btn-icon" onclick="btChangeDailyOffset(0,true)">현재</button>';
-        h += '</div>';
 
         // 기간 합계
         h += '<div class="bt-day-summary">';
@@ -7270,20 +7274,17 @@
 
       // 기간 범위
       var aRange = btPeriodRange(btActionPeriod, btActionOffset);
+      var aCanPrev = btActionPeriod !== 'quarter' || aRange.qIdx > 0;
+      var aCanNext = btActionPeriod !== 'quarter' || aRange.qIdx < aRange.qTotal - 1;
       h += '<div class="bt-date-nav">';
-      if (btActionPeriod !== 'quarter') {
-        h += '<button class="btn-icon" onclick="btChangeActionOffset(-1)">◀</button>';
-        h += '<span style="font-weight:600;padding:0 8px;">' + aRange.label + '</span>';
-        h += '<button class="btn-icon" onclick="btChangeActionOffset(1)">▶</button>';
-        h += '<button class="btn-icon" onclick="btChangeActionOffset(0,true)">현재</button>';
-      } else {
-        h += '<span style="font-weight:600;padding:0 8px;">' + aRange.label + '</span>';
-      }
+      h += '<button class="btn-icon"' + (!aCanPrev ? ' disabled style="opacity:.35;cursor:default"' : '') + ' onclick="btChangeActionOffset(-1)">◀</button>';
+      h += '<span style="font-weight:600;padding:0 8px;">' + aRange.label + '</span>';
+      h += '<button class="btn-icon"' + (!aCanNext ? ' disabled style="opacity:.35;cursor:default"' : '') + ' onclick="btChangeActionOffset(1)">▶</button>';
+      h += '<button class="btn-icon" onclick="btChangeActionOffset(0,true)">현재</button>';
       h += '</div>';
 
-      // ─ 갭 분석 바 ─
-      var q = btGetCurrentQuarter();
-      var mTarget = q && q.monthlyTargetRevenue ? q.monthlyTargetRevenue : 0;
+      // ─ 갭 분석 바 (현재 보는 기간의 분기 목표 기반) ─
+      var mTarget = aRange.quarterTarget ? Math.round(aRange.quarterTarget / 3) : 0;
       if (mTarget > 0) {
         var periodDays = aRange.days || 30;
         var periodTarget = Math.round(mTarget / 30 * periodDays);
@@ -7508,18 +7509,38 @@
       return h;
     }
     function btBuildQuarterForm(q) {
+      var def = q ? null : btNextQuarterDefaults(); // 새 추가 시 자동 제안
       var h = '<div class="bt-item-form">';
       h += '<div class="bt-form-2col">';
-      h += '<div class="bt-form-row"><label>분기 이름</label><input type="text" id="btQName" class="bt-input" placeholder="예: 2026 3분기" value="' + escapeHtml(q ? q.name : '') + '"></div>';
-      h += '<div class="bt-form-row"><label>월 목표 매출 (원)</label><input type="number" id="btQTarget" class="bt-input" min="0" value="' + (q ? (q.monthlyTargetRevenue || 0) : '') + '"></div>';
+      h += '<div class="bt-form-row"><label>분기 이름</label><input type="text" id="btQName" class="bt-input" placeholder="예: 2026 3분기" value="' + escapeHtml(q ? q.name : (def ? def.name : '')) + '"></div>';
+      h += '<div class="bt-form-row"><label>월 목표 매출 (원)</label><input type="number" id="btQTarget" class="bt-input" min="0" value="' + (q ? (q.monthlyTargetRevenue || '') : '') + '" placeholder="예: 5000000"></div>';
       h += '</div>';
       h += '<div class="bt-form-2col">';
-      h += '<div class="bt-form-row"><label>시작일</label><input type="date" id="btQStart" class="bt-input" value="' + (q ? q.startDate : '') + '"></div>';
-      h += '<div class="bt-form-row"><label>종료일</label><input type="date" id="btQEnd" class="bt-input" value="' + (q ? q.endDate : '') + '"></div>';
+      h += '<div class="bt-form-row"><label>시작일</label><input type="date" id="btQStart" class="bt-input" value="' + (q ? q.startDate : (def ? def.start : '')) + '"></div>';
+      h += '<div class="bt-form-row"><label>종료일</label><input type="date" id="btQEnd" class="bt-input" value="' + (q ? q.endDate : (def ? def.end : '')) + '"></div>';
       h += '</div>';
       h += '<div class="bt-form-actions"><button class="btn-confirm" onclick="btSaveQuarter(\'' + (q ? q.id : '') + '\')">저장</button><button class="btn-cancel" onclick="btCancelQuarter()">취소</button></div>';
       h += '</div>';
       return h;
+    }
+    function btNextQuarterDefaults() {
+      // 마지막 분기 기준으로 다음 분기 날짜/이름 자동 제안
+      var qs = btConfig && btConfig.quarters ? btConfig.quarters.slice().sort(function(a,b){ return a.startDate > b.startDate ? 1 : -1; }) : [];
+      var fmt = function(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+      if (qs.length > 0) {
+        var last = qs[qs.length - 1];
+        var nextStart = new Date(last.endDate + 'T00:00:00');
+        nextStart.setDate(nextStart.getDate() + 1);
+        var nextEnd = new Date(nextStart.getFullYear(), nextStart.getMonth() + 3, 0);
+        var qNum = Math.floor(nextStart.getMonth() / 3) + 1;
+        return { name: nextStart.getFullYear() + ' ' + qNum + '분기', start: fmt(nextStart), end: fmt(nextEnd) };
+      }
+      // 첫 분기 추가 — 현재 달력 분기로
+      var now = new Date();
+      var qm = Math.floor(now.getMonth() / 3) * 3;
+      var s = new Date(now.getFullYear(), qm, 1), e = new Date(now.getFullYear(), qm + 3, 0);
+      var qN = Math.floor(qm / 3) + 1;
+      return { name: now.getFullYear() + ' ' + qN + '분기', start: fmt(s), end: fmt(e) };
     }
     function btStartAddQuarter() { btAddingQuarter = true; btEditQuarterId = null; btRenderCurrentTab(); }
     function btStartEditQuarter(id) { btEditQuarterId = id; btAddingQuarter = false; btRenderCurrentTab(); }
