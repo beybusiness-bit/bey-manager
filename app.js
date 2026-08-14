@@ -2035,13 +2035,12 @@
         if (item.type === 'group') {
           const sortedChildren = (item.children || []).slice().sort(function(a, b) { return a.order - b.order; });
           html += '<div class="mm-group" data-mm-type="group" data-mm-id="' + item.id + '"'
-            + ' draggable="true"'
-            + ' ondragstart="mmDragStart(event,&apos;group&apos;,&apos;' + item.id + '&apos;,null)"'
             + ' ondragover="mmGroupDragOver(event,&apos;' + item.id + '&apos;)"'
-            + ' ondrop="mmGroupDrop(event,&apos;' + item.id + '&apos;)"'
-            + ' ondragend="mmDragEnd()">';
+            + ' ondrop="mmGroupDrop(event,&apos;' + item.id + '&apos;)">';
           html += '  <div class="mm-group-header">';
-          html += '    <span class="mm-drag-handle" title="드래그로 그룹 순서 변경">≡</span>';
+          html += '    <span class="mm-drag-handle" title="드래그로 그룹 순서 변경" draggable="true"'
+            + ' ondragstart="mmDragStart(event,&apos;group&apos;,&apos;' + item.id + '&apos;,null)"'
+            + ' ondragend="mmDragEnd()">≡</span>';
           html += '    <button class="mm-emoji-btn" onclick="openMmEmojiPicker(&apos;group&apos;,&apos;' + item.id + '&apos;,&apos;&apos;)">' + renderEmoji(item.icon) + '</button>';
           html += '    <input class="mm-name-input" value="' + escapeHtml(item.name) + '" oninput="updateMmGroupName(&apos;' + item.id + '&apos;,this.value)" placeholder="대분류명">';
           html += '  </div>';
@@ -2050,12 +2049,11 @@
             + ' ondrop="mmZoneDrop(event,&apos;' + item.id + '&apos;)">';
           sortedChildren.forEach(function(child) {
             html += '    <div class="mm-menu-item" data-mm-type="page" data-mm-id="' + child.id + '" data-mm-group="' + item.id + '"'
-              + ' draggable="true"'
-              + ' ondragstart="mmDragStart(event,&apos;page&apos;,&apos;' + child.id + '&apos;,&apos;' + item.id + '&apos;)"'
               + ' ondragover="mmPageDragOver(event,&apos;' + child.id + '&apos;,&apos;' + item.id + '&apos;)"'
-              + ' ondrop="mmPageDrop(event,&apos;' + child.id + '&apos;,&apos;' + item.id + '&apos;)"'
-              + ' ondragend="mmDragEnd()">';
-            html += '      <span class="mm-drag-handle" title="드래그로 위치·그룹 변경">≡</span>';
+              + ' ondrop="mmPageDrop(event,&apos;' + child.id + '&apos;,&apos;' + item.id + '&apos;)">';
+            html += '      <span class="mm-drag-handle" title="드래그로 위치·그룹 변경" draggable="true"'
+              + ' ondragstart="mmDragStart(event,&apos;page&apos;,&apos;' + child.id + '&apos;,&apos;' + item.id + '&apos;)"'
+              + ' ondragend="mmDragEnd()">≡</span>';
             html += '      <button class="mm-emoji-btn mm-emoji-btn-sm" onclick="openMmEmojiPicker(&apos;menu&apos;,&apos;' + item.id + '&apos;,&apos;' + child.id + '&apos;)">' + renderEmoji(child.icon) + '</button>';
             html += '      <input class="mm-name-input" value="' + escapeHtml(child.name) + '" oninput="updateMmMenuName(&apos;' + item.id + '&apos;,&apos;' + child.id + '&apos;,this.value)" placeholder="메뉴명">';
             html += '    </div>';
@@ -2150,28 +2148,22 @@
     var __mmDragType = null;   // 'page' | 'group'
     var __mmDragId   = null;
     var __mmDragSrcGroup = null;
-    var __mmDragFromHandle = false;  // mousedown 핸들 여부 (dragstart에서 e.target이 부모 div라 직접 판별 불가)
-
-    // 핸들에서 시작한 mousedown인지 추적 (캡처 단계)
-    document.addEventListener('mousedown', function(e) {
-      __mmDragFromHandle = !!(e.target && e.target.classList && e.target.classList.contains('mm-drag-handle'));
-    }, true);
 
     function mmDragStart(e, type, id, srcGroup) {
-      // 드래그 핸들(≡)에서 시작한 경우만 허용
-      if (!__mmDragFromHandle) {
-        e.preventDefault();
-        return;
-      }
+      // draggable="true"는 ≡ 핸들 span에만 붙어있으므로 항상 핸들에서 시작
+      e.stopPropagation();
       __mmDragType = type;
       __mmDragId = id;
       __mmDragSrcGroup = srcGroup;
       e.dataTransfer.effectAllowed = 'move';
-      // 드래그 중인 요소에 반투명 효과
-      var el = (type === 'group')
-        ? document.querySelector('[data-mm-type="group"][data-mm-id="' + id + '"]')
-        : document.querySelector('[data-mm-type="page"][data-mm-id="' + id + '"]');
-      if (el) setTimeout(function() { el.classList.add('mm-dragging'); }, 0);
+      // 부모 행 전체를 드래그 고스트로 표시
+      var rowEl = (type === 'group')
+        ? e.target.closest('[data-mm-type="group"]')
+        : e.target.closest('[data-mm-type="page"]');
+      if (rowEl) {
+        e.dataTransfer.setDragImage(rowEl, 20, 20);
+        setTimeout(function() { rowEl.classList.add('mm-dragging'); }, 0);
+      }
     }
 
     function mmDragEnd() {
@@ -2229,22 +2221,42 @@
       renderMenuManager();
     }
 
-    // 그룹 위에서의 dragover (그룹 순서 변경용)
+    // 그룹 위에서의 dragover (그룹 순서 변경용, 또는 page가 group header 영역 통과 시)
     function mmGroupDragOver(e, groupId) {
-      if (__mmDragType !== 'group' || groupId === __mmDragId) return;
-      e.preventDefault();
-      _mmClearIndicators();
-      var el = document.querySelector('[data-mm-type="group"][data-mm-id="' + groupId + '"]');
-      if (!el) return;
-      var mid = el.getBoundingClientRect().top + el.getBoundingClientRect().height / 2;
-      el.classList.add(e.clientY < mid ? 'mm-drop-above' : 'mm-drop-below');
+      e.preventDefault(); // 항상 호출 — drop 이벤트 발화를 위해
+      if (__mmDragType === 'group' && groupId !== __mmDragId) {
+        _mmClearIndicators();
+        var el = document.querySelector('[data-mm-type="group"][data-mm-id="' + groupId + '"]');
+        if (!el) return;
+        var mid = el.getBoundingClientRect().top + el.getBoundingClientRect().height / 2;
+        el.classList.add(e.clientY < mid ? 'mm-drop-above' : 'mm-drop-below');
+      }
     }
 
-    // 그룹에 drop (그룹 순서 변경)
+    // 그룹에 drop (그룹 순서 변경, 또는 page를 그룹 header에 드롭 시 맨 끝에 추가)
     function mmGroupDrop(e, groupId) {
       e.preventDefault(); e.stopPropagation();
-      if (__mmDragType !== 'group' || !__mmDragId || groupId === __mmDragId) return;
       _mmClearIndicators();
+
+      if (__mmDragType === 'page' && __mmDragId) {
+        // 페이지 항목을 그룹 헤더에 드롭 → 해당 그룹 맨 끝에 추가
+        if (__mmDragSrcGroup === groupId) { mmDragEnd(); return; }
+        var srcGrp = menuDraft.find(function(m) { return m.id === __mmDragSrcGroup; });
+        if (!srcGrp || !srcGrp.children) return;
+        var si = srcGrp.children.findIndex(function(c) { return c.id === __mmDragId; });
+        if (si < 0) return;
+        var page = srcGrp.children.splice(si, 1)[0];
+        var tgtGrp = menuDraft.find(function(m) { return m.id === groupId; });
+        if (!tgtGrp) { srcGrp.children.splice(si, 0, page); mmDragEnd(); return; }
+        if (!tgtGrp.children) tgtGrp.children = [];
+        tgtGrp.children.push(page);
+        _mmReorder();
+        __mmDragType = null; __mmDragId = null; __mmDragSrcGroup = null;
+        renderMenuManager();
+        return;
+      }
+
+      if (__mmDragType !== 'group' || !__mmDragId || groupId === __mmDragId) return;
 
       var si = menuDraft.findIndex(function(m) { return m.id === __mmDragId; });
       if (si < 0) return;
