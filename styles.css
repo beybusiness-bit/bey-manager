@@ -975,9 +975,7 @@
       user-select: none;
       -webkit-user-drag: element;
     }
-    .mm-group-header:active { cursor: grabbing; }
     .mm-group-header * { pointer-events: auto; }
-    .mm-group-header .mm-drag-handle { cursor: grab; }
     .mm-group-header .mm-name-input { cursor: text; user-select: text; }
 
     /* 최상위 고정 페이지 (홈, 설정) */
@@ -995,11 +993,17 @@
       border-radius: 10px; padding: 2px 8px;
     }
 
-    /* 드래그 핸들 */
-    .mm-drag-handle {
-      color: #bbb; font-size: 16px; cursor: grab; flex-shrink: 0;
-      padding: 0 2px; line-height: 1;
+    /* ▲▼ 순서 변경 버튼 */
+    .mm-order-btns { display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; }
+    .mm-order-btn {
+      width: 22px; height: 18px; padding: 0; font-size: 10px; line-height: 1;
+      border: 1px solid var(--border-color, #ddd); border-radius: 3px;
+      background: var(--bg-card, #fff); color: var(--text-secondary, #888);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all .12s;
     }
+    .mm-order-btn:hover:not(:disabled) { background: var(--primary-yellow, #ffde59); color: #222; border-color: var(--primary-yellow, #ffde59); }
+    .mm-order-btn:disabled { opacity: 0.25; cursor: default; }
 
     /* 이모지 버튼 */
     .mm-emoji-btn {
