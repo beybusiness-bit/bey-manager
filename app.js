@@ -6921,19 +6921,14 @@
           return x.item.catId === btDailyFilterCat || (btDailyFilterCat === '__none' && !x.item.catId);
         });
 
+        h += '<div class="bt-item-grid">';
+        visPeriodItems.forEach(function(x) {
+          h += btBuildItemCard(x.item, x.idx, x.date);
+        });
         if (visPeriodItems.length === 0) {
-          h += '<div class="bt-empty">이 기간에 기록된 달성 내용이 없습니다.</div>';
-        } else {
-          h += '<div class="bt-item-grid">';
-          visPeriodItems.forEach(function(x) {
-            h += btBuildItemCard(x.item, x.idx, x.date);
-          });
-          h += '</div>';
+          h += '<div class="bt-empty" style="grid-column:1/-1;">이 기간에 기록된 달성 내용이 없습니다.</div>';
         }
-
-        // 오늘 추가 버튼
-        h += '<div style="margin-top:12px;">';
-        h += '<button class="btn-add-card" onclick="btGoToDay(\'' + today() + '\')"><span class="btn-add-card-plus">+</span>오늘 매출 추가하기</button>';
+        h += '<button class="btn-add-card" onclick="btGoToDay(\'' + today() + '\')"><span class="btn-add-card-plus">+</span>오늘 매출 추가</button>';
         h += '</div>';
       }
 
