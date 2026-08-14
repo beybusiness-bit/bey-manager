@@ -2150,10 +2150,16 @@
     var __mmDragType = null;   // 'page' | 'group'
     var __mmDragId   = null;
     var __mmDragSrcGroup = null;
+    var __mmDragFromHandle = false;  // mousedown 핸들 여부 (dragstart에서 e.target이 부모 div라 직접 판별 불가)
+
+    // 핸들에서 시작한 mousedown인지 추적 (캡처 단계)
+    document.addEventListener('mousedown', function(e) {
+      __mmDragFromHandle = !!(e.target && e.target.classList && e.target.classList.contains('mm-drag-handle'));
+    }, true);
 
     function mmDragStart(e, type, id, srcGroup) {
       // 드래그 핸들(≡)에서 시작한 경우만 허용
-      if (!e.target.classList.contains('mm-drag-handle')) {
+      if (!__mmDragFromHandle) {
         e.preventDefault();
         return;
       }
