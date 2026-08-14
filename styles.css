@@ -1059,6 +1059,26 @@
     .mm-menu-item.mm-insert-before { box-shadow: 0 -3px 0 0 var(--primary-yellow); }
     .mm-menu-item.mm-insert-after  { box-shadow: 0  3px 0 0 var(--primary-yellow); }
 
+    /* 드래그 삽입 위치 표시 (새 DnD 방식) */
+    .mm-menu-item.mm-drop-above,
+    .mm-top-page.mm-drop-above  { box-shadow: 0 -3px 0 0 var(--primary-yellow) !important; }
+    .mm-menu-item.mm-drop-below,
+    .mm-top-page.mm-drop-below  { box-shadow: 0  3px 0 0 var(--primary-yellow) !important; }
+    .mm-group.mm-drop-above { box-shadow: 0 -4px 0 0 var(--primary-yellow) !important; }
+    .mm-group.mm-drop-below { box-shadow: 0  4px 0 0 var(--primary-yellow) !important; }
+    .mm-children.mm-drop-zone-active {
+      background: color-mix(in srgb, var(--primary-yellow) 10%, transparent);
+      outline: 2px dashed var(--primary-yellow);
+      border-radius: 6px;
+    }
+    /* 빈 그룹 안내 텍스트 */
+    .mm-empty-zone {
+      color: var(--text-secondary); font-size: 12px; text-align: center;
+      padding: 8px 0; border: 1px dashed var(--border-color); border-radius: 6px;
+    }
+    /* 고정 항목용 핸들 자리 공백 */
+    .mm-drag-placeholder { width: 22px; flex-shrink: 0; }
+
     /* 메뉴 추가 버튼 */
     .mm-add-menu-btn {
       font-size: 12px; color: var(--text-secondary);
