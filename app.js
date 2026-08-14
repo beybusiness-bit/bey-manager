@@ -6408,18 +6408,19 @@
       ]
     };
     var btConfig = null;
-    var btDailyEntries = [];  // [{date, items:[{id,catId,units,revenue,cost,memo}]}]
-    var btActions = [];       // [{id,name,catId,targetUnits,targetRevenue,targetDate,memo}]
+    var btDailyEntries = [];  // [{date, items:[{id,catId,units,unitPrice,unitCost}]}]
+    var btActions = [];       // [{id,name,catId,targetUnits,unitPrice,unitCost,date}]
     var btCurrentTab = 'dashboard';
+    var btDashPeriod = 'month';   // 'day' | 'week' | 'month'
     var btInputDate = today();
     var btAddingItem = false;
     var btEditItemDate = null;
     var btEditItemIdx = null;
-    var btCostMode = 'cost';   // 'cost' | 'rate'
     var btAddingAction = false;
     var btEditActionId = null;
     var btAddingCat = false;
     var btEditCatId = null;
+    var btCatIconTemp = '';
     var btAddingCost = false;
     var btEditCostId = null;
     var btAddingQuarter = false;
@@ -6438,39 +6439,68 @@
       if (!n || isNaN(n)) return '0';
       return Number(n).toLocaleString('ko-KR');
     }
-    function btItemMargin(item) {
-      var rev = Number(item.revenue) || 0;
-      if (item.cost !== undefined && item.cost !== null && item.cost !== '') {
-        return rev - (Number(item.cost) || 0);
+    // 아이템 매출 계산 (units × unitPrice, 구형 revenue 필드 호환)
+    function btItemRevenue(item) {
+      if (item.unitPrice !== undefined && item.unitPrice !== null && item.unitPrice !== '') {
+        return (Number(item.units) || 0) * (Number(item.unitPrice) || 0);
       }
+      return Number(item.revenue) || 0;
+    }
+    // 아이템 원가 계산 (units × unitCost, 구형 cost/marginRate 호환)
+    function btItemCost(item) {
+      if (item.unitCost !== undefined && item.unitCost !== null && item.unitCost !== '') {
+        return (Number(item.units) || 0) * (Number(item.unitCost) || 0);
+      }
+      // 구형 데이터: cost 직접값
+      if (item.cost !== undefined && item.cost !== null && item.cost !== '') {
+        return Number(item.cost) || 0;
+      }
+      // 카테고리 기본 마진율로 원가 추정
       var cat = btConfig && btConfig.categories.find(function(c) { return c.id === item.catId; });
-      if (cat && cat.defaultMarginRate != null) return rev * cat.defaultMarginRate;
+      if (cat && cat.defaultMarginRate != null) {
+        return Math.round(btItemRevenue(item) * (1 - cat.defaultMarginRate));
+      }
       return 0;
     }
+    function btItemMargin(item) { return btItemRevenue(item) - btItemCost(item); }
+    // 액션 목표 매출
+    function btActionRevenue(a) { return (Number(a.targetUnits) || 0) * (Number(a.unitPrice) || 0); }
+    function btActionMargin(a) { return btActionRevenue(a) - (Number(a.targetUnits) || 0) * (Number(a.unitCost) || 0); }
+
     function btFixedCostTotal() {
       if (!btConfig || !btConfig.fixedCosts) return 0;
       return btConfig.fixedCosts.reduce(function(s, fc) { return s + (Number(fc.amount) || 0); }, 0);
     }
     function btCalcPeriod(entries) {
-      var revenue = 0, margin = 0, units = 0;
+      var revenue = 0, cost = 0, units = 0;
       entries.forEach(function(e) {
         (e.items || []).forEach(function(item) {
-          revenue += Number(item.revenue) || 0;
-          margin  += btItemMargin(item);
+          revenue += btItemRevenue(item);
+          cost    += btItemCost(item);
           units   += Number(item.units) || 0;
         });
       });
-      return { revenue: revenue, margin: margin, units: units };
+      return { revenue: revenue, cost: cost, margin: revenue - cost, units: units };
     }
     function btCalcByCategory(entries) {
       var map = {};
       entries.forEach(function(e) {
         (e.items || []).forEach(function(item) {
-          if (!map[item.catId]) map[item.catId] = { revenue: 0, margin: 0, units: 0 };
-          map[item.catId].revenue += Number(item.revenue) || 0;
+          if (!map[item.catId]) map[item.catId] = { revenue: 0, cost: 0, margin: 0, units: 0 };
+          map[item.catId].revenue += btItemRevenue(item);
+          map[item.catId].cost    += btItemCost(item);
           map[item.catId].margin  += btItemMargin(item);
           map[item.catId].units   += Number(item.units) || 0;
         });
+      });
+      return map;
+    }
+    function btActionsByCategory() {
+      var map = {};
+      (btActions || []).forEach(function(a) {
+        var key = a.catId || '__none';
+        if (!map[key]) map[key] = [];
+        map[key].push(a);
       });
       return map;
     }
@@ -6482,8 +6512,53 @@
     function btEntriesInRange(start, end) {
       return btDailyEntries.filter(function(e) { return e.date >= start && e.date <= end; });
     }
-    function btMonthRange(monthStr) { // 'YYYY-MM'
-      return { start: monthStr + '-01', end: monthStr + '-31' };
+    function _btElapsedMonths(startDate, todayStr) {
+      var s = new Date(startDate), t = new Date(todayStr);
+      var diff = (t.getFullYear() - s.getFullYear()) * 12 + (t.getMonth() - s.getMonth());
+      return Math.max(1, diff + 1);
+    }
+    // 현재 대시보드 기간 범위 반환
+    function btDashRange() {
+      var t = today();
+      if (btDashPeriod === 'day') return { start: t, end: t, label: '오늘', days: 1 };
+      if (btDashPeriod === 'week') {
+        var d = new Date(t);
+        var dow = d.getDay(); // 0=일
+        var mon = new Date(d); mon.setDate(d.getDate() - ((dow + 6) % 7));
+        var sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+        var fmt = function(x) { return x.getFullYear() + '-' + String(x.getMonth()+1).padStart(2,'0') + '-' + String(x.getDate()).padStart(2,'0'); };
+        return { start: fmt(mon), end: fmt(sun), label: '이번 주', days: 7 };
+      }
+      return { start: t.slice(0,7)+'-01', end: t.slice(0,7)+'-31', label: '이번 달', days: 30 };
+    }
+    // SVG 바 차트 (일별 매출)
+    function btSvgBarChart(rangeStart, rangeEnd) {
+      var days = [];
+      var d = new Date(rangeStart);
+      var eDate = new Date(rangeEnd);
+      while (d <= eDate && days.length < 31) {
+        var ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        var entry = btDailyEntries.find(function(e) { return e.date === ds; });
+        var rev = entry ? btCalcPeriod([entry]).revenue : 0;
+        days.push({ date: ds, revenue: rev, day: d.getDate() });
+        d.setDate(d.getDate() + 1);
+      }
+      if (days.length < 2) return '';
+      var maxRev = Math.max.apply(null, days.map(function(x) { return x.revenue; }));
+      if (maxRev === 0) return '<div class="bt-chart-empty">아직 매출 데이터가 없습니다.</div>';
+      var W = 100, H = 60, pad = 2;
+      var barW = Math.max(2, (W - pad * days.length) / days.length);
+      var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" class="bt-bar-chart">';
+      days.forEach(function(d, i) {
+        var barH = maxRev > 0 ? Math.max(1, (d.revenue / maxRev) * (H - 6)) : 0;
+        var x = i * (barW + pad);
+        var y = H - barH;
+        var isToday = d.date === today();
+        svg += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + barH.toFixed(1) + '" rx="1" fill="' + (isToday ? '#333' : 'var(--primary-yellow,#ffde59)') + '" opacity="' + (d.revenue > 0 ? '1' : '0.2') + '">';
+        svg += '<title>' + d.date + ': ' + btFmtW(d.revenue) + '</title></rect>';
+      });
+      svg += '</svg>';
+      return svg;
     }
 
     function loadBt() {
@@ -6554,86 +6629,112 @@
 
     // ── 대시보드 ──
     function btBuildDashboard() {
-      var t = today();
-      var thisMonth = t.slice(0, 7);
-      var r = btMonthRange(thisMonth);
-      var entries = btEntriesInRange(r.start, r.end);
+      var range = btDashRange();
+      var entries = btEntriesInRange(range.start, range.end);
       var calc = btCalcPeriod(entries);
       var fc = btFixedCostTotal();
+      // 고정비 배분: 기간 비율로
+      var fcProrated = Math.round(fc / 30 * range.days);
       var q = btGetCurrentQuarter();
+      var mTarget = q ? (Number(q.monthlyTargetRevenue) || 0) : 0;
+      var periodTarget = Math.round(mTarget / 30 * range.days);
 
-      var h = '<div class="bt-dashboard">';
+      var h = '';
 
-      // 이번 달 KPI
-      h += '<div class="bt-section-title">이번 달 (' + thisMonth + ')</div>';
+      // 기간 탭
+      h += '<div class="bt-period-tabs">';
+      ['day','week','month'].forEach(function(p, i) {
+        var labels = ['오늘','이번 주','이번 달'];
+        h += '<button class="bt-period-btn' + (btDashPeriod === p ? ' active' : '') + '" onclick="btSwitchDashPeriod(\'' + p + '\')">' + labels[i] + '</button>';
+      });
+      h += '</div>';
+
+      // KPI 카드
       h += '<div class="bt-kpi-row">';
-      h += btKpiCard('총 매출', btFmtW(calc.revenue), '');
-      h += btKpiCard('순이익', btFmtW(calc.margin - fc), calc.margin - fc >= 0 ? 'positive' : 'negative');
-      h += btKpiCard('총 마진', btFmtW(calc.margin), '');
-      h += btKpiCard('고정비', btFmtW(fc), '');
+      h += btKpiCard('매출', btFmtW(calc.revenue), '');
+      h += btKpiCard('순이익', btFmtW(calc.margin - fcProrated), (calc.margin - fcProrated) >= 0 ? 'positive' : 'negative');
+      h += btKpiCard('마진', btFmtW(calc.margin), '');
+      h += btKpiCard('고정비 배분', btFmtW(fcProrated), '');
       h += '</div>';
 
-      // 분기 진행률
-      if (q) {
-        var qEntries = btEntriesInRange(q.startDate, q.endDate);
-        var qCalc = btCalcPeriod(qEntries);
-        var mTarget = Number(q.monthlyTargetRevenue) || 0;
-        var elapsed = _btElapsedMonths(q.startDate, t);
-        var qTarget = mTarget * elapsed;
-        var pct = qTarget > 0 ? Math.min(100, Math.round(qCalc.revenue / qTarget * 100)) : 0;
-        h += '<div class="bt-section-title" style="margin-top:20px;">' + q.name + ' 진행 현황</div>';
-        h += '<div class="bt-kpi-row">';
-        h += btKpiCard('누적 매출', btFmtW(qCalc.revenue), '');
-        h += btKpiCard('월 목표', btFmtW(mTarget), '');
-        h += btKpiCard('목표 대비', pct + '%', pct >= 100 ? 'positive' : '');
+      // 목표 대비
+      if (periodTarget > 0) {
+        var pct = Math.min(200, Math.round(calc.revenue / periodTarget * 100));
+        var pctBar = Math.min(100, pct);
+        h += '<div class="bt-goal-row">';
+        h += '<div class="bt-goal-label">매출 목표 대비<span class="bt-goal-pct' + (pct >= 100 ? ' hit' : '') + '">' + pct + '%</span></div>';
+        h += '<div class="bt-goal-sub">' + btFmtW(calc.revenue) + ' / ' + btFmtW(periodTarget) + '</div>';
+        h += '<div class="bt-progress-wrap"><div class="bt-progress-bar" style="width:' + pctBar + '%"></div></div>';
         h += '</div>';
-        h += '<div class="bt-progress-wrap"><div class="bt-progress-bar" style="width:' + pct + '%"></div></div>';
       }
 
-      // 카테고리별 이번 달
+      // 차트 (주/월 단위에서만)
+      if (btDashPeriod !== 'day') {
+        h += '<div class="bt-chart-wrap">';
+        h += '<div class="bt-section-title">매출 추이</div>';
+        h += btSvgBarChart(range.start, range.end);
+        h += '</div>';
+      }
+
+      // 액션플랜 vs 실제 (카테고리별)
+      var cats = (btConfig && btConfig.categories) || [];
       var bycat = btCalcByCategory(entries);
-      var cats = btConfig && btConfig.categories || [];
-      var hasCat = cats.some(function(c) { return bycat[c.id]; });
-      if (hasCat) {
-        h += '<div class="bt-section-title" style="margin-top:20px;">카테고리별 이번 달</div>';
-        h += '<div class="bt-cat-list">';
+      var actionsByCat = btActionsByCategory();
+      var hasCatData = cats.some(function(c) { return bycat[c.id] || actionsByCat[c.id]; });
+
+      if (hasCatData || Object.keys(actionsByCat).length > 0) {
+        h += '<div class="bt-section-title" style="margin-top:20px;">카테고리별 실적 / 액션플랜</div>';
+        h += '<div class="bt-cat-compare-grid">';
+
+        // 등록된 카테고리
         cats.forEach(function(cat) {
-          var cd = bycat[cat.id];
-          if (!cd) return;
-          h += '<div class="bt-cat-row">';
-          h += '<span class="bt-cat-icon" style="color:' + cat.color + '">' + cat.icon + '</span>';
-          h += '<span class="bt-cat-name">' + escapeHtml(cat.name) + '</span>';
-          h += '<span class="bt-cat-val">' + btFmtW(cd.revenue) + '</span>';
-          h += '<span class="bt-cat-units">(' + btFmtN(cd.units) + cd.unitLabel + ')</span>';
-          h += '</div>';
+          var actual = bycat[cat.id] || { revenue: 0, margin: 0, units: 0 };
+          var catActions = (actionsByCat[cat.id] || []).filter(function(a) {
+            if (!a.date) return true; // 날짜 없으면 항상 표시
+            return a.date >= range.start && a.date <= range.end;
+          });
+          var planRevenue = catActions.reduce(function(s, a) { return s + btActionRevenue(a); }, 0);
+          var planUnits = catActions.reduce(function(s, a) { return s + (Number(a.targetUnits) || 0); }, 0);
+          if (!actual.revenue && !planRevenue && !catActions.length) return;
+          h += '<div class="bt-cat-compare-card">';
+          h += '<div class="bt-cat-compare-header" style="color:' + cat.color + '">' + cat.icon + ' ' + escapeHtml(cat.name) + '</div>';
+          h += '<div class="bt-cat-compare-body">';
+          h += '<div class="bt-compare-row"><span class="bt-compare-label">실제 매출</span><span class="bt-compare-val">' + btFmtW(actual.revenue) + '</span></div>';
+          if (planRevenue) h += '<div class="bt-compare-row plan"><span class="bt-compare-label">액션 목표</span><span class="bt-compare-val">' + btFmtW(planRevenue) + '</span></div>';
+          if (actual.units || planUnits) h += '<div class="bt-compare-row"><span class="bt-compare-label">실제 / 목표 건수</span><span class="bt-compare-val">' + btFmtN(actual.units) + (planUnits ? ' / ' + btFmtN(planUnits) : '') + '</span></div>';
+          if (actual.margin) h += '<div class="bt-compare-row"><span class="bt-compare-label">마진</span><span class="bt-compare-val">' + btFmtW(actual.margin) + '</span></div>';
+          if (catActions.length) {
+            h += '<div class="bt-compare-actions">';
+            catActions.slice(0, 2).forEach(function(a) {
+              h += '<div class="bt-compare-action-chip">' + escapeHtml(a.name) + (a.date ? ' (' + a.date.slice(5) + ')' : '') + '</div>';
+            });
+            if (catActions.length > 2) h += '<div class="bt-compare-action-chip more">+' + (catActions.length - 2) + '건</div>';
+            h += '</div>';
+          }
+          h += '</div></div>';
         });
         h += '</div>';
       }
 
-      // 최근 3일 요약
-      h += '<div class="bt-section-title" style="margin-top:20px;">최근 입력 내역</div>';
-      var recent = btDailyEntries.slice().sort(function(a,b) { return b.date.localeCompare(a.date); }).slice(0, 5);
-      if (!recent.length) {
-        h += '<div class="bt-empty">아직 입력된 내역이 없습니다.</div>';
-      } else {
+      // 카테고리 없는 액션 (기타)
+      var noCatActions = (actionsByCat['__none'] || []).filter(function(a) {
+        return !a.date || (a.date >= range.start && a.date <= range.end);
+      });
+      if (noCatActions.length) {
+        h += '<div class="bt-section-title" style="margin-top:16px;">기타 액션</div>';
         h += '<div class="bt-recent-list">';
-        recent.forEach(function(e) {
-          var ec = btCalcPeriod([e]);
-          h += '<div class="bt-recent-row" onclick="switchBtTab(\'daily\');btSetDate(\'' + e.date + '\')">';
-          h += '<span class="bt-recent-date">' + e.date + '</span>';
-          h += '<span class="bt-recent-rev">' + btFmtW(ec.revenue) + '</span>';
-          h += '<span class="bt-recent-items">' + (e.items || []).length + '건</span>';
-          h += '</div>';
+        noCatActions.forEach(function(a) {
+          h += '<div class="bt-recent-row">' + escapeHtml(a.name) + (a.date ? ' — ' + a.date.slice(5) : '') + '</div>';
         });
         h += '</div>';
       }
-      h += '</div>';
+
       return h;
     }
-    function _btElapsedMonths(startDate, today) {
-      var s = new Date(startDate), t = new Date(today);
-      var diff = (t.getFullYear() - s.getFullYear()) * 12 + (t.getMonth() - s.getMonth());
-      return Math.max(1, diff + 1);
+
+    function btSwitchDashPeriod(p) {
+      btDashPeriod = p;
+      btRenderCurrentTab();
     }
     function btKpiCard(label, val, cls) {
       return '<div class="bt-kpi-card"><div class="bt-kpi-val' + (cls ? ' ' + cls : '') + '">' + val + '</div><div class="bt-kpi-label">' + label + '</div></div>';
@@ -6643,6 +6744,7 @@
     function btBuildDaily() {
       var dateEntry = btDailyEntries.find(function(e) { return e.date === btInputDate; });
       var items = dateEntry ? (dateEntry.items || []) : [];
+      var cats = (btConfig && btConfig.categories) || [];
       var h = '';
 
       // 날짜 네비
@@ -6653,28 +6755,63 @@
       h += '<button class="btn-icon" onclick="btSetDate(\'' + today() + '\')">오늘</button>';
       h += '</div>';
 
-      // 아이템 목록
+      // 일별 합계
       if (items.length) {
         var dayCalc = btCalcPeriod([{ date: btInputDate, items: items }]);
         h += '<div class="bt-day-summary">';
-        h += '<span>매출 ' + btFmtW(dayCalc.revenue) + '</span>';
-        h += '<span>마진 ' + btFmtW(dayCalc.margin) + '</span>';
+        h += '<span>매출 <strong>' + btFmtW(dayCalc.revenue) + '</strong></span>';
+        h += '<span>마진 <strong>' + btFmtW(dayCalc.margin) + '</strong></span>';
+        h += '<span>' + items.length + '건</span>';
         h += '</div>';
+      }
+
+      // 카테고리별 그룹으로 표시
+      if (items.length) {
+        // 카테고리별 그룹화
+        var grouped = {};
+        var uncatItems = [];
         items.forEach(function(item, idx) {
-          if (btEditItemDate === btInputDate && btEditItemIdx === idx) {
-            h += btBuildItemForm(item);
+          if (item.catId) {
+            if (!grouped[item.catId]) grouped[item.catId] = [];
+            grouped[item.catId].push({ item: item, idx: idx });
           } else {
-            h += btBuildItemCard(item, idx);
+            uncatItems.push({ item: item, idx: idx });
           }
         });
+
+        cats.forEach(function(cat) {
+          if (!grouped[cat.id]) return;
+          h += '<div class="bt-group-header" style="color:' + cat.color + '">' + cat.icon + ' ' + escapeHtml(cat.name) + '</div>';
+          h += '<div class="bt-item-grid">';
+          grouped[cat.id].forEach(function(entry) {
+            if (btEditItemDate === btInputDate && btEditItemIdx === entry.idx) {
+              h += '<div class="bt-item-grid-span">' + btBuildItemForm(entry.item, entry.idx) + '</div>';
+            } else {
+              h += btBuildItemCard(entry.item, entry.idx);
+            }
+          });
+          h += '</div>';
+        });
+        if (uncatItems.length) {
+          h += '<div class="bt-group-header">기타</div>';
+          h += '<div class="bt-item-grid">';
+          uncatItems.forEach(function(entry) {
+            if (btEditItemDate === btInputDate && btEditItemIdx === entry.idx) {
+              h += '<div class="bt-item-grid-span">' + btBuildItemForm(entry.item, entry.idx) + '</div>';
+            } else {
+              h += btBuildItemCard(entry.item, entry.idx);
+            }
+          });
+          h += '</div>';
+        }
       } else {
         h += '<div class="bt-empty">이 날 입력된 매출이 없습니다.</div>';
       }
 
-      // 추가 폼
+      // 추가 폼 / 버튼
       if (btAddingItem && btEditItemDate === null) {
-        h += btBuildItemForm(null);
-      } else if (!btAddingItem || btEditItemDate !== null) {
+        h += btBuildItemForm(null, null);
+      } else {
         h += '<button class="btn-primary bt-add-btn" onclick="btStartAddItem()">+ 매출 추가</button>';
       }
 
@@ -6683,21 +6820,27 @@
 
     function btBuildItemCard(item, idx) {
       var cat = btConfig && btConfig.categories.find(function(c) { return c.id === item.catId; });
-      var margin = btItemMargin(item);
+      var rev = btItemRevenue(item);
+      var cst = btItemCost(item);
+      var margin = rev - cst;
+      var units = Number(item.units) || 0;
+      var unitPrice = item.unitPrice !== undefined ? Number(item.unitPrice) : (units > 0 ? Math.round(rev / units) : 0);
+      var unitCost  = item.unitCost !== undefined ? Number(item.unitCost) : (units > 0 ? Math.round(cst / units) : 0);
       var h = '<div class="bt-item-card">';
       h += '<div class="bt-item-header">';
-      h += '<span class="bt-item-cat" style="color:' + (cat ? cat.color : '#888') + '">' + (cat ? cat.icon + ' ' + escapeHtml(cat.name) : '기타') + '</span>';
+      h += '<span class="bt-item-cat" style="color:' + (cat ? cat.color : '#888') + '">' + (cat ? cat.icon : '📦') + ' ' + (cat ? escapeHtml(cat.name) : '기타') + '</span>';
       h += '<div class="bt-item-actions">';
       h += '<button class="btn-icon" onclick="btStartEditItem(\'' + btInputDate + '\',' + idx + ')">✏️</button>';
       h += '<button class="btn-icon" onclick="btDeleteItem(\'' + btInputDate + '\',' + idx + ')">🗑️</button>';
       h += '</div></div>';
       h += '<div class="bt-item-nums">';
-      h += '<span>' + btFmtN(item.units) + (cat ? cat.unitLabel : '건') + '</span>';
-      h += '<span>매출 ' + btFmtW(Number(item.revenue)) + '</span>';
-      if (item.cost !== undefined && item.cost !== null && item.cost !== '') {
-        h += '<span>원가 ' + btFmtW(Number(item.cost)) + '</span>';
-      }
-      h += '<span>마진 ' + btFmtW(margin) + '</span>';
+      h += '<div class="bt-num-row"><span class="bt-num-label">건수</span><span class="bt-num-val">' + btFmtN(units) + (cat ? cat.unitLabel : '건') + '</span></div>';
+      h += '<div class="bt-num-row"><span class="bt-num-label">객단가</span><span class="bt-num-val">' + btFmtW(unitPrice) + '</span></div>';
+      h += '<div class="bt-num-row"><span class="bt-num-label">단위원가</span><span class="bt-num-val">' + btFmtW(unitCost) + '</span></div>';
+      h += '</div>';
+      h += '<div class="bt-item-totals">';
+      h += '<span>매출 <strong>' + btFmtW(rev) + '</strong></span>';
+      h += '<span>마진 <strong' + (margin < 0 ? ' style="color:#e53935"' : '') + '>' + btFmtW(margin) + '</strong></span>';
       h += '</div>';
       if (item.memo) {
         h += '<div class="bt-item-memo">' + escapeHtml(item.memo) + '</div>';
@@ -6706,56 +6849,49 @@
       return h;
     }
 
-    function btBuildItemForm(item) {
-      var cats = btConfig && btConfig.categories || [];
+    function btBuildItemForm(item, idx) {
+      var cats = (btConfig && btConfig.categories) || [];
       var selCat = item ? item.catId : (cats[0] ? cats[0].id : '');
-      var costVal = (item && item.cost !== undefined && item.cost !== null && item.cost !== '') ? item.cost : '';
-      var costMode = costVal !== '' ? 'cost' : btCostMode;
+      var selCatObj = cats.find(function(c) { return c.id === selCat; });
+      var unitLabel = selCatObj ? selCatObj.unitLabel : '건';
+      // 기존 값 (구형 데이터 호환)
+      var defUnits = item ? (item.units || '') : '';
+      var defUnitPrice = item ? (item.unitPrice !== undefined ? item.unitPrice : '') : '';
+      var defUnitCost = '';
+      if (item) {
+        if (item.unitCost !== undefined) defUnitCost = item.unitCost;
+        else if (item.cost !== undefined && item.cost !== null && item.cost !== '' && Number(item.units) > 0) defUnitCost = Math.round(Number(item.cost) / Number(item.units));
+      }
+      var defMemo = item && item.memo ? item.memo : '';
+
       var h = '<div class="bt-item-form">';
-      h += '<div class="bt-form-row">';
-      h += '<label>카테고리</label>';
+      h += '<div class="bt-form-2col">';
+      h += '<div class="bt-form-row"><label>카테고리</label>';
       h += '<select id="btFormCat" class="bt-select" onchange="btFormCatChange(this.value)">';
       cats.forEach(function(cat) {
         h += '<option value="' + cat.id + '"' + (selCat === cat.id ? ' selected' : '') + '>' + cat.icon + ' ' + escapeHtml(cat.name) + '</option>';
       });
-      h += '</select>';
+      h += '</select></div>';
+
+      h += '<div class="bt-form-row"><label>판매건수 (' + unitLabel + ')</label>';
+      h += '<input type="number" id="btFormUnits" class="bt-input" min="1" placeholder="0" value="' + defUnits + '" oninput="btAutoCalcDisplay()">';
+      h += '</div>';
       h += '</div>';
 
-      var selCatObj = cats.find(function(c) { return c.id === selCat; });
-      var unitLabel = selCatObj ? selCatObj.unitLabel : '건';
-
-      h += '<div class="bt-form-row">';
-      h += '<label>판매건수 (' + unitLabel + ')</label>';
-      h += '<input type="number" id="btFormUnits" class="bt-input" min="1" placeholder="0" value="' + (item ? (item.units || '') : '') + '">';
+      h += '<div class="bt-form-3col">';
+      h += '<div class="bt-form-row"><label>객단가 (1건당 판매가)</label>';
+      h += '<input type="number" id="btFormUnitPrice" class="bt-input" min="0" placeholder="0원" value="' + defUnitPrice + '" oninput="btAutoCalcDisplay()">';
       h += '</div>';
-      h += '<div class="bt-form-row">';
-      h += '<label>매출액 (원)</label>';
-      h += '<input type="number" id="btFormRevenue" class="bt-input" min="0" placeholder="0" value="' + (item ? (item.revenue || '') : '') + '">';
+      h += '<div class="bt-form-row"><label>단위 원가 (1건당 원가)</label>';
+      h += '<input type="number" id="btFormUnitCost" class="bt-input" min="0" placeholder="' + (selCatObj && selCatObj.defaultMarginRate != null ? '기본값 있음' : '0원') + '" value="' + defUnitCost + '" oninput="btAutoCalcDisplay()">';
       h += '</div>';
-
-      h += '<div class="bt-form-row">';
-      h += '<label>원가 입력 방식</label>';
-      h += '<div class="bt-cost-mode-btns">';
-      h += '<button class="bt-mode-btn' + (costMode === 'cost' ? ' active' : '') + '" onclick="btSetCostMode(\'cost\')">원가 직접 입력</button>';
-      h += '<button class="bt-mode-btn' + (costMode === 'rate' ? ' active' : '') + '" onclick="btSetCostMode(\'rate\')">마진율 사용</button>';
-      h += '</div></div>';
-
-      h += '<div id="btCostInputArea">';
-      if (costMode === 'cost') {
-        h += '<div class="bt-form-row"><label>원가 (원)</label>';
-        h += '<input type="number" id="btFormCost" class="bt-input" min="0" placeholder="미입력 시 마진율 사용" value="' + costVal + '">';
-        h += '</div>';
-      } else {
-        var rate = selCatObj && selCatObj.defaultMarginRate != null ? Math.round(selCatObj.defaultMarginRate * 100) : '';
-        h += '<div class="bt-form-row"><label>마진율 (%)</label>';
-        h += '<input type="number" id="btFormRate" class="bt-input" min="0" max="100" placeholder="카테고리 기본값" value="' + rate + '">';
-        h += '</div>';
-      }
+      h += '<div class="bt-form-row"><label>자동 계산 결과</label>';
+      h += '<div id="btAutoCalcResult" class="bt-auto-calc">건수 × 가격 입력 시 자동 계산</div>';
+      h += '</div>';
       h += '</div>';
 
-      h += '<div class="bt-form-row">';
-      h += '<label>메모</label>';
-      h += '<input type="text" id="btFormMemo" class="bt-input" placeholder="특이사항, 내용 등 (선택)" value="' + escapeHtml(item && item.memo ? item.memo : '') + '">';
+      h += '<div class="bt-form-row"><label>메모 (선택)</label>';
+      h += '<input type="text" id="btFormMemo" class="bt-input" placeholder="특이사항, 내용 등" value="' + escapeHtml(defMemo) + '">';
       h += '</div>';
 
       h += '<div class="bt-form-actions">';
@@ -6765,75 +6901,81 @@
       return h;
     }
 
-    function btFormCatChange(catId) {
-      // 카테고리 변경 시 unitLabel 업데이트 (간단 재렌더)
-      btRenderCurrentTab();
-      var catEl = document.getElementById('btFormCat');
-      if (catEl) catEl.value = catId;
-    }
-    function btSetCostMode(mode) {
-      btCostMode = mode;
-      // 현재 폼 값 읽기
-      var units = document.getElementById('btFormUnits') ? document.getElementById('btFormUnits').value : '';
-      var rev   = document.getElementById('btFormRevenue') ? document.getElementById('btFormRevenue').value : '';
-      var memo  = document.getElementById('btFormMemo') ? document.getElementById('btFormMemo').value : '';
-      var catEl = document.getElementById('btFormCat');
-      var catId = catEl ? catEl.value : '';
-      // 모드 버튼 토글
-      var btns = document.querySelectorAll('.bt-mode-btn');
-      btns.forEach(function(b) { b.classList.toggle('active', b.textContent.includes(mode === 'cost' ? '직접' : '마진율')); });
-      // 원가 입력 영역만 교체
-      var area = document.getElementById('btCostInputArea');
-      if (!area) return;
-      var cats = btConfig && btConfig.categories || [];
-      var selCatObj = cats.find(function(c) { return c.id === catId; });
-      if (mode === 'cost') {
-        area.innerHTML = '<div class="bt-form-row"><label>원가 (원)</label><input type="number" id="btFormCost" class="bt-input" min="0" placeholder="미입력 시 마진율 사용"></div>';
-      } else {
-        var rate = selCatObj && selCatObj.defaultMarginRate != null ? Math.round(selCatObj.defaultMarginRate * 100) : '';
-        area.innerHTML = '<div class="bt-form-row"><label>마진율 (%)</label><input type="number" id="btFormRate" class="bt-input" min="0" max="100" placeholder="카테고리 기본값" value="' + rate + '"></div>';
+    function btAutoCalcDisplay() {
+      var units = parseInt(document.getElementById('btFormUnits') ? document.getElementById('btFormUnits').value : '0', 10) || 0;
+      var uprice = parseInt(document.getElementById('btFormUnitPrice') ? document.getElementById('btFormUnitPrice').value : '0', 10) || 0;
+      var ucost  = parseInt(document.getElementById('btFormUnitCost') ? document.getElementById('btFormUnitCost').value : '0', 10) || 0;
+      var rev = units * uprice;
+      var cst = units * ucost;
+      // 단위 원가 없으면 카테고리 기본 마진율 사용
+      if (!ucost) {
+        var catEl = document.getElementById('btFormCat');
+        if (catEl) {
+          var cat = btConfig && btConfig.categories.find(function(c) { return c.id === catEl.value; });
+          if (cat && cat.defaultMarginRate != null) cst = Math.round(rev * (1 - cat.defaultMarginRate));
+        }
       }
-      // 값 복원
-      if (document.getElementById('btFormUnits')) document.getElementById('btFormUnits').value = units;
-      if (document.getElementById('btFormRevenue')) document.getElementById('btFormRevenue').value = rev;
-      if (document.getElementById('btFormMemo')) document.getElementById('btFormMemo').value = memo;
+      var margin = rev - cst;
+      var el = document.getElementById('btAutoCalcResult');
+      if (!el) return;
+      if (!rev) { el.innerHTML = '건수 × 가격 입력 시 자동 계산'; el.className = 'bt-auto-calc'; return; }
+      el.innerHTML = '매출 <b>' + btFmtW(rev) + '</b> &nbsp; 마진 <b' + (margin < 0 ? ' style="color:#e53935"' : '') + '>' + btFmtW(margin) + '</b>';
+      el.className = 'bt-auto-calc filled';
+    }
+
+    function btFormCatChange(catId) {
+      var cats = (btConfig && btConfig.categories) || [];
+      var cat = cats.find(function(c) { return c.id === catId; });
+      var unitLabel = cat ? cat.unitLabel : '건';
+      var labelEl = document.querySelector('#btFormUnits') ? document.querySelector('label[for]') : null;
+      // unitLabel 업데이트 — 라벨 직접 변경
+      var unitsRow = document.getElementById('btFormUnits') ? document.getElementById('btFormUnits').closest('.bt-form-row') : null;
+      if (unitsRow) unitsRow.querySelector('label').textContent = '판매건수 (' + unitLabel + ')';
+      // unitCost 기본값 힌트 업데이트
+      var ucostEl = document.getElementById('btFormUnitCost');
+      if (ucostEl && !ucostEl.value) {
+        ucostEl.placeholder = cat && cat.defaultMarginRate != null ? '기본값 있음 (' + Math.round(cat.defaultMarginRate*100) + '% 마진율)' : '0원';
+      }
+      btAutoCalcDisplay();
     }
 
     function btStartAddItem() {
       btAddingItem = true; btEditItemDate = null; btEditItemIdx = null;
       btRenderCurrentTab();
+      setTimeout(btAutoCalcDisplay, 50);
     }
     function btStartEditItem(date, idx) {
       btAddingItem = false; btEditItemDate = date; btEditItemIdx = idx;
       btRenderCurrentTab();
+      setTimeout(btAutoCalcDisplay, 50);
     }
     function btCancelItemForm() {
       btAddingItem = false; btEditItemDate = null; btEditItemIdx = null;
       btRenderCurrentTab();
     }
     function btSaveItem() {
-      var catEl    = document.getElementById('btFormCat');
-      var unitsEl  = document.getElementById('btFormUnits');
-      var revEl    = document.getElementById('btFormRevenue');
-      var costEl   = document.getElementById('btFormCost');
-      var rateEl   = document.getElementById('btFormRate');
-      var memoEl   = document.getElementById('btFormMemo');
-      if (!catEl || !unitsEl || !revEl) return;
-      var catId   = catEl.value;
-      var units   = parseInt(unitsEl.value, 10) || 0;
-      var revenue = parseInt(revEl.value, 10) || 0;
-      var memo    = memoEl ? memoEl.value.trim() : '';
-      var cost    = null;
-      if (costEl) { var cv = costEl.value; if (cv !== '') cost = parseInt(cv, 10) || 0; }
-      if (rateEl) {
-        var rv = rateEl.value;
-        if (rv !== '') {
-          var rate = parseFloat(rv) / 100;
-          cost = Math.round(revenue * (1 - rate));
+      var catEl     = document.getElementById('btFormCat');
+      var unitsEl   = document.getElementById('btFormUnits');
+      var upriceEl  = document.getElementById('btFormUnitPrice');
+      var ucostEl   = document.getElementById('btFormUnitCost');
+      var memoEl    = document.getElementById('btFormMemo');
+      if (!catEl || !unitsEl) return;
+      var catId     = catEl.value;
+      var units     = parseInt(unitsEl.value, 10) || 0;
+      var unitPrice = parseInt(upriceEl ? upriceEl.value : '0', 10) || 0;
+      var memo      = memoEl ? memoEl.value.trim() : '';
+      var item = { id: btGenId('btitem'), catId: catId, units: units, unitPrice: unitPrice, memo: memo };
+      var ucostVal = ucostEl ? ucostEl.value : '';
+      if (ucostVal !== '') {
+        item.unitCost = parseInt(ucostVal, 10) || 0;
+      }
+      // 단위 원가 없으면 카테고리 기본 마진율로 계산
+      if (item.unitCost === undefined) {
+        var cat = btConfig && btConfig.categories.find(function(c) { return c.id === catId; });
+        if (cat && cat.defaultMarginRate != null) {
+          item.unitCost = Math.round(unitPrice * (1 - cat.defaultMarginRate));
         }
       }
-      var item = { id: btGenId('btitem'), catId: catId, units: units, revenue: revenue, memo: memo };
-      if (cost !== null) item.cost = cost;
 
       var entryIdx = btDailyEntries.findIndex(function(e) { return e.date === btInputDate; });
       if (entryIdx < 0) {
@@ -6878,26 +7020,53 @@
 
     // ── 액션플랜 ──
     function btBuildPlanning() {
-      var h = '<div class="bt-section-title">액션플랜</div>';
+      var cats = (btConfig && btConfig.categories) || [];
+      var actionsByCat = btActionsByCategory();
+      var h = '';
+
       h += '<button class="btn-primary bt-add-btn" onclick="btStartAddAction()">+ 액션 추가</button>';
       if (btAddingAction && !btEditActionId) h += btBuildActionForm(null);
-      if (!btActions.length) {
-        h += '<div class="bt-empty">등록된 액션플랜이 없습니다.</div>';
-      } else {
-        h += '<div class="bt-action-list">';
-        btActions.forEach(function(action) {
+
+      // 카테고리별 그룹 표시
+      var hasAny = false;
+      cats.forEach(function(cat) {
+        var catActions = actionsByCat[cat.id] || [];
+        if (!catActions.length) return;
+        hasAny = true;
+        h += '<div class="bt-group-header" style="color:' + cat.color + '">' + cat.icon + ' ' + escapeHtml(cat.name) + '</div>';
+        h += '<div class="bt-action-grid">';
+        catActions.forEach(function(action) {
           if (btEditActionId === action.id) {
-            h += btBuildActionForm(action);
+            h += '<div class="bt-item-grid-span">' + btBuildActionForm(action) + '</div>';
+          } else {
+            h += btBuildActionCard(action);
+          }
+        });
+        h += '</div>';
+      });
+      // 카테고리 없는 액션
+      var noCat = actionsByCat['__none'] || [];
+      if (noCat.length) {
+        hasAny = true;
+        h += '<div class="bt-group-header">카테고리 미지정</div>';
+        h += '<div class="bt-action-grid">';
+        noCat.forEach(function(action) {
+          if (btEditActionId === action.id) {
+            h += '<div class="bt-item-grid-span">' + btBuildActionForm(action) + '</div>';
           } else {
             h += btBuildActionCard(action);
           }
         });
         h += '</div>';
       }
+      if (!hasAny) h += '<div class="bt-empty">등록된 액션플랜이 없습니다.</div>';
       return h;
     }
+
     function btBuildActionCard(action) {
       var cat = btConfig && btConfig.categories.find(function(c) { return c.id === action.catId; });
+      var planRev = btActionRevenue(action);
+      var planMargin = btActionMargin(action);
       var h = '<div class="bt-action-card">';
       h += '<div class="bt-action-header">';
       h += '<span class="bt-action-name">' + escapeHtml(action.name) + '</span>';
@@ -6905,33 +7074,57 @@
       h += '<button class="btn-icon" onclick="btStartEditAction(\'' + action.id + '\')">✏️</button>';
       h += '<button class="btn-icon" onclick="btDeleteAction(\'' + action.id + '\')">🗑️</button>';
       h += '</div></div>';
-      if (cat) h += '<div class="bt-action-cat" style="color:' + cat.color + '">' + cat.icon + ' ' + escapeHtml(cat.name) + '</div>';
       h += '<div class="bt-action-meta">';
-      if (action.targetUnits) h += '<span>목표 ' + btFmtN(action.targetUnits) + '건</span>';
-      if (action.targetRevenue) h += '<span>목표 매출 ' + btFmtW(action.targetRevenue) + '</span>';
-      if (action.targetDate) h += '<span>기한 ' + action.targetDate + '</span>';
+      if (action.date) h += '<span>📅 ' + action.date + '</span>';
+      if (action.targetUnits) h += '<span>' + btFmtN(action.targetUnits) + (cat ? cat.unitLabel : '건') + '</span>';
+      if (action.unitPrice) h += '<span>객단가 ' + btFmtW(action.unitPrice) + '</span>';
       h += '</div>';
-      if (action.memo) h += '<div class="bt-item-memo">' + escapeHtml(action.memo) + '</div>';
+      if (planRev) {
+        h += '<div class="bt-item-totals" style="margin-top:8px;">';
+        h += '<span>목표 매출 <strong>' + btFmtW(planRev) + '</strong></span>';
+        h += '<span>목표 마진 <strong>' + btFmtW(planMargin) + '</strong></span>';
+        h += '</div>';
+      }
       h += '</div>';
       return h;
     }
+
     function btBuildActionForm(action) {
-      var cats = btConfig && btConfig.categories || [];
+      var cats = (btConfig && btConfig.categories) || [];
       var h = '<div class="bt-item-form">';
+      h += '<div class="bt-form-2col">';
       h += '<div class="bt-form-row"><label>액션명</label><input type="text" id="btActName" class="bt-input" placeholder="무엇을 할 것인지" value="' + escapeHtml(action ? action.name : '') + '"></div>';
-      h += '<div class="bt-form-row"><label>카테고리 (선택)</label><select id="btActCat" class="bt-select"><option value="">-- 전체 --</option>';
+      h += '<div class="bt-form-row"><label>날짜 (언제 실행)</label><input type="date" id="btActDate" class="bt-input" value="' + (action && action.date ? action.date : '') + '"></div>';
+      h += '</div>';
+      h += '<div class="bt-form-row"><label>카테고리</label><select id="btActCat" class="bt-select">';
+      h += '<option value="">-- 미지정 --</option>';
       cats.forEach(function(cat) {
         h += '<option value="' + cat.id + '"' + (action && action.catId === cat.id ? ' selected' : '') + '>' + cat.icon + ' ' + escapeHtml(cat.name) + '</option>';
       });
       h += '</select></div>';
-      h += '<div class="bt-form-row"><label>목표 건수</label><input type="number" id="btActUnits" class="bt-input" min="0" placeholder="선택" value="' + (action && action.targetUnits ? action.targetUnits : '') + '"></div>';
-      h += '<div class="bt-form-row"><label>목표 매출 (원)</label><input type="number" id="btActRevenue" class="bt-input" min="0" placeholder="선택" value="' + (action && action.targetRevenue ? action.targetRevenue : '') + '"></div>';
-      h += '<div class="bt-form-row"><label>기한</label><input type="date" id="btActDate" class="bt-input" value="' + (action && action.targetDate ? action.targetDate : '') + '"></div>';
-      h += '<div class="bt-form-row"><label>메모</label><input type="text" id="btActMemo" class="bt-input" placeholder="선택" value="' + escapeHtml(action && action.memo ? action.memo : '') + '"></div>';
+      h += '<div class="bt-form-3col">';
+      h += '<div class="bt-form-row"><label>목표 건수</label><input type="number" id="btActUnits" class="bt-input" min="0" placeholder="0" value="' + (action && action.targetUnits ? action.targetUnits : '') + '" oninput="btActAutoCalc()"></div>';
+      h += '<div class="bt-form-row"><label>객단가 (1건당 판매가)</label><input type="number" id="btActUnitPrice" class="bt-input" min="0" placeholder="0원" value="' + (action && action.unitPrice ? action.unitPrice : '') + '" oninput="btActAutoCalc()"></div>';
+      h += '<div class="bt-form-row"><label>단위 원가 (1건당 원가)</label><input type="number" id="btActUnitCost" class="bt-input" min="0" placeholder="0원" value="' + (action && action.unitCost ? action.unitCost : '') + '" oninput="btActAutoCalc()"></div>';
+      h += '</div>';
+      h += '<div id="btActAutoResult" class="bt-auto-calc" style="margin-bottom:10px;"></div>';
       h += '<div class="bt-form-actions"><button class="btn-confirm" onclick="btSaveAction(\'' + (action ? action.id : '') + '\')">저장</button><button class="btn-cancel" onclick="btCancelAction()">취소</button></div>';
       h += '</div>';
       return h;
     }
+
+    function btActAutoCalc() {
+      var units = parseInt((document.getElementById('btActUnits') || {}).value || '0', 10) || 0;
+      var uprice = parseInt((document.getElementById('btActUnitPrice') || {}).value || '0', 10) || 0;
+      var ucost  = parseInt((document.getElementById('btActUnitCost') || {}).value || '0', 10) || 0;
+      var rev = units * uprice; var cst = units * ucost; var margin = rev - cst;
+      var el = document.getElementById('btActAutoResult');
+      if (!el) return;
+      if (!rev) { el.innerHTML = ''; el.className = 'bt-auto-calc'; return; }
+      el.innerHTML = '목표 매출 <b>' + btFmtW(rev) + '</b> &nbsp; 목표 마진 <b' + (margin < 0 ? ' style="color:#e53935"' : '') + '>' + btFmtW(margin) + '</b>';
+      el.className = 'bt-auto-calc filled';
+    }
+
     function btStartAddAction() { btAddingAction = true; btEditActionId = null; btRenderCurrentTab(); }
     function btStartEditAction(id) { btEditActionId = id; btAddingAction = false; btRenderCurrentTab(); }
     function btCancelAction() { btAddingAction = false; btEditActionId = null; btRenderCurrentTab(); }
@@ -6942,10 +7135,10 @@
         id: id || btGenId('btact'),
         name: name.trim(),
         catId: (document.getElementById('btActCat') || {}).value || '',
+        date: (document.getElementById('btActDate') || {}).value || '',
         targetUnits: parseInt((document.getElementById('btActUnits') || {}).value || '0', 10) || 0,
-        targetRevenue: parseInt((document.getElementById('btActRevenue') || {}).value || '0', 10) || 0,
-        targetDate: (document.getElementById('btActDate') || {}).value || '',
-        memo: ((document.getElementById('btActMemo') || {}).value || '').trim()
+        unitPrice: parseInt((document.getElementById('btActUnitPrice') || {}).value || '0', 10) || 0,
+        unitCost: parseInt((document.getElementById('btActUnitCost') || {}).value || '0', 10) || 0
       };
       if (id) {
         var idx = btActions.findIndex(function(a) { return a.id === id; });
@@ -6965,17 +7158,24 @@
 
     // ── 분기 ──
     function btBuildQuarters() {
-      var qs = btConfig ? btConfig.quarters : [];
-      var h = '<div class="bt-section-title">분기 설정 및 현황</div>';
-      h += '<button class="btn-primary bt-add-btn" onclick="btStartAddQuarter()">+ 분기 추가</button>';
+      var qs = btConfig ? (btConfig.quarters || []) : [];
+      var h = '<button class="btn-primary bt-add-btn" onclick="btStartAddQuarter()">+ 분기 추가</button>';
       if (btAddingQuarter && !btEditQuarterId) h += btBuildQuarterForm(null);
       if (!qs.length) {
         h += '<div class="bt-empty">등록된 분기가 없습니다.</div>';
       } else {
+        h += '<div class="bt-section-title">분기 설정 및 현황</div>';
+        h += '<div class="bt-quarter-grid">';
         qs.forEach(function(q) {
-          if (btEditQuarterId === q.id) { h += btBuildQuarterForm(q); return; }
+          if (btEditQuarterId === q.id) { h += '<div class="bt-item-grid-span">' + btBuildQuarterForm(q) + '</div>'; return; }
           h += btBuildQuarterCard(q);
         });
+        h += '</div>';
+        // 분기 목표 계산 방식 안내
+        h += '<div class="bt-info-box">';
+        h += '<strong>📊 대시보드 목표 적용 방식</strong><br>';
+        h += '대시보드에서 <em>이번 달</em>은 월 목표 그대로, <em>이번 주</em>는 월 목표 ÷ 30 × 7일, <em>오늘</em>은 ÷ 30 × 1일로 비례 계산됩니다.';
+        h += '</div>';
       }
       return h;
     }
@@ -7005,10 +7205,14 @@
     }
     function btBuildQuarterForm(q) {
       var h = '<div class="bt-item-form">';
+      h += '<div class="bt-form-2col">';
       h += '<div class="bt-form-row"><label>분기 이름</label><input type="text" id="btQName" class="bt-input" placeholder="예: 2026 3분기" value="' + escapeHtml(q ? q.name : '') + '"></div>';
+      h += '<div class="bt-form-row"><label>월 목표 매출 (원)</label><input type="number" id="btQTarget" class="bt-input" min="0" value="' + (q ? (q.monthlyTargetRevenue || 0) : '') + '"></div>';
+      h += '</div>';
+      h += '<div class="bt-form-2col">';
       h += '<div class="bt-form-row"><label>시작일</label><input type="date" id="btQStart" class="bt-input" value="' + (q ? q.startDate : '') + '"></div>';
       h += '<div class="bt-form-row"><label>종료일</label><input type="date" id="btQEnd" class="bt-input" value="' + (q ? q.endDate : '') + '"></div>';
-      h += '<div class="bt-form-row"><label>월 목표 매출 (원)</label><input type="number" id="btQTarget" class="bt-input" min="0" value="' + (q ? (q.monthlyTargetRevenue || 0) : '') + '"></div>';
+      h += '</div>';
       h += '<div class="bt-form-actions"><button class="btn-confirm" onclick="btSaveQuarter(\'' + (q ? q.id : '') + '\')">저장</button><button class="btn-cancel" onclick="btCancelQuarter()">취소</button></div>';
       h += '</div>';
       return h;
@@ -7051,22 +7255,32 @@
       h += '<div class="bt-section-title">카테고리</div>';
       h += '<button class="btn-primary bt-add-btn" onclick="btStartAddCat()">+ 카테고리 추가</button>';
       if (btAddingCat && !btEditCatId) h += btBuildCatForm(null);
-      var cats = btConfig ? btConfig.categories : [];
+      var cats = btConfig ? (btConfig.categories || []) : [];
+      h += '<div class="bt-settings-cat-grid">';
       cats.forEach(function(cat) {
-        if (btEditCatId === cat.id) { h += btBuildCatForm(cat); return; }
-        h += btBuildCatRow(cat);
+        if (btEditCatId === cat.id) {
+          h += '<div class="bt-item-grid-span">' + btBuildCatForm(cat) + '</div>';
+        } else {
+          h += btBuildCatRow(cat);
+        }
       });
+      h += '</div>';
       if (!cats.length) h += '<div class="bt-empty">카테고리가 없습니다.</div>';
 
       // 고정비
       h += '<div class="bt-section-title" style="margin-top:24px;">고정비</div>';
       h += '<button class="btn-primary bt-add-btn" onclick="btStartAddCost()">+ 고정비 추가</button>';
       if (btAddingCost && !btEditCostId) h += btBuildCostForm(null);
-      var fcs = btConfig ? btConfig.fixedCosts : [];
+      var fcs = btConfig ? (btConfig.fixedCosts || []) : [];
+      h += '<div class="bt-settings-cat-grid">';
       fcs.forEach(function(fc) {
-        if (btEditCostId === fc.id) { h += btBuildCostForm(fc); return; }
-        h += btBuildCostRow(fc);
+        if (btEditCostId === fc.id) {
+          h += '<div class="bt-item-grid-span">' + btBuildCostForm(fc) + '</div>';
+        } else {
+          h += btBuildCostRow(fc);
+        }
       });
+      h += '</div>';
       if (!fcs.length) h += '<div class="bt-empty">고정비가 없습니다.</div>';
       var total = btFixedCostTotal();
       h += '<div class="bt-cost-total">월 고정비 합계: <strong>' + btFmtW(total) + '</strong></div>';
@@ -7075,26 +7289,57 @@
     }
 
     function btBuildCatRow(cat) {
-      return '<div class="bt-cat-row bt-settings-row">' +
-        '<span style="font-size:1.4em">' + cat.icon + '</span>' +
-        '<span class="bt-cat-name" style="color:' + cat.color + '">' + escapeHtml(cat.name) + '</span>' +
-        '<span class="bt-settings-meta">' + escapeHtml(cat.unitLabel) + (cat.defaultMarginRate != null ? ' / 마진 ' + Math.round(cat.defaultMarginRate*100) + '%' : '') + '</span>' +
+      var rateText = cat.defaultMarginRate != null ? ' / 마진율 ' + Math.round(cat.defaultMarginRate*100) + '%' : ' / 원가 직접 입력';
+      return '<div class="bt-cat-settings-card">' +
+        '<div class="bt-cat-settings-icon" style="background:' + cat.color + '22;color:' + cat.color + '">' + cat.icon + '</div>' +
+        '<div class="bt-cat-settings-info">' +
+          '<div class="bt-cat-settings-name">' + escapeHtml(cat.name) + '</div>' +
+          '<div class="bt-cat-settings-meta">' + escapeHtml(cat.unitLabel) + rateText + '</div>' +
+        '</div>' +
         '<div class="bt-item-actions"><button class="btn-icon" onclick="btStartEditCat(\'' + cat.id + '\')">✏️</button><button class="btn-icon" onclick="btDeleteCat(\'' + cat.id + '\')">🗑️</button></div>' +
         '</div>';
     }
+
     function btBuildCatForm(cat) {
-      var h = '<div class="bt-item-form">';
-      h += '<div class="bt-form-row"><label>이름</label><input type="text" id="btCatName" class="bt-input" placeholder="카테고리 이름" value="' + escapeHtml(cat ? cat.name : '') + '"></div>';
-      h += '<div class="bt-form-row"><label>아이콘 (이모지)</label><input type="text" id="btCatIcon" class="bt-input" maxlength="4" placeholder="🏠" value="' + (cat ? cat.icon : '') + '"></div>';
-      h += '<div class="bt-form-row"><label>색상</label><input type="color" id="btCatColor" class="bt-input" value="' + (cat ? cat.color : '#888888') + '"></div>';
-      h += '<div class="bt-form-row"><label>단위 라벨</label><input type="text" id="btCatUnit" class="bt-input" placeholder="이용자, 참가자, 구매건수..." value="' + escapeHtml(cat ? cat.unitLabel : '') + '"></div>';
-      h += '<div class="bt-form-row"><label>기본 마진율 (%) — 비워두면 원가 직접 입력</label>';
       var rate = cat && cat.defaultMarginRate != null ? Math.round(cat.defaultMarginRate * 100) : '';
-      h += '<input type="number" id="btCatRate" class="bt-input" min="0" max="100" placeholder="비워두면 미사용" value="' + rate + '"></div>';
+      var h = '<div class="bt-item-form">';
+      h += '<div class="bt-form-2col">';
+      h += '<div class="bt-form-row"><label>카테고리 이름</label><input type="text" id="btCatName" class="bt-input" placeholder="카테고리 이름" value="' + escapeHtml(cat ? cat.name : '') + '"></div>';
+      h += '<div class="bt-form-row"><label>단위 라벨</label><input type="text" id="btCatUnit" class="bt-input" placeholder="이용자, 참가자, 구매건수..." value="' + escapeHtml(cat ? cat.unitLabel : '') + '"></div>';
+      h += '</div>';
+      h += '<div class="bt-form-2col">';
+      // 이모지 피커 버튼
+      h += '<div class="bt-form-row"><label>아이콘</label>';
+      h += '<button class="bt-emoji-btn" onclick="btPickCatIcon(\'' + escapeHtml(cat ? cat.icon : '') + '\')">';
+      h += '<span id="btCatIconDisplay">' + (cat && cat.icon ? cat.icon : '📦') + '</span> 이모지 선택';
+      h += '</button>';
+      h += '<input type="hidden" id="btCatIconVal" value="' + escapeHtml(cat ? cat.icon : '📦') + '">';
+      h += '</div>';
+      h += '<div class="bt-form-row"><label>색상</label><input type="color" id="btCatColor" class="bt-input-color" value="' + (cat ? cat.color : '#888888') + '"></div>';
+      h += '</div>';
+      // 마진율 설명 박스
+      h += '<div class="bt-info-box" style="margin-bottom:10px;">';
+      h += '<strong>기본 마진율</strong>이란? 입력 시 단위 원가를 비워두면 이 비율을 사용해 <em>원가 = 객단가 × (1 - 마진율%)</em>로 자동 계산합니다.<br>';
+      h += '예: 마진율 27% → 객단가 10,000원짜리 상품의 원가는 7,300원, 순이익은 2,700원으로 계산됩니다.<br>';
+      h += '단위 원가를 직접 입력하면 마진율은 무시됩니다. 입력 규칙을 특별히 지정하지 않아도 되는 카테고리는 비워두세요.';
+      h += '</div>';
+      h += '<div class="bt-form-row"><label>기본 마진율 (%) — 비워두면 항목 입력 시 원가를 직접 입력</label>';
+      h += '<input type="number" id="btCatRate" class="bt-input" min="0" max="100" placeholder="예: 27" value="' + rate + '">';
+      h += '</div>';
       h += '<div class="bt-form-actions"><button class="btn-confirm" onclick="btSaveCat(\'' + (cat ? cat.id : '') + '\')">저장</button><button class="btn-cancel" onclick="btCancelCat()">취소</button></div>';
       h += '</div>';
       return h;
     }
+
+    function btPickCatIcon(current) {
+      openEmojiPicker(current || '', function(emoji) {
+        var display = document.getElementById('btCatIconDisplay');
+        var val = document.getElementById('btCatIconVal');
+        if (display) display.textContent = emoji;
+        if (val) val.value = emoji;
+      });
+    }
+
     function btStartAddCat() { btAddingCat = true; btEditCatId = null; btRenderCurrentTab(); }
     function btStartEditCat(id) { btEditCatId = id; btAddingCat = false; btRenderCurrentTab(); }
     function btCancelCat() { btAddingCat = false; btEditCatId = null; btRenderCurrentTab(); }
@@ -7104,10 +7349,11 @@
       var rateEl = document.getElementById('btCatRate');
       var rateStr = rateEl ? rateEl.value : '';
       var marginRate = rateStr !== '' ? parseFloat(rateStr) / 100 : null;
+      var iconVal = document.getElementById('btCatIconVal');
       var cat = {
         id: id || btGenId('btcat'),
         name: name.trim(),
-        icon: (document.getElementById('btCatIcon') || {}).value || '📦',
+        icon: (iconVal ? iconVal.value : '') || '📦',
         color: (document.getElementById('btCatColor') || {}).value || '#888888',
         unitLabel: ((document.getElementById('btCatUnit') || {}).value || '건').trim(),
         defaultMarginRate: (isNaN(marginRate) || marginRate === null) ? null : marginRate
@@ -7130,16 +7376,18 @@
     }
 
     function btBuildCostRow(fc) {
-      return '<div class="bt-cat-row bt-settings-row">' +
+      return '<div class="bt-cost-row">' +
         '<span class="bt-cat-name">' + escapeHtml(fc.name) + '</span>' +
-        '<span class="bt-settings-meta">' + btFmtW(fc.amount) + '/월</span>' +
+        '<span class="bt-cost-amount">' + btFmtW(fc.amount) + '/월</span>' +
         '<div class="bt-item-actions"><button class="btn-icon" onclick="btStartEditCost(\'' + fc.id + '\')">✏️</button><button class="btn-icon" onclick="btDeleteCost(\'' + fc.id + '\')">🗑️</button></div>' +
         '</div>';
     }
     function btBuildCostForm(fc) {
       var h = '<div class="bt-item-form">';
+      h += '<div class="bt-form-2col">';
       h += '<div class="bt-form-row"><label>항목명</label><input type="text" id="btFcName" class="bt-input" placeholder="임대료, 관리비..." value="' + escapeHtml(fc ? fc.name : '') + '"></div>';
       h += '<div class="bt-form-row"><label>월 금액 (원)</label><input type="number" id="btFcAmount" class="bt-input" min="0" value="' + (fc ? fc.amount : '') + '"></div>';
+      h += '</div>';
       h += '<div class="bt-form-actions"><button class="btn-confirm" onclick="btSaveCost(\'' + (fc ? fc.id : '') + '\')">저장</button><button class="btn-cancel" onclick="btCancelCost()">취소</button></div>';
       h += '</div>';
       return h;
