@@ -6349,7 +6349,6 @@
     var btActionOffset = 0;
     var btDailyFilterCat = '__all'; // '__all' | catId
     var btActionFilterCat = '__all';
-    var btPeriodPickingDate = false; // 기간 뷰에서 날짜 선택 중 여부
 
     // 기간 범위 계산 (daily / action 탭 공용)
     function btPeriodRange(period, offset) {
@@ -6929,44 +6928,22 @@
         if (visPeriodItems.length === 0) {
           h += '<div class="bt-empty" style="grid-column:1/-1;">이 기간에 기록된 달성 내용이 없습니다.</div>';
         }
-        if (!btPeriodPickingDate) {
-          var periodHasToday = range.start <= today() && today() <= range.end;
-          var periodIsAllFuture = range.start > today();
-          if (!periodIsAllFuture) {
-            h += '<button class="btn-add-card" onclick="btPeriodPickDate()"><span class="btn-add-card-plus">+</span>매출 추가</button>';
+        // 미래 기간이 아닌 경우에만 추가 가능
+        if (range.start <= today()) {
+          if (btAddingItem) {
+            h += '<div class="bt-item-grid-span">' + btBuildItemForm(null, null, range) + '</div>';
+          } else {
+            h += '<button class="btn-add-card" onclick="btStartAddItem()"><span class="btn-add-card-plus">+</span>매출 추가</button>';
           }
         }
         h += '</div>';
-        // 날짜 선택 인라인 피커
-        if (btPeriodPickingDate) {
-          var pickMax = today() < range.end ? today() : range.end;
-          var pickDef = today() >= range.start && today() <= range.end ? today() : pickMax;
-          h += '<div class="bt-period-date-pick">';
-          h += '<div class="bt-period-date-pick-label">어느 날짜 매출인가요? <span>(' + range.label + ' 내, 오늘까지)</span></div>';
-          h += '<div class="bt-period-date-pick-row">';
-          h += '<input type="date" id="btPeriodDateInput" class="bt-input" min="' + range.start + '" max="' + pickMax + '" value="' + pickDef + '">';
-          h += '<button class="btn-confirm" onclick="btConfirmPeriodDate()">이 날짜로 추가</button>';
-          h += '<button class="btn-cancel" onclick="btCancelPeriodDate()">취소</button>';
-          h += '</div></div>';
-        }
       }
 
       return h;
     }
 
-    function btSetDailyPeriod(p) { btDailyPeriod = p; btDailyOffset = 0; btPeriodPickingDate = false; btAddingItem = false; btEditItemDate = null; btEditItemIdx = null; btRenderCurrentTab(); }
-    function btChangeDailyOffset(delta, reset) { btDailyOffset = reset ? 0 : btDailyOffset + delta; btPeriodPickingDate = false; btRenderCurrentTab(); }
-
-    function btPeriodPickDate() { btPeriodPickingDate = true; btRenderCurrentTab(); }
-    function btCancelPeriodDate() { btPeriodPickingDate = false; btRenderCurrentTab(); }
-    function btConfirmPeriodDate() {
-      var el = document.getElementById('btPeriodDateInput');
-      if (!el || !el.value) { showAlert('날짜 선택', '날짜를 선택해주세요.'); return; }
-      var sel = el.value;
-      if (sel > today()) { showAlert('날짜 오류', '미래 날짜에는 매출을 추가할 수 없습니다.'); return; }
-      btPeriodPickingDate = false;
-      btGoToDay(sel);
-    }
+    function btSetDailyPeriod(p) { btDailyPeriod = p; btDailyOffset = 0; btAddingItem = false; btEditItemDate = null; btEditItemIdx = null; btRenderCurrentTab(); }
+    function btChangeDailyOffset(delta, reset) { btDailyOffset = reset ? 0 : btDailyOffset + delta; btRenderCurrentTab(); }
     function _btDayOffset(date) {
       var todayMs = new Date(today() + 'T00:00:00').getTime();
       var targetMs = new Date(date + 'T00:00:00').getTime();
@@ -7022,7 +6999,8 @@
       return h;
     }
 
-    function btBuildItemForm(item, idx) {
+    // periodRange: 기간 뷰에서 호출 시 { start, end, label } 전달 → 날짜 필드 표시
+    function btBuildItemForm(item, idx, periodRange) {
       var cats = (btConfig && btConfig.categories) || [];
       var selCat = item ? item.catId : (cats[0] ? cats[0].id : '');
       var selCatObj = cats.find(function(c) { return c.id === selCat; });
@@ -7038,6 +7016,14 @@
       var defMemo = item && item.memo ? item.memo : '';
 
       var h = '<div class="bt-item-form">';
+      // 기간 뷰: 날짜 선택 필드 (미래 날짜 차단)
+      if (periodRange) {
+        var pickMax = today() < periodRange.end ? today() : periodRange.end;
+        var pickDef = item && item.date ? item.date : (today() >= periodRange.start && today() <= pickMax ? today() : pickMax);
+        h += '<div class="bt-form-row"><label>날짜</label>';
+        h += '<input type="date" id="btFormDate" class="bt-input" min="' + periodRange.start + '" max="' + pickMax + '" value="' + pickDef + '">';
+        h += '</div>';
+      }
       h += '<div class="bt-form-2col">';
       h += '<div class="bt-form-row"><label>카테고리</label>';
       h += '<select id="btFormCat" class="bt-select" onchange="btFormCatChange(this.value)">';
@@ -7150,11 +7136,17 @@
         }
       }
 
-      var entryIdx = btDailyEntries.findIndex(function(e) { return e.date === btInputDate; });
+      // 기간 뷰에서 추가 시 폼의 날짜 필드 사용, 일별 뷰에서는 btInputDate 사용
+      var dateEl = document.getElementById('btFormDate');
+      var saveDate = dateEl ? dateEl.value : btInputDate;
+      if (!saveDate) saveDate = btInputDate;
+      if (saveDate > today()) { showAlert('날짜 오류', '미래 날짜에는 매출을 추가할 수 없습니다.'); return; }
+
+      var entryIdx = btDailyEntries.findIndex(function(e) { return e.date === saveDate; });
       if (entryIdx < 0) {
-        btDailyEntries.push({ date: btInputDate, items: [item] });
+        btDailyEntries.push({ date: saveDate, items: [item] });
       } else {
-        if (btEditItemIdx !== null && btEditItemDate === btInputDate) {
+        if (btEditItemIdx !== null && btEditItemDate === saveDate) {
           btDailyEntries[entryIdx].items[btEditItemIdx] = item;
         } else {
           btDailyEntries[entryIdx].items.push(item);
