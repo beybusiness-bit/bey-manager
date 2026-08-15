@@ -6820,9 +6820,17 @@
       if (btDailyPeriod === 'day') btInputDate = range.start; // offset 방식으로 btInputDate 동기화
       var dCanPrev = btDailyPeriod !== 'quarter' || range.qIdx > 0;
       var dCanNext = btDailyPeriod !== 'quarter' || range.qIdx < range.qTotal - 1;
+      var dPickerMin = '', dPickerMax = '';
+      if (btDailyPeriod === 'quarter') {
+        var _dQs = (btConfig && btConfig.quarters) ? btConfig.quarters.slice().sort(function(a,b){return a.startDate>b.startDate?1:-1;}) : [];
+        if (_dQs.length > 0) { dPickerMin = _dQs[0].startDate; dPickerMax = _dQs[_dQs.length-1].endDate; }
+      }
       h += '<div class="bt-date-nav">';
       h += '<button class="btn-icon"' + (!dCanPrev ? ' disabled style="opacity:.35;cursor:default"' : '') + ' onclick="btChangeDailyOffset(-1)">◀</button>';
-      h += '<span style="font-weight:600;padding:0 8px;">' + range.label + '</span>';
+      h += '<div class="bt-date-label-wrap">';
+      h += '<button class="bt-date-label-btn">' + range.label + ' <span class="bt-cal-icon">📅</span></button>';
+      h += '<input type="date" class="bt-date-label-picker" value="' + range.start + '"' + (dPickerMin ? ' min="' + dPickerMin + '"' : '') + (dPickerMax ? ' max="' + dPickerMax + '"' : '') + ' onchange="btDailyJumpToDate(this.value)">';
+      h += '</div>';
       h += '<button class="btn-icon"' + (!dCanNext ? ' disabled style="opacity:.35;cursor:default"' : '') + ' onclick="btChangeDailyOffset(1)">▶</button>';
       h += '<button class="btn-icon" onclick="btChangeDailyOffset(0,true)">' + (btDailyPeriod === 'day' ? '오늘' : '현재') + '</button>';
       h += '</div>';
@@ -6942,6 +6950,55 @@
 
     function btSetDailyPeriod(p) { btDailyPeriod = p; btDailyOffset = 0; btAddingItem = false; btEditItemDate = null; btEditItemIdx = null; btRenderCurrentTab(); }
     function btChangeDailyOffset(delta, reset) { btDailyOffset = reset ? 0 : btDailyOffset + delta; btRenderCurrentTab(); }
+
+    // 날짜 피커로 기간 점프
+    function btDailyJumpToDate(dateStr) {
+      if (!dateStr) return;
+      var t = today();
+      if (btDailyPeriod === 'day') {
+        btDailyOffset = Math.round((new Date(dateStr+'T00:00:00') - new Date(t+'T00:00:00')) / 86400000);
+      } else if (btDailyPeriod === 'week') {
+        var sd = new Date(dateStr+'T00:00:00'), td = new Date(t+'T00:00:00');
+        var sm = new Date(sd); sm.setDate(sd.getDate() - (sd.getDay()+6)%7);
+        var tm = new Date(td); tm.setDate(td.getDate() - (td.getDay()+6)%7);
+        btDailyOffset = Math.round((sm - tm) / (7*86400000));
+      } else if (btDailyPeriod === 'month') {
+        var sd = new Date(dateStr+'T00:00:00'), td = new Date(t+'T00:00:00');
+        btDailyOffset = (sd.getFullYear()-td.getFullYear())*12 + (sd.getMonth()-td.getMonth());
+      } else { // quarter
+        var allQs = (btConfig && btConfig.quarters) ? btConfig.quarters.slice().sort(function(a,b){return a.startDate>b.startDate?1:-1;}) : [];
+        var curQIdx=-1, selQIdx=-1;
+        allQs.forEach(function(q,i){ if(t>=q.startDate&&t<=q.endDate) curQIdx=i; });
+        allQs.forEach(function(q,i){ if(dateStr>=q.startDate&&dateStr<=q.endDate) selQIdx=i; });
+        if(curQIdx<0) curQIdx=allQs.length-1;
+        if(selQIdx>=0) btDailyOffset=selQIdx-curQIdx;
+      }
+      btRenderCurrentTab();
+    }
+    function btActionJumpToDate(dateStr) {
+      if (!dateStr) return;
+      var t = today();
+      if (btActionPeriod === 'day') {
+        btActionOffset = Math.round((new Date(dateStr+'T00:00:00') - new Date(t+'T00:00:00')) / 86400000);
+      } else if (btActionPeriod === 'week') {
+        var sd = new Date(dateStr+'T00:00:00'), td = new Date(t+'T00:00:00');
+        var sm = new Date(sd); sm.setDate(sd.getDate() - (sd.getDay()+6)%7);
+        var tm = new Date(td); tm.setDate(td.getDate() - (td.getDay()+6)%7);
+        btActionOffset = Math.round((sm - tm) / (7*86400000));
+      } else if (btActionPeriod === 'month') {
+        var sd = new Date(dateStr+'T00:00:00'), td = new Date(t+'T00:00:00');
+        btActionOffset = (sd.getFullYear()-td.getFullYear())*12 + (sd.getMonth()-td.getMonth());
+      } else { // quarter
+        var allQs = (btConfig && btConfig.quarters) ? btConfig.quarters.slice().sort(function(a,b){return a.startDate>b.startDate?1:-1;}) : [];
+        var curQIdx=-1, selQIdx=-1;
+        allQs.forEach(function(q,i){ if(t>=q.startDate&&t<=q.endDate) curQIdx=i; });
+        allQs.forEach(function(q,i){ if(dateStr>=q.startDate&&dateStr<=q.endDate) selQIdx=i; });
+        if(curQIdx<0) curQIdx=allQs.length-1;
+        if(selQIdx>=0) btActionOffset=selQIdx-curQIdx;
+      }
+      btRenderCurrentTab();
+    }
+
     function _btDayOffset(date) {
       var todayMs = new Date(today() + 'T00:00:00').getTime();
       var targetMs = new Date(date + 'T00:00:00').getTime();
@@ -7022,6 +7079,8 @@
         h += '<input type="date" id="btFormDate" class="bt-input" min="' + periodRange.start + '" max="' + pickMax + '" value="' + pickDef + '">';
         h += '</div>';
       }
+      var defTotalRev = (item && item.units && item.unitPrice) ? Number(item.units) * Number(item.unitPrice) : '';
+
       h += '<div class="bt-form-2col">';
       h += '<div class="bt-form-row"><label>카테고리</label>';
       h += '<select id="btFormCat" class="bt-select" onchange="btFormCatChange(this.value)">';
@@ -7031,14 +7090,20 @@
       h += '</select></div>';
 
       h += '<div class="bt-form-row"><label>판매건수 (' + unitLabel + ')</label>';
-      h += '<input type="number" id="btFormUnits" class="bt-input" min="1" placeholder="0" value="' + defUnits + '" oninput="btAutoCalcDisplay()">';
+      h += '<input type="number" id="btFormUnits" class="bt-input" min="1" placeholder="0" value="' + defUnits + '" oninput="btItemUnitsInput()">';
       h += '</div>';
       h += '</div>';
 
-      h += '<div class="bt-form-3col">';
-      h += '<div class="bt-form-row"><label>객단가 (1건당 판매가)</label>';
-      h += '<input type="number" id="btFormUnitPrice" class="bt-input" min="0" placeholder="0원" value="' + defUnitPrice + '" oninput="btAutoCalcDisplay()">';
+      h += '<div class="bt-form-2col">';
+      h += '<div class="bt-form-row"><label>객단가 (1건당 판매가) <span class="bt-field-hint">↔ 총매출 자동 계산</span></label>';
+      h += '<input type="number" id="btFormUnitPrice" class="bt-input" min="0" placeholder="0원" value="' + defUnitPrice + '" oninput="btUnitPriceInput()">';
       h += '</div>';
+      h += '<div class="bt-form-row"><label>총매출 (전체 합산액) <span class="bt-field-hint">↔ 객단가 자동 계산</span></label>';
+      h += '<input type="number" id="btFormTotalRev" class="bt-input" min="0" placeholder="0원" value="' + defTotalRev + '" oninput="btTotalRevInput()">';
+      h += '</div>';
+      h += '</div>';
+
+      h += '<div class="bt-form-2col">';
       h += '<div class="bt-form-row"><label>단위 원가 (1건당 원가)</label>';
       h += '<input type="number" id="btFormUnitCost" class="bt-input" min="0" placeholder="' + (selCatObj && selCatObj.defaultMarginRate != null ? '기본값 있음' : '0원') + '" value="' + defUnitCost + '" oninput="btAutoCalcDisplay()">';
       h += '</div>';
@@ -7056,6 +7121,37 @@
       h += '<button class="btn-cancel" onclick="btCancelItemForm()">취소</button>';
       h += '</div></div>';
       return h;
+    }
+
+    // 객단가 → 총매출 자동 계산
+    function btUnitPriceInput() {
+      var units = parseInt((document.getElementById('btFormUnits')||{}).value||'0',10)||0;
+      var price = parseInt((document.getElementById('btFormUnitPrice')||{}).value||'0',10)||0;
+      var totalEl = document.getElementById('btFormTotalRev');
+      if (totalEl) totalEl.value = (units > 0 && price > 0) ? units * price : '';
+      btAutoCalcDisplay();
+    }
+    // 총매출 → 객단가 자동 계산
+    function btTotalRevInput() {
+      var units = parseInt((document.getElementById('btFormUnits')||{}).value||'0',10)||0;
+      var total = parseInt((document.getElementById('btFormTotalRev')||{}).value||'0',10)||0;
+      var priceEl = document.getElementById('btFormUnitPrice');
+      if (priceEl) priceEl.value = (units > 0 && total > 0) ? Math.round(total / units) : '';
+      btAutoCalcDisplay();
+    }
+    // 건수 변경 → 총매출이 입력돼 있으면 객단가 재계산, 아니면 총매출 재계산
+    function btItemUnitsInput() {
+      var units = parseInt((document.getElementById('btFormUnits')||{}).value||'0',10)||0;
+      var totalEl = document.getElementById('btFormTotalRev');
+      var priceEl = document.getElementById('btFormUnitPrice');
+      var total = parseInt((totalEl||{}).value||'0',10)||0;
+      var price = parseInt((priceEl||{}).value||'0',10)||0;
+      if (total > 0 && units > 0 && priceEl) {
+        priceEl.value = Math.round(total / units);
+      } else if (price > 0 && units > 0 && totalEl) {
+        totalEl.value = units * price;
+      }
+      btAutoCalcDisplay();
     }
 
     function btAutoCalcDisplay() {
@@ -7198,9 +7294,17 @@
       var aRange = btPeriodRange(btActionPeriod, btActionOffset);
       var aCanPrev = btActionPeriod !== 'quarter' || aRange.qIdx > 0;
       var aCanNext = btActionPeriod !== 'quarter' || aRange.qIdx < aRange.qTotal - 1;
+      var aPickerMin = '', aPickerMax = '';
+      if (btActionPeriod === 'quarter') {
+        var _aQs = (btConfig && btConfig.quarters) ? btConfig.quarters.slice().sort(function(a,b){return a.startDate>b.startDate?1:-1;}) : [];
+        if (_aQs.length > 0) { aPickerMin = _aQs[0].startDate; aPickerMax = _aQs[_aQs.length-1].endDate; }
+      }
       h += '<div class="bt-date-nav">';
       h += '<button class="btn-icon"' + (!aCanPrev ? ' disabled style="opacity:.35;cursor:default"' : '') + ' onclick="btChangeActionOffset(-1)">◀</button>';
-      h += '<span style="font-weight:600;padding:0 8px;">' + aRange.label + '</span>';
+      h += '<div class="bt-date-label-wrap">';
+      h += '<button class="bt-date-label-btn">' + aRange.label + ' <span class="bt-cal-icon">📅</span></button>';
+      h += '<input type="date" class="bt-date-label-picker" value="' + aRange.start + '"' + (aPickerMin ? ' min="' + aPickerMin + '"' : '') + (aPickerMax ? ' max="' + aPickerMax + '"' : '') + ' onchange="btActionJumpToDate(this.value)">';
+      h += '</div>';
       h += '<button class="btn-icon"' + (!aCanNext ? ' disabled style="opacity:.35;cursor:default"' : '') + ' onclick="btChangeActionOffset(1)">▶</button>';
       h += '<button class="btn-icon" onclick="btChangeActionOffset(0,true)">현재</button>';
       h += '</div>';
