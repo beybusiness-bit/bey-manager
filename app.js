@@ -7235,8 +7235,6 @@
         h += '</div></div>';
       }
 
-      if (btAddingAction && !btEditActionId) h += btBuildActionForm(null);
-
       // 기간 필터 액션
       var filtActions = btActions.filter(function(a) {
         if (!a.date) return btActionPeriod === 'quarter';
