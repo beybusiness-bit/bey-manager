@@ -6397,7 +6397,11 @@
     function btFmtW(n) {
       if (!n || isNaN(n)) return '0원';
       var abs = Math.abs(n);
-      if (abs >= 10000) return (n < 0 ? '-' : '') + Math.round(abs / 10000) + '만원';
+      if (abs >= 10000) {
+        var mw = Math.round(abs / 1000) / 10;  // 소수점 1자리 (27300 → 2.7)
+        var disp = mw % 1 === 0 ? mw.toFixed(0) : mw.toFixed(1);
+        return (n < 0 ? '-' : '') + disp + '만원';
+      }
       return n.toLocaleString('ko-KR') + '원';
     }
     function btFmtN(n) {
