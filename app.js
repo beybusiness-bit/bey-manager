@@ -6349,6 +6349,7 @@
     var btActionOffset = 0;
     var btDailyFilterCat = '__all'; // '__all' | catId
     var btActionFilterCat = '__all';
+    var btPeriodPickingDate = false; // 기간 뷰에서 날짜 선택 중 여부
 
     // 기간 범위 계산 (daily / action 탭 공용)
     function btPeriodRange(period, offset) {
@@ -6928,15 +6929,44 @@
         if (visPeriodItems.length === 0) {
           h += '<div class="bt-empty" style="grid-column:1/-1;">이 기간에 기록된 달성 내용이 없습니다.</div>';
         }
-        h += '<button class="btn-add-card" onclick="btGoToDay(\'' + today() + '\')"><span class="btn-add-card-plus">+</span>오늘 매출 추가</button>';
+        if (!btPeriodPickingDate) {
+          var periodHasToday = range.start <= today() && today() <= range.end;
+          var periodIsAllFuture = range.start > today();
+          if (!periodIsAllFuture) {
+            h += '<button class="btn-add-card" onclick="btPeriodPickDate()"><span class="btn-add-card-plus">+</span>매출 추가</button>';
+          }
+        }
         h += '</div>';
+        // 날짜 선택 인라인 피커
+        if (btPeriodPickingDate) {
+          var pickMax = today() < range.end ? today() : range.end;
+          var pickDef = today() >= range.start && today() <= range.end ? today() : pickMax;
+          h += '<div class="bt-period-date-pick">';
+          h += '<div class="bt-period-date-pick-label">어느 날짜 매출인가요? <span>(' + range.label + ' 내, 오늘까지)</span></div>';
+          h += '<div class="bt-period-date-pick-row">';
+          h += '<input type="date" id="btPeriodDateInput" class="bt-input" min="' + range.start + '" max="' + pickMax + '" value="' + pickDef + '">';
+          h += '<button class="btn-confirm" onclick="btConfirmPeriodDate()">이 날짜로 추가</button>';
+          h += '<button class="btn-cancel" onclick="btCancelPeriodDate()">취소</button>';
+          h += '</div></div>';
+        }
       }
 
       return h;
     }
 
-    function btSetDailyPeriod(p) { btDailyPeriod = p; btDailyOffset = 0; btAddingItem = false; btEditItemDate = null; btEditItemIdx = null; btRenderCurrentTab(); }
-    function btChangeDailyOffset(delta, reset) { btDailyOffset = reset ? 0 : btDailyOffset + delta; btRenderCurrentTab(); }
+    function btSetDailyPeriod(p) { btDailyPeriod = p; btDailyOffset = 0; btPeriodPickingDate = false; btAddingItem = false; btEditItemDate = null; btEditItemIdx = null; btRenderCurrentTab(); }
+    function btChangeDailyOffset(delta, reset) { btDailyOffset = reset ? 0 : btDailyOffset + delta; btPeriodPickingDate = false; btRenderCurrentTab(); }
+
+    function btPeriodPickDate() { btPeriodPickingDate = true; btRenderCurrentTab(); }
+    function btCancelPeriodDate() { btPeriodPickingDate = false; btRenderCurrentTab(); }
+    function btConfirmPeriodDate() {
+      var el = document.getElementById('btPeriodDateInput');
+      if (!el || !el.value) { showAlert('날짜 선택', '날짜를 선택해주세요.'); return; }
+      var sel = el.value;
+      if (sel > today()) { showAlert('날짜 오류', '미래 날짜에는 매출을 추가할 수 없습니다.'); return; }
+      btPeriodPickingDate = false;
+      btGoToDay(sel);
+    }
     function _btDayOffset(date) {
       var todayMs = new Date(today() + 'T00:00:00').getTime();
       var targetMs = new Date(date + 'T00:00:00').getTime();
@@ -7295,7 +7325,7 @@
       var h = '<div class="bt-item-form">';
       h += '<div class="bt-form-2col">';
       h += '<div class="bt-form-row"><label>액션명</label><input type="text" id="btActName" class="bt-input" placeholder="무엇을 할 것인지" value="' + escapeHtml(action ? action.name : '') + '"></div>';
-      h += '<div class="bt-form-row"><label>날짜 (언제 실행)</label><input type="date" id="btActDate" class="bt-input" value="' + (action && action.date ? action.date : '') + '"></div>';
+      h += '<div class="bt-form-row"><label>날짜 (언제 실행)</label><input type="date" id="btActDate" class="bt-input" min="' + today() + '" value="' + (action && action.date ? action.date : '') + '"></div>';
       h += '</div>';
       h += '<div class="bt-form-row"><label>카테고리</label><select id="btActCat" class="bt-select">';
       h += '<option value="">-- 미지정 --</option>';
@@ -7332,6 +7362,8 @@
     function btSaveAction(id) {
       var name = (document.getElementById('btActName') || {}).value || '';
       if (!name.trim()) { showAlert('입력 오류', '액션명을 입력해주세요.'); return; }
+      var actDate = (document.getElementById('btActDate') || {}).value || '';
+      if (actDate && actDate < today()) { showAlert('날짜 오류', '액션은 오늘 이후 날짜만 선택할 수 있습니다.\n과거 실적은 달성 내용 탭에 기록해주세요.'); return; }
       var action = {
         id: id || btGenId('btact'),
         name: name.trim(),
