@@ -3846,6 +3846,12 @@
     .btn-add-card { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:2px dashed var(--border-color,#ddd);border-radius:12px;background:transparent;color:var(--text-secondary,#888);cursor:pointer;padding:16px;font-size:13px;font-weight:600;transition:all .15s;min-height:80px;width:100%;box-sizing:border-box; }
     .btn-add-card:hover { border-color:var(--primary-yellow,#ffde59);background:color-mix(in srgb,var(--primary-yellow,#ffde59) 10%,transparent);color:var(--text-primary,#222); }
     .btn-add-card-plus { font-size:26px;font-weight:300;line-height:1;color:inherit; }
+    /* 기간 뷰 날짜 선택 피커 */
+    .bt-period-date-pick { margin-top:12px;padding:14px 16px;background:var(--card-bg,#fff);border:1.5px dashed var(--border-color,#ddd);border-radius:10px; }
+    .bt-period-date-pick-label { font-size:13px;font-weight:600;margin-bottom:10px; }
+    .bt-period-date-pick-label span { font-size:12px;font-weight:400;color:var(--text-secondary,#888); }
+    .bt-period-date-pick-row { display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
+    .bt-period-date-pick-row .bt-input { max-width:160px; }
     /* 액션 그리드 (데스크탑 2열) */
     .bt-action-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-bottom:4px; }
     .bt-action-card { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:12px;padding:12px 14px; }
