@@ -7002,7 +7002,7 @@
     // periodRange: 기간 뷰에서 호출 시 { start, end, label } 전달 → 날짜 필드 표시
     function btBuildItemForm(item, idx, periodRange) {
       var cats = (btConfig && btConfig.categories) || [];
-      var selCat = item ? item.catId : (cats[0] ? cats[0].id : '');
+      var selCat = item ? item.catId : (btDailyFilterCat && btDailyFilterCat !== '__all' && btDailyFilterCat !== '__none' ? btDailyFilterCat : (cats[0] ? cats[0].id : ''));
       var selCatObj = cats.find(function(c) { return c.id === selCat; });
       var unitLabel = selCatObj ? selCatObj.unitLabel : '건';
       // 기존 값 (구형 데이터 호환)
@@ -7319,10 +7319,11 @@
       h += '<div class="bt-form-row"><label>액션명</label><input type="text" id="btActName" class="bt-input" placeholder="무엇을 할 것인지" value="' + escapeHtml(action ? action.name : '') + '"></div>';
       h += '<div class="bt-form-row"><label>날짜 (언제 실행)</label><input type="date" id="btActDate" class="bt-input" min="' + today() + '" value="' + (action && action.date ? action.date : '') + '"></div>';
       h += '</div>';
+      var defActCat = action ? action.catId : (btActionFilterCat && btActionFilterCat !== '__all' && btActionFilterCat !== '__none' ? btActionFilterCat : '');
       h += '<div class="bt-form-row"><label>카테고리</label><select id="btActCat" class="bt-select">';
       h += '<option value="">-- 미지정 --</option>';
       cats.forEach(function(cat) {
-        h += '<option value="' + cat.id + '"' + (action && action.catId === cat.id ? ' selected' : '') + '>' + cat.icon + ' ' + escapeHtml(cat.name) + '</option>';
+        h += '<option value="' + cat.id + '"' + (defActCat === cat.id ? ' selected' : '') + '>' + cat.icon + ' ' + escapeHtml(cat.name) + '</option>';
       });
       h += '</select></div>';
       h += '<div class="bt-form-3col">';
