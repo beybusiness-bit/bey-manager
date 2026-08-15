@@ -6494,7 +6494,7 @@
       }
       return { start: t.slice(0,7)+'-01', end: t.slice(0,7)+'-31', label: '이번 달', days: 30 };
     }
-    // SVG 바 차트 (일별 매출)
+    // SVG 바 차트 (일별 매출) — 축 레이블 포함
     function btSvgBarChart(rangeStart, rangeEnd) {
       var days = [];
       var d = new Date(rangeStart);
@@ -6503,23 +6503,62 @@
         var ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
         var entry = btDailyEntries.find(function(e) { return e.date === ds; });
         var rev = entry ? btCalcPeriod([entry]).revenue : 0;
-        days.push({ date: ds, revenue: rev, day: d.getDate() });
+        days.push({ date: ds, revenue: rev, day: d.getDate(), mon: d.getMonth()+1 });
         d.setDate(d.getDate() + 1);
       }
       if (days.length < 2) return '';
       var maxRev = Math.max.apply(null, days.map(function(x) { return x.revenue; }));
       if (maxRev === 0) return '<div class="bt-chart-empty">아직 매출 데이터가 없습니다.</div>';
-      var W = 100, H = 60, pad = 2;
-      var barW = Math.max(2, (W - pad * days.length) / days.length);
-      var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" class="bt-bar-chart">';
-      days.forEach(function(d, i) {
-        var barH = maxRev > 0 ? Math.max(1, (d.revenue / maxRev) * (H - 6)) : 0;
-        var x = i * (barW + pad);
-        var y = H - barH;
-        var isToday = d.date === today();
-        svg += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + barH.toFixed(1) + '" rx="1" fill="' + (isToday ? '#333' : 'var(--primary-yellow,#ffde59)') + '" opacity="' + (d.revenue > 0 ? '1' : '0.2') + '">';
-        svg += '<title>' + d.date + ': ' + btFmtW(d.revenue) + '</title></rect>';
+
+      // 레이아웃
+      var VW = 440, VH = 110;
+      var mL = 50, mR = 6, mT = 8, mB = 18;
+      var cW = VW - mL - mR, cH = VH - mT - mB;
+
+      // Y축 레이블 단축 포맷 (축 공간 제한 상 만 단위 사용)
+      function axFmt(n) {
+        if (n === 0) return '0';
+        if (n >= 100000000) return (n/100000000).toFixed(n%100000000===0?0:1) + '억';
+        if (n >= 10000000) return Math.round(n/10000000) + '천만';
+        if (n >= 1000000) return (n/10000).toFixed(0) + '만';
+        if (n >= 10000) return (n/10000).toFixed(1).replace('.0','') + '만';
+        return n.toLocaleString('ko-KR');
+      }
+
+      var barPad = days.length > 20 ? 1 : 2;
+      var barW = Math.max(2, (cW - barPad * (days.length - 1)) / days.length);
+
+      var svg = '<svg viewBox="0 0 ' + VW + ' ' + VH + '" preserveAspectRatio="none" class="bt-bar-chart">';
+
+      // Y축 눈금선 + 레이블 (0/25/50/75/100%)
+      [0, 0.25, 0.5, 0.75, 1.0].forEach(function(pct) {
+        var y = (mT + cH * (1 - pct)).toFixed(1);
+        var val = Math.round(maxRev * pct);
+        svg += '<line x1="' + mL + '" y1="' + y + '" x2="' + (VW-mR) + '" y2="' + y + '" stroke="var(--border-color,#e8e8e8)" stroke-width="0.6"/>';
+        svg += '<text x="' + (mL-4) + '" y="' + (parseFloat(y)+3.5).toFixed(1) + '" text-anchor="end" font-size="9" fill="var(--text-secondary,#999)">' + axFmt(val) + '</text>';
       });
+
+      // X축 레이블 (날짜)
+      var xEvery = days.length <= 7 ? 1 : days.length <= 14 ? 2 : days.length <= 21 ? 3 : 5;
+      days.forEach(function(day, i) {
+        var x = (mL + i * (barW + barPad) + barW / 2).toFixed(1);
+        if (i === 0 || i % xEvery === 0 || i === days.length - 1) {
+          var lbl = days.length <= 14 ? String(day.day) : (day.day === 1 ? day.mon + '/' + day.day : String(day.day));
+          svg += '<text x="' + x + '" y="' + (VH-3) + '" text-anchor="middle" font-size="8" fill="var(--text-secondary,#aaa)">' + lbl + '</text>';
+        }
+      });
+
+      // 바
+      days.forEach(function(day, i) {
+        var barH = maxRev > 0 ? Math.max(1, (day.revenue / maxRev) * cH) : 0;
+        var x = (mL + i * (barW + barPad)).toFixed(1);
+        var y = (mT + cH - barH).toFixed(1);
+        var isToday = day.date === today();
+        svg += '<rect x="' + x + '" y="' + y + '" width="' + barW.toFixed(1) + '" height="' + Math.max(1, barH).toFixed(1) + '" rx="1"';
+        svg += ' fill="' + (isToday ? '#444' : 'var(--primary-yellow,#ffde59)') + '" opacity="' + (day.revenue > 0 ? '1' : '0.12') + '">';
+        svg += '<title>' + day.date + ': ' + btFmtW(day.revenue) + '</title></rect>';
+      });
+
       svg += '</svg>';
       return svg;
     }
@@ -6856,14 +6895,36 @@
         }
 
         // 요약 (전체 기준)
+        var dayCalc = btCalcPeriod([{ date: btInputDate, items: items }]);
         if (items.length) {
-          var dayCalc = btCalcPeriod([{ date: btInputDate, items: items }]);
           h += '<div class="bt-day-summary">';
           h += '<span>매출 <strong>' + btFmtW(dayCalc.revenue) + '</strong></span>';
           h += '<span>수익 <strong>' + btFmtW(dayCalc.margin) + '</strong></span>';
           h += '<span>' + items.length + '건</span>';
           h += '</div>';
         }
+        // ─ 일일 목표 대비 ─
+        (function() {
+          var _qs = (btConfig && btConfig.quarters) ? btConfig.quarters : [];
+          var _q = _qs.find(function(q) { return q.startDate <= btInputDate && q.endDate >= btInputDate; });
+          var _mT = _q ? (Number(_q.monthlyTargetRevenue) || 0) : 0;
+          if (_mT > 0) {
+            var _d = new Date(btInputDate + 'T00:00:00');
+            var _daysInMon = new Date(_d.getFullYear(), _d.getMonth()+1, 0).getDate();
+            var _dayTarget = Math.round(_mT / _daysInMon);
+            var _dPct = Math.min(200, Math.round(dayCalc.revenue / _dayTarget * 100));
+            var _dBar = Math.min(100, _dPct);
+            var _dGap = _dayTarget - dayCalc.revenue;
+            h += '<div class="bt-goal-row">';
+            h += '<div class="bt-goal-label">일 목표 대비<span class="bt-goal-pct' + (_dPct >= 100 ? ' hit' : '') + '">' + _dPct + '%</span></div>';
+            h += '<div class="bt-goal-sub">' + btFmtW(dayCalc.revenue) + ' / 목표 ' + btFmtW(_dayTarget);
+            if (_dGap > 0) h += ' <span style="color:var(--text-secondary,#888);font-size:11px;">— 부족 ' + btFmtW(_dGap) + '</span>';
+            else h += ' <span style="color:#1a8c60;font-size:11px;">— 초과 ' + btFmtW(-_dGap) + '</span>';
+            h += '</div>';
+            h += '<div class="bt-progress-wrap"><div class="bt-progress-bar' + (_dPct >= 100 ? ' full' : '') + '" style="width:' + _dBar + '%"></div></div>';
+            h += '</div>';
+          }
+        })();
 
         // 필터 적용된 항목 flat grid
         var visItems = items.reduce(function(acc, item, idx) {
@@ -6899,6 +6960,31 @@
         h += '<span>수익 <strong>' + btFmtW(periodCalc.margin) + '</strong></span>';
         h += '<span>' + entries.reduce(function(s,e){ return s+(e.items||[]).length; }, 0) + '건</span>';
         h += '</div>';
+
+        // ─ 기간 목표 대비 진행률 ─
+        var _dPeriodTarget = 0;
+        if (btDailyPeriod === 'quarter') {
+          _dPeriodTarget = range.quarterTarget || 0;
+        } else {
+          var _dQs = (btConfig && btConfig.quarters) ? btConfig.quarters : [];
+          var _dQ = _dQs.find(function(q) { return q.startDate <= range.start && q.endDate >= range.start; });
+          if (!_dQ) _dQ = _dQs.find(function(q) { return q.startDate <= range.end && q.endDate >= range.end; });
+          var _dMT = _dQ ? (Number(_dQ.monthlyTargetRevenue) || 0) : 0;
+          if (_dMT > 0) _dPeriodTarget = Math.round(_dMT / 30 * (range.days || 1));
+        }
+        if (_dPeriodTarget > 0) {
+          var _dPct = Math.min(200, Math.round(periodCalc.revenue / _dPeriodTarget * 100));
+          var _dBar = Math.min(100, _dPct);
+          var _dGap = _dPeriodTarget - periodCalc.revenue;
+          h += '<div class="bt-goal-row">';
+          h += '<div class="bt-goal-label">기간 목표 대비<span class="bt-goal-pct' + (_dPct >= 100 ? ' hit' : '') + '">' + _dPct + '%</span></div>';
+          h += '<div class="bt-goal-sub">' + btFmtW(periodCalc.revenue) + ' / 목표 ' + btFmtW(_dPeriodTarget);
+          if (_dGap > 0) h += ' <span style="color:var(--text-secondary,#888);font-size:11px;">— 부족 ' + btFmtW(_dGap) + '</span>';
+          else h += ' <span style="color:#1a8c60;font-size:11px;">— 초과 ' + btFmtW(-_dGap) + '</span>';
+          h += '</div>';
+          h += '<div class="bt-progress-wrap"><div class="bt-progress-bar' + (_dPct >= 100 ? ' full' : '') + '" style="width:' + _dBar + '%"></div></div>';
+          h += '</div>';
+        }
 
         // 기간 내 전체 아이템 수집 (날짜순)
         var allPeriodItems = [];
