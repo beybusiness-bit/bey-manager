@@ -751,15 +751,18 @@
       color: var(--border-md);
       opacity: 0;
       transition: opacity 0.2s;
+      pointer-events: none;
     }
 
     .nav-item:hover .favorite-star {
       opacity: 1;
+      pointer-events: auto;
     }
 
     .favorite-star.active {
       color: #FFD700;
       opacity: 1;
+      pointer-events: auto;
     }
 
     /* 그룹 헤더 */
@@ -3355,9 +3358,9 @@
       .work-week-day-name { font-size: 13px; font-weight: 700; }
       .work-week-day-num { font-size: 13px; }
       .work-week-day-body { flex-wrap: wrap; }
-      /* 월별: 데스크탑 아이템 숨기고 dot 표시 */
-      .work-cal-items-desktop { display: none; }
-      .work-cal-dots-mobile { display: flex; }
+      /* 월별: 모바일에서도 아이템 제목 표시 */
+      .work-cal-items-desktop { display: block; }
+      .work-cal-dots-mobile { display: none; }
       .work-cal-cell { min-height: 50px; padding: 3px 4px; }
       .work-cal-date { font-size: 11px; }
       .work-dot { width: 6px; height: 6px; }
@@ -3730,6 +3733,9 @@
     .bt-period-tabs { display:flex;gap:6px;margin-bottom:14px; }
     .bt-period-btn { font-size:13px;padding:6px 14px;border:1px solid var(--border-color,#ddd);border-radius:20px;background:transparent;cursor:pointer;color:var(--text-secondary,#888);transition:all .12s; }
     .bt-period-btn.active { background:var(--primary-yellow,#ffde59);border-color:var(--primary-yellow,#ffde59);color:#222;font-weight:700; }
+    .bt-view-toggle-btn { font-size:14px;padding:4px 10px;border:1px solid var(--border-color,#ddd);border-radius:8px;background:transparent;cursor:pointer;color:var(--text-secondary,#888);transition:all .12s;line-height:1.2; }
+    .bt-view-toggle-btn.active { background:var(--primary-yellow,#ffde59);border-color:var(--primary-yellow,#ffde59);color:#222; }
+    .bt-view-toggle-btn:hover { background:var(--bg-hover,#f5f5f5); }
     /* KPI */
     .bt-kpi-row { display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:14px; }
     .bt-kpi-card { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:4px; }
