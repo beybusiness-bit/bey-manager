@@ -3758,6 +3758,7 @@
     .bt-dual-prog { flex:1;height:8px; }
     .bt-dual-pct { font-size:11px;font-weight:600;width:32px;text-align:right;flex-shrink:0; }
     .bt-time-bar { height:100%;background:var(--border-color,#d0d0d0);border-radius:6px;transition:width .4s;max-width:100%; }
+    .bt-act-plan-bar { height:100%;background:#82b4ff;border-radius:6px;transition:width .4s;max-width:100%; }
     .bt-time-pct { color:var(--text-secondary,#999); }
     /* 차트 */
     .bt-chart-wrap { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:12px;padding:12px 14px;margin-bottom:14px; }

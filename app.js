@@ -7565,33 +7565,69 @@
       h += '<button class="btn-icon" onclick="btChangeActionOffset(0,true)">현재</button>';
       h += '</div>';
 
-      // ─ 갭 분석 바 (현재 보는 기간의 분기 목표 기반) ─
-      var mTarget = aRange.quarterTarget ? Math.round(aRange.quarterTarget / 3) : 0;
-      if (mTarget > 0) {
-        var periodDays = aRange.days || 30;
-        var periodTarget = Math.round(mTarget / 30 * periodDays);
-        // 해당 기간의 액션플랜 총 예정 매출
-        var filteredActions = btActions.filter(function(a) {
-          if (!a.date) return btActionPeriod === 'quarter'; // 날짜 없으면 분기 탭에서만
+      // ─ 4지표 비교 패널 (모든 기간 탭 공통) ─
+      (function() {
+        // 기간 목표 계산 (분기 월목표 기반)
+        var _periodTarget = 0;
+        if (btActionPeriod === 'quarter') {
+          _periodTarget = aRange.quarterTarget || 0;
+        } else {
+          var _aQs = (btConfig && btConfig.quarters) || [];
+          var _aQ = _aQs.find(function(q) { return q.startDate <= aRange.start && q.endDate >= aRange.start; });
+          if (!_aQ) _aQ = _aQs.find(function(q) { return q.startDate <= aRange.end && q.endDate >= aRange.end; });
+          var _aMT = _aQ ? (Number(_aQ.monthlyTargetRevenue) || 0) : 0;
+          if (_aMT > 0) _periodTarget = Math.round(_aMT / 30 * (aRange.days || 1));
+        }
+        if (!_periodTarget) return;  // 목표 없으면 패널 숨김
+
+        // 기간 진척률
+        var _timePct = btTimePct(aRange.start, aRange.end);
+
+        // 액션플랜 예상 매출
+        var _planActions = btActions.filter(function(a) {
+          if (!a.date) return btActionPeriod === 'quarter';
           return a.date >= aRange.start && a.date <= aRange.end;
         });
-        var planTotal = filteredActions.reduce(function(s, a) { return s + btActionRevenue(a); }, 0);
-        var covPct = Math.min(200, periodTarget > 0 ? Math.round(planTotal / periodTarget * 100) : 0);
-        var covBar = Math.min(100, covPct);
-        var gap = periodTarget - planTotal;
+        var _planRev = _planActions.reduce(function(s, a) { return s + btActionRevenue(a); }, 0);
+        var _planPct = Math.min(200, _periodTarget > 0 ? Math.round(_planRev / _periodTarget * 100) : 0);
+
+        // 실제 달성 매출
+        var _actualEntries = btEntriesInRange(aRange.start, aRange.end);
+        var _actualCalc = btCalcPeriod(_actualEntries);
+        var _actualRev = _actualCalc.revenue;
+        var _actualPct = Math.min(200, _periodTarget > 0 ? Math.round(_actualRev / _periodTarget * 100) : 0);
+
+        // 렌더
         h += '<div class="bt-gap-bar">';
-        h += '<div class="bt-gap-row">';
-        h += '<span class="bt-gap-label">목표 대비 플랜 커버리지</span>';
-        h += '<span class="bt-gap-pct' + (covPct >= 100 ? ' hit' : covPct >= 70 ? ' near' : '') + '">' + covPct + '%</span>';
+        h += '<div class="bt-gap-row" style="margin-bottom:8px;">';
+        h += '<span class="bt-gap-label">기간 목표 <strong>' + btFmtW(_periodTarget) + '</strong></span>';
         h += '</div>';
-        h += '<div class="bt-progress-wrap" style="margin:6px 0;"><div class="bt-progress-bar' + (covPct >= 100 ? ' full' : '') + '" style="width:' + covBar + '%"></div></div>';
-        h += '<div class="bt-gap-nums">';
-        h += '<span>기간 목표 <strong>' + btFmtW(periodTarget) + '</strong></span>';
-        h += '<span>예정 매출 <strong>' + btFmtW(planTotal) + '</strong></span>';
-        if (gap > 0) h += '<span class="bt-gap-deficit">부족분 ▼' + btFmtW(gap) + '</span>';
-        else h += '<span class="bt-gap-surplus">초과 ▲' + btFmtW(-gap) + '</span>';
-        h += '</div></div>';
-      }
+
+        // 4행 바
+        var rows = [
+          { label: '기간 진척률', pct: _timePct,   barClass: 'bt-time-bar',    hitClass: '' },
+          { label: '실제 달성',   pct: _actualPct, barClass: 'bt-progress-bar', hitClass: _actualPct >= 100 ? ' full' : '' },
+          { label: '액션 예상',   pct: _planPct,   barClass: 'bt-act-plan-bar', hitClass: '' },
+        ];
+        rows.forEach(function(r) {
+          var barW = Math.min(100, r.pct);
+          h += '<div class="bt-dual-bar-row">';
+          h += '<span class="bt-dual-label">' + r.label + '</span>';
+          h += '<div class="bt-progress-wrap bt-dual-prog"><div class="' + r.barClass + r.hitClass + '" style="width:' + barW + '%"></div></div>';
+          h += '<span class="bt-dual-pct' + (r.barClass === 'bt-time-bar' ? ' bt-time-pct' : (r.pct >= 100 ? ' hit' : '')) + '">' + r.pct + '%</span>';
+          h += '</div>';
+        });
+
+        // 수치 요약
+        h += '<div class="bt-gap-nums" style="margin-top:6px;">';
+        h += '<span>실제 달성 <strong>' + btFmtW(_actualRev) + '</strong></span>';
+        h += '<span>액션 예상 <strong>' + btFmtW(_planRev) + '</strong></span>';
+        var _gap = _periodTarget - _planRev;
+        if (_gap > 0) h += '<span class="bt-gap-deficit">플랜 부족 ▼' + btFmtW(_gap) + '</span>';
+        else if (_gap < 0) h += '<span class="bt-gap-surplus">플랜 초과 ▲' + btFmtW(-_gap) + '</span>';
+        h += '</div>';
+        h += '</div>';
+      })();
 
       // 기간 필터 액션 (날짜+시간 오름차순)
       var filtActions = btActions.filter(function(a) {
