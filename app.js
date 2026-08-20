@@ -2072,9 +2072,9 @@
 
       // ── 🧺 할일 바구니 ──
       var basketItems = workItems.filter(function(it) { return !it.date; });
+      h += '<div class="home-section">';
+      h += '<div class="home-section-title">🧺 할일 바구니<span class="home-section-badge">' + basketItems.length + '</span></div>';
       if (basketItems.length > 0) {
-        h += '<div class="home-section">';
-        h += '<div class="home-section-title">🧺 할일 바구니<span class="home-section-badge">' + basketItems.length + '</span></div>';
         h += '<div class="home-work-list">';
         basketItems.slice(0, 5).forEach(function(it) {
           h += '<div class="home-work-row">';
@@ -2084,9 +2084,11 @@
         });
         if (basketItems.length > 5) h += '<div class="home-more">+' + (basketItems.length - 5) + '개 더</div>';
         h += '</div>';
-        h += '<button class="home-link-btn" onclick="navigateTo(\'work\');setTimeout(function(){switchWorkView(\'basket\');},100)">바구니 전체 →</button>';
-        h += '</div>';
+      } else {
+        h += '<div style="font-size:13px;color:var(--text-secondary,#999);padding:4px 0;">바구니가 비어 있습니다.</div>';
       }
+      h += '<button class="home-link-btn" onclick="navigateTo(\'work\');setTimeout(function(){switchWorkView(\'basket\');},100)">바구니 전체 →</button>';
+      h += '</div>';
 
       el.innerHTML = h;
     }
