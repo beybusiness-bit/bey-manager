@@ -7593,10 +7593,14 @@
         h += '</div></div>';
       }
 
-      // 기간 필터 액션
+      // 기간 필터 액션 (날짜+시간 오름차순)
       var filtActions = btActions.filter(function(a) {
         if (!a.date) return btActionPeriod === 'quarter';
         return a.date >= aRange.start && a.date <= aRange.end;
+      }).slice().sort(function(a, b) {
+        var aKey = (a.date || '9999-99-99') + 'T' + (a.time || '99:99');
+        var bKey = (b.date || '9999-99-99') + 'T' + (b.time || '99:99');
+        return aKey < bKey ? -1 : aKey > bKey ? 1 : 0;
       });
 
       // 카테고리 필터 버튼
@@ -7654,7 +7658,7 @@
       h += '<button class="btn-icon" onclick="btDeleteAction(\'' + action.id + '\')">🗑️</button>';
       h += '</div></div>';
       h += '<div class="bt-action-meta">';
-      if (action.date) h += '<span>📅 ' + action.date + '</span>';
+      if (action.date) h += '<span>📅 ' + action.date + (action.time ? ' ' + action.time : '') + '</span>';
       if (action.targetUnits) h += '<span>' + btFmtN(action.targetUnits) + (cat ? cat.unitLabel : '건') + '</span>';
       if (action.unitPrice) h += '<span>객단가 ' + btFmtW(action.unitPrice) + '</span>';
       h += '</div>';
@@ -7674,6 +7678,7 @@
       h += '<div class="bt-form-2col">';
       h += '<div class="bt-form-row"><label>액션명</label><input type="text" id="btActName" class="bt-input" placeholder="무엇을 할 것인지" value="' + escapeHtml(action ? action.name : '') + '"></div>';
       h += '<div class="bt-form-row"><label>날짜 (언제 실행)</label><input type="date" id="btActDate" class="bt-input" min="' + today() + '" value="' + (action && action.date ? action.date : '') + '"></div>';
+      h += '<div class="bt-form-row"><label>시간 <span style="font-weight:400;color:var(--text-secondary,#999);font-size:11px;">(선택)</span></label><input type="time" id="btActTime" class="bt-input" value="' + (action && action.time ? action.time : '') + '"></div>';
       h += '</div>';
       var defActCat = action ? action.catId : (btActionFilterCat && btActionFilterCat !== '__all' && btActionFilterCat !== '__none' ? btActionFilterCat : '');
       var defActCatObj = cats.find(function(c) { return c.id === defActCat; });
@@ -7747,6 +7752,7 @@
         name: name.trim(),
         catId: actCatId,
         date: (document.getElementById('btActDate') || {}).value || '',
+        time: (document.getElementById('btActTime') || {}).value || '',
         targetUnits: parseInt((document.getElementById('btActUnits') || {}).value || '0', 10) || 0,
         unitPrice: actUnitPrice,
         unitCost: actUnitCostRaw
@@ -7858,12 +7864,15 @@
         h += '<div class="work-cal-date">' + day + '</div>';
         if (hasItems) {
           h += '<div class="work-cal-items-desktop">';
-          dayActions.slice(0, 3).forEach(function(a) {
+          dayActions.slice().sort(function(x, y) {
+            var xk = x.time || '99:99', yk = y.time || '99:99';
+            return xk < yk ? -1 : xk > yk ? 1 : 0;
+          }).slice(0, 3).forEach(function(a) {
             var cat = cats.find(function(c) { return c.id === a.catId; });
             var dotColor = (cat && cat.color) ? cat.color : 'var(--primary-yellow)';
             h += '<div class="work-cal-item">';
             h += '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' + dotColor + ';flex-shrink:0;margin-right:3px;"></span>';
-            h += '<span class="work-cal-item-title">' + escapeHtml(a.name) + '</span>';
+            h += '<span class="work-cal-item-title">' + (a.time ? a.time + ' ' : '') + escapeHtml(a.name) + '</span>';
             h += '</div>';
           });
           if (dayActions.length > 3) h += '<div style="font-size:10px;color:var(--text-secondary);">+' + (dayActions.length - 3) + '건</div>';
