@@ -3745,6 +3745,14 @@
     .bt-goal-sub { font-size:12px;color:var(--text-secondary,#888);margin-bottom:8px; }
     .bt-progress-wrap { height:10px;background:var(--body-bg,#f5f5f5);border-radius:6px;overflow:hidden; }
     .bt-progress-bar { height:100%;background:var(--primary-yellow,#ffde59);border-radius:6px;transition:width .4s;max-width:100%; }
+    /* 달성 + 기간경과 이중 바 */
+    .bt-dual-bar { display:flex;flex-direction:column;gap:5px;margin-top:6px; }
+    .bt-dual-bar-row { display:flex;align-items:center;gap:8px; }
+    .bt-dual-label { font-size:11px;color:var(--text-secondary,#999);width:28px;flex-shrink:0; }
+    .bt-dual-prog { flex:1;height:8px; }
+    .bt-dual-pct { font-size:11px;font-weight:600;width:32px;text-align:right;flex-shrink:0; }
+    .bt-time-bar { height:100%;background:var(--border-color,#d0d0d0);border-radius:6px;transition:width .4s;max-width:100%; }
+    .bt-time-pct { color:var(--text-secondary,#999); }
     /* 차트 */
     .bt-chart-wrap { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:12px;padding:12px 14px;margin-bottom:14px; }
     .bt-bar-chart { width:100%;height:110px;display:block; }
@@ -3834,6 +3842,29 @@
     .bt-gap-deficit { color:#e53935;font-weight:700; }
     .bt-gap-surplus { color:#1a8c60;font-weight:700; }
     .bt-progress-bar.full { background:#1a8c60; }
+    /* 홈 대시보드 */
+    .home-date-header { font-size:15px;font-weight:700;color:var(--text-secondary,#888);margin-bottom:14px; }
+    .home-section { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:14px;padding:14px 16px;margin-bottom:12px; }
+    .home-section-title { font-size:14px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px; }
+    .home-section-badge { font-size:11px;font-weight:600;background:var(--body-bg,#f0f0f0);color:var(--text-secondary,#888);border-radius:10px;padding:1px 7px;margin-left:4px; }
+    .home-kpi-row { display:flex;gap:8px;margin-bottom:8px; }
+    .home-kpi { flex:1;background:var(--body-bg,#f5f5f5);border-radius:10px;padding:10px;text-align:center; }
+    .home-kpi-val { font-size:15px;font-weight:800; }
+    .home-kpi-val.hit { color:#1a8c60; }
+    .home-kpi-label { font-size:11px;color:var(--text-secondary,#999);margin-top:2px; }
+    .home-action-list { display:flex;flex-direction:column;gap:6px;margin-bottom:8px; }
+    .home-action-row { display:flex;align-items:center;gap:8px;font-size:13px; }
+    .home-action-dot { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
+    .home-action-name { flex:1; }
+    .home-action-meta { font-size:11px;color:var(--text-secondary,#999); }
+    .home-work-list { display:flex;flex-direction:column;gap:5px;margin-bottom:8px; }
+    .home-work-row { display:flex;align-items:center;gap:8px;font-size:13px; }
+    .home-work-title { flex:1; }
+    .home-work-title.in-prog { color:#e6a817;font-weight:600; }
+    .home-basket-dot { width:6px;height:6px;border-radius:50%;background:var(--border-color,#ccc);flex-shrink:0; }
+    .home-more { font-size:12px;color:var(--text-secondary,#aaa);padding:2px 0 4px; }
+    .home-link-btn { background:none;border:none;color:var(--text-secondary,#888);font-size:12px;cursor:pointer;padding:4px 0;display:block;margin-top:4px; }
+    .home-link-btn:hover { color:var(--text-primary,#333); }
     /* Run-rate 카드 */
     .bt-runrate-card { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:12px;padding:16px;margin:14px 0; }
     .bt-runrate-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:4px; }
