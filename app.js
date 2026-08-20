@@ -7655,7 +7655,9 @@
       h += '<div class="bt-form-row"><label>날짜 (언제 실행)</label><input type="date" id="btActDate" class="bt-input" min="' + today() + '" value="' + (action && action.date ? action.date : '') + '"></div>';
       h += '</div>';
       var defActCat = action ? action.catId : (btActionFilterCat && btActionFilterCat !== '__all' && btActionFilterCat !== '__none' ? btActionFilterCat : '');
-      h += '<div class="bt-form-row"><label>카테고리</label><select id="btActCat" class="bt-select">';
+      var defActCatObj = cats.find(function(c) { return c.id === defActCat; });
+      var ucostPh = defActCatObj && defActCatObj.defaultMarginRate != null ? '기본값 있음 (' + Math.round(defActCatObj.defaultMarginRate*100) + '% 마진율)' : '0원';
+      h += '<div class="bt-form-row"><label>카테고리</label><select id="btActCat" class="bt-select" onchange="btActCatChange()">';
       h += '<option value="">-- 미지정 --</option>';
       cats.forEach(function(cat) {
         h += '<option value="' + cat.id + '"' + (defActCat === cat.id ? ' selected' : '') + '>' + cat.icon + ' ' + escapeHtml(cat.name) + '</option>';
@@ -7664,7 +7666,7 @@
       h += '<div class="bt-form-3col">';
       h += '<div class="bt-form-row"><label>목표 건수</label><input type="number" id="btActUnits" class="bt-input" min="0" placeholder="0" value="' + (action && action.targetUnits ? action.targetUnits : '') + '" oninput="btActAutoCalc()"></div>';
       h += '<div class="bt-form-row"><label>객단가 (1건당 판매가)</label><input type="number" id="btActUnitPrice" class="bt-input" min="0" placeholder="0원" value="' + (action && action.unitPrice ? action.unitPrice : '') + '" oninput="btActAutoCalc()"></div>';
-      h += '<div class="bt-form-row"><label>단위 원가 (1건당 원가)</label><input type="number" id="btActUnitCost" class="bt-input" min="0" placeholder="0원" value="' + (action && action.unitCost ? action.unitCost : '') + '" oninput="btActAutoCalc()"></div>';
+      h += '<div class="bt-form-row"><label>단위 원가 (1건당 원가)</label><input type="number" id="btActUnitCost" class="bt-input" min="0" placeholder="' + ucostPh + '" value="' + (action && action.unitCost ? action.unitCost : '') + '" oninput="btActAutoCalc()"></div>';
       h += '</div>';
       h += '<div id="btActAutoResult" class="bt-auto-calc" style="margin-bottom:10px;"></div>';
       h += '<div class="bt-form-actions"><button class="btn-confirm" onclick="btSaveAction(\'' + (action ? action.id : '') + '\')">저장</button><button class="btn-cancel" onclick="btCancelAction()">취소</button></div>';
@@ -7672,15 +7674,32 @@
       return h;
     }
 
+    // 카테고리 변경 시 원가 필드 힌트 업데이트 + 자동계산 갱신
+    function btActCatChange() {
+      var catId = (document.getElementById('btActCat') || {}).value || '';
+      var cat = btConfig && btConfig.categories.find(function(c) { return c.id === catId; });
+      var el = document.getElementById('btActUnitCost');
+      if (el) el.placeholder = cat && cat.defaultMarginRate != null ? '기본값 있음 (' + Math.round(cat.defaultMarginRate*100) + '% 마진율)' : '0원';
+      btActAutoCalc();
+    }
+
     function btActAutoCalc() {
-      var units = parseInt((document.getElementById('btActUnits') || {}).value || '0', 10) || 0;
+      var units  = parseInt((document.getElementById('btActUnits')     || {}).value || '0', 10) || 0;
       var uprice = parseInt((document.getElementById('btActUnitPrice') || {}).value || '0', 10) || 0;
-      var ucost  = parseInt((document.getElementById('btActUnitCost') || {}).value || '0', 10) || 0;
+      var ucostRaw = (document.getElementById('btActUnitCost') || {}).value;
+      var ucost  = parseInt(ucostRaw || '0', 10) || 0;
+      // 원가 미입력 시 카테고리 기본 마진율 적용
+      if (!ucost && uprice > 0) {
+        var catId = (document.getElementById('btActCat') || {}).value || '';
+        var cat = btConfig && btConfig.categories.find(function(c) { return c.id === catId; });
+        if (cat && cat.defaultMarginRate != null) ucost = Math.round(uprice * (1 - cat.defaultMarginRate));
+      }
       var rev = units * uprice; var cst = units * ucost; var margin = rev - cst;
       var el = document.getElementById('btActAutoResult');
       if (!el) return;
       if (!rev) { el.innerHTML = ''; el.className = 'bt-auto-calc'; return; }
-      el.innerHTML = '목표 매출 <b>' + btFmtW(rev) + '</b> &nbsp; 목표 수익 <b' + (margin < 0 ? ' style="color:#e53935"' : '') + '>' + btFmtW(margin) + '</b>';
+      var mRate = rev > 0 ? Math.round(margin / rev * 100) : 0;
+      el.innerHTML = '목표 매출 <b>' + btFmtW(rev) + '</b> &nbsp; 목표 수익 <b' + (margin < 0 ? ' style="color:#e53935"' : '') + '>' + btFmtW(margin) + '</b> <span style="color:var(--text-secondary,#999);font-size:11px;">(' + mRate + '% 마진)</span>';
       el.className = 'bt-auto-calc filled';
     }
 
@@ -7692,14 +7711,24 @@
       if (!name.trim()) { showAlert('입력 오류', '액션명을 입력해주세요.'); return; }
       var actDate = (document.getElementById('btActDate') || {}).value || '';
       if (actDate && actDate < today()) { showAlert('날짜 오류', '액션은 오늘 이후 날짜만 선택할 수 있습니다.\n과거 실적은 달성 내용 탭에 기록해주세요.'); return; }
+      var actCatId   = (document.getElementById('btActCat')       || {}).value || '';
+      var actUnitPrice = parseInt((document.getElementById('btActUnitPrice') || {}).value || '0', 10) || 0;
+      var actUnitCostRaw = parseInt((document.getElementById('btActUnitCost') || {}).value || '0', 10) || 0;
+      // 원가 미입력 시 카테고리 기본 마진율로 자동 계산
+      if (!actUnitCostRaw && actUnitPrice > 0) {
+        var actCatObj = btConfig && btConfig.categories.find(function(c) { return c.id === actCatId; });
+        if (actCatObj && actCatObj.defaultMarginRate != null) {
+          actUnitCostRaw = Math.round(actUnitPrice * (1 - actCatObj.defaultMarginRate));
+        }
+      }
       var action = {
         id: id || btGenId('btact'),
         name: name.trim(),
-        catId: (document.getElementById('btActCat') || {}).value || '',
+        catId: actCatId,
         date: (document.getElementById('btActDate') || {}).value || '',
         targetUnits: parseInt((document.getElementById('btActUnits') || {}).value || '0', 10) || 0,
-        unitPrice: parseInt((document.getElementById('btActUnitPrice') || {}).value || '0', 10) || 0,
-        unitCost: parseInt((document.getElementById('btActUnitCost') || {}).value || '0', 10) || 0
+        unitPrice: actUnitPrice,
+        unitCost: actUnitCostRaw
       };
       if (id) {
         var idx = btActions.findIndex(function(a) { return a.id === id; });
