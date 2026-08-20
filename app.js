@@ -6472,6 +6472,10 @@
     var btActionOffset = 0;
     var btDailyFilterCat = '__all'; // '__all' | catId
     var btActionFilterCat = '__all';
+    var btDailyCalView = false;  // false=리스트, true=캘린더
+    var btActionCalView = false;
+    var btDailyCalMonth = 0;   // offset from current month (calendar view)
+    var btActionCalMonth = 0;
 
     // 기간 범위 계산 (daily / action 탭 공용)
     function btPeriodRange(period, offset) {
@@ -6987,13 +6991,21 @@
       var cats = (btConfig && btConfig.categories) || [];
       var h = '';
 
-      // 기간 탭
-      h += '<div class="bt-period-tabs">';
+      // 리스트/캘린더 토글
+      h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">';
+      h += '<div class="bt-period-tabs" style="flex:1;">';
       ['day','week','month','quarter'].forEach(function(p) {
         var labels = { day:'일', week:'주', month:'월', quarter:'분기' };
-        h += '<button class="bt-period-btn' + (btDailyPeriod===p?' active':'') + '" onclick="btSetDailyPeriod(\'' + p + '\')">' + labels[p] + '</button>';
+        h += '<button class="bt-period-btn' + (btDailyPeriod===p&&!btDailyCalView?' active':'') + '" onclick="btSetDailyPeriod(\'' + p + '\')">' + labels[p] + '</button>';
       });
       h += '</div>';
+      h += '<div style="display:flex;gap:4px;flex-shrink:0;">';
+      h += '<button class="bt-view-toggle-btn' + (!btDailyCalView?' active':'') + '" onclick="btDailyCalView=false;btRenderCurrentTab()" title="리스트">☰</button>';
+      h += '<button class="bt-view-toggle-btn' + (btDailyCalView?' active':'') + '" onclick="btDailyCalView=true;btRenderCurrentTab()" title="캘린더">📅</button>';
+      h += '</div>';
+      h += '</div>';
+
+      if (btDailyCalView) return h + btBuildDailyCalendar();
 
       // ─ 통합 기간 네비 (일/주/월/분기 공통) ─
       var range = btPeriodRange(btDailyPeriod, btDailyOffset);
@@ -7517,13 +7529,22 @@
       var cats = (btConfig && btConfig.categories) || [];
       var h = '';
 
-      // 기간 탭
-      h += '<div class="bt-period-tabs">';
+      // 리스트/캘린더 토글 + 기간 탭
+      h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">';
+      h += '<div class="bt-period-tabs" style="flex:1;">';
       ['day','week','month','quarter'].forEach(function(p) {
         var labels = { day:'일', week:'주', month:'월', quarter:'분기' };
-        h += '<button class="bt-period-btn' + (btActionPeriod===p?' active':'') + '" onclick="btSetActionPeriod(\'' + p + '\')">' + labels[p] + '</button>';
+        h += '<button class="bt-period-btn' + (btActionPeriod===p&&!btActionCalView?' active':'') + '" onclick="btSetActionPeriod(\'' + p + '\')">' + labels[p] + '</button>';
       });
       h += '</div>';
+      h += '<div style="display:flex;gap:4px;flex-shrink:0;">';
+      h += '<button class="bt-view-toggle-btn' + (!btActionCalView?' active':'') + '" onclick="btActionCalView=false;btRenderCurrentTab()" title="리스트">☰</button>';
+      h += '<button class="bt-view-toggle-btn' + (btActionCalView?' active':'') + '" onclick="btActionCalView=true;btRenderCurrentTab()" title="캘린더">📅</button>';
+      h += '</div>';
+      h += '</div>';
+
+      // 캘린더 뷰
+      if (btActionCalView) return h + btBuildActionCalendar();
 
       // 기간 범위
       var aRange = btPeriodRange(btActionPeriod, btActionOffset);
@@ -7744,6 +7765,114 @@
         btActions = btActions.filter(function(a) { return a.id !== id; });
         saveBt(); btRenderCurrentTab(); showToast('삭제됨');
       });
+    }
+
+    // ── 달성내용 캘린더뷰 ──
+    function btBuildDailyCalendar() {
+      var now = new Date();
+      var yr = now.getFullYear();
+      var mo = now.getMonth() + 1 + btDailyCalMonth;
+      while (mo > 12) { mo -= 12; yr++; }
+      while (mo < 1)  { mo += 12; yr--; }
+      var todayStr = today();
+      var daysInMonth = new Date(yr, mo, 0).getDate();
+      var firstDay = new Date(yr, mo - 1, 1).getDay();
+      var firstDayKR = (firstDay === 0) ? 6 : firstDay - 1;
+      var monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+      var cats = (btConfig && btConfig.categories) || [];
+
+      var h = '<div class="work-month">';
+      h += '<div class="work-nav"><button class="btn-icon" onclick="btDailyCalMonth+=-1;btRenderCurrentTab()">&#8249;</button>';
+      h += '<span class="work-nav-label">' + yr + '년 ' + monthNames[mo - 1] + '</span>';
+      h += '<button class="btn-icon" onclick="btDailyCalMonth+=1;btRenderCurrentTab()">&#8250;</button></div>';
+      if (btDailyCalMonth !== 0) h += '<div class="today-jump-row"><button class="today-jump-btn" onclick="btDailyCalMonth=0;btRenderCurrentTab()">이번달로</button></div>';
+
+      h += '<div class="work-cal">';
+      ['월','화','수','목','금','토','일'].forEach(function(d, i) {
+        h += '<div class="work-cal-head' + (i >= 5 ? ' weekend' : '') + '">' + d + '</div>';
+      });
+      for (var blank = 0; blank < firstDayKR; blank++) h += '<div class="work-cal-cell empty"></div>';
+      for (var day = 1; day <= daysInMonth; day++) {
+        var ds = yr + '-' + String(mo).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+        var isToday = ds === todayStr;
+        var dow = (firstDayKR + day - 1) % 7;
+        var isWeekend = (dow === 5 || dow === 6);
+        var entry = btDailyEntries.find(function(e) { return e.date === ds; });
+        var dayItems = entry ? (entry.items || []) : [];
+        var hasItems = dayItems.length > 0;
+        h += '<div class="work-cal-cell' + (isToday ? ' is-today' : '') + (isWeekend ? ' weekend' : '') + (hasItems ? ' has-items' : '') + '" onclick="btSetDate(\'' + ds + '\')">';
+        h += '<div class="work-cal-date">' + day + '</div>';
+        if (hasItems) {
+          h += '<div class="work-cal-items-desktop">';
+          dayItems.slice(0, 3).forEach(function(it) {
+            var cat = cats.find(function(c) { return c.id === it.catId; });
+            var dotColor = (cat && cat.color) ? cat.color : 'var(--primary-yellow)';
+            var rev = (it.units || 0) * (it.unitPrice || 0);
+            h += '<div class="work-cal-item">';
+            h += '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' + dotColor + ';flex-shrink:0;margin-right:3px;"></span>';
+            h += '<span class="work-cal-item-title">' + escapeHtml((cat ? cat.name : '') || '매출') + ' ' + btFmtW(rev) + '</span>';
+            h += '</div>';
+          });
+          if (dayItems.length > 3) h += '<div style="font-size:10px;color:var(--text-secondary);">+' + (dayItems.length - 3) + '건</div>';
+          h += '</div>';
+        }
+        h += '</div>';
+      }
+      h += '</div></div>';
+      return h;
+    }
+
+    // ── 액션플랜 캘린더뷰 ──
+    function btBuildActionCalendar() {
+      var now = new Date();
+      var yr = now.getFullYear();
+      var mo = now.getMonth() + 1 + btActionCalMonth;
+      while (mo > 12) { mo -= 12; yr++; }
+      while (mo < 1)  { mo += 12; yr--; }
+      var todayStr = today();
+      var daysInMonth = new Date(yr, mo, 0).getDate();
+      var firstDay = new Date(yr, mo - 1, 1).getDay();
+      var firstDayKR = (firstDay === 0) ? 6 : firstDay - 1;
+      var monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+      var cats = (btConfig && btConfig.categories) || [];
+
+      var h = '<div class="work-month">';
+      h += '<div class="work-nav"><button class="btn-icon" onclick="btActionCalMonth+=-1;btRenderCurrentTab()">&#8249;</button>';
+      h += '<span class="work-nav-label">' + yr + '년 ' + monthNames[mo - 1] + '</span>';
+      h += '<button class="btn-icon" onclick="btActionCalMonth+=1;btRenderCurrentTab()">&#8250;</button></div>';
+      if (btActionCalMonth !== 0) h += '<div class="today-jump-row"><button class="today-jump-btn" onclick="btActionCalMonth=0;btRenderCurrentTab()">이번달로</button></div>';
+
+      h += '<div class="work-cal">';
+      ['월','화','수','목','금','토','일'].forEach(function(d, i) {
+        h += '<div class="work-cal-head' + (i >= 5 ? ' weekend' : '') + '">' + d + '</div>';
+      });
+      for (var blank = 0; blank < firstDayKR; blank++) h += '<div class="work-cal-cell empty"></div>';
+      for (var day = 1; day <= daysInMonth; day++) {
+        var ds = yr + '-' + String(mo).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+        var isToday = ds === todayStr;
+        var dow = (firstDayKR + day - 1) % 7;
+        var isWeekend = (dow === 5 || dow === 6);
+        var dayActions = btActions.filter(function(a) { return a.date === ds; });
+        var hasItems = dayActions.length > 0;
+        h += '<div class="work-cal-cell' + (isToday ? ' is-today' : '') + (isWeekend ? ' weekend' : '') + (hasItems ? ' has-items' : '') + '">';
+        h += '<div class="work-cal-date">' + day + '</div>';
+        if (hasItems) {
+          h += '<div class="work-cal-items-desktop">';
+          dayActions.slice(0, 3).forEach(function(a) {
+            var cat = cats.find(function(c) { return c.id === a.catId; });
+            var dotColor = (cat && cat.color) ? cat.color : 'var(--primary-yellow)';
+            h += '<div class="work-cal-item">';
+            h += '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' + dotColor + ';flex-shrink:0;margin-right:3px;"></span>';
+            h += '<span class="work-cal-item-title">' + escapeHtml(a.name) + '</span>';
+            h += '</div>';
+          });
+          if (dayActions.length > 3) h += '<div style="font-size:10px;color:var(--text-secondary);">+' + (dayActions.length - 3) + '건</div>';
+          h += '</div>';
+        }
+        h += '</div>';
+      }
+      h += '</div></div>';
+      return h;
     }
 
     // ── 분기 ──
