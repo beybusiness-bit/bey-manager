@@ -1717,6 +1717,8 @@
       const lastPage = sessionStorage.getItem('lastPage');
       if (lastPage && document.getElementById(lastPage + 'Page')) {
         navigateTo(lastPage);
+      } else {
+        renderHomePage(); // 기본 홈 화면 초기 렌더
       }
       updateMobileTopTitle();
       /* 알림 권한 이미 허용된 경우 → FCM 토큰 자동 등록 */
@@ -1971,6 +1973,124 @@
     // ========================================
     // 네비게이션
     // ========================================
+    // ── 홈 대시보드 ──
+    function renderHomePage() {
+      var el = document.getElementById('homeContent');
+      if (!el) return;
+      loadBt();
+      try { workItems = JSON.parse(localStorage.getItem('workItems') || '[]'); } catch(e) { workItems = []; }
+      workItems.forEach(function(it) { it.focusTime = it.focusTime || 0; });
+      var t = today();
+      var h = '';
+
+      // ── 오늘 날짜 헤더 ──
+      h += '<div class="home-date-header">' + formatDateKR(t) + '</div>';
+
+      // ── 💰 매출 요약 (돈을벌자) ──
+      var todayEntry = btDailyEntries.find(function(e) { return e.date === t; });
+      var todayItems = todayEntry ? (todayEntry.items || []) : [];
+      var todayCalc = btCalcPeriod(todayItems.length ? [todayEntry] : []);
+      var q = btGetCurrentQuarter();
+      var mTarget = q ? (Number(q.monthlyTargetRevenue) || 0) : 0;
+      var d0 = new Date(t + 'T00:00:00');
+      var daysInMon = new Date(d0.getFullYear(), d0.getMonth()+1, 0).getDate();
+      var dayTarget = mTarget > 0 ? Math.round(mTarget / daysInMon) : 0;
+
+      h += '<div class="home-section">';
+      h += '<div class="home-section-title">💰 오늘 매출</div>';
+      if (dayTarget > 0) {
+        var revPct = Math.min(200, Math.round(todayCalc.revenue / dayTarget * 100));
+        var revBar = Math.min(100, revPct);
+        var timePct = btTimePct(t, t);
+        h += '<div class="home-kpi-row">';
+        h += '<div class="home-kpi"><div class="home-kpi-val">' + btFmtW(todayCalc.revenue) + '</div><div class="home-kpi-label">매출</div></div>';
+        h += '<div class="home-kpi"><div class="home-kpi-val">' + btFmtW(todayCalc.margin) + '</div><div class="home-kpi-label">수익</div></div>';
+        h += '<div class="home-kpi"><div class="home-kpi-val' + (revPct >= 100 ? ' hit' : '') + '">' + revPct + '%</div><div class="home-kpi-label">목표 달성</div></div>';
+        h += '</div>';
+        h += '<div class="bt-dual-bar" style="margin-top:6px;">';
+        h += '<div class="bt-dual-bar-row"><span class="bt-dual-label">달성</span><div class="bt-progress-wrap bt-dual-prog"><div class="bt-progress-bar' + (revPct >= 100 ? ' full' : '') + '" style="width:' + revBar + '%"></div></div><span class="bt-dual-pct">' + revPct + '%</span></div>';
+        h += '<div class="bt-dual-bar-row"><span class="bt-dual-label">경과</span><div class="bt-progress-wrap bt-dual-prog"><div class="bt-time-bar" style="width:' + timePct + '%"></div></div><span class="bt-dual-pct bt-time-pct">' + timePct + '%</span></div>';
+        h += '</div>';
+      } else {
+        h += '<div class="home-kpi-row">';
+        h += '<div class="home-kpi"><div class="home-kpi-val">' + btFmtW(todayCalc.revenue) + '</div><div class="home-kpi-label">매출</div></div>';
+        h += '<div class="home-kpi"><div class="home-kpi-val">' + btFmtW(todayCalc.margin) + '</div><div class="home-kpi-label">수익</div></div>';
+        h += '<div class="home-kpi"><div class="home-kpi-val">' + todayItems.length + '</div><div class="home-kpi-label">건수</div></div>';
+        h += '</div>';
+      }
+      h += '<button class="home-link-btn" onclick="navigateTo(\'business-tracker\')">자세히 →</button>';
+      h += '</div>';
+
+      // ── 📋 오늘 액션플랜 ──
+      var todayActions = (btActions || []).filter(function(a) {
+        return !a.date || a.date === t;
+      });
+      if (todayActions.length > 0) {
+        h += '<div class="home-section">';
+        h += '<div class="home-section-title">📋 오늘 액션플랜</div>';
+        h += '<div class="home-action-list">';
+        todayActions.slice(0, 5).forEach(function(a) {
+          var cat = btConfig && btConfig.categories.find(function(c) { return c.id === a.catId; });
+          h += '<div class="home-action-row">';
+          h += '<span class="home-action-dot" style="background:' + (cat ? cat.color : 'var(--border-color,#ddd)') + '"></span>';
+          h += '<span class="home-action-name">' + escapeHtml(a.name) + '</span>';
+          if (a.targetUnits) h += '<span class="home-action-meta">' + btFmtN(a.targetUnits) + '건</span>';
+          h += '</div>';
+        });
+        if (todayActions.length > 5) h += '<div class="home-more">+' + (todayActions.length - 5) + '개 더</div>';
+        h += '</div>';
+        h += '<button class="home-link-btn" onclick="navigateTo(\'business-tracker\');setTimeout(function(){switchBtTab(\'planning\');},100)">전체 보기 →</button>';
+        h += '</div>';
+      }
+
+      // ── 💼 오늘 할일 ──
+      var todayWorkItems = workItems.filter(function(it) { return it.date === t; });
+      var pendingWork = todayWorkItems.filter(function(it) { return getWorkStatus(it) !== 'done'; });
+      var doneWork = todayWorkItems.filter(function(it) { return getWorkStatus(it) === 'done'; });
+      if (todayWorkItems.length > 0 || true) {
+        h += '<div class="home-section">';
+        h += '<div class="home-section-title">💼 오늘 할일<span class="home-section-badge">' + doneWork.length + '/' + todayWorkItems.length + '</span></div>';
+        if (pendingWork.length > 0) {
+          h += '<div class="home-work-list">';
+          pendingWork.slice(0, 5).forEach(function(it) {
+            var st = getWorkStatus(it);
+            h += '<div class="home-work-row">';
+            h += workStatusSVG(st, 16);
+            h += '<span class="home-work-title' + (st === 'in-progress' ? ' in-prog' : '') + '">' + (it.emoji ? it.emoji + ' ' : '') + escapeHtml(it.title) + '</span>';
+            h += '</div>';
+          });
+          if (pendingWork.length > 5) h += '<div class="home-more">+' + (pendingWork.length - 5) + '개 더</div>';
+          h += '</div>';
+        } else if (doneWork.length > 0) {
+          h += '<div style="font-size:13px;color:#1a8c60;padding:6px 0;">🎉 오늘 할일 모두 완료!</div>';
+        } else {
+          h += '<div style="font-size:13px;color:var(--text-secondary,#999);padding:6px 0;">오늘 할일이 없습니다.</div>';
+        }
+        h += '<button class="home-link-btn" onclick="navigateTo(\'work\')">일 페이지 →</button>';
+        h += '</div>';
+      }
+
+      // ── 🧺 할일 바구니 ──
+      var basketItems = workItems.filter(function(it) { return !it.date; });
+      if (basketItems.length > 0) {
+        h += '<div class="home-section">';
+        h += '<div class="home-section-title">🧺 할일 바구니<span class="home-section-badge">' + basketItems.length + '</span></div>';
+        h += '<div class="home-work-list">';
+        basketItems.slice(0, 5).forEach(function(it) {
+          h += '<div class="home-work-row">';
+          h += '<span class="home-basket-dot"></span>';
+          h += '<span class="home-work-title">' + (it.emoji ? it.emoji + ' ' : '') + escapeHtml(it.title) + '</span>';
+          h += '</div>';
+        });
+        if (basketItems.length > 5) h += '<div class="home-more">+' + (basketItems.length - 5) + '개 더</div>';
+        h += '</div>';
+        h += '<button class="home-link-btn" onclick="navigateTo(\'work\');setTimeout(function(){switchWorkView(\'basket\');},100)">바구니 전체 →</button>';
+        h += '</div>';
+      }
+
+      el.innerHTML = h;
+    }
+
     function navigateTo(pageId) {
       // 잘못 저장된 ID 보정
       if (pageId === 'work-sos') pageId = 'work';
@@ -1991,6 +2111,7 @@
       updateActiveMenu();
       updateMobileTopTitle();
 
+      if (pageId === 'home') renderHomePage();
       if (pageId === 'habit') renderHabitPage();
       if (pageId === 'business-tracker') renderBusinessTrackerPage();
       if (pageId === 'work') renderWorkPage();
@@ -6398,6 +6519,16 @@
       if (!n || isNaN(n)) return '0원';
       return Math.round(n).toLocaleString('ko-KR') + '원';
     }
+    // 기간 경과 % (0~100). 지나간 기간=100, 미래=0, 현재=실시간 계산
+    function btTimePct(rangeStart, rangeEnd) {
+      var t = today();
+      if (t > rangeEnd) return 100;
+      if (t < rangeStart) return 0;
+      var s = new Date(rangeStart + 'T00:00:00').getTime();
+      var e = new Date(rangeEnd + 'T23:59:59').getTime();
+      var n = new Date().getTime();
+      return Math.max(0, Math.min(100, Math.round((n - s) / (e - s) * 100)));
+    }
     function btFmtN(n) {
       if (!n || isNaN(n)) return '0';
       return Number(n).toLocaleString('ko-KR');
@@ -6659,14 +6790,22 @@
       h += btKpiCard('고정비 배분', btFmtW(fcProrated), '');
       h += '</div>';
 
-      // 목표 대비
+      // 목표 대비 + 기간 경과
       if (periodTarget > 0) {
         var pct = Math.min(200, Math.round(calc.revenue / periodTarget * 100));
         var pctBar = Math.min(100, pct);
+        var dashTimePct = btTimePct(range.start, range.end);
+        var dashGap = periodTarget - calc.revenue;
         h += '<div class="bt-goal-row">';
         h += '<div class="bt-goal-label">매출 목표 대비<span class="bt-goal-pct' + (pct >= 100 ? ' hit' : '') + '">' + pct + '%</span></div>';
-        h += '<div class="bt-goal-sub">' + btFmtW(calc.revenue) + ' / ' + btFmtW(periodTarget) + '</div>';
-        h += '<div class="bt-progress-wrap"><div class="bt-progress-bar" style="width:' + pctBar + '%"></div></div>';
+        h += '<div class="bt-goal-sub">' + btFmtW(calc.revenue) + ' / ' + btFmtW(periodTarget);
+        if (dashGap > 0) h += ' <span style="color:var(--text-secondary,#888);font-size:11px;">— 부족 ' + btFmtW(dashGap) + '</span>';
+        else h += ' <span style="color:#1a8c60;font-size:11px;">— 초과 ' + btFmtW(-dashGap) + '</span>';
+        h += '</div>';
+        h += '<div class="bt-dual-bar">';
+        h += '<div class="bt-dual-bar-row"><span class="bt-dual-label">달성</span><div class="bt-progress-wrap bt-dual-prog"><div class="bt-progress-bar' + (pct >= 100 ? ' full' : '') + '" style="width:' + pctBar + '%"></div></div><span class="bt-dual-pct">' + pct + '%</span></div>';
+        h += '<div class="bt-dual-bar-row"><span class="bt-dual-label">경과</span><div class="bt-progress-wrap bt-dual-prog"><div class="bt-time-bar" style="width:' + dashTimePct + '%"></div></div><span class="bt-dual-pct bt-time-pct">' + dashTimePct + '%</span></div>';
+        h += '</div>';
         h += '</div>';
       }
 
@@ -6915,13 +7054,17 @@
             var _dPct = Math.min(200, Math.round(dayCalc.revenue / _dayTarget * 100));
             var _dBar = Math.min(100, _dPct);
             var _dGap = _dayTarget - dayCalc.revenue;
+            var _dTimePct = btTimePct(btInputDate, btInputDate);
             h += '<div class="bt-goal-row">';
             h += '<div class="bt-goal-label">일 목표 대비<span class="bt-goal-pct' + (_dPct >= 100 ? ' hit' : '') + '">' + _dPct + '%</span></div>';
             h += '<div class="bt-goal-sub">' + btFmtW(dayCalc.revenue) + ' / 목표 ' + btFmtW(_dayTarget);
             if (_dGap > 0) h += ' <span style="color:var(--text-secondary,#888);font-size:11px;">— 부족 ' + btFmtW(_dGap) + '</span>';
             else h += ' <span style="color:#1a8c60;font-size:11px;">— 초과 ' + btFmtW(-_dGap) + '</span>';
             h += '</div>';
-            h += '<div class="bt-progress-wrap"><div class="bt-progress-bar' + (_dPct >= 100 ? ' full' : '') + '" style="width:' + _dBar + '%"></div></div>';
+            h += '<div class="bt-dual-bar">';
+            h += '<div class="bt-dual-bar-row"><span class="bt-dual-label">달성</span><div class="bt-progress-wrap bt-dual-prog"><div class="bt-progress-bar' + (_dPct >= 100 ? ' full' : '') + '" style="width:' + _dBar + '%"></div></div><span class="bt-dual-pct">' + _dPct + '%</span></div>';
+            h += '<div class="bt-dual-bar-row"><span class="bt-dual-label">경과</span><div class="bt-progress-wrap bt-dual-prog"><div class="bt-time-bar" style="width:' + _dTimePct + '%"></div></div><span class="bt-dual-pct bt-time-pct">' + _dTimePct + '%</span></div>';
+            h += '</div>';
             h += '</div>';
           }
         })();
@@ -6976,13 +7119,17 @@
           var _dPct = Math.min(200, Math.round(periodCalc.revenue / _dPeriodTarget * 100));
           var _dBar = Math.min(100, _dPct);
           var _dGap = _dPeriodTarget - periodCalc.revenue;
+          var _dTimePct2 = btTimePct(range.start, range.end);
           h += '<div class="bt-goal-row">';
           h += '<div class="bt-goal-label">기간 목표 대비<span class="bt-goal-pct' + (_dPct >= 100 ? ' hit' : '') + '">' + _dPct + '%</span></div>';
           h += '<div class="bt-goal-sub">' + btFmtW(periodCalc.revenue) + ' / 목표 ' + btFmtW(_dPeriodTarget);
           if (_dGap > 0) h += ' <span style="color:var(--text-secondary,#888);font-size:11px;">— 부족 ' + btFmtW(_dGap) + '</span>';
           else h += ' <span style="color:#1a8c60;font-size:11px;">— 초과 ' + btFmtW(-_dGap) + '</span>';
           h += '</div>';
-          h += '<div class="bt-progress-wrap"><div class="bt-progress-bar' + (_dPct >= 100 ? ' full' : '') + '" style="width:' + _dBar + '%"></div></div>';
+          h += '<div class="bt-dual-bar">';
+          h += '<div class="bt-dual-bar-row"><span class="bt-dual-label">달성</span><div class="bt-progress-wrap bt-dual-prog"><div class="bt-progress-bar' + (_dPct >= 100 ? ' full' : '') + '" style="width:' + _dBar + '%"></div></div><span class="bt-dual-pct">' + _dPct + '%</span></div>';
+          h += '<div class="bt-dual-bar-row"><span class="bt-dual-label">경과</span><div class="bt-progress-wrap bt-dual-prog"><div class="bt-time-bar" style="width:' + _dTimePct2 + '%"></div></div><span class="bt-dual-pct bt-time-pct">' + _dTimePct2 + '%</span></div>';
+          h += '</div>';
           h += '</div>';
         }
 
