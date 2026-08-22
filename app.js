@@ -6546,7 +6546,8 @@
       }
       return Number(item.revenue) || 0;
     }
-    // 아이템 원가 계산 (units × unitCost, 구형 cost/marginRate 호환)
+    // 아이템 원가 계산 (units × unitCost, 구형 cost 호환)
+    // ※ 저장 시 unitCost를 항상 고정 기록하므로 카테고리 마진율 변경은 소급 적용되지 않음
     function btItemCost(item) {
       if (item.unitCost !== undefined && item.unitCost !== null && item.unitCost !== '') {
         return (Number(item.units) || 0) * (Number(item.unitCost) || 0);
@@ -6554,11 +6555,6 @@
       // 구형 데이터: cost 직접값
       if (item.cost !== undefined && item.cost !== null && item.cost !== '') {
         return Number(item.cost) || 0;
-      }
-      // 카테고리 기본 마진율로 원가 추정
-      var cat = btConfig && btConfig.categories.find(function(c) { return c.id === item.catId; });
-      if (cat && cat.defaultMarginRate != null) {
-        return Math.round(btItemRevenue(item) * (1 - cat.defaultMarginRate));
       }
       return 0;
     }
@@ -8153,12 +8149,34 @@
       if (!btConfig.categories) btConfig.categories = [];
       if (id) {
         var idx = btConfig.categories.findIndex(function(c) { return c.id === id; });
-        if (idx >= 0) btConfig.categories[idx] = cat; else btConfig.categories.push(cat);
+        var existing = idx >= 0 ? btConfig.categories[idx] : null;
+        // 기존 카테고리의 마진율이 변경된 경우 경고
+        var oldRate = existing ? existing.defaultMarginRate : undefined;
+        var newRate = cat.defaultMarginRate;
+        var rateChanged = existing && (
+          (oldRate == null && newRate != null) ||
+          (oldRate != null && newRate == null) ||
+          (oldRate != null && newRate != null && Math.abs(oldRate - newRate) > 0.0001)
+        );
+        var doSave = function() {
+          if (idx >= 0) btConfig.categories[idx] = cat; else btConfig.categories.push(cat);
+          btAddingCat = false; btEditCatId = null;
+          saveBt(); btRenderCurrentTab(); showToast('카테고리 저장됨');
+        };
+        if (rateChanged) {
+          showConfirm(
+            '마진율 변경 안내',
+            '마진율을 변경해도 이미 저장된 달성내용과 액션플랜에는 적용되지 않습니다.\n기존 기록의 수익은 저장 당시 마진율 기준으로 유지됩니다.\n\n저장하시겠습니까?',
+            function(ok) { if (ok) doSave(); }
+          );
+        } else {
+          doSave();
+        }
       } else {
         btConfig.categories.push(cat);
+        btAddingCat = false; btEditCatId = null;
+        saveBt(); btRenderCurrentTab(); showToast('카테고리 저장됨');
       }
-      btAddingCat = false; btEditCatId = null;
-      saveBt(); btRenderCurrentTab(); showToast('카테고리 저장됨');
     }
     function btDeleteCat(id) {
       showConfirm('삭제 확인', '이 카테고리를 삭제할까요? 연관된 입력 데이터의 카테고리 표시는 변경됩니다.', function(ok) { if (!ok) return;
