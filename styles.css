@@ -3761,7 +3761,10 @@
     .bt-act-plan-bar { height:100%;background:#82b4ff;border-radius:6px;transition:width .4s;max-width:100%; }
     .bt-time-pct { color:var(--text-secondary,#999); }
     /* 차트 */
-    .bt-chart-wrap { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:12px;padding:12px 14px;margin-bottom:14px; }
+    .bt-chart-wrap { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:12px;padding:12px 14px;margin-bottom:14px;max-width:680px; }
+    .bt-quarter-name-preview { font-size:15px;font-weight:700;color:var(--text-primary,#222);margin-bottom:12px;padding:8px 12px;background:var(--bg-input,#f7f7f7);border-radius:8px; }
+    .bt-quarter-obj { font-size:13px;color:var(--text-primary,#333);line-height:1.6;white-space:pre-wrap;margin-bottom:16px;padding:10px 14px;background:var(--bg-input,#f7f7f7);border-radius:10px;border-left:3px solid var(--primary-yellow,#ffde59); }
+    .bt-quarter-obj-label { font-size:11px;color:var(--text-secondary,#888);font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px; }
     .bt-bar-chart { width:100%;height:110px;display:block; }
     .bt-chart-empty { font-size:13px;color:var(--text-secondary,#aaa);text-align:center;padding:20px 0; }
     /* 카테고리 비교 그리드 (데스크탑 2열) */

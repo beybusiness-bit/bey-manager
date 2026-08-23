@@ -6553,7 +6553,7 @@
         if (curQIdx < 0) curQIdx = allQs.length - 1; // 현재 분기 없으면 마지막 분기
         var targetQIdx = Math.max(0, Math.min(allQs.length - 1, curQIdx + (offset||0)));
         var qObj = allQs[targetQIdx];
-        return { start: qObj.startDate, end: qObj.endDate, label: qObj.name, days: 90, quarterTarget: (qObj.monthlyTargetRevenue||0)*3, qIdx: targetQIdx, qTotal: allQs.length };
+        return { start: qObj.startDate, end: qObj.endDate, label: qObj.name, days: 90, quarterTarget: (qObj.monthlyTargetRevenue||0)*3, quarterObj: qObj, qIdx: targetQIdx, qTotal: allQs.length };
       }
       // 분기 미설정 시 현재 달력 분기
       var d2 = new Date(t), qm = Math.floor(d2.getMonth()/3)*3;
@@ -6875,6 +6875,10 @@
 
         h += '<div class="bt-runrate-card">';
         h += '<div class="bt-section-title" style="margin-bottom:10px;">🎯 분기 목표 트래킹</div>';
+        if (q.objective) {
+          h += '<div class="bt-quarter-obj-label">Objective</div>';
+          h += '<div class="bt-quarter-obj">' + escapeHtml(q.objective) + '</div>';
+        }
 
         // 분기 전체 진행 바
         h += '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">';
@@ -7170,6 +7174,11 @@
         var qEnd = new Date(range.end + 'T00:00:00');
         var qYr = qStart.getFullYear(), qMo = qStart.getMonth();
         var monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+        var _qObj = range.quarterObj;
+        if (_qObj && _qObj.objective) {
+          h += '<div class="bt-quarter-obj-label">Objective</div>';
+          h += '<div class="bt-quarter-obj">' + escapeHtml(_qObj.objective) + '</div>';
+        }
         h += '<div class="bt-quarter-cols">';
         while (new Date(qYr, qMo, 1) <= qEnd) {
           var moFirst = new Date(qYr, qMo, 1);
@@ -7816,6 +7825,11 @@
         var qEnd = new Date(aRange.end + 'T00:00:00');
         var qYr = qStart.getFullYear(), qMo = qStart.getMonth();
         var monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+        var _aqObj = aRange.quarterObj;
+        if (_aqObj && _aqObj.objective) {
+          h += '<div class="bt-quarter-obj-label">Objective</div>';
+          h += '<div class="bt-quarter-obj">' + escapeHtml(_aqObj.objective) + '</div>';
+        }
         h += '<div class="bt-quarter-cols">';
         while (new Date(qYr, qMo, 1) <= qEnd) {
           var moFirstStr = qYr+'-'+String(qMo+1).padStart(2,'0')+'-01';
@@ -8131,6 +8145,14 @@
       }
       return h;
     }
+    // 시작일로부터 "YYYY N분기" 자동 생성
+    function btQuarterAutoName(startDate) {
+      if (!startDate) return '';
+      var d = new Date(startDate + 'T00:00:00');
+      var qNum = Math.floor(d.getMonth() / 3) + 1;
+      return d.getFullYear() + ' ' + qNum + '분기';
+    }
+
     function btBuildQuarterCard(q) {
       var entries = btEntriesInRange(q.startDate, q.endDate);
       var calc = btCalcPeriod(entries);
@@ -8138,12 +8160,14 @@
       var t = today();
       var inRange = q.startDate <= t && q.endDate >= t;
       var pct = mTarget > 0 && inRange ? Math.min(100, Math.round(calc.revenue / (_btElapsedMonths(q.startDate, t) * mTarget) * 100)) : 0;
+      var autoName = btQuarterAutoName(q.startDate);
       var h = '<div class="bt-quarter-card' + (inRange ? ' active-quarter' : '') + '">';
       h += '<div class="bt-quarter-header">';
-      h += '<span class="bt-quarter-name">' + escapeHtml(q.name) + (inRange ? ' <span class="bt-badge">현재</span>' : '') + '</span>';
+      h += '<span class="bt-quarter-name">' + escapeHtml(autoName) + (inRange ? ' <span class="bt-badge">현재</span>' : '') + '</span>';
       h += '<div class="bt-item-actions"><button class="btn-icon" onclick="btStartEditQuarter(\'' + q.id + '\')">✏️</button><button class="btn-icon" onclick="btDeleteQuarter(\'' + q.id + '\')">🗑️</button></div>';
       h += '</div>';
       h += '<div class="bt-quarter-meta">' + q.startDate + ' ~ ' + q.endDate + '</div>';
+      if (q.objective) h += '<div class="bt-quarter-obj">' + escapeHtml(q.objective) + '</div>';
       h += '<div class="bt-quarter-nums">';
       h += '<span>월 목표 ' + btFmtW(mTarget) + '</span>';
       h += '<span>누적 매출 ' + btFmtW(calc.revenue) + '</span>';
@@ -8156,22 +8180,26 @@
       return h;
     }
     function btBuildQuarterForm(q) {
-      var def = q ? null : btNextQuarterDefaults(); // 새 추가 시 자동 제안
+      var def = q ? null : btNextQuarterDefaults();
+      var defStart = q ? q.startDate : (def ? def.start : '');
+      var autoName = defStart ? btQuarterAutoName(defStart) : (q ? btQuarterAutoName(q.startDate) : '');
       var h = '<div class="bt-item-form">';
-      h += '<div class="bt-form-2col">';
-      h += '<div class="bt-form-row"><label>분기 이름</label><input type="text" id="btQName" class="bt-input" placeholder="예: 2026 3분기" value="' + escapeHtml(q ? q.name : (def ? def.name : '')) + '"></div>';
-      h += '<div class="bt-form-row"><label>월 목표 매출 (원)</label><input type="number" id="btQTarget" class="bt-input" min="0" value="' + (q ? (q.monthlyTargetRevenue || '') : '') + '" placeholder="예: 5000000"></div>';
+      h += '<div class="bt-form-row"><label>분기 이름 <span style="font-weight:400;font-size:11px;color:var(--text-secondary,#999);">(시작일로 자동 결정)</span></label>';
+      h += '<div class="bt-quarter-name-preview" id="btQNamePreview">' + escapeHtml(autoName || '시작일을 입력하면 자동 표시됩니다') + '</div>';
       h += '</div>';
       h += '<div class="bt-form-2col">';
-      h += '<div class="bt-form-row"><label>시작일</label><input type="date" id="btQStart" class="bt-input" value="' + (q ? q.startDate : (def ? def.start : '')) + '"></div>';
+      h += '<div class="bt-form-row"><label>시작일</label><input type="date" id="btQStart" class="bt-input" value="' + defStart + '" onchange="var p=document.getElementById(\'btQNamePreview\');if(p)p.textContent=btQuarterAutoName(this.value)||\'\'"></div>';
       h += '<div class="bt-form-row"><label>종료일</label><input type="date" id="btQEnd" class="bt-input" value="' + (q ? q.endDate : (def ? def.end : '')) + '"></div>';
+      h += '</div>';
+      h += '<div class="bt-form-row"><label>월 목표 매출 (원)</label><input type="number" id="btQTarget" class="bt-input" min="0" value="' + (q ? (q.monthlyTargetRevenue || '') : '') + '" placeholder="예: 5000000"></div>';
+      h += '<div class="bt-form-row"><label>목표 / 다짐 <span style="font-weight:400;font-size:11px;color:var(--text-secondary,#999);">(Objective — 선택)</span></label>';
+      h += '<textarea id="btQObjective" class="bt-input" rows="3" placeholder="이 분기에 이루고 싶은 것, OKR Objective, 다짐 등을 자유롭게 써주세요" style="resize:vertical;font-size:13px;">' + escapeHtml(q ? (q.objective || '') : '') + '</textarea>';
       h += '</div>';
       h += '<div class="bt-form-actions"><button class="btn-confirm" onclick="btSaveQuarter(\'' + (q ? q.id : '') + '\')">저장</button><button class="btn-cancel" onclick="btCancelQuarter()">취소</button></div>';
       h += '</div>';
       return h;
     }
     function btNextQuarterDefaults() {
-      // 마지막 분기 기준으로 다음 분기 날짜/이름 자동 제안
       var qs = btConfig && btConfig.quarters ? btConfig.quarters.slice().sort(function(a,b){ return a.startDate > b.startDate ? 1 : -1; }) : [];
       var fmt = function(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
       if (qs.length > 0) {
@@ -8179,28 +8207,26 @@
         var nextStart = new Date(last.endDate + 'T00:00:00');
         nextStart.setDate(nextStart.getDate() + 1);
         var nextEnd = new Date(nextStart.getFullYear(), nextStart.getMonth() + 3, 0);
-        var qNum = Math.floor(nextStart.getMonth() / 3) + 1;
-        return { name: nextStart.getFullYear() + ' ' + qNum + '분기', start: fmt(nextStart), end: fmt(nextEnd) };
+        return { start: fmt(nextStart), end: fmt(nextEnd) };
       }
-      // 첫 분기 추가 — 현재 달력 분기로
       var now = new Date();
       var qm = Math.floor(now.getMonth() / 3) * 3;
       var s = new Date(now.getFullYear(), qm, 1), e = new Date(now.getFullYear(), qm + 3, 0);
-      var qN = Math.floor(qm / 3) + 1;
-      return { name: now.getFullYear() + ' ' + qN + '분기', start: fmt(s), end: fmt(e) };
+      return { start: fmt(s), end: fmt(e) };
     }
     function btStartAddQuarter() { btAddingQuarter = true; btEditQuarterId = null; btRenderCurrentTab(); }
     function btStartEditQuarter(id) { btEditQuarterId = id; btAddingQuarter = false; btRenderCurrentTab(); }
     function btCancelQuarter() { btAddingQuarter = false; btEditQuarterId = null; btRenderCurrentTab(); }
     function btSaveQuarter(id) {
-      var name = (document.getElementById('btQName') || {}).value || '';
-      if (!name.trim()) { showAlert('입력 오류', '분기 이름을 입력해주세요.'); return; }
+      var startDate = (document.getElementById('btQStart') || {}).value || '';
+      if (!startDate) { showAlert('입력 오류', '시작일을 입력해주세요.'); return; }
       var q = {
         id: id || btGenId('btq'),
-        name: name.trim(),
-        startDate: (document.getElementById('btQStart') || {}).value || '',
+        name: btQuarterAutoName(startDate),  // 자동 생성
+        startDate: startDate,
         endDate: (document.getElementById('btQEnd') || {}).value || '',
-        monthlyTargetRevenue: parseInt((document.getElementById('btQTarget') || {}).value || '0', 10) || 0
+        monthlyTargetRevenue: parseInt((document.getElementById('btQTarget') || {}).value || '0', 10) || 0,
+        objective: ((document.getElementById('btQObjective') || {}).value || '').trim()
       };
       if (!btConfig.quarters) btConfig.quarters = [];
       if (id) {
