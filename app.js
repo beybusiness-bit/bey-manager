@@ -7054,6 +7054,9 @@
       h += '<input type="date" class="bt-date-label-picker" value="' + range.start + '"' + (dPickerMin ? ' min="' + dPickerMin + '"' : '') + (dPickerMax ? ' max="' + dPickerMax + '"' : '') + ' onchange="btDailyJumpToDate(this.value)"></div>';
       h += '<button class="btn-icon"' + (!dCanNext ? ' disabled style="opacity:.35;cursor:default"' : '') + ' onclick="btChangeDailyOffset(1)">▶</button>';
       h += '<button class="btn-icon" onclick="btChangeDailyOffset(0,true)">' + (btDailyPeriod === 'day' ? '오늘' : '현재') + '</button>';
+      if (btDailyPeriod !== 'month' && range.start <= today()) {
+        h += '<button class="bt-nav-add-btn" onclick="btStartAddItem()" title="매출 추가">＋</button>';
+      }
       h += '</div>';
 
       // ─ 기간 합계 + 목표 대비 (일 뷰는 별도, 주/월/분기는 공통) ─
@@ -7095,11 +7098,9 @@
         h += '</div></div>';
       })();
 
-      // 추가 폼 + 버튼 (모든 뷰 공통)
+      // 추가 폼 (추가 버튼은 네비바에 이동됨)
       if (btAddingItem) {
         h += '<div style="margin:10px 0;">' + btBuildItemForm(null, null, null) + '</div>';
-      } else if (range.start <= today()) {
-        h += '<button class="btn-add-card" style="margin:8px 0;" onclick="btStartAddItem()"><span class="btn-add-card-plus">+</span>매출 추가</button>';
       }
       // 편집 폼은 각 뷰 섹션에서 인라인으로 처리
 
@@ -7150,14 +7151,11 @@
             } else {
               h += '<div class="bt-week-item" style="border-left:3px solid ' + catColor + ';background:' + catColor + '15;" onclick="btEditItemInDay(\'' + wds + '\',' + realIdx + ')">';
               if (it.time) h += '<span class="bt-week-item-time">' + it.time + '</span>';
-              h += '<span class="bt-week-item-cat">' + (cat ? cat.icon : '📦') + '</span>';
+              h += '<span class="bt-week-item-cat">' + (cat ? cat.icon : '📦') + ' <span class="bt-week-item-name">' + escapeHtml(cat ? cat.name : '') + '</span></span>';
               h += '<span class="bt-week-item-rev">' + btFmtW(btItemRevenue(it)) + '</span>';
               h += '</div>';
             }
           });
-          if (wds <= today()) {
-            h += '<div class="bt-week-add" onclick="btInputDate=\'' + wds + '\';btDailyOffset=' + wi + ';btStartAddItem()" title="' + wds + ' 추가">＋</div>';
-          }
           h += '</div>';
         }
         h += '</div>';
@@ -7166,12 +7164,13 @@
       } else if (btDailyPeriod === 'month') {
         h += btBuildDailyCalendar(range);
 
-      // ─ 분기 뷰 — 월별 섹션 ─
+      // ─ 분기 뷰 — 월별 섹션 (데스크탑 가로 3열) ─
       } else if (btDailyPeriod === 'quarter') {
         var qStart = new Date(range.start + 'T00:00:00');
         var qEnd = new Date(range.end + 'T00:00:00');
         var qYr = qStart.getFullYear(), qMo = qStart.getMonth();
         var monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+        h += '<div class="bt-quarter-cols">';
         while (new Date(qYr, qMo, 1) <= qEnd) {
           var moFirst = new Date(qYr, qMo, 1);
           var moLast = new Date(qYr, qMo+1, 0);
@@ -7213,6 +7212,7 @@
           qMo++;
           if (qMo > 11) { qMo = 0; qYr++; }
         }
+        h += '</div>'; // bt-quarter-cols
       }
 
       return h;
@@ -7592,6 +7592,9 @@
       h += '</div>';
       h += '<button class="btn-icon"' + (!aCanNext ? ' disabled style="opacity:.35;cursor:default"' : '') + ' onclick="btChangeActionOffset(1)">▶</button>';
       h += '<button class="btn-icon" onclick="btChangeActionOffset(0,true)">' + (btActionPeriod === 'day' ? '오늘' : '현재') + '</button>';
+      if (btActionPeriod !== 'month') {
+        h += '<button class="bt-nav-add-btn" onclick="btStartAddAction()" title="액션 추가">＋</button>';
+      }
       h += '</div>';
 
       // ─ 4지표 비교 패널 (모든 기간 탭 공통) ─
@@ -7639,13 +7642,9 @@
         h += '</div></div>';
       })();
 
-      // 액션 추가 폼/버튼 (일/주/분기 뷰 공통, 월뷰는 캘린더만)
-      if (btActionPeriod !== 'month') {
-        if (btAddingAction && !btEditActionId) {
-          h += '<div style="margin:10px 0;">' + btBuildActionForm(null) + '</div>';
-        } else {
-          h += '<button class="btn-add-card" style="margin:8px 0;" onclick="btStartAddAction()"><span class="btn-add-card-plus">+</span>액션 추가</button>';
-        }
+      // 액션 추가 폼 (버튼은 네비바로 이동됨)
+      if (btActionPeriod !== 'month' && btAddingAction && !btEditActionId) {
+        h += '<div style="margin:10px 0;">' + btBuildActionForm(null) + '</div>';
       }
 
       // 기간 내 액션 (날짜+시간 오름차순)
@@ -7700,8 +7699,8 @@
             } else {
               h += '<div class="bt-week-item" style="border-left:3px solid ' + catColor + ';background:' + catColor + '15;" onclick="btStartEditAction(\'' + act.id + '\')">';
               if (act.time) h += '<span class="bt-week-item-time">' + act.time + '</span>';
-              h += '<span class="bt-week-item-cat">' + (cat ? cat.icon : '📋') + '</span>';
-              h += '<span class="bt-week-item-rev">' + escapeHtml(act.name.length > 8 ? act.name.slice(0,8)+'…' : act.name) + '</span>';
+              h += '<span class="bt-week-item-cat">' + (cat ? cat.icon : '📋') + ' <span class="bt-week-item-name">' + escapeHtml(cat ? cat.name : '') + '</span></span>';
+              h += '<span class="bt-week-item-rev">' + escapeHtml(act.name) + '</span>';
               h += '</div>';
             }
           });
@@ -7714,12 +7713,13 @@
       } else if (btActionPeriod === 'month') {
         h += btBuildActionCalendar(aRange);
 
-      // ─ 분기 뷰 — 월별 섹션 ─
+      // ─ 분기 뷰 — 월별 섹션 (데스크탑 가로 3열) ─
       } else if (btActionPeriod === 'quarter') {
         var qStart = new Date(aRange.start + 'T00:00:00');
         var qEnd = new Date(aRange.end + 'T00:00:00');
         var qYr = qStart.getFullYear(), qMo = qStart.getMonth();
         var monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+        h += '<div class="bt-quarter-cols">';
         while (new Date(qYr, qMo, 1) <= qEnd) {
           var moFirstStr = qYr+'-'+String(qMo+1).padStart(2,'0')+'-01';
           var moLastDate = new Date(qYr, qMo+1, 0);
@@ -7764,6 +7764,7 @@
           qMo++;
           if (qMo > 11) { qMo = 0; qYr++; }
         }
+        h += '</div>'; // bt-quarter-cols
       }
 
       return h;
