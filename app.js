@@ -6686,12 +6686,7 @@
       var maxRev = Math.max.apply(null, days.map(function(x) { return x.revenue; }));
       if (maxRev === 0) return '<div class="bt-chart-empty">아직 매출 데이터가 없습니다.</div>';
 
-      // 레이아웃
-      var VW = 440, VH = 110;
-      var mL = 50, mR = 6, mT = 8, mB = 18;
-      var cW = VW - mL - mR, cH = VH - mT - mB;
-
-      // Y축 레이블 단축 포맷 (축 공간 제한 상 만 단위 사용)
+      // Y축 레이블 단축 포맷
       function axFmt(n) {
         if (n === 0) return '0';
         if (n >= 100000000) return (n/100000000).toFixed(n%100000000===0?0:1) + '억';
@@ -6701,42 +6696,48 @@
         return n.toLocaleString('ko-KR');
       }
 
+      // SVG 좌표 (텍스트 없음 — 텍스트는 HTML로 분리)
+      var VW = 440, VH = 90;
       var barPad = days.length > 20 ? 1 : 2;
-      var barW = Math.max(2, (cW - barPad * (days.length - 1)) / days.length);
+      var barW = Math.max(2, (VW - barPad * (days.length - 1)) / days.length);
 
+      // SVG: 눈금선 + 바만 (text 없음 → 크기 고정 HTML 레이블이 대신)
       var svg = '<svg viewBox="0 0 ' + VW + ' ' + VH + '" preserveAspectRatio="none" class="bt-bar-chart">';
-
-      // Y축 눈금선 + 레이블 (0/25/50/75/100%)
       [0, 0.25, 0.5, 0.75, 1.0].forEach(function(pct) {
-        var y = (mT + cH * (1 - pct)).toFixed(1);
-        var val = Math.round(maxRev * pct);
-        svg += '<line x1="' + mL + '" y1="' + y + '" x2="' + (VW-mR) + '" y2="' + y + '" stroke="var(--border-color,#e8e8e8)" stroke-width="0.6"/>';
-        svg += '<text x="' + (mL-4) + '" y="' + (parseFloat(y)+3.5).toFixed(1) + '" text-anchor="end" font-size="9" fill="var(--text-secondary,#999)">' + axFmt(val) + '</text>';
+        var y = (VH * (1 - pct)).toFixed(1);
+        svg += '<line x1="0" y1="' + y + '" x2="' + VW + '" y2="' + y + '" stroke="var(--border-color,#e8e8e8)" stroke-width="0.6"/>';
       });
-
-      // X축 레이블 (날짜)
-      var xEvery = days.length <= 7 ? 1 : days.length <= 14 ? 2 : days.length <= 21 ? 3 : 5;
       days.forEach(function(day, i) {
-        var x = (mL + i * (barW + barPad) + barW / 2).toFixed(1);
-        if (i === 0 || i % xEvery === 0 || i === days.length - 1) {
-          var lbl = days.length <= 14 ? String(day.day) : (day.day === 1 ? day.mon + '/' + day.day : String(day.day));
-          svg += '<text x="' + x + '" y="' + (VH-3) + '" text-anchor="middle" font-size="8" fill="var(--text-secondary,#aaa)">' + lbl + '</text>';
-        }
-      });
-
-      // 바
-      days.forEach(function(day, i) {
-        var barH = maxRev > 0 ? Math.max(1, (day.revenue / maxRev) * cH) : 0;
-        var x = (mL + i * (barW + barPad)).toFixed(1);
-        var y = (mT + cH - barH).toFixed(1);
+        var barH = maxRev > 0 ? Math.max(1, (day.revenue / maxRev) * VH) : 0;
+        var x = (i * (barW + barPad)).toFixed(1);
+        var y = (VH - barH).toFixed(1);
         var isToday = day.date === today();
         svg += '<rect x="' + x + '" y="' + y + '" width="' + barW.toFixed(1) + '" height="' + Math.max(1, barH).toFixed(1) + '" rx="1"';
         svg += ' fill="' + (isToday ? '#444' : 'var(--primary-yellow,#ffde59)') + '" opacity="' + (day.revenue > 0 ? '1' : '0.12') + '">';
         svg += '<title>' + day.date + ': ' + btFmtW(day.revenue) + '</title></rect>';
       });
-
       svg += '</svg>';
-      return svg;
+
+      // Y축 HTML 레이블 (fixed 10px — SVG 크기와 무관)
+      var yLabels = '<div class="bt-chart-ylabels">';
+      [1.0, 0.75, 0.5, 0.25, 0].forEach(function(pct) {
+        yLabels += '<span>' + axFmt(Math.round(maxRev * pct)) + '</span>';
+      });
+      yLabels += '</div>';
+
+      // X축 HTML 레이블
+      var xEvery = days.length <= 7 ? 1 : days.length <= 14 ? 2 : days.length <= 21 ? 3 : 5;
+      var xLabels = '<div class="bt-chart-xlabels">';
+      days.forEach(function(day, i) {
+        if (i === 0 || i % xEvery === 0 || i === days.length - 1) {
+          var pct = days.length > 1 ? (i / (days.length - 1) * 100).toFixed(2) : '0';
+          var lbl = days.length <= 14 ? String(day.day) : (day.day === 1 ? day.mon + '/' + day.day : String(day.day));
+          xLabels += '<span style="left:' + pct + '%">' + lbl + '</span>';
+        }
+      });
+      xLabels += '</div>';
+
+      return '<div class="bt-bar-chart-outer">' + yLabels + '<div class="bt-chart-bars">' + svg + xLabels + '</div></div>';
     }
 
     function loadBt() {
@@ -6892,12 +6893,14 @@
         var qPct = Math.min(200, Math.round(qActual / qTotalTarget * 100));
         var qBar = Math.min(100, qPct);
 
+        if (q.objective) {
+          h += '<div class="bt-objective-banner">';
+          h += '<div class="bt-objective-label">Objective</div>';
+          h += '<div class="bt-objective-text">' + escapeHtml(q.objective) + '</div>';
+          h += '</div>';
+        }
         h += '<div class="bt-runrate-card">';
         h += '<div class="bt-section-title" style="margin-bottom:10px;">🎯 분기 목표 트래킹</div>';
-        if (q.objective) {
-          h += '<div class="bt-quarter-obj-label">Objective</div>';
-          h += '<div class="bt-quarter-obj">' + escapeHtml(q.objective) + '</div>';
-        }
 
         // 분기 전체 진행 바
         h += '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">';
