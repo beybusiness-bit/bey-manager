@@ -6835,6 +6835,12 @@
       h += btKpiCard('고정비 배분', btFmtW(fcProrated), '');
       h += '</div>';
 
+      // ─ 2열 그리드 시작 (데스크탑: 좌=목표/차트, 우=분기트래킹 / 모바일: 단열) ─
+      h += '<div class="bt-dash-grid">';
+
+      // ── 왼쪽 열: 목표 대비 + 차트 ──
+      h += '<div class="bt-dash-left">';
+
       // 목표 대비 + 기간 경과
       if (periodTarget > 0) {
         var pct = Math.min(200, Math.round(calc.revenue / periodTarget * 100));
@@ -6853,6 +6859,19 @@
         h += '</div>';
         h += '</div>';
       }
+
+      // 차트 (주/월 단위에서만)
+      if (btDashPeriod !== 'day') {
+        h += '<div class="bt-chart-wrap">';
+        h += '<div class="bt-section-title">매출 추이</div>';
+        h += btSvgBarChart(range.start, range.end);
+        h += '</div>';
+      }
+
+      h += '</div>'; // bt-dash-left
+
+      // ── 오른쪽 열: 분기 목표 트래킹 ──
+      h += '<div class="bt-dash-right">';
 
       // ─ 동적 목표 재계산 (run-rate) ─
       if (q && mTarget > 0) {
@@ -6936,13 +6955,8 @@
         h += '</div>'; // bt-runrate-card
       }
 
-      // 차트 (주/월 단위에서만)
-      if (btDashPeriod !== 'day') {
-        h += '<div class="bt-chart-wrap">';
-        h += '<div class="bt-section-title">매출 추이</div>';
-        h += btSvgBarChart(range.start, range.end);
-        h += '</div>';
-      }
+      h += '</div>'; // bt-dash-right
+      h += '</div>'; // bt-dash-grid
 
       // 액션플랜 vs 실제 (카테고리별) — 카테고리가 있으면 항상 표시
       var cats = (btConfig && btConfig.categories) || [];
