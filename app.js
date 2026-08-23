@@ -6828,13 +6828,24 @@
       });
       h += '</div>';
 
-      // KPI 카드
+      // KPI 카드 + Objective 상단 2열 그리드 (objective 있을 때만)
+      var _dashHasObj = !!(q && q.objective);
+      if (_dashHasObj) h += '<div class="bt-dash-top-grid"><div class="bt-dash-top-left">';
       h += '<div class="bt-kpi-row">';
       h += btKpiCard('매출', btFmtW(calc.revenue), '');
       h += btKpiCard('순수익', btFmtW(calc.margin - fcProrated), (calc.margin - fcProrated) >= 0 ? 'positive' : 'negative');
       h += btKpiCard('수익', btFmtW(calc.margin), '');
       h += btKpiCard('고정비 배분', btFmtW(fcProrated), '');
       h += '</div>';
+      if (_dashHasObj) {
+        h += '</div>'; // bt-dash-top-left
+        h += '<div class="bt-dash-top-right">';
+        h += '<div class="bt-objective-banner">';
+        h += '<div class="bt-objective-label">Objective</div>';
+        h += '<div class="bt-objective-text">' + escapeHtml(q.objective) + '</div>';
+        h += '</div>';
+        h += '</div></div>'; // bt-dash-top-right + bt-dash-top-grid
+      }
 
       // ─ 2열 그리드 시작 (데스크탑: 좌=목표/차트, 우=분기트래킹 / 모바일: 단열) ─
       h += '<div class="bt-dash-grid">';
@@ -6893,12 +6904,6 @@
         var qPct = Math.min(200, Math.round(qActual / qTotalTarget * 100));
         var qBar = Math.min(100, qPct);
 
-        if (q.objective) {
-          h += '<div class="bt-objective-banner">';
-          h += '<div class="bt-objective-label">Objective</div>';
-          h += '<div class="bt-objective-text">' + escapeHtml(q.objective) + '</div>';
-          h += '</div>';
-        }
         h += '<div class="bt-runrate-card">';
         h += '<div class="bt-section-title" style="margin-bottom:10px;">🎯 분기 목표 트래킹</div>';
 
@@ -7080,7 +7085,9 @@
       }
       h += '</div>';
 
-      // ─ 기간 합계 + 목표 대비 (일 뷰는 별도, 주/월/분기는 공통) ─
+      // ─ 기간 합계 + 목표 대비 + Objective (분기+objective 있으면 2열) ─
+      var _dQObjData = btDailyPeriod === 'quarter' && range.quarterObj && range.quarterObj.objective ? range.quarterObj : null;
+      if (_dQObjData) h += '<div class="bt-daily-top-grid"><div class="bt-daily-top-left">';
       var _dSumEntries = btDailyPeriod === 'day' ? btDailyEntries.filter(function(e) { return e.date === btInputDate; }) : btEntriesInRange(range.start, range.end);
       var _dSumCalc = btCalcPeriod(_dSumEntries);
       var _dSumCount = _dSumEntries.reduce(function(s,e){ return s+(e.items||[]).length; }, 0);
@@ -7118,6 +7125,14 @@
         h += '<div class="bt-dual-bar-row"><span class="bt-dual-label">경과</span><div class="bt-progress-wrap bt-dual-prog"><div class="bt-time-bar" style="width:' + _tpct + '%"></div></div><span class="bt-dual-pct bt-time-pct">' + _tpct + '%</span></div>';
         h += '</div></div>';
       })();
+      if (_dQObjData) {
+        h += '</div>'; // bt-daily-top-left
+        h += '<div class="bt-daily-top-right">';
+        h += '<div class="bt-objective-banner">';
+        h += '<div class="bt-objective-label">Objective</div>';
+        h += '<div class="bt-objective-text">' + escapeHtml(_dQObjData.objective) + '</div>';
+        h += '</div></div></div>'; // banner + right + grid
+      }
 
       // 추가 폼 (추가 버튼은 네비바에 이동됨)
       if (btAddingItem) {
@@ -7191,11 +7206,7 @@
         var qEnd = new Date(range.end + 'T00:00:00');
         var qYr = qStart.getFullYear(), qMo = qStart.getMonth();
         var monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-        var _qObj = range.quarterObj;
-        if (_qObj && _qObj.objective) {
-          h += '<div class="bt-quarter-obj-label">Objective</div>';
-          h += '<div class="bt-quarter-obj">' + escapeHtml(_qObj.objective) + '</div>';
-        }
+        // Objective는 상단 2열 그리드에서 이미 표시됨 (_dQObjData)
         h += '<div class="bt-quarter-cols">';
         while (new Date(qYr, qMo, 1) <= qEnd) {
           var moFirst = new Date(qYr, qMo, 1);
@@ -7720,7 +7731,9 @@
       }
       h += '</div>';
 
-      // ─ 4지표 비교 패널 (모든 기간 탭 공통) ─
+      // ─ 4지표 비교 패널 + Objective (분기+objective 있으면 2열) ─
+      var _aQObjData = btActionPeriod === 'quarter' && aRange.quarterObj && aRange.quarterObj.objective ? aRange.quarterObj : null;
+      if (_aQObjData) h += '<div class="bt-daily-top-grid"><div class="bt-daily-top-left">';
       (function() {
         var _periodTarget = 0;
         if (btActionPeriod === 'quarter') {
@@ -7764,6 +7777,14 @@
         else if (_gap < 0) h += '<span class="bt-gap-surplus">플랜 초과 ▲' + btFmtW(-_gap) + '</span>';
         h += '</div></div>';
       })();
+      if (_aQObjData) {
+        h += '</div>'; // bt-daily-top-left
+        h += '<div class="bt-daily-top-right">';
+        h += '<div class="bt-objective-banner">';
+        h += '<div class="bt-objective-label">Objective</div>';
+        h += '<div class="bt-objective-text">' + escapeHtml(_aQObjData.objective) + '</div>';
+        h += '</div></div></div>'; // banner + right + grid
+      }
 
       // 액션 추가 폼 (버튼은 네비바로 이동됨)
       if (btActionPeriod !== 'month' && btAddingAction && !btEditActionId) {
@@ -7842,11 +7863,7 @@
         var qEnd = new Date(aRange.end + 'T00:00:00');
         var qYr = qStart.getFullYear(), qMo = qStart.getMonth();
         var monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-        var _aqObj = aRange.quarterObj;
-        if (_aqObj && _aqObj.objective) {
-          h += '<div class="bt-quarter-obj-label">Objective</div>';
-          h += '<div class="bt-quarter-obj">' + escapeHtml(_aqObj.objective) + '</div>';
-        }
+        // Objective는 상단 2열 그리드에서 이미 표시됨 (_aQObjData)
         h += '<div class="bt-quarter-cols">';
         while (new Date(qYr, qMo, 1) <= qEnd) {
           var moFirstStr = qYr+'-'+String(qMo+1).padStart(2,'0')+'-01';
