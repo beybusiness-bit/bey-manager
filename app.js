@@ -7138,7 +7138,7 @@
           var wEntry = btDailyEntries.find(function(e) { return e.date === wds; });
           var wItems = wEntry ? (wEntry.items || []).slice().sort(function(a,b){ var ak=a.time||'zz',bk=b.time||'zz'; return ak<bk?-1:ak>bk?1:0; }) : [];
           h += '<div class="bt-week-col' + (wIsToday?' is-today':'') + (wIsWeekend?' weekend':'') + '">';
-          h += '<div class="bt-week-col-head" onclick="btDailyJumpToDate(\'' + wds + '\');btSetDailyPeriod(\'day\')">';
+          h += '<div class="bt-week-col-head" onclick="btNavToDay(\'' + wds + '\')">';
           h += '<span class="bt-week-day-name">' + dayNames[wi] + '</span>';
           h += '<span class="bt-week-day-num' + (wIsToday?' today-num':'') + '">' + wd.getDate() + '</span>';
           h += '</div>';
@@ -7149,7 +7149,7 @@
             if (btEditItemDate === wds && btEditItemIdx === realIdx) {
               h += '<div class="bt-week-item-edit">' + btBuildItemForm(it, realIdx, wds) + '</div>';
             } else {
-              h += '<div class="bt-week-item" style="border-left:3px solid ' + catColor + ';background:' + catColor + '15;" onclick="btEditItemInDay(\'' + wds + '\',' + realIdx + ')">';
+              h += '<div class="bt-week-item" style="border-left:3px solid ' + catColor + ';background:' + catColor + '15;" onclick="btShowItemDetail(\'' + wds + '\',' + realIdx + ')">';
               if (it.time) h += '<span class="bt-week-item-time">' + it.time + '</span>';
               h += '<span class="bt-week-item-cat">' + (cat ? cat.icon : '📦') + ' <span class="bt-week-item-name">' + escapeHtml(cat ? cat.name : '') + '</span></span>';
               h += '<span class="bt-week-item-rev">' + btFmtW(btItemRevenue(it)) + '</span>';
@@ -7189,7 +7189,7 @@
               var dayItems = (entry.items || []).slice().sort(function(a,b){ var ak=a.time||'zz',bk=b.time||'zz'; return ak<bk?-1:ak>bk?1:0; });
               if (!dayItems.length) return;
               h += '<div class="bt-qtr-day-row">';
-              h += '<div class="bt-qtr-day-label" onclick="btDailyJumpToDate(\'' + entry.date + '\');btSetDailyPeriod(\'day\')">' + entry.date.slice(5).replace('-','/') + '</div>';
+              h += '<div class="bt-qtr-day-label" onclick="btNavToDay(\'' + entry.date + '\')">' + entry.date.slice(5).replace('-','/') + '</div>';
               h += '<div class="bt-qtr-day-items">';
               dayItems.forEach(function(it, si) {
                 var realIdx = (entry.items || []).indexOf(it);
@@ -7198,7 +7198,7 @@
                 if (btEditItemDate === entry.date && btEditItemIdx === realIdx) {
                   h += '<div>' + btBuildItemForm(it, realIdx, entry.date) + '</div>';
                 } else {
-                  h += '<div class="bt-qtr-item" style="border-left:3px solid '+catColor+';background:'+catColor+'15;" onclick="btEditItemInDay(\'' + entry.date + '\',' + realIdx + ')">';
+                  h += '<div class="bt-qtr-item" style="border-left:3px solid '+catColor+';background:'+catColor+'15;" onclick="btShowItemDetail(\'' + entry.date + '\',' + realIdx + ')">';
                   if (it.time) h += '<span class="bt-qtr-item-time">' + it.time + '</span>';
                   h += '<span>' + (cat ? cat.icon+' '+escapeHtml(cat.name) : '📦') + '</span>';
                   h += '<span class="bt-qtr-item-rev">' + btFmtW(btItemRevenue(it)) + '</span>';
@@ -7274,6 +7274,20 @@
       var targetMs = new Date(date + 'T00:00:00').getTime();
       return Math.round((targetMs - todayMs) / 86400000);
     }
+    // 날짜 헤더/라벨 클릭 → 해당 날짜 일뷰로 이동 (offset 리셋 없이)
+    function btNavToDay(dateStr) {
+      btDailyPeriod = 'day';
+      btDailyOffset = _btDayOffset(dateStr);
+      btInputDate = dateStr;
+      btAddingItem = false; btEditItemDate = null; btEditItemIdx = null;
+      btRenderCurrentTab();
+    }
+    function btActionNavToDay(dateStr) {
+      btActionPeriod = 'day';
+      btActionOffset = _btDayOffset(dateStr);
+      btAddingAction = false; btEditActionId = null;
+      btRenderCurrentTab();
+    }
     function btGoToDay(date) {
       btInputDate = date; btDailyOffset = _btDayOffset(date);
       btDailyPeriod = 'day'; btStartAddItem();
@@ -7285,6 +7299,89 @@
       btEditItemDate = date; btEditItemIdx = idx;
       btRenderCurrentTab();
       setTimeout(btAutoCalcDisplay, 50);
+    }
+
+    // ── 달성내용 상세보기 모달 ──
+    function btShowItemDetail(date, idx) {
+      var entry = btDailyEntries.find(function(e) { return e.date === date; });
+      if (!entry) return;
+      var item = (entry.items || [])[idx];
+      if (!item) return;
+      var cats = (btConfig && btConfig.categories) || [];
+      var cat = cats.find(function(c) { return c.id === item.catId; });
+      var rev = btItemRevenue(item);
+      var cst = btItemCost(item);
+      var margin = rev - cst;
+      var mRate = rev > 0 ? Math.round(margin / rev * 100) : 0;
+      var catColor = (cat && cat.color) ? cat.color : '#ddd';
+      var el = document.getElementById('btDetailModal');
+      if (!el) {
+        el = document.createElement('div'); el.id = 'btDetailModal';
+        el.className = 'bt-detail-overlay'; document.body.appendChild(el);
+      }
+      el.innerHTML = '<div class="bt-detail-box">' +
+        '<div class="bt-detail-header" style="border-left:4px solid ' + catColor + '">' +
+        '<span class="bt-detail-title">' + (cat ? cat.icon + ' ' + escapeHtml(cat.name) : '📦 매출') + '</span>' +
+        '<button class="bt-detail-close" onclick="btCloseDetail()">✕</button>' +
+        '</div>' +
+        '<div class="bt-detail-body">' +
+        '<div class="bt-detail-row"><span class="bt-detail-label">날짜</span><span>' + date + (item.time ? '  ' + item.time : '') + '</span></div>' +
+        (item.units ? '<div class="bt-detail-row"><span class="bt-detail-label">건수</span><span>' + btFmtN(item.units) + (cat ? cat.unitLabel || '건' : '건') + '</span></div>' : '') +
+        (item.unitPrice ? '<div class="bt-detail-row"><span class="bt-detail-label">객단가</span><span>' + btFmtW(item.unitPrice) + '</span></div>' : '') +
+        '<div class="bt-detail-row"><span class="bt-detail-label">매출</span><span style="font-weight:700;font-size:15px;">' + btFmtW(rev) + '</span></div>' +
+        (cst ? '<div class="bt-detail-row"><span class="bt-detail-label">원가</span><span>' + btFmtW(cst) + '</span></div>' : '') +
+        (rev ? '<div class="bt-detail-row"><span class="bt-detail-label">수익</span><span style="color:' + (margin >= 0 ? '#1a8c60' : '#e53935') + ';font-weight:600;">' + btFmtW(margin) + ' <span style="font-size:11px;font-weight:400;">(' + mRate + '%)</span></span></div>' : '') +
+        (item.memo ? '<div class="bt-detail-row bt-detail-memo"><span class="bt-detail-label">메모</span><span>' + escapeHtml(item.memo) + '</span></div>' : '') +
+        '</div>' +
+        '<div class="bt-detail-footer">' +
+        '<button class="btn-confirm" onclick="btCloseDetail();btEditItemInDay(\'' + date + '\',' + idx + ')">✏️ 수정</button>' +
+        '<button class="btn-cancel" onclick="btCloseDetail()">닫기</button>' +
+        '</div>' +
+        '</div>';
+      el.style.display = 'flex';
+      el.onclick = function(e) { if (e.target === el) btCloseDetail(); };
+    }
+    function btCloseDetail() {
+      var el = document.getElementById('btDetailModal');
+      if (el) el.style.display = 'none';
+    }
+
+    // ── 액션플랜 상세보기 모달 ──
+    function btShowActionDetail(id) {
+      var action = btActions.find(function(a) { return a.id === id; });
+      if (!action) return;
+      var cats = (btConfig && btConfig.categories) || [];
+      var cat = cats.find(function(c) { return c.id === action.catId; });
+      var planRev = btActionRevenue(action);
+      var planCst = btActionMargin ? (planRev - btActionMargin(action)) : 0;
+      var planMargin = btActionMargin ? btActionMargin(action) : 0;
+      var mRate = planRev > 0 ? Math.round(planMargin / planRev * 100) : 0;
+      var catColor = (cat && cat.color) ? cat.color : '#ddd';
+      var el = document.getElementById('btDetailModal');
+      if (!el) {
+        el = document.createElement('div'); el.id = 'btDetailModal';
+        el.className = 'bt-detail-overlay'; document.body.appendChild(el);
+      }
+      el.innerHTML = '<div class="bt-detail-box">' +
+        '<div class="bt-detail-header" style="border-left:4px solid ' + catColor + '">' +
+        '<span class="bt-detail-title">' + (cat ? cat.icon + ' ' : '📋 ') + escapeHtml(action.name) + '</span>' +
+        '<button class="bt-detail-close" onclick="btCloseDetail()">✕</button>' +
+        '</div>' +
+        '<div class="bt-detail-body">' +
+        (cat ? '<div class="bt-detail-row"><span class="bt-detail-label">카테고리</span><span>' + escapeHtml(cat.name) + '</span></div>' : '') +
+        (action.date ? '<div class="bt-detail-row"><span class="bt-detail-label">날짜</span><span>' + action.date + (action.time ? '  ' + action.time : '') + '</span></div>' : '') +
+        (action.targetUnits ? '<div class="bt-detail-row"><span class="bt-detail-label">목표 건수</span><span>' + btFmtN(action.targetUnits) + (cat ? cat.unitLabel || '건' : '건') + '</span></div>' : '') +
+        (action.unitPrice ? '<div class="bt-detail-row"><span class="bt-detail-label">객단가</span><span>' + btFmtW(action.unitPrice) + '</span></div>' : '') +
+        (planRev ? '<div class="bt-detail-row"><span class="bt-detail-label">목표 매출</span><span style="font-weight:700;font-size:15px;">' + btFmtW(planRev) + '</span></div>' : '') +
+        (planRev ? '<div class="bt-detail-row"><span class="bt-detail-label">목표 수익</span><span style="color:' + (planMargin >= 0 ? '#1a8c60' : '#e53935') + ';font-weight:600;">' + btFmtW(planMargin) + ' <span style="font-size:11px;font-weight:400;">(' + mRate + '%)</span></span></div>' : '') +
+        '</div>' +
+        '<div class="bt-detail-footer">' +
+        '<button class="btn-confirm" onclick="btCloseDetail();btStartEditAction(\'' + id + '\')">✏️ 수정</button>' +
+        '<button class="btn-cancel" onclick="btCloseDetail()">닫기</button>' +
+        '</div>' +
+        '</div>';
+      el.style.display = 'flex';
+      el.onclick = function(e) { if (e.target === el) btCloseDetail(); };
     }
 
     // date: 기간뷰에서 해당 카드의 실제 날짜 (일뷰에서는 생략 → btInputDate 사용)
@@ -7687,7 +7784,7 @@
             var ak=a.time||'zz',bk=b.time||'zz'; return ak<bk?-1:ak>bk?1:0;
           });
           h += '<div class="bt-week-col' + (wIsToday?' is-today':'') + (wIsWeekend?' weekend':'') + '">';
-          h += '<div class="bt-week-col-head" onclick="btActionJumpToDate(\'' + wds + '\');btSetActionPeriod(\'day\')">';
+          h += '<div class="bt-week-col-head" onclick="btActionNavToDay(\'' + wds + '\')">';
           h += '<span class="bt-week-day-name">' + dayNames[wi] + '</span>';
           h += '<span class="bt-week-day-num' + (wIsToday?' today-num':'') + '">' + wd.getDate() + '</span>';
           h += '</div>';
@@ -7697,14 +7794,14 @@
             if (btEditActionId === act.id) {
               h += '<div class="bt-week-item-edit">' + btBuildActionForm(act) + '</div>';
             } else {
-              h += '<div class="bt-week-item" style="border-left:3px solid ' + catColor + ';background:' + catColor + '15;" onclick="btStartEditAction(\'' + act.id + '\')">';
+              h += '<div class="bt-week-item" style="border-left:3px solid ' + catColor + ';background:' + catColor + '15;" onclick="btShowActionDetail(\'' + act.id + '\')">';
               if (act.time) h += '<span class="bt-week-item-time">' + act.time + '</span>';
               h += '<span class="bt-week-item-cat">' + (cat ? cat.icon : '📋') + ' <span class="bt-week-item-name">' + escapeHtml(cat ? cat.name : '') + '</span></span>';
               h += '<span class="bt-week-item-rev">' + escapeHtml(act.name) + '</span>';
               h += '</div>';
             }
           });
-          h += '<div class="bt-week-add" onclick="btActionJumpToDate(\'' + wds + '\');btSetActionPeriod(\'day\')" title="' + wds + '일뷰로">＋</div>';
+          h += '<div class="bt-week-add" onclick="btActionNavToDay(\'' + wds + '\')" title="' + wds + '일뷰로">＋</div>';
           h += '</div>';
         }
         h += '</div>';
@@ -7742,7 +7839,7 @@
                 var ak=a.time||'zz',bk=b.time||'zz'; return ak<bk?-1:ak>bk?1:0;
               });
               h += '<div class="bt-qtr-day-row">';
-              h += '<div class="bt-qtr-day-label" onclick="btActionJumpToDate(\'' + dstr + '\');btSetActionPeriod(\'day\')">' + dstr.slice(5).replace('-','/') + '</div>';
+              h += '<div class="bt-qtr-day-label" onclick="btActionNavToDay(\'' + dstr + '\')">' + dstr.slice(5).replace('-','/') + '</div>';
               h += '<div class="bt-qtr-day-items">';
               dayActs.forEach(function(act) {
                 var cat = cats.find(function(c){ return c.id === act.catId; });
@@ -7750,7 +7847,7 @@
                 if (btEditActionId === act.id) {
                   h += '<div>' + btBuildActionForm(act) + '</div>';
                 } else {
-                  h += '<div class="bt-qtr-item" style="border-left:3px solid '+catColor+';background:'+catColor+'15;" onclick="btStartEditAction(\'' + act.id + '\')">';
+                  h += '<div class="bt-qtr-item" style="border-left:3px solid '+catColor+';background:'+catColor+'15;" onclick="btShowActionDetail(\'' + act.id + '\')">';
                   if (act.time) h += '<span class="bt-qtr-item-time">' + act.time + '</span>';
                   h += '<span>' + (cat ? cat.icon+' '+escapeHtml(cat.name) : '📋') + '</span>';
                   h += '<span class="bt-qtr-item-rev">' + escapeHtml(act.name) + '</span>';
@@ -7931,7 +8028,7 @@
         var entry = btDailyEntries.find(function(e) { return e.date === ds; });
         var dayItems = entry ? (entry.items || []).slice().sort(function(a,b){ var ak=a.time||'zz',bk=b.time||'zz'; return ak<bk?-1:ak>bk?1:0; }) : [];
         var hasItems = dayItems.length > 0;
-        h += '<div class="work-cal-cell' + (isToday ? ' is-today' : '') + (isWeekend ? ' weekend' : '') + (hasItems ? ' has-items' : '') + '" onclick="btDailyJumpToDate(\'' + ds + '\');btSetDailyPeriod(\'day\')">';
+        h += '<div class="work-cal-cell' + (isToday ? ' is-today' : '') + (isWeekend ? ' weekend' : '') + (hasItems ? ' has-items' : '') + '" onclick="btNavToDay(\'' + ds + '\')">';
         h += '<div class="work-cal-date">' + day + '</div>';
         if (hasItems) {
           h += '<div class="work-cal-items-desktop">';
@@ -7940,7 +8037,7 @@
             var cat = cats.find(function(c) { return c.id === it.catId; });
             var dotColor = (cat && cat.color) ? cat.color : 'var(--primary-yellow)';
             var rev = btItemRevenue(it);
-            h += '<div class="work-cal-item" onclick="event.stopPropagation();btEditItemInDay(\'' + ds + '\',' + realIdx + ')" style="cursor:pointer;">';
+            h += '<div class="work-cal-item" onclick="event.stopPropagation();btShowItemDetail(\'' + ds + '\',' + realIdx + ')" style="cursor:pointer;">';
             h += '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' + dotColor + ';flex-shrink:0;margin-right:3px;"></span>';
             h += '<span class="work-cal-item-title">' + (it.time ? it.time + ' ' : '') + escapeHtml((cat ? cat.name : '') || '매출') + ' ' + btFmtW(rev) + '</span>';
             h += '</div>';
@@ -7984,14 +8081,14 @@
           var xk = x.time || '99:99', yk = y.time || '99:99'; return xk<yk?-1:xk>yk?1:0;
         });
         var hasItems = dayActions.length > 0;
-        h += '<div class="work-cal-cell' + (isToday ? ' is-today' : '') + (isWeekend ? ' weekend' : '') + (hasItems ? ' has-items' : '') + '" onclick="btActionJumpToDate(\'' + ds + '\');btSetActionPeriod(\'day\')">';
+        h += '<div class="work-cal-cell' + (isToday ? ' is-today' : '') + (isWeekend ? ' weekend' : '') + (hasItems ? ' has-items' : '') + '" onclick="btActionNavToDay(\'' + ds + '\')">';
         h += '<div class="work-cal-date">' + day + '</div>';
         if (hasItems) {
           h += '<div class="work-cal-items-desktop">';
           dayActions.slice(0, 3).forEach(function(a) {
             var cat = cats.find(function(c) { return c.id === a.catId; });
             var dotColor = (cat && cat.color) ? cat.color : 'var(--primary-yellow)';
-            h += '<div class="work-cal-item" onclick="event.stopPropagation();btStartEditAction(\'' + a.id + '\')" style="cursor:pointer;">';
+            h += '<div class="work-cal-item" onclick="event.stopPropagation();btShowActionDetail(\'' + a.id + '\')" style="cursor:pointer;">';
             h += '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' + dotColor + ';flex-shrink:0;margin-right:3px;"></span>';
             h += '<span class="work-cal-item-title">' + (a.time ? a.time + ' ' : '') + escapeHtml(a.name) + '</span>';
             h += '</div>';
