@@ -164,6 +164,22 @@ open('/tmp/check.js','w',encoding='utf-8').write('\n'.join(m))
 
 - **페이저 스타일**: `.pagination`, `.pg-btn` (flex, gap:6px, mono 폰트)
 - **반응형**: 모바일 최적화 우선, 데스크톱도 지원
+
+### 데스크탑 레이아웃 원칙 (⚠️ 자동 적용 필수)
+
+> 사용자가 매번 지적하지 않아도 아래 원칙을 **처음 구현할 때부터** 지킬 것.
+
+- **가로 공간 낭비 금지**: 단일 컨텐츠가 전체 가로폭을 차지하는 형태는 기본적으로 의심한다.
+  새 섹션/카드를 만들 때 **"이 옆에 나란히 놓을 수 있는 요소가 있나?"** 를 먼저 확인할 것.
+- **2열 그리드 우선 검토**: 요약 정보 + 상세 정보, 목표 대비 + 분기 트래킹, KPI + Objective 등
+  개념적으로 병렬 배치 가능한 요소 쌍이 보이면 `display:grid; grid-template-columns:1fr 1fr` 적용.
+- **실제 적용 패턴** (이 앱에 이미 구현됨, 참고):
+  - 대시보드: KPI 카드(좌) + Objective 배너(우) → `.bt-dash-top-grid`
+  - 대시보드: 목표/차트(좌) + 분기 트래킹(우) → `.bt-dash-grid`
+  - 달성내용/액션플랜 분기뷰: 합계/목표바(좌) + Objective(우) → `.bt-daily-top-grid`
+- **모바일 단열 유지**: 모든 2열 그리드는 반드시 `@media(max-width:768px){ display:block; }` 포함.
+- **SVG 차트 텍스트**: `preserveAspectRatio="none"` SVG 안에 `<text>` 금지.
+  Y축/X축 레이블은 HTML `<div>`로 분리해서 CSS `font-size` 고정할 것 (`.bt-chart-ylabels`, `.bt-chart-xlabels` 패턴 참고).
 - **컬러 시스템** (CSS 변수, 디자인 설정에서 모두 변경 가능):
   - 키컬러: `--primary-yellow` (#ffde59)
   - 보조: `--primary-pink` (#ffaade), `--primary-green` (#c1ff72)
