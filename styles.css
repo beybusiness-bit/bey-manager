@@ -3763,9 +3763,21 @@
     /* 차트 */
     .bt-chart-wrap { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:12px;padding:12px 14px;margin-bottom:14px; }
     .bt-quarter-name-preview { font-size:15px;font-weight:700;color:var(--text-primary,#222);margin-bottom:12px;padding:8px 12px;background:var(--bg-input,#f7f7f7);border-radius:8px; }
-    .bt-quarter-obj { font-size:13px;color:var(--text-primary,#333);line-height:1.6;white-space:pre-wrap;margin-bottom:16px;padding:10px 14px;background:var(--bg-input,#f7f7f7);border-radius:10px;border-left:3px solid var(--primary-yellow,#ffde59); }
-    .bt-quarter-obj-label { font-size:11px;color:var(--text-secondary,#888);font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px; }
-    .bt-bar-chart { width:100%;height:110px;display:block; }
+    /* Objective 공통 (quarter 뷰) */
+    .bt-quarter-obj-label { font-size:11px;color:var(--text-secondary,#888);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px; }
+    .bt-quarter-obj { font-size:17px;font-weight:700;color:var(--text-primary,#111);line-height:1.5;white-space:pre-wrap;margin-bottom:20px;padding:14px 18px;background:var(--primary-yellow,#ffde59);border-radius:12px; }
+    /* Objective 배너 (대시보드 전용 — 카드 밖) */
+    .bt-objective-banner { margin-bottom:12px;padding:16px 20px 18px;background:var(--primary-yellow,#ffde59);border-radius:14px; }
+    .bt-objective-label { font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(0,0,0,.45);margin-bottom:6px; }
+    .bt-objective-text { font-size:20px;font-weight:800;color:#111;line-height:1.4;white-space:pre-wrap; }
+    /* 바 차트 — HTML+SVG 하이브리드 */
+    .bt-bar-chart-outer { display:flex;gap:6px;align-items:stretch; }
+    .bt-chart-ylabels { width:40px;flex-shrink:0;display:flex;flex-direction:column;justify-content:space-between;padding-bottom:20px; }
+    .bt-chart-ylabels span { font-size:10px;color:var(--text-secondary,#999);text-align:right;line-height:1;white-space:nowrap; }
+    .bt-chart-bars { flex:1;min-width:0;position:relative;padding-bottom:20px; }
+    .bt-bar-chart { width:100%;height:90px;display:block; }
+    .bt-chart-xlabels { position:absolute;bottom:0;left:0;right:0;height:20px; }
+    .bt-chart-xlabels span { position:absolute;font-size:10px;color:var(--text-secondary,#aaa);transform:translateX(-50%);white-space:nowrap;line-height:1; }
     .bt-chart-empty { font-size:13px;color:var(--text-secondary,#aaa);text-align:center;padding:20px 0; }
     /* 카테고리 비교 그리드 (데스크탑 2열) */
     .bt-cat-compare-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-bottom:10px; }
