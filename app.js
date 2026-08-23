@@ -3680,8 +3680,51 @@
           }
           if (data.businessTracker) {
             if (data.businessTracker.config) { btConfig = data.businessTracker.config; localStorage.setItem('btConfig', JSON.stringify(btConfig)); }
-            if (data.businessTracker.dailyEntries) { btDailyEntries = data.businessTracker.dailyEntries; localStorage.setItem('btDailyEntries', JSON.stringify(btDailyEntries)); }
-            if (data.businessTracker.actions) { btActions = data.businessTracker.actions; localStorage.setItem('btActions', JSON.stringify(btActions)); }
+            // 로컬에 더 많은 데이터가 있으면 로컬 우선 (Firestore 미sync된 데이터 보존)
+            if (data.businessTracker.dailyEntries) {
+              var _fsEntries = data.businessTracker.dailyEntries;
+              var _localEntries = [];
+              try { _localEntries = JSON.parse(localStorage.getItem('btDailyEntries') || '[]'); } catch(e) {}
+              // Firestore 데이터가 더 최신이거나 많으면 Firestore 우선, 로컬이 더 많으면 머지
+              if (_fsEntries.length >= _localEntries.length) {
+                btDailyEntries = _fsEntries;
+              } else {
+                // 로컬에 더 많은 날짜 — 날짜 기준 merge (Firestore 항목 + 로컬에만 있는 날짜 추가)
+                var _merged = _fsEntries.slice();
+                _localEntries.forEach(function(le) {
+                  if (!_merged.find(function(fe) { return fe.date === le.date; })) _merged.push(le);
+                });
+                btDailyEntries = _merged;
+                // Firestore에 없는 로컬 데이터를 다시 업로드
+                setTimeout(function() { if (window.FS && FS.isConnected()) FS.sync(['돈을벌자']); }, 800);
+              }
+              localStorage.setItem('btDailyEntries', JSON.stringify(btDailyEntries));
+            }
+            if (data.businessTracker.actions) {
+              var _fsActions = data.businessTracker.actions;
+              var _localActions = [];
+              try { _localActions = JSON.parse(localStorage.getItem('btActions') || '[]'); } catch(e) {}
+              if (_fsActions.length >= _localActions.length) {
+                btActions = _fsActions;
+              } else {
+                // 로컬에 더 많은 액션 — id 기준 merge
+                var _mergedActs = _fsActions.slice();
+                _localActions.forEach(function(la) {
+                  if (!_mergedActs.find(function(fa) { return fa.id === la.id; })) _mergedActs.push(la);
+                });
+                btActions = _mergedActs;
+                setTimeout(function() { if (window.FS && FS.isConnected()) FS.sync(['돈을벌자']); }, 800);
+              }
+              localStorage.setItem('btActions', JSON.stringify(btActions));
+            } else if (!data.businessTracker.actions) {
+              // Firestore에 actions가 없으면 로컬 데이터 유지 후 업로드
+              var _localActsFallback = [];
+              try { _localActsFallback = JSON.parse(localStorage.getItem('btActions') || '[]'); } catch(e) {}
+              if (_localActsFallback.length > 0) {
+                btActions = _localActsFallback;
+                setTimeout(function() { if (window.FS && FS.isConnected()) FS.sync(['돈을벌자']); }, 800);
+              }
+            }
           }
           _updateUI('ok', 'Firebase 연결됨');
           console.log('[FS] ✅ 전체 로드 완료');
@@ -6920,7 +6963,7 @@
           var pctBar = pct !== null ? Math.min(100, pct) : 0;
 
           h += '<div class="bt-cat-compare-card">';
-          h += '<div class="bt-cat-compare-header" style="color:' + cat.color + '">' + cat.icon + ' ' + escapeHtml(cat.name);
+          h += '<div class="bt-cat-compare-header" style="background:' + cat.color + '22;border-left:3px solid ' + cat.color + ';padding-left:8px;">' + cat.icon + ' ' + escapeHtml(cat.name);
           if (pct !== null) h += '<span class="bt-goal-pct' + (pct >= 100 ? ' hit' : '') + '" style="margin-left:auto;font-size:12px;">' + pct + '%</span>';
           h += '</div>';
 
@@ -7273,7 +7316,7 @@
       var h = '<div class="bt-item-card" style="--bt-cat-color:' + (cat ? cat.color : '#ddd') + '">';
       h += '<div class="bt-item-header">';
       h += '<div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">';
-      h += '<span class="bt-item-cat" style="color:' + (cat ? cat.color : '#888') + '">' + (cat ? cat.icon : '📦') + ' ' + (cat ? escapeHtml(cat.name) : '기타') + '</span>';
+      h += '<span class="bt-item-cat" style="background:' + (cat ? cat.color + '30' : '#eee') + ';border-radius:4px;padding:1px 6px;">' + (cat ? cat.icon : '📦') + ' ' + (cat ? escapeHtml(cat.name) : '기타') + '</span>';
       if (date) h += '<span class="bt-card-date">' + date.slice(5).replace('-', '/') + '</span>';
       h += '</div>';
       h += '<div class="bt-item-actions">';
@@ -8081,7 +8124,7 @@
     function btBuildCatRow(cat) {
       var rateText = cat.defaultMarginRate != null ? ' / 마진율 ' + Math.round(cat.defaultMarginRate*100) + '%' : ' / 원가 직접 입력';
       return '<div class="bt-cat-settings-card">' +
-        '<div class="bt-cat-settings-icon" style="background:' + cat.color + '22;color:' + cat.color + '">' + cat.icon + '</div>' +
+        '<div class="bt-cat-settings-icon" style="background:' + cat.color + ';color:#fff;">' + cat.icon + '</div>' +
         '<div class="bt-cat-settings-info">' +
           '<div class="bt-cat-settings-name">' + escapeHtml(cat.name) + '</div>' +
           '<div class="bt-cat-settings-meta">' + escapeHtml(cat.unitLabel) + rateText + '</div>' +
