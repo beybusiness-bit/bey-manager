@@ -178,6 +178,12 @@ open('/tmp/check.js','w',encoding='utf-8').write('\n'.join(m))
   - 대시보드: 목표/차트(좌) + 분기 트래킹(우) → `.bt-dash-grid`
   - 달성내용/액션플랜 분기뷰: 합계/목표바(좌) + Objective(우) → `.bt-daily-top-grid`
 - **모바일 단열 유지**: 모든 2열 그리드는 반드시 `@media(max-width:768px){ display:block; }` 포함.
+- **카드 액션 버튼 호버 reveal (전역 글로벌 규칙)**: 새 카드를 만들 때 수정/삭제 같은 액션 버튼은 **기본적으로 숨겨두고 카드 호버 시 나타나도록** 한다.
+  - `opacity:0; transition:opacity .15s ease` 기본, 부모카드:hover에서 `opacity:1`
+  - 편집 모드(`editing` 클래스)에서도 버튼이 표시되어야 하면 해당 셀렉터도 추가
+  - 터치 기기(`@media(hover:none)`)에서는 `opacity:1`로 항상 표시
+  - **예시**: `.bt-item-actions`, `.cn-item-actions`, `.quirk-card-actions`, `.sched-list-item-actions` 참고
+  - 아이템이 버튼 공간을 차지하면 안 되는 경우(`display:none` 방식)엔 부모카드:hover 셀렉터로 `display:flex` 추가 (`activity-card-actions`, `category-card-actions` 참고)
 - **SVG 차트 텍스트**: `preserveAspectRatio="none"` SVG 안에 `<text>` 금지.
   Y축/X축 레이블은 HTML `<div>`로 분리해서 CSS `font-size` 고정할 것 (`.bt-chart-ylabels`, `.bt-chart-xlabels` 패턴 참고).
 - **컬러 시스템** (CSS 변수, 디자인 설정에서 모두 변경 가능):
