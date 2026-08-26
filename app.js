@@ -7194,6 +7194,9 @@
               h += '</div>';
             }
           });
+          if (wds <= today()) {
+            h += '<div class="bt-week-add" onclick="btStartAddItem(\'' + wds + '\')" title="' + wds + ' 달성 추가">＋</div>';
+          }
           h += '</div>';
         }
         h += '</div>';
@@ -7852,7 +7855,7 @@
               h += '</div>';
             }
           });
-          h += '<div class="bt-week-add" onclick="btActionNavToDay(\'' + wds + '\')" title="' + wds + '일뷰로">＋</div>';
+          h += '<div class="bt-week-add" onclick="btStartAddAction(\'' + wds + '\')" title="' + wds + ' 액션 추가">＋</div>';
           h += '</div>';
         }
         h += '</div>';
