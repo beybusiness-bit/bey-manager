@@ -6503,6 +6503,8 @@
     var btAddingAction = false;
     var btEditActionId = null;
     var btActionInputDate = '';
+    var btDuplicateItemData = null;   // 복제 원본 아이템 (달성내용 복제 시)
+    var btDuplicateActionData = null; // 복제 원본 액션 (액션플랜 복제 시)
     var btAddingCat = false;
     var btEditCatId = null;
     var btCatIconTemp = '';
@@ -6831,21 +6833,30 @@
 
       // KPI 카드 + Objective 상단 2열 그리드 (objective 있을 때만)
       var _dashHasObj = !!(q && q.objective);
-      if (_dashHasObj) h += '<div class="bt-dash-top-grid"><div class="bt-dash-top-left">';
-      h += '<div class="bt-kpi-row">';
-      h += btKpiCard('매출', btFmtW(calc.revenue), '');
-      h += btKpiCard('순수익', btFmtW(calc.margin - fcProrated), (calc.margin - fcProrated) >= 0 ? 'positive' : 'negative');
-      h += btKpiCard('수익', btFmtW(calc.margin), '');
-      h += btKpiCard('고정비 배분', btFmtW(fcProrated), '');
-      h += '</div>';
       if (_dashHasObj) {
-        h += '</div>'; // bt-dash-top-left
-        h += '<div class="bt-dash-top-right">';
+        // 좌(1.2fr)=Objective / 우(2fr)=KPI 2×2 격자 → 양쪽 높이 자동 맞춤
+        h += '<div class="bt-dash-top-grid" style="grid-template-columns:1.2fr 2fr">';
+        h += '<div class="bt-dash-top-left">';
         h += '<div class="bt-objective-banner">';
         h += '<div class="bt-objective-label">Objective</div>';
         h += '<div class="bt-objective-text">' + escapeHtml(q.objective) + '</div>';
         h += '</div>';
+        h += '</div>'; // bt-dash-top-left
+        h += '<div class="bt-dash-top-right">';
+        h += '<div class="bt-kpi-row" style="grid-template-columns:1fr 1fr;">';
+        h += btKpiCard('매출', btFmtW(calc.revenue), '');
+        h += btKpiCard('순수익', btFmtW(calc.margin - fcProrated), (calc.margin - fcProrated) >= 0 ? 'positive' : 'negative');
+        h += btKpiCard('수익', btFmtW(calc.margin), '');
+        h += btKpiCard('고정비 배분', btFmtW(fcProrated), '');
+        h += '</div>';
         h += '</div></div>'; // bt-dash-top-right + bt-dash-top-grid
+      } else {
+        h += '<div class="bt-kpi-row">';
+        h += btKpiCard('매출', btFmtW(calc.revenue), '');
+        h += btKpiCard('순수익', btFmtW(calc.margin - fcProrated), (calc.margin - fcProrated) >= 0 ? 'positive' : 'negative');
+        h += btKpiCard('수익', btFmtW(calc.margin), '');
+        h += btKpiCard('고정비 배분', btFmtW(fcProrated), '');
+        h += '</div>';
       }
 
       // ─ 2열 그리드 시작 (데스크탑: 좌=목표/차트, 우=분기트래킹 / 모바일: 단열) ─
@@ -7455,8 +7466,9 @@
       h += '</div>';
       h += '<div class="bt-item-actions">';
       // 기간뷰에서 수정: 해당 날짜의 일뷰로 이동 후 편집 폼 열기
-      h += '<button class="btn-icon" onclick="' + (date ? 'btEditItemInDay(\'' + cardDate + '\',' + idx + ')' : 'btStartEditItem(\'' + cardDate + '\',' + idx + ')') + '">✏️</button>';
-      h += '<button class="btn-icon" onclick="btDeleteItem(\'' + cardDate + '\',' + idx + ')">🗑️</button>';
+      h += '<button class="btn-icon" onclick="' + (date ? 'btEditItemInDay(\'' + cardDate + '\',' + idx + ')' : 'btStartEditItem(\'' + cardDate + '\',' + idx + ')') + '" title="수정">✏️</button>';
+      h += '<button class="btn-icon" onclick="btDuplicateItem(\'' + cardDate + '\',' + idx + ')" title="복제">📋</button>';
+      h += '<button class="btn-icon" onclick="btDeleteItem(\'' + cardDate + '\',' + idx + ')" title="삭제">🗑️</button>';
       h += '</div></div>';
       h += '<div class="bt-item-nums">';
       h += '<div class="bt-num-row"><span class="bt-num-label">건수</span><span class="bt-num-val">' + btFmtN(units) + (cat ? cat.unitLabel : '건') + '</span></div>';
@@ -7476,22 +7488,28 @@
 
     // item: 편집 시 기존 item 객체, idx: 인덱스, cardDate: 카드의 실제 날짜 (일뷰 외)
     function btBuildItemForm(item, idx, cardDate) {
+      // 복제 모드: btDuplicateItemData가 있으면 그 데이터로 폼 채우기 (신규처럼 저장)
+      var _isDuplicate = !item && !!btDuplicateItemData;
+      var _dupData = _isDuplicate ? btDuplicateItemData : null;
       var cats = (btConfig && btConfig.categories) || [];
-      var selCat = item ? item.catId : (btDailyFilterCat && btDailyFilterCat !== '__all' && btDailyFilterCat !== '__none' ? btDailyFilterCat : (cats[0] ? cats[0].id : ''));
+      var selCat = item ? item.catId : (_dupData ? _dupData.catId : (btDailyFilterCat && btDailyFilterCat !== '__all' && btDailyFilterCat !== '__none' ? btDailyFilterCat : (cats[0] ? cats[0].id : '')));
       var selCatObj = cats.find(function(c) { return c.id === selCat; });
       var unitLabel = selCatObj ? selCatObj.unitLabel : '건';
-      var defUnits = item ? (item.units || '') : '';
-      var defUnitPrice = item ? (item.unitPrice !== undefined ? item.unitPrice : '') : '';
+      var defUnits = item ? (item.units || '') : (_dupData ? (_dupData.units || '') : '');
+      var defUnitPrice = item ? (item.unitPrice !== undefined ? item.unitPrice : '') : (_dupData ? (_dupData.unitPrice !== undefined ? _dupData.unitPrice : '') : '');
       var defUnitCost = '';
       if (item) {
         if (item.unitCost !== undefined) defUnitCost = item.unitCost;
         else if (item.cost !== undefined && item.cost !== null && item.cost !== '' && Number(item.units) > 0) defUnitCost = Math.round(Number(item.cost) / Number(item.units));
+      } else if (_dupData) {
+        defUnitCost = _dupData.unitCost !== undefined ? _dupData.unitCost : '';
       }
-      var defMemo = item && item.memo ? item.memo : '';
-      // 날짜 기본값: 편집 시 item.date → cardDate → btInputDate
-      var defDate = (item && item.date) ? item.date : (cardDate || btInputDate);
+      var defMemo = item && item.memo ? item.memo : (_dupData ? (_dupData.memo || '') : '');
+      // 날짜 기본값: 편집 시 item.date → 복제 시 오늘 → cardDate → btInputDate
+      var defDate = item ? (item.date || cardDate || btInputDate) : (cardDate || btInputDate);
       if (!defDate) defDate = today();
-      var defTime = (item && item.time) ? item.time : '';
+      if (defDate > today()) defDate = today(); // 달성내용은 항상 오늘 이하
+      var defTime = (item && item.time) ? item.time : (_dupData ? (_dupData.time || '') : '');
 
       var h = '<div class="bt-item-form">';
       // 날짜·시간 항상 표시 (오늘 이후 날짜는 미래 매출 불가)
@@ -7539,6 +7557,29 @@
       h += '<div class="bt-form-row"><label>메모 (선택)</label>';
       h += '<input type="text" id="btFormMemo" class="bt-input" placeholder="특이사항, 내용 등" value="' + escapeHtml(defMemo) + '">';
       h += '</div>';
+
+      // 반복 등록 섹션 (신규 등록 시에만)
+      if (!item) {
+        h += '<div class="bt-repeat-section">';
+        h += '<label class="bt-repeat-toggle-label"><input type="checkbox" id="btFormRepeat" onchange="btToggleRepeatPanel(\'item\')"> 여러 날짜에 반복 등록</label>';
+        h += '<div id="btFormRepeatPanel" style="display:none;margin-top:10px;">';
+        h += '<div class="bt-form-2col">';
+        h += '<div class="bt-form-row"><label>반복 주기</label>';
+        h += '<div style="display:flex;gap:6px;align-items:center;">';
+        h += '<input type="number" id="btRepeatEvery" class="bt-input" min="1" max="99" value="1" style="width:64px;" oninput="btRepeatPreview(\'item\')">';
+        h += '<select id="btRepeatUnit" class="bt-select" onchange="btRepeatPreview(\'item\')">';
+        h += '<option value="day">일마다</option><option value="week">주마다</option><option value="month">월마다</option>';
+        h += '</select></div></div>';
+        h += '</div>';
+        h += '<div class="bt-form-2col">';
+        h += '<div class="bt-form-row"><label>반복 시작일</label>';
+        h += '<input type="date" id="btRepeatStart" class="bt-input" max="' + today() + '" value="' + defDate + '" oninput="btRepeatPreview(\'item\')"></div>';
+        h += '<div class="bt-form-row"><label>반복 종료일</label>';
+        h += '<input type="date" id="btRepeatEnd" class="bt-input" max="' + today() + '" oninput="btRepeatPreview(\'item\')"></div>';
+        h += '</div>';
+        h += '<div id="btRepeatPreviewEl" class="bt-repeat-preview"></div>';
+        h += '</div></div>';
+      }
 
       h += '<div class="bt-form-actions">';
       h += '<button class="btn-confirm" onclick="btSaveItem()">저장</button>';
@@ -7618,16 +7659,19 @@
 
     function btStartAddItem(dateHint) {
       if (dateHint) btInputDate = dateHint;
+      btDuplicateItemData = null;
       btAddingItem = true; btEditItemDate = null; btEditItemIdx = null;
       btRenderCurrentTab();
       setTimeout(btAutoCalcDisplay, 50);
     }
     function btStartEditItem(date, idx) {
+      btDuplicateItemData = null;
       btAddingItem = false; btEditItemDate = date; btEditItemIdx = idx;
       btRenderCurrentTab();
       setTimeout(btAutoCalcDisplay, 50);
     }
     function btCancelItemForm() {
+      btDuplicateItemData = null;
       btAddingItem = false; btEditItemDate = null; btEditItemIdx = null;
       btRenderCurrentTab();
     }
@@ -7672,6 +7716,28 @@
         }
         btEditItemDate = null; btEditItemIdx = null;
       }
+      // 반복 등록 처리
+      var repChk = document.getElementById('btFormRepeat');
+      if (repChk && repChk.checked) {
+        var repStart = (document.getElementById('btRepeatStart') || {}).value || '';
+        var repEnd = (document.getElementById('btRepeatEnd') || {}).value || '';
+        var repEvery = (document.getElementById('btRepeatEvery') || {}).value || '1';
+        var repUnit = (document.getElementById('btRepeatUnit') || {}).value || 'day';
+        var repDates = btGenRepeatDates(repStart, repEnd, repEvery, repUnit, today(), null);
+        if (!repDates.length) { showAlert('반복 오류', '조건에 맞는 날짜가 없습니다.\n시작일/종료일을 확인해주세요.'); return; }
+        repDates.forEach(function(rd) {
+          var repItem = JSON.parse(JSON.stringify(item));
+          repItem.id = btGenId('btitem');
+          var ei = btDailyEntries.findIndex(function(e) { return e.date === rd; });
+          if (ei < 0) btDailyEntries.push({ date: rd, items: [repItem] });
+          else btDailyEntries[ei].items.push(repItem);
+        });
+        btDuplicateItemData = null; btAddingItem = false; btEditItemDate = null; btEditItemIdx = null;
+        saveBtDailyEntries(); btRenderCurrentTab();
+        showToast(repDates.length + '개 날짜에 저장됨');
+        return;
+      }
+
       var entryIdx = btDailyEntries.findIndex(function(e) { return e.date === saveDate; });
       if (entryIdx < 0) {
         btDailyEntries.push({ date: saveDate, items: [item] });
@@ -7682,7 +7748,7 @@
           btDailyEntries[entryIdx].items.push(item);
         }
       }
-      btAddingItem = false; btEditItemDate = null; btEditItemIdx = null;
+      btDuplicateItemData = null; btAddingItem = false; btEditItemDate = null; btEditItemIdx = null;
       saveBtDailyEntries();
       btRenderCurrentTab();
       showToast('매출 저장됨');
@@ -7950,8 +8016,9 @@
       h += '<div class="bt-action-header">';
       h += '<span class="bt-action-name">' + escapeHtml(action.name) + '</span>';
       h += '<div class="bt-item-actions">';
-      h += '<button class="btn-icon" onclick="btStartEditAction(\'' + action.id + '\')">✏️</button>';
-      h += '<button class="btn-icon" onclick="btDeleteAction(\'' + action.id + '\')">🗑️</button>';
+      h += '<button class="btn-icon" onclick="btStartEditAction(\'' + action.id + '\')" title="수정">✏️</button>';
+      h += '<button class="btn-icon" onclick="btDuplicateAction(\'' + action.id + '\')" title="복제">📋</button>';
+      h += '<button class="btn-icon" onclick="btDeleteAction(\'' + action.id + '\')" title="삭제">🗑️</button>';
       h += '</div></div>';
       h += '<div class="bt-action-meta">';
       if (action.date) h += '<span>📅 ' + action.date + (action.time ? ' ' + action.time : '') + '</span>';
@@ -7969,15 +8036,20 @@
     }
 
     function btBuildActionForm(action) {
+      // 복제 모드: btDuplicateActionData가 있으면 해당 데이터로 폼 채우기 (신규처럼 저장)
+      var _isDupAct = !action && !!btDuplicateActionData;
+      var _dupAct = _isDupAct ? btDuplicateActionData : null;
       var cats = (btConfig && btConfig.categories) || [];
       var h = '<div class="bt-item-form">';
+      var _actName = action ? action.name : (_dupAct ? _dupAct.name : '');
+      var _actDefDate = action ? (action.date || '') : (_dupAct ? (btActionInputDate || '') : (btActionInputDate || ''));
+      var _actTime = action ? (action.time || '') : (_dupAct ? (_dupAct.time || '') : '');
       h += '<div class="bt-form-2col">';
-      h += '<div class="bt-form-row"><label>액션명</label><input type="text" id="btActName" class="bt-input" placeholder="무엇을 할 것인지" value="' + escapeHtml(action ? action.name : '') + '"></div>';
-      var _actDefDate = (action && action.date) ? action.date : (btActionInputDate || '');
+      h += '<div class="bt-form-row"><label>액션명</label><input type="text" id="btActName" class="bt-input" placeholder="무엇을 할 것인지" value="' + escapeHtml(_actName) + '"></div>';
       h += '<div class="bt-form-row"><label>날짜 (언제 실행)</label><input type="date" id="btActDate" class="bt-input" value="' + _actDefDate + '"></div>';
-      h += '<div class="bt-form-row"><label>시간 <span style="font-weight:400;color:var(--text-secondary,#999);font-size:11px;">(선택)</span></label><input type="time" id="btActTime" class="bt-input" value="' + (action && action.time ? action.time : '') + '"></div>';
+      h += '<div class="bt-form-row"><label>시간 <span style="font-weight:400;color:var(--text-secondary,#999);font-size:11px;">(선택)</span></label><input type="time" id="btActTime" class="bt-input" value="' + _actTime + '"></div>';
       h += '</div>';
-      var defActCat = action ? action.catId : (btActionFilterCat && btActionFilterCat !== '__all' && btActionFilterCat !== '__none' ? btActionFilterCat : '');
+      var defActCat = action ? action.catId : (_dupAct ? _dupAct.catId : (btActionFilterCat && btActionFilterCat !== '__all' && btActionFilterCat !== '__none' ? btActionFilterCat : ''));
       var defActCatObj = cats.find(function(c) { return c.id === defActCat; });
       var ucostPh = defActCatObj && defActCatObj.defaultMarginRate != null ? '기본값 있음 (' + Math.round(defActCatObj.defaultMarginRate*100) + '% 마진율)' : '0원';
       h += '<div class="bt-form-row"><label>카테고리</label><select id="btActCat" class="bt-select" onchange="btActCatChange()">';
@@ -7986,12 +8058,40 @@
         h += '<option value="' + cat.id + '"' + (defActCat === cat.id ? ' selected' : '') + '>' + cat.icon + ' ' + escapeHtml(cat.name) + '</option>';
       });
       h += '</select></div>';
+      var _actUnits = action ? (action.targetUnits || '') : (_dupAct ? (_dupAct.targetUnits || '') : '');
+      var _actUnitPrice = action ? (action.unitPrice || '') : (_dupAct ? (_dupAct.unitPrice || '') : '');
+      var _actUnitCost = action ? (action.unitCost || '') : (_dupAct ? (_dupAct.unitCost || '') : '');
       h += '<div class="bt-form-3col">';
-      h += '<div class="bt-form-row"><label>목표 건수</label><input type="number" id="btActUnits" class="bt-input" min="0" placeholder="0" value="' + (action && action.targetUnits ? action.targetUnits : '') + '" oninput="btActAutoCalc()"></div>';
-      h += '<div class="bt-form-row"><label>객단가 (1건당 판매가)</label><input type="number" id="btActUnitPrice" class="bt-input" min="0" placeholder="0원" value="' + (action && action.unitPrice ? action.unitPrice : '') + '" oninput="btActAutoCalc()"></div>';
-      h += '<div class="bt-form-row"><label>단위 원가 (1건당 원가)</label><input type="number" id="btActUnitCost" class="bt-input" min="0" placeholder="' + ucostPh + '" value="' + (action && action.unitCost ? action.unitCost : '') + '" oninput="btActAutoCalc()"></div>';
+      h += '<div class="bt-form-row"><label>목표 건수</label><input type="number" id="btActUnits" class="bt-input" min="0" placeholder="0" value="' + _actUnits + '" oninput="btActAutoCalc()"></div>';
+      h += '<div class="bt-form-row"><label>객단가 (1건당 판매가)</label><input type="number" id="btActUnitPrice" class="bt-input" min="0" placeholder="0원" value="' + _actUnitPrice + '" oninput="btActAutoCalc()"></div>';
+      h += '<div class="bt-form-row"><label>단위 원가 (1건당 원가)</label><input type="number" id="btActUnitCost" class="bt-input" min="0" placeholder="' + ucostPh + '" value="' + _actUnitCost + '" oninput="btActAutoCalc()"></div>';
       h += '</div>';
       h += '<div id="btActAutoResult" class="bt-auto-calc" style="margin-bottom:10px;"></div>';
+
+      // 반복 등록 섹션 (신규 등록 또는 복제 시에만)
+      if (!action) {
+        var _repStartDefault = _actDefDate || today();
+        h += '<div class="bt-repeat-section">';
+        h += '<label class="bt-repeat-toggle-label"><input type="checkbox" id="btActFormRepeat" onchange="btToggleRepeatPanel(\'action\')"> 여러 날짜에 반복 등록</label>';
+        h += '<div id="btActFormRepeatPanel" style="display:none;margin-top:10px;">';
+        h += '<div class="bt-form-2col">';
+        h += '<div class="bt-form-row"><label>반복 주기</label>';
+        h += '<div style="display:flex;gap:6px;align-items:center;">';
+        h += '<input type="number" id="btActRepeatEvery" class="bt-input" min="1" max="99" value="1" style="width:64px;" oninput="btRepeatPreview(\'action\')">';
+        h += '<select id="btActRepeatUnit" class="bt-select" onchange="btRepeatPreview(\'action\')">';
+        h += '<option value="day">일마다</option><option value="week">주마다</option><option value="month">월마다</option>';
+        h += '</select></div></div>';
+        h += '</div>';
+        h += '<div class="bt-form-2col">';
+        h += '<div class="bt-form-row"><label>반복 시작일</label>';
+        h += '<input type="date" id="btActRepeatStart" class="bt-input" value="' + _repStartDefault + '" oninput="btRepeatPreview(\'action\')"></div>';
+        h += '<div class="bt-form-row"><label>반복 종료일</label>';
+        h += '<input type="date" id="btActRepeatEnd" class="bt-input" oninput="btRepeatPreview(\'action\')"></div>';
+        h += '</div>';
+        h += '<div id="btActRepeatPreviewEl" class="bt-repeat-preview"></div>';
+        h += '</div></div>';
+      }
+
       h += '<div class="bt-form-actions"><button class="btn-confirm" onclick="btSaveAction(\'' + (action ? action.id : '') + '\')">저장</button><button class="btn-cancel" onclick="btCancelAction()">취소</button></div>';
       h += '</div>';
       return h;
@@ -8026,9 +8126,101 @@
       el.className = 'bt-auto-calc filled';
     }
 
-    function btStartAddAction(dateHint) { if (dateHint) btActionInputDate = dateHint; btAddingAction = true; btEditActionId = null; btRenderCurrentTab(); }
-    function btStartEditAction(id) { btEditActionId = id; btAddingAction = false; btRenderCurrentTab(); }
-    function btCancelAction() { btAddingAction = false; btEditActionId = null; btRenderCurrentTab(); }
+    // ── 복제 함수 ──
+    function btDuplicateItem(date, idx) {
+      var entry = btDailyEntries.find(function(e) { return e.date === date; });
+      if (!entry || !entry.items[idx]) return;
+      var src = entry.items[idx];
+      btDuplicateItemData = JSON.parse(JSON.stringify(src));
+      btDuplicateItemData.id = null; // 새로 생성
+      btInputDate = today() < date ? today() : date; // 달성내용: 오늘 이하
+      btAddingItem = true; btEditItemDate = null; btEditItemIdx = null;
+      btRenderCurrentTab();
+      setTimeout(btAutoCalcDisplay, 50);
+    }
+    function btDuplicateAction(id) {
+      var src = btActions.find(function(a) { return a.id === id; });
+      if (!src) return;
+      btDuplicateActionData = JSON.parse(JSON.stringify(src));
+      btDuplicateActionData.id = null;
+      btDuplicateActionData.date = ''; // 날짜는 사용자가 다시 지정
+      btActionInputDate = '';
+      btAddingAction = true; btEditActionId = null;
+      btRenderCurrentTab();
+      setTimeout(btActAutoCalc, 50);
+    }
+
+    // ── 반복 등록 헬퍼 ──
+    function btToggleRepeatPanel(type) {
+      if (type === 'item') {
+        var chk = document.getElementById('btFormRepeat');
+        var panel = document.getElementById('btFormRepeatPanel');
+        if (panel) panel.style.display = (chk && chk.checked) ? 'block' : 'none';
+        if (chk && chk.checked) btRepeatPreview('item');
+      } else {
+        var chk2 = document.getElementById('btActFormRepeat');
+        var panel2 = document.getElementById('btActFormRepeatPanel');
+        if (panel2) panel2.style.display = (chk2 && chk2.checked) ? 'block' : 'none';
+        if (chk2 && chk2.checked) btRepeatPreview('action');
+      }
+    }
+    function btGenRepeatDates(start, end, every, unit, maxDate, minDate) {
+      // start, end: 'YYYY-MM-DD', every: 숫자, unit: 'day'|'week'|'month'
+      // maxDate: 이 날짜 이하만 허용 (달성내용), minDate: 이 날짜 이상만 허용 (액션플랜)
+      var dates = [];
+      if (!start || !end || start > end) return dates;
+      var cur = new Date(start + 'T00:00:00');
+      var endDate = new Date(end + 'T00:00:00');
+      var n = parseInt(every, 10) || 1;
+      var limit = 500; // 무한루프 방지
+      while (cur <= endDate && limit-- > 0) {
+        var ds = cur.getFullYear() + '-' + String(cur.getMonth()+1).padStart(2,'0') + '-' + String(cur.getDate()).padStart(2,'0');
+        var ok = true;
+        if (maxDate && ds > maxDate) ok = false;
+        if (minDate && ds < minDate) ok = false;
+        if (ok) dates.push(ds);
+        if (unit === 'day') cur.setDate(cur.getDate() + n);
+        else if (unit === 'week') cur.setDate(cur.getDate() + n * 7);
+        else if (unit === 'month') cur.setMonth(cur.getMonth() + n);
+      }
+      return dates;
+    }
+    function btRepeatPreview(type) {
+      var previewEl, start, end, every, unit;
+      if (type === 'item') {
+        previewEl = document.getElementById('btRepeatPreviewEl');
+        start = (document.getElementById('btRepeatStart') || {}).value || '';
+        end = (document.getElementById('btRepeatEnd') || {}).value || '';
+        every = (document.getElementById('btRepeatEvery') || {}).value || '1';
+        unit = (document.getElementById('btRepeatUnit') || {}).value || 'day';
+      } else {
+        previewEl = document.getElementById('btActRepeatPreviewEl');
+        start = (document.getElementById('btActRepeatStart') || {}).value || '';
+        end = (document.getElementById('btActRepeatEnd') || {}).value || '';
+        every = (document.getElementById('btActRepeatEvery') || {}).value || '1';
+        unit = (document.getElementById('btActRepeatUnit') || {}).value || 'day';
+      }
+      if (!previewEl) return;
+      if (!start || !end) { previewEl.textContent = '시작일과 종료일을 선택하면 미리보기가 표시됩니다'; return; }
+      var maxD = type === 'item' ? today() : null;
+      var minD = type === 'action' ? today() : null;
+      var dates = btGenRepeatDates(start, end, every, unit, maxD, minD);
+      if (!dates.length) {
+        previewEl.textContent = '조건에 맞는 날짜가 없습니다 (규칙: 달성내용은 오늘 이하, 액션플랜은 오늘 이상)';
+        previewEl.style.color = 'var(--danger,#e53935)';
+        return;
+      }
+      previewEl.style.color = '';
+      var unitLabels = { day:'일', week:'주', month:'월' };
+      var preview = every + unitLabels[unit] + ' 간격, 총 ' + dates.length + '개: ';
+      var shown = dates.slice(0, 5).map(function(d) { return d.slice(5).replace('-','/'); });
+      preview += shown.join(', ') + (dates.length > 5 ? ' … +' + (dates.length-5) + '개' : '');
+      previewEl.textContent = preview;
+    }
+
+    function btStartAddAction(dateHint) { if (dateHint) btActionInputDate = dateHint; btAddingAction = true; btEditActionId = null; btDuplicateActionData = null; btRenderCurrentTab(); }
+    function btStartEditAction(id) { btEditActionId = id; btAddingAction = false; btDuplicateActionData = null; btRenderCurrentTab(); }
+    function btCancelAction() { btAddingAction = false; btEditActionId = null; btDuplicateActionData = null; btRenderCurrentTab(); }
     function btSaveAction(id) {
       var name = (document.getElementById('btActName') || {}).value || '';
       if (!name.trim()) { showAlert('입력 오류', '액션명을 입력해주세요.'); return; }
@@ -8054,13 +8246,36 @@
         unitPrice: actUnitPrice,
         unitCost: actUnitCostRaw
       };
+      // 반복 등록 처리 (신규 등록 시에만)
+      if (!id) {
+        var repChkAct = document.getElementById('btActFormRepeat');
+        if (repChkAct && repChkAct.checked) {
+          var repStartAct = (document.getElementById('btActRepeatStart') || {}).value || '';
+          var repEndAct = (document.getElementById('btActRepeatEnd') || {}).value || '';
+          var repEveryAct = (document.getElementById('btActRepeatEvery') || {}).value || '1';
+          var repUnitAct = (document.getElementById('btActRepeatUnit') || {}).value || 'day';
+          var repDatesAct = btGenRepeatDates(repStartAct, repEndAct, repEveryAct, repUnitAct, null, today());
+          if (!repDatesAct.length) { showAlert('반복 오류', '조건에 맞는 날짜가 없습니다.\n시작일/종료일을 확인해주세요.'); return; }
+          repDatesAct.forEach(function(rd) {
+            var repAction = JSON.parse(JSON.stringify(action));
+            repAction.id = btGenId('btact');
+            repAction.date = rd;
+            btActions.push(repAction);
+          });
+          btDuplicateActionData = null; btAddingAction = false; btEditActionId = null;
+          saveBt(); btRenderCurrentTab();
+          showToast(repDatesAct.length + '개 날짜에 저장됨');
+          return;
+        }
+      }
+
       if (id) {
         var idx = btActions.findIndex(function(a) { return a.id === id; });
         if (idx >= 0) btActions[idx] = action; else btActions.push(action);
       } else {
         btActions.push(action);
       }
-      btAddingAction = false; btEditActionId = null;
+      btDuplicateActionData = null; btAddingAction = false; btEditActionId = null;
       saveBt(); btRenderCurrentTab(); showToast('액션 저장됨');
     }
     function btDeleteAction(id) {
