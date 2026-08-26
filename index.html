@@ -96,6 +96,17 @@
     </div>
   </div>
 
+  <!-- 액션 수정 모달 -->
+  <div id="btActionEditModal" class="modal-overlay" style="z-index:1500;display:none;" onclick="if(event.target===this)btCloseActionEditModal()">
+    <div class="modal-box" style="max-width:520px;width:94%;max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <h3 style="margin:0;font-size:16px;font-weight:700;">액션 수정</h3>
+        <button class="btn-icon" onclick="btCloseActionEditModal()">✕</button>
+      </div>
+      <div id="btActionEditModalBody"></div>
+    </div>
+  </div>
+
   <!-- 이모지 피커 모달 -->
   <div id="emojiPickerOverlay" class="emoji-picker-overlay">
     <div class="emoji-picker-wrap">
