@@ -7440,7 +7440,7 @@
         (planRev ? '<div class="bt-detail-row"><span class="bt-detail-label">목표 수익</span><span style="color:' + (planMargin >= 0 ? '#1a8c60' : '#e53935') + ';font-weight:600;">' + btFmtW(planMargin) + ' <span style="font-size:11px;font-weight:400;">(' + mRate + '%)</span></span></div>' : '') +
         '</div>' +
         '<div class="bt-detail-footer">' +
-        '<button class="btn-confirm" onclick="btCloseDetail();btStartEditAction(\'' + id + '\')">✏️ 수정</button>' +
+        '<button class="btn-confirm" onclick="btCloseDetail();setTimeout(function(){btStartEditAction(\'' + id + '\');},50)">✏️ 수정</button>' +
         '<button class="btn-cancel" onclick="btCloseDetail()">닫기</button>' +
         '</div>' +
         '</div>';
@@ -7926,15 +7926,11 @@
           wDayActions.forEach(function(act) {
             var cat = cats.find(function(c) { return c.id === act.catId; });
             var catColor = (cat && cat.color) ? cat.color : '#ddd';
-            if (btEditActionId === act.id) {
-              h += '<div class="bt-week-item-edit">' + btBuildActionForm(act) + '</div>';
-            } else {
-              h += '<div class="bt-week-item" style="border-left:3px solid ' + catColor + ';background:' + catColor + '15;" onclick="btShowActionDetail(\'' + act.id + '\')">';
-              if (act.time) h += '<span class="bt-week-item-time">' + act.time + '</span>';
-              h += '<span class="bt-week-item-cat">' + (cat ? cat.icon : '📋') + ' <span class="bt-week-item-name">' + escapeHtml(cat ? cat.name : '') + '</span></span>';
-              h += '<span class="bt-week-item-rev">' + escapeHtml(act.name) + '</span>';
-              h += '</div>';
-            }
+            h += '<div class="bt-week-item" style="border-left:3px solid ' + catColor + ';background:' + catColor + '15;" onclick="btShowActionDetail(\'' + act.id + '\')">';
+            if (act.time) h += '<span class="bt-week-item-time">' + act.time + '</span>';
+            h += '<span class="bt-week-item-cat">' + (cat ? cat.icon : '📋') + ' <span class="bt-week-item-name">' + escapeHtml(cat ? cat.name : '') + '</span></span>';
+            h += '<span class="bt-week-item-rev">' + escapeHtml(act.name) + '</span>';
+            h += '</div>';
           });
           h += '<div class="bt-week-add" onclick="btStartAddAction(\'' + wds + '\')" title="' + wds + ' 액션 추가">＋</div>';
           h += '</div>';
@@ -7980,18 +7976,14 @@
               dayActs.forEach(function(act) {
                 var cat = cats.find(function(c){ return c.id === act.catId; });
                 var catColor = (cat && cat.color) ? cat.color : '#ddd';
-                if (btEditActionId === act.id) {
-                  h += '<div>' + btBuildActionForm(act) + '</div>';
-                } else {
-                  // 달성내용과 동일한 레이아웃: [카테고리 배지] [액션명 flex중간] [예상매출 오른쪽]
-                  var actRev = btActionRevenue(act);
-                  h += '<div class="bt-qtr-item" style="border-left:3px solid '+catColor+';background:'+catColor+'15;" onclick="btShowActionDetail(\'' + act.id + '\')">';
-                  if (act.time) h += '<span class="bt-qtr-item-time">' + act.time + '</span>';
-                  h += '<span class="bt-qtr-item-cat-badge">' + (cat ? cat.icon+' '+escapeHtml(cat.name) : '📋') + '</span>';
-                  h += '<span class="bt-qtr-item-name">' + escapeHtml(act.name) + '</span>';
-                  if (actRev) h += '<span class="bt-qtr-item-rev">' + btFmtW(actRev) + '</span>';
-                  h += '</div>';
-                }
+                // 달성내용과 동일한 레이아웃: [카테고리 배지] [액션명 flex중간] [예상매출 오른쪽]
+                var actRev = btActionRevenue(act);
+                h += '<div class="bt-qtr-item" style="border-left:3px solid '+catColor+';background:'+catColor+'15;" onclick="btShowActionDetail(\'' + act.id + '\')">';
+                if (act.time) h += '<span class="bt-qtr-item-time">' + act.time + '</span>';
+                h += '<span class="bt-qtr-item-cat-badge">' + (cat ? cat.icon+' '+escapeHtml(cat.name) : '📋') + '</span>';
+                h += '<span class="bt-qtr-item-name">' + escapeHtml(act.name) + '</span>';
+                if (actRev) h += '<span class="bt-qtr-item-rev">' + btFmtW(actRev) + '</span>';
+                h += '</div>';
               });
               h += '</div></div>';
             });
@@ -8222,8 +8214,33 @@
     }
 
     function btStartAddAction(dateHint) { if (dateHint) btActionInputDate = dateHint; btAddingAction = true; btEditActionId = null; btDuplicateActionData = null; btRenderCurrentTab(); }
-    function btStartEditAction(id) { btEditActionId = id; btAddingAction = false; btDuplicateActionData = null; btRenderCurrentTab(); }
-    function btCancelAction() { btAddingAction = false; btEditActionId = null; btDuplicateActionData = null; btRenderCurrentTab(); }
+    function btStartEditAction(id) {
+      // 수정은 항상 모달로 열기 (뷰 종류 무관)
+      var act = btActions.find(function(a) { return a.id === id; });
+      if (!act) return;
+      btEditActionId = id; btAddingAction = false; btDuplicateActionData = null;
+      var modal = document.getElementById('btActionEditModal');
+      var body  = document.getElementById('btActionEditModalBody');
+      if (modal && body) {
+        body.innerHTML = btBuildActionForm(act);
+        modal.style.display = 'flex';
+        setTimeout(btActAutoCalc, 50);
+      } else {
+        // fallback: 모달 없으면 인라인
+        btRenderCurrentTab();
+      }
+    }
+    function btCloseActionEditModal() {
+      var modal = document.getElementById('btActionEditModal');
+      if (modal) modal.style.display = 'none';
+      btEditActionId = null; btAddingAction = false; btDuplicateActionData = null;
+      btRenderCurrentTab();
+    }
+    function btCancelAction() {
+      var modal = document.getElementById('btActionEditModal');
+      if (modal && modal.style.display !== 'none') { btCloseActionEditModal(); return; }
+      btAddingAction = false; btEditActionId = null; btDuplicateActionData = null; btRenderCurrentTab();
+    }
     function btSaveAction(id) {
       var name = (document.getElementById('btActName') || {}).value || '';
       if (!name.trim()) { showAlert('입력 오류', '액션명을 입력해주세요.'); return; }
@@ -8278,6 +8295,9 @@
       } else {
         btActions.push(action);
       }
+      // 모달이 열려있으면 닫기
+      var _actModal = document.getElementById('btActionEditModal');
+      if (_actModal && _actModal.style.display !== 'none') _actModal.style.display = 'none';
       btDuplicateActionData = null; btAddingAction = false; btEditActionId = null;
       saveBt(); btRenderCurrentTab(); showToast('액션 저장됨');
     }
