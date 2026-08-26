@@ -3896,26 +3896,28 @@
     .home-more { font-size:12px;color:var(--text-secondary,#aaa);padding:2px 0 4px; }
     .home-link-btn { background:none;border:none;color:var(--text-secondary,#888);font-size:12px;cursor:pointer;padding:4px 0;display:block;margin-top:4px; }
     .home-link-btn:hover { color:var(--text-primary,#333); }
-    /* 대시보드 상단 2열: KPI + Objective */
+    /* 대시보드 상단 2열: Objective(좌) + KPI 2×2(우) */
     .bt-dash-top-grid { display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;margin-bottom:14px; }
-    .bt-dash-top-left,.bt-dash-top-right { min-width:0;display:flex;flex-direction:column; }
+    .bt-dash-top-left,.bt-dash-top-right { min-width:0;display:flex;flex-direction:column;height:100%; }
     .bt-dash-top-left .bt-objective-banner,
     .bt-dash-top-right .bt-objective-banner { flex:1;box-sizing:border-box; }
-    @media(max-width:768px){ .bt-dash-top-grid { display:block; } .bt-dash-top-right { margin-top:12px; } }
+    .bt-dash-top-right .bt-kpi-row { flex:1;align-content:stretch;margin-bottom:0; }
+    .bt-dash-top-right .bt-kpi-card { min-height:0; }
+    @media(max-width:768px){ .bt-dash-top-grid { display:block; } .bt-dash-top-right { margin-top:12px;height:auto; } .bt-dash-top-left { height:auto; } }
     /* 대시보드 중단 2열: 목표/차트 + 분기트래킹 */
     .bt-dash-grid { display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;margin-bottom:4px; }
     .bt-dash-left,.bt-dash-right { min-width:0; }
     .bt-dash-right:empty { display:none; }
     @media(max-width:768px){ .bt-dash-grid { display:block; } }
-    /* 달성내용/액션플랜 분기뷰 상단 2열: 합계+목표바 / Objective */
+    /* 달성내용/액션플랜 분기뷰 상단 2열: Objective(좌) + 목표바(우) */
     .bt-daily-top-grid { display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;margin-bottom:4px; }
-    .bt-daily-top-left,.bt-daily-top-right { min-width:0;display:flex;flex-direction:column; }
+    .bt-daily-top-left,.bt-daily-top-right { min-width:0;display:flex;flex-direction:column;height:100%; }
     .bt-daily-top-left .bt-objective-banner,
     .bt-daily-top-right .bt-objective-banner { flex:1;box-sizing:border-box; }
-    /* 달성내용·액션플랜: 우측 카드도 좌측과 높이 맞춤 */
-    .bt-daily-top-right .bt-goal-row { flex:1;margin-bottom:0; }
-    .bt-daily-top-right .bt-gap-bar { flex:1;margin-bottom:0; }
-    @media(max-width:768px){ .bt-daily-top-grid { display:block; } .bt-daily-top-right { margin-top:12px; } }
+    /* 우측 카드(목표바·gap바)도 좌측과 높이 맞춤 */
+    .bt-daily-top-right .bt-goal-row { flex:1;margin-bottom:0;min-height:0; }
+    .bt-daily-top-right .bt-gap-bar { flex:1;margin-bottom:0;min-height:0; }
+    @media(max-width:768px){ .bt-daily-top-grid { display:block; } .bt-daily-top-right,.bt-daily-top-left { margin-top:12px;height:auto; } }
     /* Run-rate 카드 */
     .bt-runrate-card { background:var(--card-bg,#fff);border:1px solid var(--border-color,#eee);border-radius:12px;padding:16px;margin:0; }
     .bt-runrate-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:4px; }
@@ -4028,8 +4030,10 @@
     .bt-qtr-day-items { display:flex;flex-direction:column;gap:4px;flex:1;min-width:0; }
     .bt-qtr-item { display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:12px;min-width:0;transition:opacity .15s; }
     .bt-qtr-item:hover { opacity:.75; }
-    .bt-qtr-item-time { font-size:10px;color:var(--text-secondary,#888);font-family:'DM Mono',monospace;white-space:nowrap; }
-    .bt-qtr-item-rev { font-size:12px;font-weight:600;margin-left:auto;white-space:nowrap; }
+    .bt-qtr-item-time { font-size:10px;color:var(--text-secondary,#888);font-family:'DM Mono',monospace;white-space:nowrap;flex-shrink:0; }
+    .bt-qtr-item-cat-badge { white-space:nowrap;flex-shrink:0; }
+    .bt-qtr-item-name { flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary,#666); }
+    .bt-qtr-item-rev { font-size:12px;font-weight:600;margin-left:auto;white-space:nowrap;flex-shrink:0; }
     /* 모바일 */
     @media (max-width:600px) {
       .bt-form-2col { grid-template-columns:1fr; }

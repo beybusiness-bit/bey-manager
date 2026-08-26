@@ -7264,7 +7264,7 @@
                 } else {
                   h += '<div class="bt-qtr-item" style="border-left:3px solid '+catColor+';background:'+catColor+'15;" onclick="btShowItemDetail(\'' + entry.date + '\',' + realIdx + ')">';
                   if (it.time) h += '<span class="bt-qtr-item-time">' + it.time + '</span>';
-                  h += '<span>' + (cat ? cat.icon+' '+escapeHtml(cat.name) : '📦') + '</span>';
+                  h += '<span class="bt-qtr-item-cat-badge">' + (cat ? cat.icon+' '+escapeHtml(cat.name) : '📦') + '</span>';
                   h += '<span class="bt-qtr-item-rev">' + btFmtW(btItemRevenue(it)) + '</span>';
                   h += '</div>';
                 }
@@ -7983,10 +7983,13 @@
                 if (btEditActionId === act.id) {
                   h += '<div>' + btBuildActionForm(act) + '</div>';
                 } else {
+                  // 달성내용과 동일한 레이아웃: [카테고리 배지] [액션명 flex중간] [예상매출 오른쪽]
+                  var actRev = btActionRevenue(act);
                   h += '<div class="bt-qtr-item" style="border-left:3px solid '+catColor+';background:'+catColor+'15;" onclick="btShowActionDetail(\'' + act.id + '\')">';
                   if (act.time) h += '<span class="bt-qtr-item-time">' + act.time + '</span>';
-                  h += '<span>' + (cat ? cat.icon+' '+escapeHtml(cat.name) : '📋') + '</span>';
-                  h += '<span class="bt-qtr-item-rev">' + escapeHtml(act.name) + '</span>';
+                  h += '<span class="bt-qtr-item-cat-badge">' + (cat ? cat.icon+' '+escapeHtml(cat.name) : '📋') + '</span>';
+                  h += '<span class="bt-qtr-item-name">' + escapeHtml(act.name) + '</span>';
+                  if (actRev) h += '<span class="bt-qtr-item-rev">' + btFmtW(actRev) + '</span>';
                   h += '</div>';
                 }
               });
