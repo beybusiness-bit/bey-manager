@@ -6831,21 +6831,30 @@
 
       // KPI 카드 + Objective 상단 2열 그리드 (objective 있을 때만)
       var _dashHasObj = !!(q && q.objective);
-      if (_dashHasObj) h += '<div class="bt-dash-top-grid"><div class="bt-dash-top-left">';
-      h += '<div class="bt-kpi-row">';
-      h += btKpiCard('매출', btFmtW(calc.revenue), '');
-      h += btKpiCard('순수익', btFmtW(calc.margin - fcProrated), (calc.margin - fcProrated) >= 0 ? 'positive' : 'negative');
-      h += btKpiCard('수익', btFmtW(calc.margin), '');
-      h += btKpiCard('고정비 배분', btFmtW(fcProrated), '');
-      h += '</div>';
       if (_dashHasObj) {
-        h += '</div>'; // bt-dash-top-left
-        h += '<div class="bt-dash-top-right">';
+        // 좌(1.2fr)=Objective / 우(2fr)=KPI 2×2 격자 → 양쪽 높이 자동 맞춤
+        h += '<div class="bt-dash-top-grid" style="grid-template-columns:1.2fr 2fr">';
+        h += '<div class="bt-dash-top-left">';
         h += '<div class="bt-objective-banner">';
         h += '<div class="bt-objective-label">Objective</div>';
         h += '<div class="bt-objective-text">' + escapeHtml(q.objective) + '</div>';
         h += '</div>';
+        h += '</div>'; // bt-dash-top-left
+        h += '<div class="bt-dash-top-right">';
+        h += '<div class="bt-kpi-row" style="grid-template-columns:1fr 1fr;">';
+        h += btKpiCard('매출', btFmtW(calc.revenue), '');
+        h += btKpiCard('순수익', btFmtW(calc.margin - fcProrated), (calc.margin - fcProrated) >= 0 ? 'positive' : 'negative');
+        h += btKpiCard('수익', btFmtW(calc.margin), '');
+        h += btKpiCard('고정비 배분', btFmtW(fcProrated), '');
+        h += '</div>';
         h += '</div></div>'; // bt-dash-top-right + bt-dash-top-grid
+      } else {
+        h += '<div class="bt-kpi-row">';
+        h += btKpiCard('매출', btFmtW(calc.revenue), '');
+        h += btKpiCard('순수익', btFmtW(calc.margin - fcProrated), (calc.margin - fcProrated) >= 0 ? 'positive' : 'negative');
+        h += btKpiCard('수익', btFmtW(calc.margin), '');
+        h += btKpiCard('고정비 배분', btFmtW(fcProrated), '');
+        h += '</div>';
       }
 
       // ─ 2열 그리드 시작 (데스크탑: 좌=목표/차트, 우=분기트래킹 / 모바일: 단열) ─
