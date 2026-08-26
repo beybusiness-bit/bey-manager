@@ -6502,6 +6502,7 @@
     var btEditItemIdx = null;
     var btAddingAction = false;
     var btEditActionId = null;
+    var btActionInputDate = '';
     var btAddingCat = false;
     var btEditCatId = null;
     var btCatIconTemp = '';
@@ -7080,8 +7081,9 @@
       h += '<input type="date" class="bt-date-label-picker" value="' + range.start + '"' + (dPickerMin ? ' min="' + dPickerMin + '"' : '') + (dPickerMax ? ' max="' + dPickerMax + '"' : '') + ' onchange="btDailyJumpToDate(this.value)"></div>';
       h += '<button class="btn-icon"' + (!dCanNext ? ' disabled style="opacity:.35;cursor:default"' : '') + ' onclick="btChangeDailyOffset(1)">▶</button>';
       h += '<button class="btn-icon" onclick="btChangeDailyOffset(0,true)">' + (btDailyPeriod === 'day' ? '오늘' : '현재') + '</button>';
-      if (btDailyPeriod !== 'month' && range.start <= today()) {
-        h += '<button class="bt-nav-add-btn" onclick="btStartAddItem()" title="매출 추가">＋</button>';
+      if (range.start <= today()) {
+        var _dAddDate = (today() >= range.start && today() <= range.end) ? today() : range.start;
+        h += '<button class="bt-nav-add-btn" onclick="btStartAddItem(\'' + _dAddDate + '\')" title="매출 추가">＋</button>';
       }
       h += '</div>';
 
@@ -7600,7 +7602,8 @@
       btAutoCalcDisplay();
     }
 
-    function btStartAddItem() {
+    function btStartAddItem(dateHint) {
+      if (dateHint) btInputDate = dateHint;
       btAddingItem = true; btEditItemDate = null; btEditItemIdx = null;
       btRenderCurrentTab();
       setTimeout(btAutoCalcDisplay, 50);
@@ -7726,8 +7729,9 @@
       h += '</div>';
       h += '<button class="btn-icon"' + (!aCanNext ? ' disabled style="opacity:.35;cursor:default"' : '') + ' onclick="btChangeActionOffset(1)">▶</button>';
       h += '<button class="btn-icon" onclick="btChangeActionOffset(0,true)">' + (btActionPeriod === 'day' ? '오늘' : '현재') + '</button>';
-      if (btActionPeriod !== 'month') {
-        h += '<button class="bt-nav-add-btn" onclick="btStartAddAction()" title="액션 추가">＋</button>';
+      {
+        var _aAddDate = (today() >= aRange.start && today() <= aRange.end) ? today() : aRange.start;
+        h += '<button class="bt-nav-add-btn" onclick="btStartAddAction(\'' + _aAddDate + '\')" title="액션 추가">＋</button>';
       }
       h += '</div>';
 
@@ -7787,7 +7791,7 @@
       }
 
       // 액션 추가 폼 (버튼은 네비바로 이동됨)
-      if (btActionPeriod !== 'month' && btAddingAction && !btEditActionId) {
+      if (btAddingAction && !btEditActionId) {
         h += '<div style="margin:10px 0;">' + btBuildActionForm(null) + '</div>';
       }
 
@@ -7951,7 +7955,8 @@
       var h = '<div class="bt-item-form">';
       h += '<div class="bt-form-2col">';
       h += '<div class="bt-form-row"><label>액션명</label><input type="text" id="btActName" class="bt-input" placeholder="무엇을 할 것인지" value="' + escapeHtml(action ? action.name : '') + '"></div>';
-      h += '<div class="bt-form-row"><label>날짜 (언제 실행)</label><input type="date" id="btActDate" class="bt-input" min="' + today() + '" value="' + (action && action.date ? action.date : '') + '"></div>';
+      var _actDefDate = (action && action.date) ? action.date : (btActionInputDate || '');
+      h += '<div class="bt-form-row"><label>날짜 (언제 실행)</label><input type="date" id="btActDate" class="bt-input" value="' + _actDefDate + '"></div>';
       h += '<div class="bt-form-row"><label>시간 <span style="font-weight:400;color:var(--text-secondary,#999);font-size:11px;">(선택)</span></label><input type="time" id="btActTime" class="bt-input" value="' + (action && action.time ? action.time : '') + '"></div>';
       h += '</div>';
       var defActCat = action ? action.catId : (btActionFilterCat && btActionFilterCat !== '__all' && btActionFilterCat !== '__none' ? btActionFilterCat : '');
@@ -8003,7 +8008,7 @@
       el.className = 'bt-auto-calc filled';
     }
 
-    function btStartAddAction() { btAddingAction = true; btEditActionId = null; btRenderCurrentTab(); }
+    function btStartAddAction(dateHint) { if (dateHint) btActionInputDate = dateHint; btAddingAction = true; btEditActionId = null; btRenderCurrentTab(); }
     function btStartEditAction(id) { btEditActionId = id; btAddingAction = false; btRenderCurrentTab(); }
     function btCancelAction() { btAddingAction = false; btEditActionId = null; btRenderCurrentTab(); }
     function btSaveAction(id) {
