@@ -3223,7 +3223,7 @@
     .work-week-empty { font-size: 11px; color: var(--text-secondary); opacity: 0.4; text-align: center; padding: 8px 0; }
 
     /* 월별 뷰 */
-    .work-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+    .work-cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
     .work-cal-head { text-align: center; font-size: 12px; font-weight: 600; color: var(--text-secondary); padding: 6px 0; }
     .work-cal-head.weekend { color: #e55; }
     .work-cal-cell { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; min-height: 56px; padding: 4px 6px; }
@@ -3351,20 +3351,77 @@
     /* 큰 dot (모바일) */
     .work-dot-lg { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; font-size: 8px; font-weight: 700; color: #fff; margin-right: 2px; flex-shrink: 0; }
 
+    /* ── 주별 모바일: 요일 탭 스트립 ── */
+    .work-week-day-tabs { display: none; }
+    .work-week-single { display: none; }
+    .work-day-empty { text-align: center; color: var(--text-secondary); opacity: 0.4; padding: 32px 0; font-size: 14px; }
+    .btn-sm { font-size: 12px; padding: 4px 12px; }
+
     @media (max-width: 768px) {
       /* 칸반 세로 배열 */
       .work-kanban { grid-template-columns: 1fr; gap: 8px; }
-      /* 주별 세로 배열 */
-      .work-week-grid { grid-template-columns: 1fr; gap: 6px; }
-      .work-week-col { min-height: auto; }
-      .work-week-day-header { display: flex; flex-direction: row; align-items: center; gap: 8px; }
-      .work-week-day-name { font-size: 13px; font-weight: 700; }
-      .work-week-day-num { font-size: 13px; }
-      .work-week-day-body { flex-wrap: wrap; }
-      /* 월별: 모바일에서도 아이템 제목 표시 */
-      .work-cal-items-desktop { display: block; }
-      .work-cal-dots-mobile { display: none; }
-      .work-cal-cell { min-height: 50px; padding: 3px 4px; }
+
+      /* 주별: 모바일에서는 요일 탭 스트립 + 단일 요일 콘텐츠 */
+      .work-week-grid { display: none; } /* 데스크탑 7열 그리드 숨김 */
+      .work-week-day-tabs {
+        display: flex;
+        gap: 4px;
+        overflow-x: auto;
+        padding: 4px 0 8px;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+      }
+      .work-week-day-tabs::-webkit-scrollbar { display: none; }
+      .work-week-day-tab {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        flex: 1 0 calc(100% / 7);
+        min-width: 40px;
+        padding: 6px 2px;
+        border-radius: 10px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        position: relative;
+        color: var(--text-primary);
+      }
+      .work-week-day-tab.active {
+        background: var(--primary-yellow);
+      }
+      .work-week-day-tab.today .work-week-tab-num {
+        color: var(--primary-yellow);
+        font-weight: 800;
+      }
+      .work-week-day-tab.active.today .work-week-tab-num {
+        color: #000;
+      }
+      .work-week-tab-name { font-size: 11px; color: var(--text-secondary); font-weight: 600; }
+      .work-week-day-tab.active .work-week-tab-name { color: #000; }
+      .work-week-tab-num { font-size: 16px; font-weight: 700; }
+      .work-week-tab-dot {
+        width: 5px; height: 5px;
+        border-radius: 50%;
+        background: var(--text-secondary);
+        margin-top: 1px;
+      }
+      .work-week-day-tab.active .work-week-tab-dot { background: #555; }
+      .work-week-single { display: block; }
+      .work-week-single-hdr {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 0 10px;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      /* 월별: 모바일에서는 dot만 표시 (제목 숨김) */
+      .work-cal-items-desktop { display: none; }
+      .work-cal-dots-mobile { display: flex; }
+      .work-cal-cell { min-height: 56px; padding: 3px 2px; }
       .work-cal-date { font-size: 11px; }
       .work-dot { width: 6px; height: 6px; }
       .work-item-card { padding: 10px 12px; gap: 8px; }

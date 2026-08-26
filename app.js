@@ -9440,6 +9440,7 @@
     var workWeekOffset = 0;
     var workMonthOffset = 0;
     var workSelectedDate = today();
+    var workWeekDayIndex = null; // 주별 모바일 선택된 요일 (0=월 ~ 6=일, null=오늘 자동)
     var workBasketPage = 1;
     var workBasketPerPage = 12;
     var workBasketSearch = '';
@@ -10422,6 +10423,15 @@
       var sunday = addDays(monday, 6);
       var todayStr = today();
       var dayNames = ['월','화','수','목','금','토','일'];
+      var isMobile = window.innerWidth <= 768;
+
+      // 모바일: workWeekDayIndex 자동 설정 (이번 주 오늘, 아니면 0)
+      if (isMobile && workWeekDayIndex === null) {
+        var todayDow = new Date().getDay(); // 0=일,1=월...
+        var todayKr = (todayDow === 0) ? 6 : todayDow - 1; // 0=월~6=일
+        // 현재 주이면 오늘 요일, 아니면 월요일(0)
+        workWeekDayIndex = (workWeekOffset === 0) ? todayKr : 0;
+      }
 
       var html = '<div class="work-week">';
       html += '<div class="work-nav">';
@@ -10433,34 +10443,78 @@
       html += '</div>';
       if (workWeekOffset !== 0) html += '<div class="today-jump-row"><button class="today-jump-btn" onclick="workWeekMove(0)">오늘로 이동</button></div>';
 
-      html += '<div class="work-week-grid">';
-      for (var i = 0; i < 7; i++) {
-        var ds = addDays(monday, i);
-        var isToday = ds === todayStr;
-        var dayItems = workItems.filter(function(it) { return it.date === ds; });
-        var dp = ds.split('-');
-        html += '<div class="work-week-col' + (isToday ? ' is-today' : '') + '">';
-        html += '<div class="work-week-day-header" onclick="workGoToDate(\'' + ds + '\')">';
-        html += '<span class="work-week-day-name">' + dayNames[i] + '</span>';
-        html += '<span class="work-week-day-num">' + parseInt(dp[2]) + '</span>';
-        html += '</div>';
-        html += '<div class="work-week-day-body">';
-        if (dayItems.length === 0) {
-          html += '<div class="work-week-empty" onclick="showAddWorkItemModal(\'' + ds + '\')">+</div>';
-        } else {
-          dayItems.forEach(function(it) { html += renderWorkWeekMiniCard(it); });
-          var normalCnt = dayItems.filter(function(it) { return !it.isBonus; }).length;
-          if (normalCnt < getDailyWorkLimit(ds)) html += '<div class="work-week-add" onclick="event.stopPropagation();showAddWorkItemModal(\'' + ds + '\')">+</div>';
+      if (isMobile) {
+        // ── 모바일: 요일 탭 스트립 + 단일 요일 콘텐츠 ──
+        var selIdx = workWeekDayIndex !== null ? workWeekDayIndex : 0;
+        html += '<div class="work-week-day-tabs">';
+        for (var i = 0; i < 7; i++) {
+          var ds = addDays(monday, i);
+          var dp = ds.split('-');
+          var isToday = ds === todayStr;
+          var dayItems = workItems.filter(function(it) { return it.date === ds; });
+          var isSel = (i === selIdx);
+          html += '<button class="work-week-day-tab' + (isSel ? ' active' : '') + (isToday ? ' today' : '') + '" onclick="setWorkWeekDay(' + i + ')">';
+          html += '<span class="work-week-tab-name">' + dayNames[i] + '</span>';
+          html += '<span class="work-week-tab-num">' + parseInt(dp[2]) + '</span>';
+          if (dayItems.length > 0) html += '<span class="work-week-tab-dot"></span>';
+          html += '</button>';
         }
-        html += '</div></div>';
+        html += '</div>';
+
+        // 선택된 요일의 할일 카드
+        var selDs = addDays(monday, selIdx);
+        var selItems = workItems.filter(function(it) { return it.date === selDs; });
+        var selDp = selDs.split('-');
+        var isTodaySel = selDs === todayStr;
+        html += '<div class="work-week-single">';
+        html += '<div class="work-week-single-hdr">';
+        html += '<span>' + parseInt(selDp[1]) + '/' + parseInt(selDp[2]) + ' ' + dayNames[selIdx] + '</span>';
+        html += '<button class="btn-accent btn-sm" onclick="showAddWorkItemModal(\'' + selDs + '\')">+ 추가</button>';
+        html += '</div>';
+        if (selItems.length === 0) {
+          html += '<div class="work-day-empty"><span>할일이 없어요</span></div>';
+        } else {
+          selItems.forEach(function(it) { html += renderWorkWeekMiniCard(it); });
+        }
+        html += '</div>';
+      } else {
+        // ── 데스크탑: 7열 그리드 ──
+        html += '<div class="work-week-grid">';
+        for (var i = 0; i < 7; i++) {
+          var ds = addDays(monday, i);
+          var isToday = ds === todayStr;
+          var dayItems = workItems.filter(function(it) { return it.date === ds; });
+          var dp = ds.split('-');
+          html += '<div class="work-week-col' + (isToday ? ' is-today' : '') + '">';
+          html += '<div class="work-week-day-header" onclick="workGoToDate(\'' + ds + '\')">';
+          html += '<span class="work-week-day-name">' + dayNames[i] + '</span>';
+          html += '<span class="work-week-day-num">' + parseInt(dp[2]) + '</span>';
+          html += '</div>';
+          html += '<div class="work-week-day-body">';
+          if (dayItems.length === 0) {
+            html += '<div class="work-week-empty" onclick="showAddWorkItemModal(\'' + ds + '\')">+</div>';
+          } else {
+            dayItems.forEach(function(it) { html += renderWorkWeekMiniCard(it); });
+            var normalCnt = dayItems.filter(function(it) { return !it.isBonus; }).length;
+            if (normalCnt < getDailyWorkLimit(ds)) html += '<div class="work-week-add" onclick="event.stopPropagation();showAddWorkItemModal(\'' + ds + '\')">+</div>';
+          }
+          html += '</div></div>';
+        }
+        html += '</div>';
       }
-      html += '</div></div>';
+
+      html += '</div>';
       c.innerHTML = html;
     }
 
+    function setWorkWeekDay(idx) {
+      workWeekDayIndex = idx;
+      renderWorkWeek();
+    }
+
     function workWeekMove(delta) {
-      if (delta === 0) { workWeekOffset = 0; }
-      else { workWeekOffset += delta; }
+      if (delta === 0) { workWeekOffset = 0; workWeekDayIndex = null; }
+      else { workWeekOffset += delta; workWeekDayIndex = 0; }
       renderWorkWeek();
     }
 
