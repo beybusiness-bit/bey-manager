@@ -3909,6 +3909,7 @@
     /* 달성내용/액션플랜 분기뷰 상단 2열: 합계+목표바 / Objective */
     .bt-daily-top-grid { display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;margin-bottom:4px; }
     .bt-daily-top-left,.bt-daily-top-right { min-width:0;display:flex;flex-direction:column; }
+    .bt-daily-top-left .bt-objective-banner,
     .bt-daily-top-right .bt-objective-banner { flex:1;box-sizing:border-box; }
     @media(max-width:768px){ .bt-daily-top-grid { display:block; } .bt-daily-top-right { margin-top:12px; } }
     /* Run-rate 카드 */

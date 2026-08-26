@@ -7087,15 +7087,31 @@
       }
       h += '</div>';
 
-      // ─ 기간 합계 + 목표 대비 + Objective (분기+objective 있으면 2열) ─
+      // ─ 기간 합계 + 목표 대비 + Objective (분기+objective 있으면 2열: 좌=Obj+요약 / 우=달성률) ─
       var _dQObjData = btDailyPeriod === 'quarter' && range.quarterObj && range.quarterObj.objective ? range.quarterObj : null;
-      if (_dQObjData) h += '<div class="bt-daily-top-grid"><div class="bt-daily-top-left">';
       var _dSumEntries = btDailyPeriod === 'day' ? btDailyEntries.filter(function(e) { return e.date === btInputDate; }) : btEntriesInRange(range.start, range.end);
       var _dSumCalc = btCalcPeriod(_dSumEntries);
       var _dSumCount = _dSumEntries.reduce(function(s,e){ return s+(e.items||[]).length; }, 0);
-      if (_dSumCount > 0) {
-        h += '<div class="bt-day-summary"><span>매출 <strong>' + btFmtW(_dSumCalc.revenue) + '</strong></span>';
-        h += '<span>수익 <strong>' + btFmtW(_dSumCalc.margin) + '</strong></span><span>' + _dSumCount + '건</span></div>';
+      if (_dQObjData) {
+        // 2열: 좌(2fr) = Objective + 매출/수익, 우(3fr) = 달성률 바
+        h += '<div class="bt-daily-top-grid" style="grid-template-columns:2fr 3fr">';
+        h += '<div class="bt-daily-top-left">';
+        h += '<div class="bt-objective-banner">';
+        h += '<div class="bt-objective-label">Objective</div>';
+        h += '<div class="bt-objective-text">' + escapeHtml(_dQObjData.objective) + '</div>';
+        h += '</div>';
+        if (_dSumCount > 0) {
+          h += '<div class="bt-day-summary" style="margin-top:10px;"><span>매출 <strong>' + btFmtW(_dSumCalc.revenue) + '</strong></span>';
+          h += '<span>수익 <strong>' + btFmtW(_dSumCalc.margin) + '</strong></span><span>' + _dSumCount + '건</span></div>';
+        }
+        h += '</div>'; // bt-daily-top-left
+        h += '<div class="bt-daily-top-right">';
+      } else {
+        // 단일 열: 요약 표시
+        if (_dSumCount > 0) {
+          h += '<div class="bt-day-summary"><span>매출 <strong>' + btFmtW(_dSumCalc.revenue) + '</strong></span>';
+          h += '<span>수익 <strong>' + btFmtW(_dSumCalc.margin) + '</strong></span><span>' + _dSumCount + '건</span></div>';
+        }
       }
       (function() {
         var _target = 0, _rs = range.start, _re = range.end;
@@ -7128,12 +7144,7 @@
         h += '</div></div>';
       })();
       if (_dQObjData) {
-        h += '</div>'; // bt-daily-top-left
-        h += '<div class="bt-daily-top-right">';
-        h += '<div class="bt-objective-banner">';
-        h += '<div class="bt-objective-label">Objective</div>';
-        h += '<div class="bt-objective-text">' + escapeHtml(_dQObjData.objective) + '</div>';
-        h += '</div></div></div>'; // banner + right + grid
+        h += '</div></div>'; // bt-daily-top-right + bt-daily-top-grid
       }
 
       // 추가 폼 (추가 버튼은 네비바에 이동됨)
@@ -7738,9 +7749,18 @@
       }
       h += '</div>';
 
-      // ─ 4지표 비교 패널 + Objective (분기+objective 있으면 2열) ─
+      // ─ Objective(좌, 1fr) + 4지표 비교 패널(우, 2fr) ─
       var _aQObjData = btActionPeriod === 'quarter' && aRange.quarterObj && aRange.quarterObj.objective ? aRange.quarterObj : null;
-      if (_aQObjData) h += '<div class="bt-daily-top-grid"><div class="bt-daily-top-left">';
+      if (_aQObjData) {
+        h += '<div class="bt-daily-top-grid" style="grid-template-columns:1fr 2fr">';
+        h += '<div class="bt-daily-top-left">';
+        h += '<div class="bt-objective-banner">';
+        h += '<div class="bt-objective-label">Objective</div>';
+        h += '<div class="bt-objective-text">' + escapeHtml(_aQObjData.objective) + '</div>';
+        h += '</div>';
+        h += '</div>'; // bt-daily-top-left
+        h += '<div class="bt-daily-top-right">';
+      }
       (function() {
         var _periodTarget = 0;
         if (btActionPeriod === 'quarter') {
@@ -7785,12 +7805,7 @@
         h += '</div></div>';
       })();
       if (_aQObjData) {
-        h += '</div>'; // bt-daily-top-left
-        h += '<div class="bt-daily-top-right">';
-        h += '<div class="bt-objective-banner">';
-        h += '<div class="bt-objective-label">Objective</div>';
-        h += '<div class="bt-objective-text">' + escapeHtml(_aQObjData.objective) + '</div>';
-        h += '</div></div></div>'; // banner + right + grid
+        h += '</div></div>'; // bt-daily-top-right + bt-daily-top-grid
       }
 
       // 액션 추가 폼 (버튼은 네비바로 이동됨)
