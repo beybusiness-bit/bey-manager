@@ -174,6 +174,16 @@
     }
     .btn-accent:hover { opacity: 0.82; box-shadow: var(--shadow-sm); }
     .btn-accent.btn-sm { font-size: 12px; padding: 4px 10px; }
+    .btn-secondary {
+      display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+      padding: 6px 14px; border-radius: var(--button-radius, 8px);
+      border: 1.5px solid var(--border-color, #ddd);
+      background: transparent; color: var(--text-primary);
+      font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
+      transition: background .12s, border-color .12s; white-space: nowrap;
+    }
+    .btn-secondary:hover { background: var(--bg-hover); border-color: var(--text-secondary); }
+    .btn-secondary.btn-sm { font-size: 12px; padding: 4px 10px; }
 
     .btn-primary:hover {
       transform: translateY(-1px);
@@ -4163,6 +4173,9 @@
     .moim-ing-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
     .moim-ing-price { font-size: 12px; color: var(--text-secondary); font-family: 'DM Mono', monospace; }
     .moim-ing-unit-cost { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+    .moim-ing-actions { display: flex; gap: 6px; flex-shrink: 0; justify-content: flex-end; margin-top: 8px; opacity: 0; transition: opacity .15s ease; }
+    .moim-ing-card:hover .moim-ing-actions { opacity: 1; }
+    @media (hover: none) { .moim-ing-actions { opacity: 1; } }
     .moim-stock-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
     .moim-stock-tbl th { text-align: left; padding: 8px 10px; font-size: 11px; font-weight: 600; color: var(--text-secondary); border-bottom: 2px solid var(--border-color); background: var(--bg-side); white-space: nowrap; }
     .moim-stock-tbl td { padding: 10px 10px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
