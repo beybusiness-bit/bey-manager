@@ -1688,19 +1688,34 @@
       _restorePomodoroState();
       /* 화면 복귀 시 실시간 시계 기준으로 타이머 보정 */
       document.addEventListener('visibilitychange', function() {
-        if (!document.hidden && pomodoroState.running && _lastTickTime) {
-          var now = Date.now();
-          var elapsed = Math.floor((now - _lastTickTime) / 1000);
-          if (elapsed > 2) {
-            _lastTickTime = now;
-            pomodoroState.remaining = Math.max(0, pomodoroState.remaining - elapsed);
-            if (pomodoroState.remaining <= 0) {
-              pomodoroState.running = false;
-              stopPomodoroTick();
-              onPomodoroPhaseEnd();
-            } else {
-              renderPomodoroUI();
-              updatePageTitle();
+        if (!document.hidden) {
+          // ① 뽀모도로 타이머 백그라운드 경과 보정
+          if (pomodoroState.running && _lastTickTime) {
+            var now = Date.now();
+            var elapsed = Math.floor((now - _lastTickTime) / 1000);
+            if (elapsed > 2) {
+              _lastTickTime = now;
+              pomodoroState.remaining = Math.max(0, pomodoroState.remaining - elapsed);
+              if (pomodoroState.remaining <= 0) {
+                pomodoroState.running = false;
+                stopPomodoroTick();
+                onPomodoroPhaseEnd();
+              } else {
+                renderPomodoroUI();
+                updatePageTitle();
+              }
+            }
+          }
+          // ② Firebase 최신 데이터 pull (탭/화면 복귀 시)
+          //    모달 열림 / 편집 중 / Firebase 미연결이면 건너뜀
+          if (window.FS && FS.isConnected()) {
+            var hasOpenModal = !!document.querySelector('.modal-overlay.show, .emoji-picker-overlay');
+            var isEditing = !!(
+              document.querySelector('.activity-card.editing, .category-card.editing') ||
+              document.querySelector('[data-edit-id]')  // 인라인 편집
+            );
+            if (!hasOpenModal && !isEditing) {
+              FS.loadAll().then(function(ok) { if (ok) renderCurrentPageIfNeeded(); });
             }
           }
         }
