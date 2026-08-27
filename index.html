@@ -2873,6 +2873,129 @@ SQLite / PostgreSQL (데이터 저장)
         </div>
       </div>
 
+      <!-- 모임 만들기 페이지 -->
+      <div id="moimPage" class="page">
+        <div class="page-header">
+          <h2>🎯 모임 만들기</h2>
+        </div>
+        <div id="moimPageContent"></div>
+      </div>
+
+      <!-- 모임: 프로그램 추가/수정 모달 -->
+      <div id="moimProgModal" class="modal-overlay" onclick="if(event.target===this)closeMoimProgModal()">
+        <div class="modal-box" style="max-width:520px">
+          <h3 id="moimProgModalTitle">프로그램 추가</h3>
+          <input type="hidden" id="moimProgId">
+          <div class="form-group">
+            <label class="form-label">이모지</label>
+            <button type="button" class="work-form-emoji-btn" id="moimProgEmojiBtn" onclick="openEmojiPicker(document.getElementById('moimProgEmojiBtn').textContent,function(e){document.getElementById('moimProgEmojiBtn').textContent=e;})">🎪</button>
+          </div>
+          <div class="form-group">
+            <label class="form-label">프로그램명 <span style="color:#e55">*</span></label>
+            <input type="text" class="input-field" id="moimProgName" placeholder="예: 원데이 쿠킹 클래스">
+          </div>
+          <div class="form-group">
+            <label class="form-label">설명</label>
+            <input type="text" class="input-field" id="moimProgDesc" placeholder="간단한 설명 (선택)">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="form-group">
+              <label class="form-label">판매가 (1인, 원) <span style="color:#e55">*</span></label>
+              <input type="number" class="input-field" id="moimProgPrice" placeholder="0" min="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">최대 인원</label>
+              <input type="number" class="input-field" id="moimProgMax" placeholder="6" min="1">
+            </div>
+          </div>
+          <div class="form-group">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <label class="form-label" style="margin:0">1인 기준 재료</label>
+              <button type="button" class="btn-text" style="font-size:12px" onclick="moimAddRecipeRow()">+ 재료 추가</button>
+            </div>
+            <div id="moimRecipeRows" style="display:flex;flex-direction:column;gap:6px"></div>
+            <div id="moimCostPreview" style="margin-top:10px;padding:10px 12px;background:var(--bg-side);border-radius:8px;font-size:13px;display:none">
+              <div style="display:flex;justify-content:space-between"><span>원가 (1인)</span><span id="moimCostVal" style="font-weight:700;color:#e06000"></span></div>
+              <div style="display:flex;justify-content:space-between;margin-top:4px"><span>수익 (1인)</span><span id="moimProfitVal" style="font-weight:700"></span></div>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeMoimProgModal()">취소</button>
+            <button class="btn-confirm" onclick="saveMoimProg()">저장</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 모임: 원가 항목 추가/수정 모달 -->
+      <div id="moimIngModal" class="modal-overlay" onclick="if(event.target===this)closeMoimIngModal()">
+        <div class="modal-box" style="max-width:440px">
+          <h3 id="moimIngModalTitle">원가 항목 추가</h3>
+          <input type="hidden" id="moimIngId">
+          <div class="form-group">
+            <label class="form-label">항목명 <span style="color:#e55">*</span></label>
+            <input type="text" class="input-field" id="moimIngName" placeholder="예: 밀가루">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="form-group">
+              <label class="form-label">단위 <span style="color:#e55">*</span></label>
+              <input type="text" class="input-field" id="moimIngUnit" placeholder="예: g, ml, 개">
+            </div>
+            <div class="form-group">
+              <label class="form-label">카테고리</label>
+              <select class="input-field" id="moimIngCat"></select>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="form-group">
+              <label class="form-label">구매 단위량 <span style="color:#e55">*</span></label>
+              <input type="number" class="input-field" id="moimIngPQty" placeholder="예: 1000" min="0" step="any">
+            </div>
+            <div class="form-group">
+              <label class="form-label">구매 단가 (원) <span style="color:#e55">*</span></label>
+              <input type="number" class="input-field" id="moimIngPrice" placeholder="예: 2500" min="0">
+            </div>
+          </div>
+          <div style="padding:8px 12px;background:var(--bg-side);border-radius:8px;font-size:12px;color:var(--text-secondary)" id="moimIngUnitCost">단위당 원가: —</div>
+          <div class="modal-actions" style="margin-top:14px">
+            <button class="btn-cancel" onclick="closeMoimIngModal()">취소</button>
+            <button class="btn-confirm" onclick="saveMoimIng()">저장</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 모임: 카테고리 추가/수정 모달 -->
+      <div id="moimCatModal" class="modal-overlay" onclick="if(event.target===this)closeMoimCatModal()">
+        <div class="modal-box" style="max-width:360px">
+          <h3 id="moimCatModalTitle">카테고리 추가</h3>
+          <input type="hidden" id="moimCatId">
+          <div class="form-group">
+            <label class="form-label">카테고리명 <span style="color:#e55">*</span></label>
+            <input type="text" class="input-field" id="moimCatName" placeholder="예: 식재료">
+          </div>
+          <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeMoimCatModal()">취소</button>
+            <button class="btn-confirm" onclick="saveMoimCat()">저장</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 모임: 입출고 기록 모달 -->
+      <div id="moimLogModal" class="modal-overlay" onclick="if(event.target===this)closeMoimLogModal()">
+        <div class="modal-box" style="max-width:480px">
+          <h3>입출고 기록</h3>
+          <div class="form-group">
+            <label class="form-label">날짜 <span style="color:#e55">*</span></label>
+            <input type="date" class="input-field" id="moimLogDate">
+          </div>
+          <div id="moimLogRows" style="display:flex;flex-direction:column;gap:8px"></div>
+          <button type="button" class="btn-text" style="font-size:13px;margin-top:6px" onclick="moimAddLogRow()">+ 항목 추가</button>
+          <div class="modal-actions" style="margin-top:14px">
+            <button class="btn-cancel" onclick="closeMoimLogModal()">취소</button>
+            <button class="btn-confirm" onclick="saveMoimLog()">저장</button>
+          </div>
+        </div>
+      </div>
+
       <!-- 설정 페이지 -->
       <div id="settingsPage" class="page">
         <div class="page-header">

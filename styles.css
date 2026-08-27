@@ -4112,3 +4112,50 @@
       .activity-card .activity-card-actions,
       .category-card .category-card-actions { display: flex; }
     }
+
+    /* ═══════════════════════════════════════════════
+       모임 만들기 페이지
+    ═══════════════════════════════════════════════ */
+    .moim-prog-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; margin-bottom: 12px; }
+    .moim-prog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .moim-prog-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+    .moim-prog-emoji { font-size: 36px; line-height: 1; flex-shrink: 0; }
+    .moim-prog-name { font-size: 17px; font-weight: 800; }
+    .moim-prog-desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    .moim-kpi-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 14px 0; }
+    .moim-kpi { }
+    .moim-kpi-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 3px; }
+    .moim-kpi-val { font-size: 17px; font-weight: 800; }
+    .moim-kpi-val.sell { color: var(--text-primary); }
+    .moim-kpi-val.cost { color: #e06000; }
+    .moim-kpi-val.profit-pos { color: #2a7a00; }
+    .moim-kpi-val.profit-neg { color: #e53935; }
+    .moim-recipe-toggle { font-size: 12px; color: var(--text-secondary); cursor: pointer; border: none; background: none; padding: 4px 0; }
+    .moim-recipe-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .moim-hr { border: none; border-top: 1px solid var(--border-color); margin: 12px 0; }
+    .moim-ing-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+    .moim-ing-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; cursor: pointer; transition: background .12s; }
+    .moim-ing-card:hover { background: var(--bg-hover); }
+    .moim-ing-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .moim-ing-price { font-size: 12px; color: var(--text-secondary); font-family: 'DM Mono', monospace; }
+    .moim-ing-unit-cost { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+    .moim-stock-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .moim-stock-tbl th { text-align: left; padding: 8px 10px; font-size: 11px; font-weight: 600; color: var(--text-secondary); border-bottom: 2px solid var(--border-color); background: var(--bg-side); white-space: nowrap; }
+    .moim-stock-tbl td { padding: 10px 10px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+    .moim-stock-tbl tr:last-child td { border-bottom: none; }
+    .moim-stock-tbl tr:hover td { background: var(--bg-hover); }
+    .moim-stock-neg { color: #e53935; font-weight: 700; }
+    .moim-stock-pos { color: #2a7a00; font-weight: 700; }
+    .moim-log-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1.5fr auto; gap: 6px; align-items: center; }
+    .moim-cat-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .moim-cat-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; border: 1.5px solid var(--border-color); background: var(--bg-card); font-size: 13px; font-weight: 600; cursor: pointer; }
+    .moim-cat-chip:hover { background: var(--bg-hover); }
+    @media (max-width: 768px) {
+      .moim-kpi-row { grid-template-columns: 1fr 1fr; }
+      .moim-kpi-row .moim-kpi:last-child { grid-column: span 2; }
+      .moim-ing-grid { grid-template-columns: 1fr 1fr; }
+      .moim-log-row { grid-template-columns: 1fr 1fr; gap: 5px; }
+      .moim-log-row > * { grid-column: span 1; }
+      .moim-log-row input[placeholder="메모"] { grid-column: span 2; }
+      .moim-log-row button { grid-column: span 2; }
+    }

@@ -31,13 +31,19 @@
         ]
       },
       {
-        id: 'group-study', type: 'group', icon: '💻', name: '공부', order: 2,
+        id: 'group-il', type: 'group', icon: '🎪', name: '일', order: 2,
+        children: [
+          { id: 'moim', type: 'page', icon: '🎯', name: '모임 만들기', slug: 'moim', order: 0 },
+        ]
+      },
+      {
+        id: 'group-study', type: 'group', icon: '💻', name: '공부', order: 3,
         children: [
           { id: 'devnotes', type: 'page', icon: '📓', name: '개발괴발', slug: 'devnotes', order: 0 },
         ]
       },
       {
-        id: 'group-storage', type: 'group', icon: '🎁', name: '보관보관', order: 3,
+        id: 'group-storage', type: 'group', icon: '🎁', name: '보관보관', order: 4,
         children: [
           { id: 'habit', type: 'page', icon: '🍎', name: '습관', slug: 'habit', order: 0 },
           { id: 'daily', type: 'page', icon: '📅', name: '시간표', slug: 'daily', order: 1 },
@@ -47,7 +53,7 @@
           { id: 'idea', type: 'page', icon: '💡', name: '아이디어', slug: 'idea', order: 5 },
         ]
       },
-      { id: 'settings', type: 'page', icon: '⚙️', name: '설정', slug: 'settings', order: 4 },
+      { id: 'settings', type: 'page', icon: '⚙️', name: '설정', slug: 'settings', order: 5 },
     ];
 
     // 이모지 데이터
@@ -1683,6 +1689,7 @@
       loadWorkSettings();
       loadPomodoroSettings();
       loadNotificationSettings();
+      loadMoimData();
       /* 뽀모도로 초기 상태 설정 */
       initPomodoroPhase('work');
       _restorePomodoroState();
@@ -2134,6 +2141,7 @@
       if (pageId === 'work') renderWorkPage();
       if (pageId === 'quirk') renderQuirkPage();
       if (pageId === 'devnotes') { dnUpdateAll(); dnUpdateTabBadges(); }
+      if (pageId === 'moim') renderMoimPage && renderMoimPage();
       var dnFab = document.getElementById('dnQuestionFab');
       if (dnFab) dnFab.style.display = (pageId === 'devnotes') ? 'flex' : 'none';
 
@@ -3552,7 +3560,8 @@
         workItemLogs: function() { return { logs: workItemLogs }; },
         devnotesLogs:    function() { return { items: dnNoteLogs }; },
         quirks:          function() { return { items: quirks }; },
-        businessTracker: function() { return { config: btConfig, dailyEntries: btDailyEntries, actions: btActions }; }
+        businessTracker: function() { return { config: btConfig, dailyEntries: btDailyEntries, actions: btActions }; },
+        moimData: function() { return { ingredients: moimIngredients, categories: moimCategories, programs: moimPrograms, recipes: moimRecipes, inventoryLog: moimInventoryLog }; }
       };
 
       // 시트 이름 → Firestore 문서 이름 매핑
@@ -3562,7 +3571,8 @@
         '카테고리': 'categories', '일상종류': 'categories',
         '사용자설정': 'settings',
         '뽀모도로기록': 'pomodoroLogs', '할일기록': 'workItemLogs', '개발괴발기록': 'devnotesLogs',
-        '돈을벌자': 'businessTracker'
+        '돈을벌자': 'businessTracker',
+        'moim': 'moimData'
       };
 
       function _buildSettings() {
@@ -3740,6 +3750,14 @@
                 setTimeout(function() { if (window.FS && FS.isConnected()) FS.sync(['돈을벌자']); }, 800);
               }
             }
+          }
+          if (data.moimData) {
+            if (data.moimData.ingredients) moimIngredients = data.moimData.ingredients;
+            if (data.moimData.categories) moimCategories = data.moimData.categories;
+            if (data.moimData.programs) moimPrograms = data.moimData.programs;
+            if (data.moimData.recipes) moimRecipes = data.moimData.recipes;
+            if (data.moimData.inventoryLog) moimInventoryLog = data.moimData.inventoryLog;
+            localStorage.setItem('moimData', JSON.stringify({ ingredients: moimIngredients, categories: moimCategories, programs: moimPrograms, recipes: moimRecipes, inventoryLog: moimInventoryLog }));
           }
           _updateUI('ok', 'Firebase 연결됨');
           console.log('[FS] ✅ 전체 로드 완료');
@@ -11738,6 +11756,7 @@
       else if (currentPage === 'work') renderWorkPage && renderWorkPage();
       else if (currentPage === 'quirk') renderQuirkPage && renderQuirkPage();
       else if (currentPage === 'devnotes') dnUpdateAll && dnUpdateAll();
+      else if (currentPage === 'moim') renderMoimPage && renderMoimPage();
     }
 
     // 데이터 관리 (마이그레이션 + Excel 내보내기)
@@ -12566,6 +12585,498 @@
       var totalEl = document.getElementById('dn-total-num');
       if (scoreEl) scoreEl.textContent = correct;
       if (totalEl) totalEl.textContent = totalQ;
+    }
+
+    // ========================================
+    // 모임 만들기 페이지
+    // ========================================
+    var moimIngredients = [];  // { id, name, unit, purchase_unit_qty, price_per_unit, category_id, is_active, created_at }
+    var moimCategories = [];   // { id, name, created_at }
+    var moimPrograms = [];     // { id, name, emoji, description, selling_price, max_participants, is_active, created_at }
+    var moimRecipes = [];      // { id, program_id, ingredient_id, qty_per_person, created_at }
+    var moimInventoryLog = []; // { id, log_date, ingredient_id, type, quantity, order_date, memo, created_at }
+    var moimTab = 'programs';  // 'programs' | 'ingredients' | 'stock' | 'history'
+
+    function moimGenId(prefix) {
+      return prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+    }
+
+    function moimFmt(n) {
+      if (n === null || n === undefined || isNaN(n)) return '—';
+      return Math.round(n).toLocaleString('ko-KR') + '원';
+    }
+
+    function moimFmtNum(n) {
+      return (typeof n === 'number') ? n.toLocaleString('ko-KR') : '—';
+    }
+
+    function loadMoimData() {
+      try {
+        var raw = localStorage.getItem('moimData');
+        if (!raw) return;
+        var d = JSON.parse(raw);
+        if (d.ingredients) moimIngredients = d.ingredients;
+        if (d.categories) moimCategories = d.categories;
+        if (d.programs) moimPrograms = d.programs;
+        if (d.recipes) moimRecipes = d.recipes;
+        if (d.inventoryLog) moimInventoryLog = d.inventoryLog;
+      } catch(e) {}
+    }
+
+    function saveMoimData() {
+      var d = { ingredients: moimIngredients, categories: moimCategories, programs: moimPrograms, recipes: moimRecipes, inventoryLog: moimInventoryLog };
+      localStorage.setItem('moimData', JSON.stringify(d));
+      if (window.FS && FS.isConnected()) FS.sync(['moim']);
+    }
+
+    // 현재 재고 = 입출고 이력 합산 (조정은 절대값으로 교정)
+    function moimCalcStock(ingId, upTo) {
+      var logs = moimInventoryLog.filter(function(l) { return l.ingredient_id === ingId && (!upTo || l.log_date <= upTo); });
+      var sum = 0;
+      logs.forEach(function(l) {
+        if (l.type === '조정') sum = l.quantity; // 조정: 절대값으로 교체
+        else sum += l.quantity;
+      });
+      return sum;
+    }
+
+    // 프로그램 1인 원가 계산
+    function moimCalcCostPer(programId) {
+      var recipe = moimRecipes.filter(function(r) { return r.program_id === programId; });
+      return recipe.reduce(function(sum, r) {
+        var ing = moimIngredients.find(function(i) { return i.id === r.ingredient_id; });
+        if (!ing || !ing.purchase_unit_qty || !ing.price_per_unit) return sum;
+        return sum + r.qty_per_person * (ing.price_per_unit / ing.purchase_unit_qty);
+      }, 0);
+    }
+
+    function renderMoimPage() {
+      loadMoimData();
+      var c = document.getElementById('moimPageContent');
+      if (!c) return;
+      // 탭 UI (기존 앱 패턴)
+      var html = '<div class="tab-nav" id="moimTabNav">';
+      [['programs','📋 프로그램'],['ingredients','🧂 원가 항목'],['stock','📦 재고 현황'],['history','📜 이력']].forEach(function(t) {
+        html += '<button class="tab-btn' + (moimTab === t[0] ? ' active' : '') + '" onclick="switchMoimTab(\'' + t[0] + '\')">' + t[1] + '</button>';
+      });
+      html += '</div>';
+      html += '<div style="padding:16px 24px 60px">';
+      if (moimTab === 'programs') html += renderMoimPrograms();
+      else if (moimTab === 'ingredients') html += renderMoimIngredients();
+      else if (moimTab === 'stock') html += renderMoimStock();
+      else html += renderMoimHistory();
+      html += '</div>';
+      c.innerHTML = html;
+    }
+
+    function switchMoimTab(tab) {
+      moimTab = tab;
+      renderMoimPage();
+    }
+
+    // ── 탭1: 프로그램 ──
+    function renderMoimPrograms() {
+      var progs = moimPrograms.filter(function(p) { return p.is_active !== false; });
+      var html = '<div style="display:flex;justify-content:flex-end;margin-bottom:14px">';
+      html += '<button class="btn-accent" onclick="openMoimProgModal()">+ 프로그램 추가</button>';
+      html += '</div>';
+      if (!progs.length) {
+        return html + '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">등록된 프로그램이 없어요</div></div>';
+      }
+      progs.forEach(function(prog) {
+        var costPer = moimCalcCostPer(prog.id);
+        var profitPer = (prog.selling_price || 0) - costPer;
+        var recipe = moimRecipes.filter(function(r) { return r.program_id === prog.id; });
+        html += '<div class="moim-prog-card">';
+        html += '<div class="moim-prog-header">';
+        html += '<div class="moim-prog-info"><span class="moim-prog-emoji">' + (prog.emoji || '🎪') + '</span>';
+        html += '<div><div class="moim-prog-name">' + escapeHtml(prog.name) + '</div>';
+        if (prog.description) html += '<div class="moim-prog-desc">' + escapeHtml(prog.description) + '</div>';
+        if (prog.max_participants) html += '<div class="moim-prog-desc">최대 ' + prog.max_participants + '명</div>';
+        html += '</div></div>';
+        html += '<div style="display:flex;gap:6px;flex-shrink:0">';
+        html += '<button class="btn-icon" onclick="openMoimProgModal(\'' + prog.id + '\')" title="수정">✏️</button>';
+        html += '<button class="btn-icon" onclick="deleteMoimProg(\'' + prog.id + '\')" title="삭제">🗑️</button>';
+        html += '</div></div>';
+        html += '<hr class="moim-hr">';
+        html += '<div class="moim-kpi-row">';
+        html += '<div class="moim-kpi"><div class="moim-kpi-label">판매가 (1인)</div><div class="moim-kpi-val sell">' + moimFmt(prog.selling_price) + '</div></div>';
+        html += '<div class="moim-kpi"><div class="moim-kpi-label">원가 (1인)</div><div class="moim-kpi-val cost">' + moimFmt(costPer) + '</div></div>';
+        html += '<div class="moim-kpi"><div class="moim-kpi-label">수익 (1인)</div><div class="moim-kpi-val ' + (profitPer >= 0 ? 'profit-pos' : 'profit-neg') + '">' + moimFmt(profitPer) + '</div></div>';
+        html += '</div>';
+        if (recipe.length) {
+          html += '<button class="moim-recipe-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'\':\'none\';this.textContent=(this.nextElementSibling.style.display===\'none\'?\'▶\':\'▼\')+\' 1인 기준 재료\'">▶ 1인 기준 재료</button>';
+          html += '<div class="moim-recipe-chips" style="display:none">';
+          recipe.forEach(function(r) {
+            var ing = moimIngredients.find(function(i) { return i.id === r.ingredient_id; });
+            if (!ing) return;
+            var c = r.qty_per_person * (ing.price_per_unit / ing.purchase_unit_qty);
+            html += '<span class="tag-chip">' + escapeHtml(ing.name) + ' ' + r.qty_per_person + ing.unit + ' <span style="color:#e06000;font-size:11px">' + moimFmt(c) + '</span></span>';
+          });
+          html += '</div>';
+        }
+        html += '</div>';
+      });
+      return html;
+    }
+
+    // ── 탭2: 원가 항목 ──
+    function renderMoimIngredients() {
+      var ings = moimIngredients.filter(function(i) { return i.is_active !== false; });
+      var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px;flex-wrap:wrap">';
+      html += '<button class="btn-accent" onclick="openMoimIngModal()">+ 항목 추가</button>';
+      html += '<button class="btn-text" style="font-size:13px" onclick="openMoimCatModal()">카테고리 관리</button>';
+      html += '</div>';
+      if (!ings.length) {
+        return html + '<div class="empty-state"><div class="empty-state-icon">🧂</div><div class="empty-state-text">등록된 원가 항목이 없어요</div></div>';
+      }
+      // 카테고리별 그룹
+      var ungrouped = ings.filter(function(i) { return !i.category_id; });
+      var cats = moimCategories;
+      html += '<div class="moim-ing-grid">';
+      ings.forEach(function(ing) {
+        var cat = moimCategories.find(function(c) { return c.id === ing.category_id; });
+        var unitCost = ing.purchase_unit_qty ? (ing.price_per_unit / ing.purchase_unit_qty).toFixed(2) : null;
+        var usedIn = moimPrograms.filter(function(p) { return moimRecipes.some(function(r) { return r.program_id === p.id && r.ingredient_id === ing.id; }); });
+        html += '<div class="moim-ing-card" onclick="openMoimIngModal(\'' + ing.id + '\')">';
+        html += '<div class="moim-ing-name">' + escapeHtml(ing.name) + '</div>';
+        html += '<div class="moim-ing-price">' + moimFmt(ing.price_per_unit) + ' / ' + moimFmtNum(ing.purchase_unit_qty) + ing.unit + '</div>';
+        if (unitCost) html += '<div class="moim-ing-unit-cost">' + unitCost + '원/' + ing.unit + '</div>';
+        if (cat) html += '<div style="margin-top:6px"><span class="tag-chip" style="font-size:11px">' + escapeHtml(cat.name) + '</span></div>';
+        if (usedIn.length) html += '<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px">' + usedIn.map(function(p) { return '<span class="tag-chip" style="font-size:11px;background:var(--primary-yellow-light,#fffbe6)">' + (p.emoji || '') + ' ' + escapeHtml(p.name) + '</span>'; }).join('') + '</div>';
+        html += '<div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn-icon" onclick="event.stopPropagation();deleteMoimIng(\'' + ing.id + '\')" title="삭제" style="opacity:0;transition:opacity .15s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0">🗑️</button></div>';
+        html += '</div>';
+      });
+      html += '</div>';
+      return html;
+    }
+
+    // ── 탭3: 재고 현황 ──
+    function renderMoimStock() {
+      var ings = moimIngredients.filter(function(i) { return i.is_active !== false; });
+      var html = '<div style="display:flex;justify-content:flex-end;margin-bottom:14px">';
+      html += '<button class="btn-accent" onclick="openMoimLogModal()">+ 입출고 기록</button>';
+      html += '</div>';
+      if (!ings.length) {
+        return html + '<div class="empty-state"><div class="empty-state-icon">📦</div><div class="empty-state-text">원가 항목을 먼저 등록하세요</div></div>';
+      }
+      html += '<div style="overflow-x:auto"><table class="moim-stock-tbl"><thead><tr><th>항목명</th><th>단위</th><th>현재 재고</th><th>카테고리</th></tr></thead><tbody>';
+      ings.forEach(function(ing) {
+        var stock = moimCalcStock(ing.id);
+        var cat = moimCategories.find(function(c) { return c.id === ing.category_id; });
+        html += '<tr>';
+        html += '<td><strong>' + escapeHtml(ing.name) + '</strong></td>';
+        html += '<td style="color:var(--text-secondary);font-size:12px">' + ing.unit + '</td>';
+        html += '<td class="' + (stock < 0 ? 'moim-stock-neg' : stock > 0 ? 'moim-stock-pos' : '') + '" style="font-family:\'DM Mono\',monospace">' + moimFmtNum(stock) + ' ' + ing.unit + '</td>';
+        html += '<td>' + (cat ? '<span class="tag-chip" style="font-size:11px">' + escapeHtml(cat.name) + '</span>' : '<span style="color:var(--text-secondary);font-size:12px">—</span>') + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table></div>';
+      return html;
+    }
+
+    // ── 탭4: 입출고 이력 ──
+    function renderMoimHistory() {
+      var logs = moimInventoryLog.slice().sort(function(a, b) { return b.log_date.localeCompare(a.log_date) || b.created_at.localeCompare(a.created_at); });
+      var html = '<div style="display:flex;justify-content:flex-end;margin-bottom:14px">';
+      html += '<button class="btn-accent" onclick="openMoimLogModal()">+ 입출고 기록</button>';
+      html += '</div>';
+      if (!logs.length) {
+        return html + '<div class="empty-state"><div class="empty-state-icon">📜</div><div class="empty-state-text">입출고 기록이 없어요</div></div>';
+      }
+      html += '<div style="overflow-x:auto"><table class="moim-stock-tbl"><thead><tr><th>날짜</th><th>항목</th><th>구분</th><th>수량</th><th>메모</th><th></th></tr></thead><tbody>';
+      logs.forEach(function(log) {
+        var ing = moimIngredients.find(function(i) { return i.id === log.ingredient_id; });
+        var typeColor = log.type === '입고' ? 'color:#2a7a00' : log.type === '조정' ? 'color:#c8a800' : 'color:var(--text-secondary)';
+        html += '<tr>';
+        html += '<td style="font-family:\'DM Mono\',monospace;font-size:12px">' + log.log_date + '</td>';
+        html += '<td><strong>' + escapeHtml(ing ? ing.name : '—') + '</strong></td>';
+        html += '<td><span style="' + typeColor + ';font-weight:600;font-size:12px">' + log.type + '</span></td>';
+        var qSign = log.type === '입고' ? '+' : log.type === '사용' ? '-' : '';
+        html += '<td style="font-family:\'DM Mono\',monospace;font-size:12px">' + qSign + moimFmtNum(Math.abs(log.quantity)) + ' ' + (ing ? ing.unit : '') + '</td>';
+        html += '<td style="font-size:12px;color:var(--text-secondary)">' + escapeHtml(log.memo || '') + '</td>';
+        html += '<td><button class="btn-icon" onclick="deleteMoimLog(\'' + log.id + '\')">🗑️</button></td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table></div>';
+      return html;
+    }
+
+    // ── 프로그램 모달 ──
+    function openMoimProgModal(id) {
+      var modal = document.getElementById('moimProgModal');
+      var titleEl = document.getElementById('moimProgModalTitle');
+      document.getElementById('moimProgId').value = id || '';
+      titleEl.textContent = id ? '프로그램 수정' : '프로그램 추가';
+      var rowsEl = document.getElementById('moimRecipeRows');
+      rowsEl.innerHTML = '';
+      if (id) {
+        var prog = moimPrograms.find(function(p) { return p.id === id; });
+        if (!prog) return;
+        document.getElementById('moimProgEmojiBtn').textContent = prog.emoji || '🎪';
+        document.getElementById('moimProgName').value = prog.name;
+        document.getElementById('moimProgDesc').value = prog.description || '';
+        document.getElementById('moimProgPrice').value = prog.selling_price || '';
+        document.getElementById('moimProgMax').value = prog.max_participants || '';
+        moimRecipes.filter(function(r) { return r.program_id === id; }).forEach(function(r) { moimAddRecipeRow(r.ingredient_id, r.qty_per_person); });
+      } else {
+        document.getElementById('moimProgEmojiBtn').textContent = '🎪';
+        ['moimProgName','moimProgDesc','moimProgPrice','moimProgMax'].forEach(function(fid) { document.getElementById(fid).value = ''; });
+      }
+      moimUpdateCostPreview();
+      modal.classList.add('show');
+    }
+
+    function closeMoimProgModal() { document.getElementById('moimProgModal').classList.remove('show'); }
+
+    function moimAddRecipeRow(ingId, qty) {
+      var rowsEl = document.getElementById('moimRecipeRows');
+      var rid = moimGenId('rr');
+      var opts = '<option value="">재료 선택</option>' + moimIngredients.filter(function(i) { return i.is_active !== false; }).map(function(i) {
+        return '<option value="' + i.id + '"' + (i.id === ingId ? ' selected' : '') + '>' + escapeHtml(i.name) + ' (' + i.unit + ')</option>';
+      }).join('');
+      var div = document.createElement('div');
+      div.style.cssText = 'display:grid;grid-template-columns:2fr 1fr auto;gap:6px;align-items:center';
+      div.innerHTML = '<select class="input-field moim-rr-ing" onchange="moimUpdateCostPreview()">' + opts + '</select>'
+        + '<input type="number" class="input-field moim-rr-qty" placeholder="1인 기준량" min="0" step="any" value="' + (qty || '') + '" oninput="moimUpdateCostPreview()">'
+        + '<button type="button" class="btn-icon" onclick="this.parentElement.remove();moimUpdateCostPreview()">✕</button>';
+      rowsEl.appendChild(div);
+      moimUpdateCostPreview();
+    }
+
+    function moimUpdateCostPreview() {
+      var priceEl = document.getElementById('moimProgPrice');
+      var previewEl = document.getElementById('moimCostPreview');
+      if (!priceEl || !previewEl) return;
+      var rows = document.querySelectorAll('#moimRecipeRows > div');
+      var costPer = 0;
+      rows.forEach(function(row) {
+        var ingId = row.querySelector('.moim-rr-ing').value;
+        var qty = parseFloat(row.querySelector('.moim-rr-qty').value) || 0;
+        var ing = moimIngredients.find(function(i) { return i.id === ingId; });
+        if (ing && ing.purchase_unit_qty && qty) costPer += qty * (ing.price_per_unit / ing.purchase_unit_qty);
+      });
+      var sellPrice = parseFloat(priceEl.value) || 0;
+      var profit = sellPrice - costPer;
+      if (rows.length > 0 || sellPrice > 0) {
+        previewEl.style.display = '';
+        document.getElementById('moimCostVal').textContent = moimFmt(costPer);
+        var profitEl = document.getElementById('moimProfitVal');
+        profitEl.textContent = moimFmt(profit);
+        profitEl.style.color = profit >= 0 ? '#2a7a00' : '#e53935';
+      } else {
+        previewEl.style.display = 'none';
+      }
+    }
+
+    function saveMoimProg() {
+      var name = document.getElementById('moimProgName').value.trim();
+      var price = parseFloat(document.getElementById('moimProgPrice').value);
+      var maxP = parseInt(document.getElementById('moimProgMax').value) || 0;
+      var desc = document.getElementById('moimProgDesc').value.trim();
+      var emoji = document.getElementById('moimProgEmojiBtn').textContent.trim();
+      var id = document.getElementById('moimProgId').value;
+      if (!name || isNaN(price)) { showToast('프로그램명과 판매가를 입력해주세요', 'warning'); return; }
+      var now = new Date().toISOString();
+      var recipe = [];
+      document.querySelectorAll('#moimRecipeRows > div').forEach(function(row) {
+        var ingId = row.querySelector('.moim-rr-ing').value;
+        var qty = parseFloat(row.querySelector('.moim-rr-qty').value);
+        if (ingId && qty > 0) recipe.push({ ingredient_id: ingId, qty_per_person: qty });
+      });
+      if (id) {
+        var prog = moimPrograms.find(function(p) { return p.id === id; });
+        if (prog) { prog.name = name; prog.description = desc; prog.emoji = emoji; prog.selling_price = price; prog.max_participants = maxP; }
+        moimRecipes = moimRecipes.filter(function(r) { return r.program_id !== id; });
+        recipe.forEach(function(r) { moimRecipes.push({ id: moimGenId('rec'), program_id: id, ingredient_id: r.ingredient_id, qty_per_person: r.qty_per_person, created_at: now }); });
+        showToast('프로그램 수정 완료', 'success');
+      } else {
+        var pid = moimGenId('prg');
+        moimPrograms.push({ id: pid, name: name, description: desc, emoji: emoji, selling_price: price, max_participants: maxP, is_active: true, created_at: now });
+        recipe.forEach(function(r) { moimRecipes.push({ id: moimGenId('rec'), program_id: pid, ingredient_id: r.ingredient_id, qty_per_person: r.qty_per_person, created_at: now }); });
+        showToast('프로그램 추가 완료', 'success');
+      }
+      closeMoimProgModal();
+      saveMoimData();
+      renderMoimPage();
+    }
+
+    function deleteMoimProg(id) {
+      var prog = moimPrograms.find(function(p) { return p.id === id; });
+      if (!prog) return;
+      showConfirm('프로그램 삭제', escapeHtml(prog.name) + '을(를) 삭제할까요?', function(ok) {
+        if (!ok) return;
+        moimPrograms = moimPrograms.filter(function(p) { return p.id !== id; });
+        moimRecipes = moimRecipes.filter(function(r) { return r.program_id !== id; });
+        saveMoimData();
+        renderMoimPage();
+        showToast('프로그램 삭제 완료', 'success');
+      });
+    }
+
+    // ── 원가 항목 모달 ──
+    function openMoimIngModal(id) {
+      var modal = document.getElementById('moimIngModal');
+      document.getElementById('moimIngModalTitle').textContent = id ? '원가 항목 수정' : '원가 항목 추가';
+      document.getElementById('moimIngId').value = id || '';
+      // 카테고리 드롭다운 동기화
+      var catSel = document.getElementById('moimIngCat');
+      catSel.innerHTML = '<option value="">카테고리 없음</option>' + moimCategories.map(function(c) { return '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>'; }).join('');
+      if (id) {
+        var ing = moimIngredients.find(function(i) { return i.id === id; });
+        if (!ing) return;
+        document.getElementById('moimIngName').value = ing.name;
+        document.getElementById('moimIngUnit').value = ing.unit;
+        document.getElementById('moimIngCat').value = ing.category_id || '';
+        document.getElementById('moimIngPQty').value = ing.purchase_unit_qty || '';
+        document.getElementById('moimIngPrice').value = ing.price_per_unit || '';
+      } else {
+        ['moimIngName','moimIngUnit','moimIngPQty','moimIngPrice'].forEach(function(fid) { document.getElementById(fid).value = ''; });
+        catSel.value = '';
+      }
+      moimUpdateUnitCost();
+      modal.classList.add('show');
+    }
+
+    function closeMoimIngModal() { document.getElementById('moimIngModal').classList.remove('show'); }
+
+    function moimUpdateUnitCost() {
+      var pqty = parseFloat(document.getElementById('moimIngPQty').value);
+      var price = parseFloat(document.getElementById('moimIngPrice').value);
+      var unit = document.getElementById('moimIngUnit').value || '단위';
+      var el = document.getElementById('moimIngUnitCost');
+      if (el) el.textContent = (pqty > 0 && price > 0) ? '단위당 원가: ' + (price / pqty).toFixed(2) + '원/' + unit : '단위당 원가: —';
+    }
+
+    function saveMoimIng() {
+      var name = document.getElementById('moimIngName').value.trim();
+      var unit = document.getElementById('moimIngUnit').value.trim();
+      var pqty = parseFloat(document.getElementById('moimIngPQty').value);
+      var price = parseFloat(document.getElementById('moimIngPrice').value);
+      var catId = document.getElementById('moimIngCat').value || null;
+      var id = document.getElementById('moimIngId').value;
+      if (!name || !unit || isNaN(pqty) || isNaN(price)) { showToast('필수 항목을 모두 입력해주세요', 'warning'); return; }
+      var now = new Date().toISOString();
+      if (id) {
+        var ing = moimIngredients.find(function(i) { return i.id === id; });
+        if (ing) { ing.name = name; ing.unit = unit; ing.purchase_unit_qty = pqty; ing.price_per_unit = price; ing.category_id = catId; }
+        showToast('항목 수정 완료', 'success');
+      } else {
+        moimIngredients.push({ id: moimGenId('ing'), name: name, unit: unit, purchase_unit_qty: pqty, price_per_unit: price, category_id: catId, is_active: true, created_at: now });
+        showToast('항목 추가 완료', 'success');
+      }
+      closeMoimIngModal();
+      saveMoimData();
+      renderMoimPage();
+    }
+
+    function deleteMoimIng(id) {
+      var ing = moimIngredients.find(function(i) { return i.id === id; });
+      if (!ing) return;
+      var usedIn = moimRecipes.filter(function(r) { return r.ingredient_id === id; });
+      var msg = escapeHtml(ing.name) + '을(를) 삭제할까요?';
+      if (usedIn.length) msg += '<br><small style="color:var(--text-secondary)">' + usedIn.length + '개 프로그램의 재료 목록에서도 제거됩니다.</small>';
+      showConfirm('원가 항목 삭제', msg, function(ok) {
+        if (!ok) return;
+        moimIngredients = moimIngredients.filter(function(i) { return i.id !== id; });
+        moimRecipes = moimRecipes.filter(function(r) { return r.ingredient_id !== id; });
+        saveMoimData();
+        renderMoimPage();
+        showToast('항목 삭제 완료', 'success');
+      });
+    }
+
+    // ── 카테고리 모달 ──
+    function openMoimCatModal(id) {
+      var modal = document.getElementById('moimCatModal');
+      document.getElementById('moimCatModalTitle').textContent = id ? '카테고리 수정' : '카테고리 추가';
+      document.getElementById('moimCatId').value = id || '';
+      if (id) {
+        var cat = moimCategories.find(function(c) { return c.id === id; });
+        document.getElementById('moimCatName').value = cat ? cat.name : '';
+      } else {
+        document.getElementById('moimCatName').value = '';
+      }
+      modal.classList.add('show');
+    }
+
+    function closeMoimCatModal() { document.getElementById('moimCatModal').classList.remove('show'); }
+
+    function saveMoimCat() {
+      var name = document.getElementById('moimCatName').value.trim();
+      var id = document.getElementById('moimCatId').value;
+      if (!name) { showToast('카테고리명을 입력해주세요', 'warning'); return; }
+      if (id) {
+        var cat = moimCategories.find(function(c) { return c.id === id; });
+        if (cat) cat.name = name;
+      } else {
+        moimCategories.push({ id: moimGenId('cat'), name: name, created_at: new Date().toISOString() });
+      }
+      closeMoimCatModal();
+      saveMoimData();
+      // 카테고리 변경 후 원가 항목 탭으로 복귀
+      moimTab = 'ingredients';
+      renderMoimPage();
+    }
+
+    // ── 입출고 기록 모달 ──
+    function openMoimLogModal() {
+      var modal = document.getElementById('moimLogModal');
+      document.getElementById('moimLogDate').value = today();
+      document.getElementById('moimLogRows').innerHTML = '';
+      moimAddLogRow();
+      modal.classList.add('show');
+    }
+
+    function closeMoimLogModal() { document.getElementById('moimLogModal').classList.remove('show'); }
+
+    function moimAddLogRow() {
+      var container = document.getElementById('moimLogRows');
+      var opts = moimIngredients.filter(function(i) { return i.is_active !== false; }).map(function(i) {
+        return '<option value="' + i.id + '">' + escapeHtml(i.name) + ' (' + i.unit + ')</option>';
+      }).join('');
+      var div = document.createElement('div');
+      div.className = 'moim-log-row';
+      div.innerHTML = '<select class="input-field moim-lr-ing"><option value="">항목 선택</option>' + opts + '</select>'
+        + '<select class="input-field moim-lr-type"><option value="입고">입고</option><option value="사용">사용</option><option value="조정">조정</option></select>'
+        + '<input type="number" class="input-field moim-lr-qty" placeholder="수량" min="0" step="any">'
+        + '<input type="text" class="input-field moim-lr-memo" placeholder="메모">'
+        + '<button type="button" class="btn-icon" onclick="this.parentElement.remove()">✕</button>';
+      container.appendChild(div);
+    }
+
+    function saveMoimLog() {
+      var date = document.getElementById('moimLogDate').value;
+      if (!date) { showToast('날짜를 입력해주세요', 'warning'); return; }
+      var rows = document.querySelectorAll('#moimLogRows .moim-log-row');
+      var entries = [];
+      var valid = true;
+      rows.forEach(function(row) {
+        var ingId = row.querySelector('.moim-lr-ing').value;
+        var type = row.querySelector('.moim-lr-type').value;
+        var qty = parseFloat(row.querySelector('.moim-lr-qty').value);
+        var memo = row.querySelector('.moim-lr-memo').value.trim();
+        if (!ingId || isNaN(qty) || qty <= 0) { valid = false; return; }
+        var quantity = type === '사용' ? -qty : qty;
+        entries.push({ id: moimGenId('log'), log_date: date, ingredient_id: ingId, type: type, quantity: quantity, memo: memo, created_at: new Date().toISOString() });
+      });
+      if (!valid || !entries.length) { showToast('항목과 수량을 모두 입력해주세요', 'warning'); return; }
+      entries.forEach(function(e) { moimInventoryLog.push(e); });
+      closeMoimLogModal();
+      saveMoimData();
+      moimTab = 'history';
+      renderMoimPage();
+      showToast(entries.length + '건 기록 완료', 'success');
+    }
+
+    function deleteMoimLog(id) {
+      showConfirm('기록 삭제', '이 입출고 기록을 삭제할까요?', function(ok) {
+        if (!ok) return;
+        moimInventoryLog = moimInventoryLog.filter(function(l) { return l.id !== id; });
+        saveMoimData();
+        renderMoimPage();
+        showToast('기록 삭제 완료', 'success');
+      });
     }
 
     // ========================================
