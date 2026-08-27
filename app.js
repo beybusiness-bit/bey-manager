@@ -12959,7 +12959,22 @@
       modal.classList.add('show');
     }
 
-    function closeMoimIngModal() { document.getElementById('moimIngModal').classList.remove('show'); }
+    function closeMoimIngModal() {
+      document.getElementById('moimIngModal').classList.remove('show');
+      // 프로그램 모달에서 재료 만들기 중 취소 시 → 프로그램 모달 복원
+      if (_moimProgCtx) {
+        var ctx = _moimProgCtx;
+        _moimProgCtx = null;
+        openMoimProgModal(ctx.id || undefined);
+        document.getElementById('moimProgEmojiBtn').textContent = ctx.emoji;
+        document.getElementById('moimProgName').value = ctx.name;
+        document.getElementById('moimProgDesc').value = ctx.desc;
+        document.getElementById('moimProgPrice').value = ctx.price;
+        document.getElementById('moimProgMax').value = ctx.maxP;
+        ctx.recipe.forEach(function(r) { moimAddRecipeRow(r.ingId, r.qty); });
+        moimUpdateCostPreview();
+      }
+    }
 
     // 프로그램 모달에서 재료 바로 만들기
     function moimOpenIngFromProg() {
@@ -13009,12 +13024,14 @@
         moimIngredients.push({ id: newIngId, name: name, unit: unit, purchase_unit_qty: pqty, price_per_unit: price, category_id: catId, is_active: true, created_at: now });
         showToast('항목 추가 완료', 'success');
       }
+      // 저장 경로: ctx를 먼저 꺼내고 null로 비운 뒤 closeMoimIngModal 호출
+      // (closeMoimIngModal 내부의 취소 복원 로직이 저장 경로에서 중복 실행되지 않도록)
+      var _savedCtx = _moimProgCtx;
+      _moimProgCtx = null;
       closeMoimIngModal();
       saveMoimData();
-      // 프로그램 모달에서 재료 만들기로 진입한 경우 → 프로그램 모달 복원
-      if (_moimProgCtx) {
-        var ctx = _moimProgCtx;
-        _moimProgCtx = null;
+      if (_savedCtx) {
+        var ctx = _savedCtx;
         openMoimProgModal(ctx.id || undefined);
         document.getElementById('moimProgEmojiBtn').textContent = ctx.emoji;
         document.getElementById('moimProgName').value = ctx.name;
