@@ -2902,7 +2902,7 @@ SQLite / PostgreSQL (데이터 저장)
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             <div class="form-group">
               <label class="form-label">판매가 (1인, 원) <span style="color:#e55">*</span></label>
-              <input type="number" class="input-field" id="moimProgPrice" placeholder="0" min="0">
+              <input type="number" class="input-field" id="moimProgPrice" placeholder="예: 15000" min="0" oninput="moimUpdateCostPreview()">
             </div>
             <div class="form-group">
               <label class="form-label">최대 인원</label>
@@ -2943,7 +2943,7 @@ SQLite / PostgreSQL (데이터 저장)
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             <div class="form-group">
               <label class="form-label">단위 <span style="color:#e55">*</span></label>
-              <input type="text" class="input-field" id="moimIngUnit" placeholder="예: g, ml, 개">
+              <input type="text" class="input-field" id="moimIngUnit" placeholder="예: g, ml, 개" oninput="moimUpdateUnitCost()">
             </div>
             <div class="form-group">
               <label class="form-label">카테고리</label>
@@ -2953,11 +2953,11 @@ SQLite / PostgreSQL (데이터 저장)
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             <div class="form-group">
               <label class="form-label">구매 단위량 <span style="color:#e55">*</span></label>
-              <input type="number" class="input-field" id="moimIngPQty" placeholder="예: 1000" min="0" step="any">
+              <input type="number" class="input-field" id="moimIngPQty" placeholder="예: 1000" min="0" step="any" oninput="moimUpdateUnitCost()">
             </div>
             <div class="form-group">
               <label class="form-label">구매 단가 (원) <span style="color:#e55">*</span></label>
-              <input type="number" class="input-field" id="moimIngPrice" placeholder="예: 2500" min="0">
+              <input type="number" class="input-field" id="moimIngPrice" placeholder="예: 2500" min="0" oninput="moimUpdateUnitCost()">
             </div>
           </div>
           <div style="padding:8px 12px;background:var(--bg-side);border-radius:8px;font-size:12px;color:var(--text-secondary)" id="moimIngUnitCost">단위당 원가: —</div>
