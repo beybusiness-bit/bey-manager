@@ -277,7 +277,26 @@
     }
     .input-field:focus { border-color: var(--primary-yellow); }
     textarea.input-field { line-height: 1.5; }
-    select.input-field { height: 42px; cursor: pointer; }
+    select.input-field { cursor: pointer; }
+    /* .modal-box input 레거시 규칙을 .input-field 클래스 요소에서 무력화 */
+    .modal-box input.input-field,
+    .modal-box select.input-field {
+      padding: 9px 12px;
+      border: 1.5px solid var(--border-color);
+      font-size: 14px;
+      margin-bottom: 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .modal-box input.input-field:focus,
+    .modal-box select.input-field:focus {
+      border-color: var(--primary-yellow);
+      outline: none;
+    }
+    /* 프로그램 모달 재료 행 */
+    .moim-rr-row { display: flex; align-items: center; gap: 8px; }
+    .moim-rr-row .moim-rr-ing { flex: 1; min-width: 0; }
+    .moim-rr-row .moim-rr-qty { width: 110px; flex-shrink: 0; }
 
     .modal-box input,
     .modal-box textarea {
