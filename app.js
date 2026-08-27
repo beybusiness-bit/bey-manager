@@ -12745,8 +12745,8 @@
     function renderMoimIngredients() {
       var ings = moimIngredients.filter(function(i) { return i.is_active !== false; });
       var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px;flex-wrap:wrap">';
-      html += '<button class="btn-accent" onclick="openMoimIngModal()">+ 항목 추가</button>';
-      html += '<button class="btn-text" style="font-size:13px" onclick="openMoimCatModal()">카테고리 관리</button>';
+      html += '<button class="btn-accent" onclick="openMoimIngModal()">+ 재료 추가</button>';
+      html += '<button class="btn-secondary btn-sm" onclick="openMoimCatModal()">카테고리 관리</button>';
       html += '</div>';
       if (!ings.length) {
         return html + '<div class="empty-state"><div class="empty-state-icon">🧂</div><div class="empty-state-text">등록된 원가 항목이 없어요</div></div>';
@@ -12765,7 +12765,7 @@
         if (unitCost) html += '<div class="moim-ing-unit-cost">' + unitCost + '원/' + ing.unit + '</div>';
         if (cat) html += '<div style="margin-top:6px"><span class="tag-chip" style="font-size:11px">' + escapeHtml(cat.name) + '</span></div>';
         if (usedIn.length) html += '<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px">' + usedIn.map(function(p) { return '<span class="tag-chip" style="font-size:11px;background:var(--primary-yellow-light,#fffbe6)">' + (p.emoji || '') + ' ' + escapeHtml(p.name) + '</span>'; }).join('') + '</div>';
-        html += '<div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn-icon" onclick="event.stopPropagation();deleteMoimIng(\'' + ing.id + '\')" title="삭제" style="opacity:0;transition:opacity .15s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0">🗑️</button></div>';
+        html += '<div class="moim-ing-actions"><button class="btn-icon" onclick="event.stopPropagation();deleteMoimIng(\'' + ing.id + '\')" title="삭제">🗑️</button></div>';
         html += '</div>';
       });
       html += '</div>';
@@ -12936,7 +12936,7 @@
     // ── 원가 항목 모달 ──
     function openMoimIngModal(id) {
       var modal = document.getElementById('moimIngModal');
-      document.getElementById('moimIngModalTitle').textContent = id ? '원가 항목 수정' : '원가 항목 추가';
+      document.getElementById('moimIngModalTitle').textContent = id ? '재료 수정' : '재료 추가';
       document.getElementById('moimIngId').value = id || '';
       // 카테고리 드롭다운 동기화
       var catSel = document.getElementById('moimIngCat');

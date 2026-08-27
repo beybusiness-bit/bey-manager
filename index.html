@@ -2933,10 +2933,10 @@ SQLite / PostgreSQL (데이터 저장)
       <!-- 모임: 원가 항목 추가/수정 모달 -->
       <div id="moimIngModal" class="modal-overlay" onclick="if(event.target===this)closeMoimIngModal()">
         <div class="modal-box" style="max-width:440px">
-          <h3 id="moimIngModalTitle">원가 항목 추가</h3>
+          <h3 id="moimIngModalTitle">재료 추가</h3>
           <input type="hidden" id="moimIngId">
           <div class="form-group">
-            <label class="form-label">항목명 <span style="color:#e55">*</span></label>
+            <label class="form-label">재료명 <span style="color:#e55">*</span></label>
             <input type="text" class="input-field" id="moimIngName" placeholder="예: 밀가루"
               onkeydown="if(event.key==='Enter'){event.preventDefault();saveMoimIng();}">
           </div>
