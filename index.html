@@ -2893,7 +2893,7 @@ SQLite / PostgreSQL (데이터 저장)
           <div class="form-group">
             <label class="form-label">프로그램명 <span style="color:#e55">*</span></label>
             <input type="text" class="input-field" id="moimProgName" placeholder="예: 원데이 쿠킹 클래스"
-              onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('moimProgDesc').focus();}">
+              onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();document.getElementById('moimProgDesc').focus();}">
           </div>
           <div class="form-group">
             <label class="form-label">설명</label>
@@ -2913,8 +2913,8 @@ SQLite / PostgreSQL (데이터 저장)
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px">
               <label class="form-label" style="margin:0">1인 기준 재료</label>
               <div style="display:flex;gap:8px">
-                <button type="button" class="btn-text" style="font-size:12px" onclick="moimOpenIngFromProg()">+ 새 재료 만들기</button>
-                <button type="button" class="btn-text" style="font-size:12px" onclick="moimAddRecipeRow()">+ 기존 재료 선택</button>
+                <button type="button" class="btn-secondary btn-sm" onclick="moimOpenIngFromProg()">+ 새 재료 만들기</button>
+                <button type="button" class="btn-accent btn-sm" onclick="moimAddRecipeRow()">+ 기존 재료 선택</button>
               </div>
             </div>
             <div id="moimRecipeRows" style="display:flex;flex-direction:column;gap:6px"></div>
@@ -2938,7 +2938,7 @@ SQLite / PostgreSQL (데이터 저장)
           <div class="form-group">
             <label class="form-label">재료명 <span style="color:#e55">*</span></label>
             <input type="text" class="input-field" id="moimIngName" placeholder="예: 밀가루"
-              onkeydown="if(event.key==='Enter'){event.preventDefault();saveMoimIng();}">
+              onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();saveMoimIng();}">
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             <div class="form-group">
@@ -2979,7 +2979,7 @@ SQLite / PostgreSQL (데이터 저장)
           <div class="form-group">
             <label class="form-label">카테고리명 <span style="color:#e55">*</span></label>
             <input type="text" class="input-field" id="moimCatName" placeholder="예: 식재료"
-              onkeydown="if(event.key==='Enter'){event.preventDefault();saveMoimCat();}">
+              onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();saveMoimCat();}">
           </div>
           <div class="modal-actions">
             <button class="btn-cancel" onclick="closeMoimCatModal()">닫기</button>
@@ -2997,7 +2997,7 @@ SQLite / PostgreSQL (데이터 저장)
             <input type="date" class="input-field" id="moimLogDate">
           </div>
           <div id="moimLogRows" style="display:flex;flex-direction:column;gap:12px;margin-bottom:8px"></div>
-          <button type="button" class="btn-text" style="font-size:13px;margin-bottom:4px" onclick="moimAddLogRow()">+ 항목 추가</button>
+          <button type="button" class="btn-secondary btn-sm" style="margin-bottom:4px" onclick="moimAddLogRow()">+ 항목 추가</button>
           <div class="modal-actions" style="margin-top:10px">
             <button class="btn-cancel" onclick="closeMoimLogModal()">취소</button>
             <button class="btn-confirm" onclick="saveMoimLog()">저장</button>
@@ -3413,7 +3413,7 @@ firebase deploy --only functions</pre>
       <div class="habit-form-row">
         <button class="emoji-edit-btn" id="habitEmojiBtn" onclick="openHabitFormEmojiPicker()">✅</button>
         <input class="input-field" id="habitNameInput" placeholder="습관 이름" style="flex:1;"
-          onkeydown="if(event.key==='Enter')saveHabitForm();if(event.key==='Escape')closeHabitForm()">
+          onkeydown="if(event.key==='Enter'&&!event.isComposing)saveHabitForm();if(event.key==='Escape')closeHabitForm()">
       </div>
       <div style="margin-bottom:14px;">
         <div class="form-label" style="margin-bottom:8px;">반복 요일</div>
@@ -3474,7 +3474,7 @@ firebase deploy --only functions</pre>
       <div class="habit-form-row" style="margin-bottom:12px;">
         <button class="emoji-edit-btn" id="siAddModalEmojiBtn" onclick="openSiAddModalEmojiPicker()">✅</button>
         <input class="input-field" id="siAddModalNameInput" placeholder="일상 이름" style="flex:1;"
-          onkeydown="if(event.key==='Enter')saveSiAddActivityModal();if(event.key==='Escape')closeSiAddActivityModal()">
+          onkeydown="if(event.key==='Enter'&&!event.isComposing)saveSiAddActivityModal();if(event.key==='Escape')closeSiAddActivityModal()">
       </div>
       <div style="margin-bottom:12px;">
         <div class="form-label" style="margin-bottom:6px;">카테고리</div>
