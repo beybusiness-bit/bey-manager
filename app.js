@@ -12704,6 +12704,7 @@
       if (!progs.length) {
         return html + '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">등록된 프로그램이 없어요</div></div>';
       }
+      html += '<div class="moim-prog-grid">';
       progs.forEach(function(prog) {
         var costPer = moimCalcCostPer(prog.id);
         var profitPer = (prog.selling_price || 0) - costPer;
@@ -12738,6 +12739,7 @@
         }
         html += '</div>';
       });
+      html += '</div>'; // .moim-prog-grid
       return html;
     }
 
@@ -12746,7 +12748,7 @@
       var ings = moimIngredients.filter(function(i) { return i.is_active !== false; });
       var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px;flex-wrap:wrap">';
       html += '<button class="btn-accent" onclick="openMoimIngModal()">+ 재료 추가</button>';
-      html += '<button class="btn-secondary btn-sm" onclick="openMoimCatModal()">카테고리 관리</button>';
+      html += '<button class="btn-secondary" onclick="openMoimCatModal()">카테고리 관리</button>';
       html += '</div>';
       if (!ings.length) {
         return html + '<div class="empty-state"><div class="empty-state-icon">🧂</div><div class="empty-state-text">등록된 원가 항목이 없어요</div></div>';
