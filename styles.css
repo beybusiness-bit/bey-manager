@@ -277,6 +277,7 @@
     }
     .input-field:focus { border-color: var(--primary-yellow); }
     textarea.input-field { line-height: 1.5; }
+    select.input-field { height: 42px; cursor: pointer; }
 
     .modal-box input,
     .modal-box textarea {
