@@ -154,6 +154,27 @@
       transition: transform 0.1s, box-shadow 0.2s;
     }
 
+    /* 추가 CTA 버튼 (+ 새 항목, + 추가 등) */
+    .btn-accent {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 7px 14px;
+      border-radius: var(--button-radius, 8px);
+      border: none;
+      background: var(--accent-btn-bg, var(--primary-yellow));
+      color: var(--accent-btn-color, #1a1a1a);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity .15s, box-shadow .15s;
+      white-space: nowrap;
+    }
+    .btn-accent:hover { opacity: 0.82; box-shadow: var(--shadow-sm); }
+    .btn-accent.btn-sm { font-size: 12px; padding: 4px 10px; }
+
     .btn-primary:hover {
       transform: translateY(-1px);
       box-shadow: var(--shadow-md);

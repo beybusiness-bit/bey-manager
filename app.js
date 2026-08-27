@@ -7521,7 +7521,6 @@
       h += '<div class="bt-item-actions">';
       // 기간뷰에서 수정: 해당 날짜의 일뷰로 이동 후 편집 폼 열기
       h += '<button class="btn-icon" onclick="' + (date ? 'btEditItemInDay(\'' + cardDate + '\',' + idx + ')' : 'btStartEditItem(\'' + cardDate + '\',' + idx + ')') + '" title="수정">✏️</button>';
-      h += '<button class="btn-icon" onclick="btDuplicateItem(\'' + cardDate + '\',' + idx + ')" title="복제">📋</button>';
       h += '<button class="btn-icon" onclick="btDeleteItem(\'' + cardDate + '\',' + idx + ')" title="삭제">🗑️</button>';
       h += '</div></div>';
       h += '<div class="bt-item-nums">';
