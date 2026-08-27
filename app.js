@@ -1788,8 +1788,13 @@
       defaults.forEach(function(defItem) {
         if (!savedIds[defItem.id]) {
           var clone = JSON.parse(JSON.stringify(defItem));
-          clone.order = saved.length;
-          saved.push(clone);
+          // settings 항목 바로 앞에 삽입 (settings가 항상 마지막에 오도록)
+          var settingsIdx = saved.findIndex(function(s) { return s.id === 'settings'; });
+          if (settingsIdx >= 0) {
+            saved.splice(settingsIdx, 0, clone);
+          } else {
+            saved.push(clone);
+          }
         } else if (defItem.type === 'group' && defItem.children) {
           var savedGroup = saved.find(function(s) { return s.id === defItem.id; });
           defItem.children.forEach(function(defChild) {
@@ -1800,6 +1805,8 @@
           });
         }
       });
+      // order 재계산 (삽입 후 순서 정합)
+      saved.forEach(function(item, i) { item.order = i; });
       return saved;
     }
 
@@ -2235,6 +2242,7 @@
 
     function initMenuDraft() {
       menuDraft = JSON.parse(JSON.stringify(menus));
+      _mmReorder(); // 기존에 home/settings 위치가 꼬인 경우 즉시 교정
       renderMenuManager();
     }
 
@@ -2347,7 +2355,20 @@
     }
 
     // order 필드를 배열 위치 기준으로 재계산
+    // home은 항상 맨 앞, settings는 항상 맨 뒤로 고정
     function _mmReorder() {
+      // home을 맨 앞으로, settings를 맨 뒤로 이동
+      var homeIdx = menuDraft.findIndex(function(m) { return m.id === 'home'; });
+      var settingsIdx = menuDraft.findIndex(function(m) { return m.id === 'settings'; });
+      if (homeIdx > 0) {
+        var homeItem = menuDraft.splice(homeIdx, 1)[0];
+        menuDraft.unshift(homeItem);
+      }
+      settingsIdx = menuDraft.findIndex(function(m) { return m.id === 'settings'; });
+      if (settingsIdx >= 0 && settingsIdx !== menuDraft.length - 1) {
+        var settingsItem = menuDraft.splice(settingsIdx, 1)[0];
+        menuDraft.push(settingsItem);
+      }
       menuDraft.forEach(function(item, i) {
         item.order = i;
         if (item.children) item.children.forEach(function(child, j) { child.order = j; });
