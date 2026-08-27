@@ -174,12 +174,13 @@
     }
     .btn-accent:hover { opacity: 0.82; box-shadow: var(--shadow-sm); }
     .btn-accent.btn-sm { font-size: 12px; padding: 4px 10px; }
+    /* 보조 액션 버튼 — btn-accent와 동일 높이, 아웃라인 스타일 */
     .btn-secondary {
       display: inline-flex; align-items: center; justify-content: center; gap: 4px;
-      padding: 6px 14px; border-radius: var(--button-radius, 8px);
+      padding: 7px 14px; border-radius: var(--button-radius, 8px);
       border: 1.5px solid var(--border-color, #ddd);
       background: transparent; color: var(--text-primary);
-      font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
+      font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
       transition: background .12s, border-color .12s; white-space: nowrap;
     }
     .btn-secondary:hover { background: var(--bg-hover); border-color: var(--text-secondary); }
@@ -4147,7 +4148,8 @@
     /* ═══════════════════════════════════════════════
        모임 만들기 페이지
     ═══════════════════════════════════════════════ */
-    .moim-prog-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; margin-bottom: 12px; position: relative; }
+    .moim-prog-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    .moim-prog-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; position: relative; }
     .moim-prog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
     .moim-prog-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
     .moim-prog-emoji { font-size: 36px; line-height: 1; flex-shrink: 0; }
@@ -4193,6 +4195,7 @@
     @media (max-width: 768px) {
       .moim-kpi-row { grid-template-columns: 1fr 1fr; }
       .moim-kpi-row .moim-kpi:last-child { grid-column: span 2; }
+      .moim-prog-grid { grid-template-columns: 1fr; }
       .moim-ing-grid { grid-template-columns: 1fr 1fr; }
       .moim-log-row { grid-template-columns: 1fr 1fr; gap: 5px; }
       .moim-log-row > * { grid-column: span 1; }
