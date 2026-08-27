@@ -2892,7 +2892,8 @@ SQLite / PostgreSQL (데이터 저장)
           </div>
           <div class="form-group">
             <label class="form-label">프로그램명 <span style="color:#e55">*</span></label>
-            <input type="text" class="input-field" id="moimProgName" placeholder="예: 원데이 쿠킹 클래스">
+            <input type="text" class="input-field" id="moimProgName" placeholder="예: 원데이 쿠킹 클래스"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('moimProgDesc').focus();}">
           </div>
           <div class="form-group">
             <label class="form-label">설명</label>
@@ -2909,9 +2910,12 @@ SQLite / PostgreSQL (데이터 저장)
             </div>
           </div>
           <div class="form-group">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px">
               <label class="form-label" style="margin:0">1인 기준 재료</label>
-              <button type="button" class="btn-text" style="font-size:12px" onclick="moimAddRecipeRow()">+ 재료 추가</button>
+              <div style="display:flex;gap:8px">
+                <button type="button" class="btn-text" style="font-size:12px" onclick="moimOpenIngFromProg()">+ 새 재료 만들기</button>
+                <button type="button" class="btn-text" style="font-size:12px" onclick="moimAddRecipeRow()">+ 기존 재료 선택</button>
+              </div>
             </div>
             <div id="moimRecipeRows" style="display:flex;flex-direction:column;gap:6px"></div>
             <div id="moimCostPreview" style="margin-top:10px;padding:10px 12px;background:var(--bg-side);border-radius:8px;font-size:13px;display:none">
@@ -2933,7 +2937,8 @@ SQLite / PostgreSQL (데이터 저장)
           <input type="hidden" id="moimIngId">
           <div class="form-group">
             <label class="form-label">항목명 <span style="color:#e55">*</span></label>
-            <input type="text" class="input-field" id="moimIngName" placeholder="예: 밀가루">
+            <input type="text" class="input-field" id="moimIngName" placeholder="예: 밀가루"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();saveMoimIng();}">
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             <div class="form-group">
@@ -2963,33 +2968,37 @@ SQLite / PostgreSQL (데이터 저장)
         </div>
       </div>
 
-      <!-- 모임: 카테고리 추가/수정 모달 -->
+      <!-- 모임: 카테고리 관리 모달 -->
       <div id="moimCatModal" class="modal-overlay" onclick="if(event.target===this)closeMoimCatModal()">
-        <div class="modal-box" style="max-width:360px">
-          <h3 id="moimCatModalTitle">카테고리 추가</h3>
+        <div class="modal-box" style="max-width:380px">
+          <h3 id="moimCatModalTitle">카테고리 관리</h3>
           <input type="hidden" id="moimCatId">
+          <!-- 기존 카테고리 목록 -->
+          <div id="moimCatList" style="margin-bottom:16px;min-height:20px"></div>
+          <!-- 새 카테고리 추가 폼 -->
           <div class="form-group">
             <label class="form-label">카테고리명 <span style="color:#e55">*</span></label>
-            <input type="text" class="input-field" id="moimCatName" placeholder="예: 식재료">
+            <input type="text" class="input-field" id="moimCatName" placeholder="예: 식재료"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();saveMoimCat();}">
           </div>
           <div class="modal-actions">
-            <button class="btn-cancel" onclick="closeMoimCatModal()">취소</button>
-            <button class="btn-confirm" onclick="saveMoimCat()">저장</button>
+            <button class="btn-cancel" onclick="closeMoimCatModal()">닫기</button>
+            <button class="btn-confirm" onclick="saveMoimCat()">추가</button>
           </div>
         </div>
       </div>
 
       <!-- 모임: 입출고 기록 모달 -->
       <div id="moimLogModal" class="modal-overlay" onclick="if(event.target===this)closeMoimLogModal()">
-        <div class="modal-box" style="max-width:480px">
+        <div class="modal-box" style="max-width:560px;max-height:90vh;overflow-y:auto">
           <h3>입출고 기록</h3>
           <div class="form-group">
             <label class="form-label">날짜 <span style="color:#e55">*</span></label>
             <input type="date" class="input-field" id="moimLogDate">
           </div>
-          <div id="moimLogRows" style="display:flex;flex-direction:column;gap:8px"></div>
-          <button type="button" class="btn-text" style="font-size:13px;margin-top:6px" onclick="moimAddLogRow()">+ 항목 추가</button>
-          <div class="modal-actions" style="margin-top:14px">
+          <div id="moimLogRows" style="display:flex;flex-direction:column;gap:12px;margin-bottom:8px"></div>
+          <button type="button" class="btn-text" style="font-size:13px;margin-bottom:4px" onclick="moimAddLogRow()">+ 항목 추가</button>
+          <div class="modal-actions" style="margin-top:10px">
             <button class="btn-cancel" onclick="closeMoimLogModal()">취소</button>
             <button class="btn-confirm" onclick="saveMoimLog()">저장</button>
           </div>

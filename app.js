@@ -12617,6 +12617,7 @@
     var moimRecipes = [];      // { id, program_id, ingredient_id, qty_per_person, created_at }
     var moimInventoryLog = []; // { id, log_date, ingredient_id, type, quantity, order_date, memo, created_at }
     var moimTab = 'programs';  // 'programs' | 'ingredients' | 'stock' | 'history'
+    var _moimProgCtx = null;   // 프로그램 모달에서 재료 추가 시 상태 저장
 
     function moimGenId(prefix) {
       return prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
@@ -12677,7 +12678,7 @@
       if (!c) return;
       // 탭 UI (기존 앱 패턴)
       var html = '<div class="tab-nav" id="moimTabNav">';
-      [['programs','📋 프로그램'],['ingredients','🧂 원가 항목'],['stock','📦 재고 현황'],['history','📜 이력']].forEach(function(t) {
+      [['programs','📋 프로그램'],['ingredients','🥕 재료'],['stock','📦 재고 현황'],['history','📜 입출고 내역']].forEach(function(t) {
         html += '<button class="tab-btn' + (moimTab === t[0] ? ' active' : '') + '" onclick="switchMoimTab(\'' + t[0] + '\')">' + t[1] + '</button>';
       });
       html += '</div>';
@@ -12715,7 +12716,7 @@
         if (prog.description) html += '<div class="moim-prog-desc">' + escapeHtml(prog.description) + '</div>';
         if (prog.max_participants) html += '<div class="moim-prog-desc">최대 ' + prog.max_participants + '명</div>';
         html += '</div></div>';
-        html += '<div style="display:flex;gap:6px;flex-shrink:0">';
+        html += '<div class="moim-prog-actions">';
         html += '<button class="btn-icon" onclick="openMoimProgModal(\'' + prog.id + '\')" title="수정">✏️</button>';
         html += '<button class="btn-icon" onclick="deleteMoimProg(\'' + prog.id + '\')" title="삭제">🗑️</button>';
         html += '</div></div>';
@@ -12775,9 +12776,7 @@
     // ── 탭3: 재고 현황 ──
     function renderMoimStock() {
       var ings = moimIngredients.filter(function(i) { return i.is_active !== false; });
-      var html = '<div style="display:flex;justify-content:flex-end;margin-bottom:14px">';
-      html += '<button class="btn-accent" onclick="openMoimLogModal()">+ 입출고 기록</button>';
-      html += '</div>';
+      var html = '';
       if (!ings.length) {
         return html + '<div class="empty-state"><div class="empty-state-icon">📦</div><div class="empty-state-text">원가 항목을 먼저 등록하세요</div></div>';
       }
@@ -12961,6 +12960,27 @@
 
     function closeMoimIngModal() { document.getElementById('moimIngModal').classList.remove('show'); }
 
+    // 프로그램 모달에서 재료 바로 만들기
+    function moimOpenIngFromProg() {
+      var recipe = [];
+      document.querySelectorAll('#moimRecipeRows > div').forEach(function(row) {
+        var ingEl = row.querySelector('.moim-rr-ing');
+        var qtyEl = row.querySelector('.moim-rr-qty');
+        if (ingEl && qtyEl) recipe.push({ ingId: ingEl.value, qty: qtyEl.value });
+      });
+      _moimProgCtx = {
+        id: document.getElementById('moimProgId').value,
+        emoji: document.getElementById('moimProgEmojiBtn').textContent.trim(),
+        name: document.getElementById('moimProgName').value,
+        desc: document.getElementById('moimProgDesc').value,
+        price: document.getElementById('moimProgPrice').value,
+        maxP: document.getElementById('moimProgMax').value,
+        recipe: recipe
+      };
+      closeMoimProgModal();
+      openMoimIngModal();
+    }
+
     function moimUpdateUnitCost() {
       var pqty = parseFloat(document.getElementById('moimIngPQty').value);
       var price = parseFloat(document.getElementById('moimIngPrice').value);
@@ -12978,16 +12998,35 @@
       var id = document.getElementById('moimIngId').value;
       if (!name || !unit || isNaN(pqty) || isNaN(price)) { showToast('필수 항목을 모두 입력해주세요', 'warning'); return; }
       var now = new Date().toISOString();
+      var newIngId = null;
       if (id) {
         var ing = moimIngredients.find(function(i) { return i.id === id; });
         if (ing) { ing.name = name; ing.unit = unit; ing.purchase_unit_qty = pqty; ing.price_per_unit = price; ing.category_id = catId; }
         showToast('항목 수정 완료', 'success');
       } else {
-        moimIngredients.push({ id: moimGenId('ing'), name: name, unit: unit, purchase_unit_qty: pqty, price_per_unit: price, category_id: catId, is_active: true, created_at: now });
+        newIngId = moimGenId('ing');
+        moimIngredients.push({ id: newIngId, name: name, unit: unit, purchase_unit_qty: pqty, price_per_unit: price, category_id: catId, is_active: true, created_at: now });
         showToast('항목 추가 완료', 'success');
       }
       closeMoimIngModal();
       saveMoimData();
+      // 프로그램 모달에서 재료 만들기로 진입한 경우 → 프로그램 모달 복원
+      if (_moimProgCtx) {
+        var ctx = _moimProgCtx;
+        _moimProgCtx = null;
+        openMoimProgModal(ctx.id || undefined);
+        document.getElementById('moimProgEmojiBtn').textContent = ctx.emoji;
+        document.getElementById('moimProgName').value = ctx.name;
+        document.getElementById('moimProgDesc').value = ctx.desc;
+        document.getElementById('moimProgPrice').value = ctx.price;
+        document.getElementById('moimProgMax').value = ctx.maxP;
+        var rowsEl = document.getElementById('moimRecipeRows');
+        rowsEl.innerHTML = '';
+        ctx.recipe.forEach(function(r) { moimAddRecipeRow(r.ingId, r.qty); });
+        if (newIngId) moimAddRecipeRow(newIngId, '');
+        moimUpdateCostPreview();
+        return;
+      }
       renderMoimPage();
     }
 
@@ -13010,7 +13049,7 @@
     // ── 카테고리 모달 ──
     function openMoimCatModal(id) {
       var modal = document.getElementById('moimCatModal');
-      document.getElementById('moimCatModalTitle').textContent = id ? '카테고리 수정' : '카테고리 추가';
+      document.getElementById('moimCatModalTitle').textContent = '카테고리 관리';
       document.getElementById('moimCatId').value = id || '';
       if (id) {
         var cat = moimCategories.find(function(c) { return c.id === id; });
@@ -13018,10 +13057,33 @@
       } else {
         document.getElementById('moimCatName').value = '';
       }
+      _renderMoimCatList();
       modal.classList.add('show');
+      setTimeout(function() { var el = document.getElementById('moimCatName'); if (el) el.focus(); }, 60);
     }
 
-    function closeMoimCatModal() { document.getElementById('moimCatModal').classList.remove('show'); }
+    function _renderMoimCatList() {
+      var listEl = document.getElementById('moimCatList');
+      if (!listEl) return;
+      if (!moimCategories.length) {
+        listEl.innerHTML = '<div style="color:var(--text-secondary);font-size:13px;padding:6px 0">아직 카테고리가 없어요</div>';
+        return;
+      }
+      listEl.innerHTML = moimCategories.map(function(cat) {
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border-color)">'
+          + '<span style="font-size:14px;font-weight:600">' + escapeHtml(cat.name) + '</span>'
+          + '<div style="display:flex;gap:4px">'
+          + '<button class="btn-icon" onclick="openMoimCatModal(\'' + cat.id + '\')" title="수정">✏️</button>'
+          + '<button class="btn-icon" onclick="deleteMoimCat(\'' + cat.id + '\')" title="삭제">🗑️</button>'
+          + '</div></div>';
+      }).join('');
+    }
+
+    function closeMoimCatModal() {
+      document.getElementById('moimCatModal').classList.remove('show');
+      document.getElementById('moimCatId').value = '';
+      document.getElementById('moimCatName').value = '';
+    }
 
     function saveMoimCat() {
       var name = document.getElementById('moimCatName').value.trim();
@@ -13030,14 +13092,30 @@
       if (id) {
         var cat = moimCategories.find(function(c) { return c.id === id; });
         if (cat) cat.name = name;
+        showToast('카테고리 수정 완료', 'success');
       } else {
         moimCategories.push({ id: moimGenId('cat'), name: name, created_at: new Date().toISOString() });
+        showToast('카테고리 추가 완료', 'success');
       }
-      closeMoimCatModal();
       saveMoimData();
-      // 카테고리 변경 후 원가 항목 탭으로 복귀
-      moimTab = 'ingredients';
-      renderMoimPage();
+      // 입력 초기화 후 목록 갱신 (모달은 열어두기)
+      document.getElementById('moimCatId').value = '';
+      document.getElementById('moimCatName').value = '';
+      _renderMoimCatList();
+      setTimeout(function() { var el = document.getElementById('moimCatName'); if (el) el.focus(); }, 60);
+    }
+
+    function deleteMoimCat(id) {
+      var cat = moimCategories.find(function(c) { return c.id === id; });
+      if (!cat) return;
+      showConfirm('카테고리 삭제', escapeHtml(cat.name) + '을(를) 삭제할까요?<br><small style="color:var(--text-secondary)">이 카테고리 소속 재료는 분류 없음으로 변경됩니다.</small>', function(ok) {
+        if (!ok) return;
+        moimCategories = moimCategories.filter(function(c) { return c.id !== id; });
+        moimIngredients.forEach(function(i) { if (i.category_id === id) i.category_id = null; });
+        saveMoimData();
+        _renderMoimCatList();
+        showToast('카테고리 삭제 완료', 'success');
+      });
     }
 
     // ── 입출고 기록 모달 ──
@@ -13053,29 +13131,52 @@
 
     function moimAddLogRow() {
       var container = document.getElementById('moimLogRows');
-      var opts = moimIngredients.filter(function(i) { return i.is_active !== false; }).map(function(i) {
-        return '<option value="' + i.id + '">' + escapeHtml(i.name) + ' (' + i.unit + ')</option>';
+      var ings = moimIngredients.filter(function(i) { return i.is_active !== false; });
+      var opts = ings.map(function(i) {
+        var stk = moimCalcStock(i.id);
+        return '<option value="' + i.id + '">' + escapeHtml(i.name) + ' (' + i.unit + ', 현재: ' + stk + ')' + '</option>';
       }).join('');
       var div = document.createElement('div');
-      div.className = 'moim-log-row';
-      div.innerHTML = '<select class="input-field moim-lr-ing"><option value="">항목 선택</option>' + opts + '</select>'
-        + '<select class="input-field moim-lr-type"><option value="입고">입고</option><option value="사용">사용</option><option value="조정">조정</option></select>'
-        + '<input type="number" class="input-field moim-lr-qty" placeholder="수량" min="0" step="any">'
-        + '<input type="text" class="input-field moim-lr-memo" placeholder="메모">'
-        + '<button type="button" class="btn-icon" onclick="this.parentElement.remove()">✕</button>';
+      div.className = 'moim-log-entry';
+      div.innerHTML =
+        '<div class="moim-log-entry-top">'
+        + '<div class="form-group" style="margin:0;flex:1">'
+        + '<label class="form-label">재료</label>'
+        + '<select class="input-field moim-lr-ing"><option value="">선택</option>' + opts + '</select>'
+        + '</div>'
+        + '<button type="button" class="btn-icon" style="margin-top:22px;flex-shrink:0" onclick="this.closest(\'.moim-log-entry\').remove()" title="삭제">✕</button>'
+        + '</div>'
+        + '<div class="moim-log-entry-mid">'
+        + '<div class="form-group" style="margin:0">'
+        + '<label class="form-label">구분</label>'
+        + '<select class="input-field moim-lr-type">'
+        + '<option value="입고">입고 (증가)</option>'
+        + '<option value="사용">사용 (감소)</option>'
+        + '<option value="조정">조정 (절대값)</option>'
+        + '</select>'
+        + '</div>'
+        + '<div class="form-group" style="margin:0">'
+        + '<label class="form-label">수량</label>'
+        + '<input type="number" class="input-field moim-lr-qty" placeholder="0" min="0" step="1">'
+        + '</div>'
+        + '</div>'
+        + '<div class="form-group" style="margin:0;margin-top:8px">'
+        + '<label class="form-label">메모 (선택)</label>'
+        + '<input type="text" class="input-field moim-lr-memo" placeholder="예: 마켓컬리 구매">'
+        + '</div>';
       container.appendChild(div);
     }
 
     function saveMoimLog() {
       var date = document.getElementById('moimLogDate').value;
       if (!date) { showToast('날짜를 입력해주세요', 'warning'); return; }
-      var rows = document.querySelectorAll('#moimLogRows .moim-log-row');
+      var rows = document.querySelectorAll('#moimLogRows .moim-log-entry');
       var entries = [];
       var valid = true;
       rows.forEach(function(row) {
         var ingId = row.querySelector('.moim-lr-ing').value;
         var type = row.querySelector('.moim-lr-type').value;
-        var qty = parseFloat(row.querySelector('.moim-lr-qty').value);
+        var qty = parseInt(row.querySelector('.moim-lr-qty').value, 10);
         var memo = row.querySelector('.moim-lr-memo').value.trim();
         if (!ingId || isNaN(qty) || qty <= 0) { valid = false; return; }
         var quantity = type === '사용' ? -qty : qty;
