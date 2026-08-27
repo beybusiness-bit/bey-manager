@@ -4116,12 +4116,15 @@
     /* ═══════════════════════════════════════════════
        모임 만들기 페이지
     ═══════════════════════════════════════════════ */
-    .moim-prog-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; margin-bottom: 12px; }
+    .moim-prog-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; margin-bottom: 12px; position: relative; }
     .moim-prog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
     .moim-prog-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
     .moim-prog-emoji { font-size: 36px; line-height: 1; flex-shrink: 0; }
     .moim-prog-name { font-size: 17px; font-weight: 800; }
     .moim-prog-desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    .moim-prog-actions { display: flex; gap: 6px; flex-shrink: 0; opacity: 0; transition: opacity .15s ease; }
+    .moim-prog-card:hover .moim-prog-actions { opacity: 1; }
+    @media (hover: none) { .moim-prog-actions { opacity: 1; } }
     .moim-kpi-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 14px 0; }
     .moim-kpi { }
     .moim-kpi-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 3px; }
@@ -4147,6 +4150,9 @@
     .moim-stock-neg { color: #e53935; font-weight: 700; }
     .moim-stock-pos { color: #2a7a00; font-weight: 700; }
     .moim-log-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1.5fr auto; gap: 6px; align-items: center; }
+    .moim-log-entry { background: var(--bg-side); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; }
+    .moim-log-entry-top { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 10px; }
+    .moim-log-entry-mid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .moim-cat-chips { display: flex; flex-wrap: wrap; gap: 8px; }
     .moim-cat-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; border: 1.5px solid var(--border-color); background: var(--bg-card); font-size: 13px; font-weight: 600; cursor: pointer; }
     .moim-cat-chip:hover { background: var(--bg-hover); }
@@ -4157,5 +4163,6 @@
       .moim-log-row { grid-template-columns: 1fr 1fr; gap: 5px; }
       .moim-log-row > * { grid-column: span 1; }
       .moim-log-row input[placeholder="메모"] { grid-column: span 2; }
+      .moim-log-entry-mid { grid-template-columns: 1fr; }
       .moim-log-row button { grid-column: span 2; }
     }
