@@ -1727,6 +1727,23 @@
           }
         }
       });
+
+      // PWA 복귀 시 강제 sync (pageshow는 iOS PWA에서 visibilitychange보다 안정적)
+      window.addEventListener('pageshow', function(e) {
+        if (e.persisted && window.FS && FS.isConnected()) {
+          FS.loadAll().then(function(ok) { if (ok) renderCurrentPageIfNeeded(); });
+        }
+      });
+      // 30초 주기 background polling — 다른 기기 수정사항 자동 반영
+      setInterval(function() {
+        if (!document.hidden && window.FS && FS.isConnected()) {
+          var hasOpenModal = !!document.querySelector('.modal-overlay.show, .emoji-picker-overlay');
+          if (!hasOpenModal) {
+            FS.loadAll().then(function(ok) { if (ok) renderCurrentPageIfNeeded(); });
+          }
+        }
+      }, 30000);
+
       startNotifyScheduler();
       renderSidebar();
       renderMenuManager();
@@ -9868,6 +9885,8 @@
         + ' ondragstart="workDragStart(event,\'' + item.id + '\',\'' + status + '\')"'
         + ' ondragend="workDragEnd(event)"'
         + ' onclick="showWorkItemDetail(\'' + item.id + '\')">';
+      /* 모바일 드래그 핸들 (터치 전용) */
+      html += '<div class="work-drag-handle" ontouchstart="workTouchDragStart(event,\'' + item.id + '\',\'' + status + '\')" onclick="event.stopPropagation()">⠿</div>';
       /* 상위 할일 링크 */
       if (parent) {
         html += '<div class="work-parent-link">↗ ' + escapeHtml(parent.emoji || '📋') + ' ' + escapeHtml(parent.title) + '</div>';
@@ -10123,6 +10142,97 @@
 
       saveWorkItems();
       renderWorkView();
+    }
+
+    // ── 모바일 터치 DnD ──
+    var _wTouchDragId = null;
+    var _wTouchDragStatus = null;
+    var _wTouchGhost = null;
+    var _wTouchOffsetX = 0;
+    var _wTouchOffsetY = 0;
+
+    function workTouchDragStart(e, id, status) {
+      e.stopPropagation();
+      var touch = e.touches[0];
+      var card = document.querySelector('.work-kanban-card[data-id="' + id + '"]');
+      if (!card) return;
+      _wTouchDragId = id;
+      _wTouchDragStatus = status;
+      var rect = card.getBoundingClientRect();
+      _wTouchOffsetX = touch.clientX - rect.left;
+      _wTouchOffsetY = touch.clientY - rect.top;
+      /* 고스트 생성 */
+      _wTouchGhost = card.cloneNode(true);
+      _wTouchGhost.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;opacity:0.85;'
+        + 'width:' + rect.width + 'px;box-shadow:0 8px 24px rgba(0,0,0,0.18);'
+        + 'left:' + (touch.clientX - _wTouchOffsetX) + 'px;top:' + (touch.clientY - _wTouchOffsetY) + 'px;';
+      document.body.appendChild(_wTouchGhost);
+      card.style.opacity = '0.35';
+      document.addEventListener('touchmove', _wTouchMove, { passive: false });
+      document.addEventListener('touchend', _wTouchEnd, { once: true });
+    }
+
+    function _wTouchMove(e) {
+      if (!_wTouchGhost) return;
+      e.preventDefault();
+      var touch = e.touches[0];
+      _wTouchGhost.style.left = (touch.clientX - _wTouchOffsetX) + 'px';
+      _wTouchGhost.style.top  = (touch.clientY - _wTouchOffsetY) + 'px';
+      /* 드롭 인디케이터 */
+      _wTouchGhost.style.display = 'none';
+      var el = document.elementFromPoint(touch.clientX, touch.clientY);
+      _wTouchGhost.style.display = '';
+      document.querySelectorAll('.work-kanban-col').forEach(function(c) { c.classList.remove('drag-over'); });
+      document.querySelectorAll('.work-drop-indicator').forEach(function(d) { d.remove(); });
+      __workDragTargetId = null; __workDragInsertBefore = false;
+      if (!el) return;
+      var col = el.closest ? el.closest('.work-kanban-col') : null;
+      if (!col) return;
+      col.classList.add('drag-over');
+      var targetCard = el.closest ? el.closest('.work-kanban-card') : null;
+      var body = col.querySelector('.work-kanban-body');
+      if (!body) return;
+      var line = document.createElement('div');
+      line.className = 'work-drop-indicator';
+      if (targetCard && targetCard.dataset.id !== _wTouchDragId) {
+        var rect2 = targetCard.getBoundingClientRect();
+        var before = touch.clientY < (rect2.top + rect2.height / 2);
+        __workDragTargetId = targetCard.dataset.id;
+        __workDragInsertBefore = before;
+        body.insertBefore(line, before ? targetCard : targetCard.nextSibling);
+      } else {
+        body.appendChild(line);
+      }
+    }
+
+    function _wTouchEnd(e) {
+      document.removeEventListener('touchmove', _wTouchMove);
+      if (_wTouchGhost) { _wTouchGhost.remove(); _wTouchGhost = null; }
+      document.querySelectorAll('.work-kanban-col').forEach(function(c) { c.classList.remove('drag-over'); });
+      document.querySelectorAll('.work-drop-indicator').forEach(function(d) { d.remove(); });
+      var card = document.querySelector('.work-kanban-card[data-id="' + _wTouchDragId + '"]');
+      if (card) card.style.opacity = '';
+      var touch = e.changedTouches[0];
+      /* 고스트 잠깐 숨기고 드롭 대상 찾기 */
+      var el = document.elementFromPoint(touch.clientX, touch.clientY);
+      var col = el && (el.closest ? el.closest('.work-kanban-col') : null);
+      if (!col || !_wTouchDragId) { _wTouchDragId = null; _wTouchDragStatus = null; return; }
+      var targetStatus = col.dataset.status;
+      var id = _wTouchDragId;
+      var srcStatus = _wTouchDragStatus;
+      _wTouchDragId = null; _wTouchDragStatus = null;
+      if (targetStatus !== srcStatus) {
+        setWorkItemStatus(id, targetStatus);
+      } else if (__workDragTargetId && __workDragTargetId !== id) {
+        var item2 = workItems.find(function(it) { return it.id === id; });
+        var dragIdx = workItems.findIndex(function(it) { return it.id === id; });
+        workItems.splice(dragIdx, 1);
+        var targetIdx = workItems.findIndex(function(it) { return it.id === __workDragTargetId; });
+        workItems.splice(__workDragInsertBefore ? targetIdx : targetIdx + 1, 0, item2);
+        saveWorkItems();
+        renderWorkView();
+      }
+      __workDragTargetId = null; __workDragInsertBefore = false;
     }
 
     // ── 단계 B: 할일 추가/수정/삭제/상세 ──
