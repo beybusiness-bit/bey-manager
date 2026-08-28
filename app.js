@@ -9661,7 +9661,8 @@
       });
       var normalSlots = getDailyWorkLimit(targetDate);
       var normalCount = targetItems.filter(function(it) { return !it.isBonus; }).length;
-      if (!item.isBonus && normalCount >= normalSlots) {
+      /* 연결 할일(parentId 있음)은 한도 제한을 받지 않음 */
+      if (!item.isBonus && !item.parentId && normalCount >= normalSlots) {
         showAlert('이동 불가', label + '의 일반 할일 슬롯이 가득 차 있습니다.');
         return;
       }
@@ -10253,7 +10254,8 @@
     function addConnectedTask(parentId) {
       var parent = workItems.find(function(it) { return it.id === parentId; });
       if (!parent) return;
-      openWorkItemModal(parent.date, false, parentId);
+      /* 연결 할일의 기본 날짜는 부모 날짜가 아닌 오늘 */
+      openWorkItemModal(today(), false, parentId);
     }
 
     function showEditWorkItemModal(id) {
