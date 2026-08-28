@@ -2140,6 +2140,7 @@
       }
 
       updateActiveMenu();
+      updateAllPageHeaders();
       updateMobileTopTitle();
 
       if (pageId === 'home') renderHomePage();
@@ -2153,6 +2154,21 @@
       if (dnFab) dnFab.style.display = (pageId === 'devnotes') ? 'flex' : 'none';
 
       closeSidebar();  // 모바일에서 사이드바 자동 닫기 (데스크탑에서는 무효)
+    }
+
+    function updateAllPageHeaders() {
+      // 메뉴 아이콘/이름이 바뀔 때 각 페이지 .page-header h2도 함께 갱신
+      function applyToMenu(m) {
+        if (m.type === 'page' && m.id) {
+          var pageEl = document.getElementById(m.id + 'Page');
+          if (pageEl) {
+            var h2 = pageEl.querySelector('.page-header h2');
+            if (h2) h2.textContent = (m.icon ? m.icon + ' ' : '') + m.name;
+          }
+        }
+        if (m.children) m.children.forEach(applyToMenu);
+      }
+      menus.forEach(applyToMenu);
     }
 
     function updateMobileTopTitle() {
@@ -2377,19 +2393,19 @@
 
     function updateMenuIcon(menuId, icon) {
       const menu = menus.find(function(m) { return m.id === menuId; });
-      if (menu) { menu.icon = icon; saveMenus(); renderSidebar(); renderMenuManager(); }
+      if (menu) { menu.icon = icon; saveMenus(); renderSidebar(); renderMenuManager(); updateAllPageHeaders(); updateMobileTopTitle(); }
     }
 
     function updateMenuName(menuId, name) {
       const menu = menus.find(function(m) { return m.id === menuId; });
-      if (menu) { menu.name = name; saveMenus(); renderSidebar(); renderMenuManager(); }
+      if (menu) { menu.name = name; saveMenus(); renderSidebar(); renderMenuManager(); updateAllPageHeaders(); updateMobileTopTitle(); }
     }
 
     function updateChildIcon(groupId, childId, icon) {
       const group = menus.find(function(m) { return m.id === groupId; });
       if (group && group.children) {
         const child = group.children.find(function(c) { return c.id === childId; });
-        if (child) { child.icon = icon; saveMenus(); renderSidebar(); renderMenuManager(); }
+        if (child) { child.icon = icon; saveMenus(); renderSidebar(); renderMenuManager(); updateAllPageHeaders(); updateMobileTopTitle(); }
       }
     }
 
@@ -2397,7 +2413,7 @@
       const group = menus.find(function(m) { return m.id === groupId; });
       if (group && group.children) {
         const child = group.children.find(function(c) { return c.id === childId; });
-        if (child) { child.name = name; saveMenus(); renderSidebar(); renderMenuManager(); }
+        if (child) { child.name = name; saveMenus(); renderSidebar(); renderMenuManager(); updateAllPageHeaders(); updateMobileTopTitle(); }
       }
     }
 
@@ -10291,6 +10307,17 @@
           if (dateInput) {
             var newDate = dateInput.value || null;
             if (newDate !== item.date) {
+              /* 날짜로 이동할 때 일반 할일 최대 개수 체크 */
+              if (newDate && !item.isBonus && !item.parentId) {
+                var limit = getDailyWorkLimit(newDate);
+                var countOnTarget = workItems.filter(function(it) {
+                  return it.date === newDate && !it.isBonus && !it.parentId && it.id !== item.id;
+                }).length;
+                if (countOnTarget >= limit) {
+                  showAlert('날짜 변경 불가', newDate + '의 일반 할일이 최대(' + limit + '개)에 도달했습니다.\n보너스 할일로 추가하거나 다른 날짜를 선택해주세요.');
+                  return;
+                }
+              }
               logWorkEvent('date_changed', item, item.date || 'basket', newDate || 'basket');
               item.date = newDate;
               if (!newDate) item.isBonus = false; /* 바구니로 이동 시 보너스 해제 */
