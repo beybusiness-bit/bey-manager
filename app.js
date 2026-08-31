@@ -9768,7 +9768,7 @@
       if (!item.isBonus && !item.parentId && normalCount >= normalSlots) {
         var availBonus = getAvailableBonusSlots(targetDate);
         var potentialParents = workItems.filter(function(it) {
-          return it.date === targetDate && !it.parentId && it.id !== id;
+          return it.date === targetDate && !it.parentId && it.id !== id && getWorkStatus(it) === 'done';
         });
         if (availBonus <= 0 && potentialParents.length === 0) {
           showAlert('이동 불가', label + '의 일반 할일 슬롯이 가득 찼고, 보너스/연결 할일 슬롯도 없습니다.');
@@ -10538,7 +10538,7 @@
                 if (countOnTarget >= limit) {
                   var _ab = getAvailableBonusSlots(newDate);
                   var _pp = workItems.filter(function(it) {
-                    return it.date === newDate && !it.parentId && it.id !== item.id;
+                    return it.date === newDate && !it.parentId && it.id !== item.id && getWorkStatus(it) === 'done';
                   });
                   if (_ab <= 0 && _pp.length === 0) {
                     showAlert('날짜 변경 불가', newDate + '의 일반 할일이 최대(' + limit + '개)에 도달했습니다.');
