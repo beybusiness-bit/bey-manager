@@ -9678,23 +9678,43 @@
 
       var overlay = document.createElement('div');
       overlay.id = '_workConvertOverlay';
-      overlay.style.cssText = 'position:fixed;inset:0;z-index:2100;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;padding:16px;';
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:2100;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:16px;';
 
       var box = document.createElement('div');
-      box.style.cssText = 'background:var(--card-bg);border-radius:14px;padding:20px;width:100%;max-width:360px;max-height:80vh;overflow-y:auto;';
-      box.innerHTML = '<h3 style="margin:0 0 6px;font-size:15px;">일반 슬롯 가득 참</h3>'
-        + '<p style="margin:0 0 16px;font-size:13px;color:var(--text-secondary);">이 날짜의 일반 할일이 최대 개수에 도달했습니다.<br>다음 방식으로 추가할 수 있습니다.</p>'
+      /* 배경은 CSS 변수 대신 직접 지정해야 투명도 영향을 안 받음 */
+      box.style.cssText = 'background:#fff;border-radius:14px;padding:22px;width:100%;max-width:360px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.28);';
+      /* 다크 모드 대응 */
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches) {
+        box.style.background = '#2a2a2a';
+      }
+      var rootTheme = document.documentElement.getAttribute('data-theme');
+      if (rootTheme === 'dark') box.style.background = '#2a2a2a';
+      else if (rootTheme === 'light') box.style.background = '#fff';
+
+      box.innerHTML = '<h3 style="margin:0 0 6px;font-size:15px;font-weight:700;">일반 슬롯 가득 참</h3>'
+        + '<p style="margin:0 0 16px;font-size:13px;opacity:0.65;">이 날짜의 일반 할일이 최대 개수에 도달했습니다.<br>다음 방식으로 추가할 수 있습니다.</p>'
         + '<div id="_wcBtnArea" style="display:flex;flex-direction:column;gap:8px;"></div>'
         + '<div id="_wcParentArea" style="display:none;margin-top:14px;"></div>'
-        + '<button style="margin-top:14px;width:100%;padding:9px;border-radius:var(--button-radius,8px);border:1px solid var(--border-color);background:transparent;cursor:pointer;font-size:13px;" id="_wcCancelBtn">취소</button>';
+        + '<button style="margin-top:12px;width:100%;padding:9px;border-radius:var(--button-radius,8px);border:1px solid rgba(128,128,128,0.3);background:transparent;cursor:pointer;font-size:13px;opacity:0.7;" id="_wcCancelBtn">취소</button>';
 
       var btnArea = box.querySelector('#_wcBtnArea');
       var parentArea = box.querySelector('#_wcParentArea');
       var cancelBtn = box.querySelector('#_wcCancelBtn');
+      var inParentStep = false;
 
       function close() { overlay.remove(); }
+
+      function showMainStep() {
+        inParentStep = false;
+        btnArea.style.display = 'flex';
+        parentArea.style.display = 'none';
+        parentArea.innerHTML = '';
+        cancelBtn.textContent = '취소';
+        cancelBtn.onclick = close;
+      }
+
       cancelBtn.onclick = close;
-      overlay.onclick = function(e) { if (e.target === overlay) close(); };
+      overlay.onclick = function(e) { if (e.target === overlay) { if (inParentStep) showMainStep(); else close(); } };
 
       if (availBonus > 0) {
         var bonusBtn = document.createElement('button');
@@ -9707,17 +9727,19 @@
       if (potentialParents.length > 0) {
         var linkBtn = document.createElement('button');
         linkBtn.textContent = '🔗 연결 할일로 추가';
-        linkBtn.style.cssText = 'width:100%;padding:10px;border-radius:var(--button-radius,8px);border:1.5px solid var(--border-color);background:transparent;color:var(--text-primary);font-size:13px;font-weight:600;cursor:pointer;';
+        linkBtn.style.cssText = 'width:100%;padding:10px;border-radius:var(--button-radius,8px);border:1.5px solid rgba(128,128,128,0.35);background:transparent;font-size:13px;font-weight:600;cursor:pointer;';
         linkBtn.onclick = function() {
+          inParentStep = true;
           btnArea.style.display = 'none';
-          cancelBtn.style.marginTop = '8px';
           parentArea.style.display = '';
-          parentArea.innerHTML = '<p style="font-size:13px;font-weight:600;margin:0 0 8px;">어떤 할일의 연결 할일로 추가할까요?</p>'
+          cancelBtn.textContent = '← 이전';
+          cancelBtn.onclick = showMainStep;
+          parentArea.innerHTML = '<p style="font-size:13px;font-weight:600;margin:0 0 10px;">어떤 할일의 연결 할일로 추가할까요?</p>'
             + '<div style="display:flex;flex-direction:column;gap:6px;">'
             + potentialParents.map(function(p) {
-                return '<button class="_wc-parent-btn" data-pid="' + p.id + '" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;border:1.5px solid var(--border-color);background:var(--bg-main);cursor:pointer;font-size:13px;text-align:left;">'
-                  + '<span style="font-size:18px;">' + (p.emoji || '📋') + '</span>'
-                  + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(p.title) + '</span>'
+                return '<button class="_wc-parent-btn" data-pid="' + p.id + '" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;border:1.5px solid rgba(128,128,128,0.25);background:rgba(128,128,128,0.06);cursor:pointer;font-size:13px;text-align:left;width:100%;">'
+                  + '<span style="font-size:18px;flex-shrink:0;">' + (p.emoji || '📋') + '</span>'
+                  + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;">' + escapeHtml(p.title) + '</span>'
                   + '</button>';
               }).join('')
             + '</div>';
@@ -9728,7 +9750,6 @@
         btnArea.appendChild(linkBtn);
       }
 
-      box.appendChild(document.createElement('div'));
       overlay.appendChild(box);
       document.body.appendChild(overlay);
     }
