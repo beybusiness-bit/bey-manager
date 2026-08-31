@@ -9669,6 +9669,70 @@
       showToast('🧺 바구니로 이동했습니다');
     }
 
+    /* ── 슬롯 초과 이동 다이얼로그 (공통) ──
+       onDone(mode, parentId)  mode = 'bonus' | 'linked'
+    */
+    function _showWorkMoveConvertDialog(itemId, targetDate, availBonus, potentialParents, onDone) {
+      var existing = document.getElementById('_workConvertOverlay');
+      if (existing) existing.remove();
+
+      var overlay = document.createElement('div');
+      overlay.id = '_workConvertOverlay';
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:2100;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;padding:16px;';
+
+      var box = document.createElement('div');
+      box.style.cssText = 'background:var(--card-bg);border-radius:14px;padding:20px;width:100%;max-width:360px;max-height:80vh;overflow-y:auto;';
+      box.innerHTML = '<h3 style="margin:0 0 6px;font-size:15px;">일반 슬롯 가득 참</h3>'
+        + '<p style="margin:0 0 16px;font-size:13px;color:var(--text-secondary);">이 날짜의 일반 할일이 최대 개수에 도달했습니다.<br>다음 방식으로 추가할 수 있습니다.</p>'
+        + '<div id="_wcBtnArea" style="display:flex;flex-direction:column;gap:8px;"></div>'
+        + '<div id="_wcParentArea" style="display:none;margin-top:14px;"></div>'
+        + '<button style="margin-top:14px;width:100%;padding:9px;border-radius:var(--button-radius,8px);border:1px solid var(--border-color);background:transparent;cursor:pointer;font-size:13px;" id="_wcCancelBtn">취소</button>';
+
+      var btnArea = box.querySelector('#_wcBtnArea');
+      var parentArea = box.querySelector('#_wcParentArea');
+      var cancelBtn = box.querySelector('#_wcCancelBtn');
+
+      function close() { overlay.remove(); }
+      cancelBtn.onclick = close;
+      overlay.onclick = function(e) { if (e.target === overlay) close(); };
+
+      if (availBonus > 0) {
+        var bonusBtn = document.createElement('button');
+        bonusBtn.textContent = '⭐ 보너스 할일로 추가 (' + availBonus + '개 가능)';
+        bonusBtn.style.cssText = 'width:100%;padding:10px;border-radius:var(--button-radius,8px);border:none;background:var(--primary-yellow,#ffde59);color:#1a1a1a;font-size:13px;font-weight:600;cursor:pointer;';
+        bonusBtn.onclick = function() { close(); onDone('bonus', null); };
+        btnArea.appendChild(bonusBtn);
+      }
+
+      if (potentialParents.length > 0) {
+        var linkBtn = document.createElement('button');
+        linkBtn.textContent = '🔗 연결 할일로 추가';
+        linkBtn.style.cssText = 'width:100%;padding:10px;border-radius:var(--button-radius,8px);border:1.5px solid var(--border-color);background:transparent;color:var(--text-primary);font-size:13px;font-weight:600;cursor:pointer;';
+        linkBtn.onclick = function() {
+          btnArea.style.display = 'none';
+          cancelBtn.style.marginTop = '8px';
+          parentArea.style.display = '';
+          parentArea.innerHTML = '<p style="font-size:13px;font-weight:600;margin:0 0 8px;">어떤 할일의 연결 할일로 추가할까요?</p>'
+            + '<div style="display:flex;flex-direction:column;gap:6px;">'
+            + potentialParents.map(function(p) {
+                return '<button class="_wc-parent-btn" data-pid="' + p.id + '" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;border:1.5px solid var(--border-color);background:var(--bg-main);cursor:pointer;font-size:13px;text-align:left;">'
+                  + '<span style="font-size:18px;">' + (p.emoji || '📋') + '</span>'
+                  + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(p.title) + '</span>'
+                  + '</button>';
+              }).join('')
+            + '</div>';
+          parentArea.querySelectorAll('._wc-parent-btn').forEach(function(btn) {
+            btn.onclick = function() { close(); onDone('linked', btn.dataset.pid); };
+          });
+        };
+        btnArea.appendChild(linkBtn);
+      }
+
+      box.appendChild(document.createElement('div'));
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+    }
+
     function moveDetailItemToDate(id, targetDate, label) {
       var item = workItems.find(function(it) { return it.id === id; });
       if (!item) return;
@@ -9680,7 +9744,31 @@
       var normalCount = targetItems.filter(function(it) { return !it.isBonus; }).length;
       /* 연결 할일(parentId 있음)은 한도 제한을 받지 않음 */
       if (!item.isBonus && !item.parentId && normalCount >= normalSlots) {
-        showAlert('이동 불가', label + '의 일반 할일 슬롯이 가득 차 있습니다.');
+        var availBonus = getAvailableBonusSlots(targetDate);
+        var potentialParents = workItems.filter(function(it) {
+          return it.date === targetDate && !it.parentId && it.id !== id;
+        });
+        if (availBonus <= 0 && potentialParents.length === 0) {
+          showAlert('이동 불가', label + '의 일반 할일 슬롯이 가득 찼고, 보너스/연결 할일 슬롯도 없습니다.');
+          return;
+        }
+        _showWorkMoveConvertDialog(id, targetDate, availBonus, potentialParents, function(mode, parentId) {
+          item.date = targetDate;
+          item.status = 'pending';
+          item.completed = false;
+          if (mode === 'bonus') {
+            item.isBonus = true;
+          } else if (mode === 'linked' && parentId) {
+            item.isBonus = false;
+            item.parentId = parentId;
+            logWorkEvent('linked', item, '', parentId);
+          }
+          logWorkEvent('date_changed', item, oldDate || 'basket', targetDate);
+          saveWorkItems();
+          closeWorkDetailModal();
+          renderWorkView();
+          showToast('📅 ' + label + '로 이동했습니다');
+        });
         return;
       }
       item.date = targetDate;
@@ -10426,7 +10514,31 @@
                   return it.date === newDate && !it.isBonus && !it.parentId && it.id !== item.id;
                 }).length;
                 if (countOnTarget >= limit) {
-                  showAlert('날짜 변경 불가', newDate + '의 일반 할일이 최대(' + limit + '개)에 도달했습니다.\n보너스 할일로 추가하거나 다른 날짜를 선택해주세요.');
+                  var _ab = getAvailableBonusSlots(newDate);
+                  var _pp = workItems.filter(function(it) {
+                    return it.date === newDate && !it.parentId && it.id !== item.id;
+                  });
+                  if (_ab <= 0 && _pp.length === 0) {
+                    showAlert('날짜 변경 불가', newDate + '의 일반 할일이 최대(' + limit + '개)에 도달했습니다.');
+                    return;
+                  }
+                  /* 모달 닫고 나서 다이얼로그 표시 — 먼저 현재 편집값 임시 저장 */
+                  var _savedTitle = title, _savedMemo = memo, _savedItem = item;
+                  var _oldDate = _savedItem.date;
+                  _showWorkMoveConvertDialog(_savedItem.id, newDate, _ab, _pp, function(mode, parentId) {
+                    _savedItem.title = _savedTitle;
+                    _savedItem.emoji = workItemDraft ? (workItemDraft.emoji || '📋') : _savedItem.emoji;
+                    _savedItem.color = emojiToWorkColor(_savedItem.emoji);
+                    _savedItem.memo = _savedMemo;
+                    if (mode === 'bonus') { _savedItem.isBonus = true; }
+                    else if (mode === 'linked' && parentId) { _savedItem.isBonus = false; _savedItem.parentId = parentId; }
+                    logWorkEvent('date_changed', _savedItem, _oldDate || 'basket', newDate || 'basket');
+                    _savedItem.date = newDate;
+                    saveWorkItems();
+                    closeWorkItemModal();
+                    renderWorkView();
+                    showToast('할일을 수정했습니다');
+                  });
                   return;
                 }
               }
