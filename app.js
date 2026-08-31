@@ -9590,7 +9590,8 @@
       return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="none" stroke="#ccc" stroke-width="1.5"/></svg>';
     }
     function getCompletedNormalCount(dateStr) {
-      return workItems.filter(function(it) { return it.date === dateStr && !it.isBonus && getWorkStatus(it) === 'done'; }).length;
+      /* 연결 할일(parentId)은 보너스 슬롯 계산에서 제외 — 슬롯 제한 없이 추가 가능한 항목이므로 완료해도 보너스를 주지 않음 */
+      return workItems.filter(function(it) { return it.date === dateStr && !it.isBonus && !it.parentId && getWorkStatus(it) === 'done'; }).length;
     }
     function getBonusUsedCount(dateStr) {
       return workItems.filter(function(it) { return it.date === dateStr && it.isBonus; }).length;
