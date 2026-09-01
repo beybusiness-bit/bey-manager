@@ -1678,6 +1678,7 @@
       loadActivities();
       loadSchedules();
       loadWorkItems();
+      loadBusinesses();
       loadWorkItemLogs();
       loadBt();
       loadHabits();
@@ -3635,7 +3636,7 @@
           profilePhoto: localStorage.getItem('profilePhoto') || null
         };
         ['designSettings','menuCustomizations','menuStructure','myEmojis','tagColorOverrides',
-         'workSettings','pomodoroSettings','notificationSettings','favoritePages','bae_done','dnSeenVersions'].forEach(function(k) {
+         'workSettings','pomodoroSettings','notificationSettings','favoritePages','bae_done','dnSeenVersions','businesses'].forEach(function(k) {
           var v = localStorage.getItem(k);
           if (v !== null) { try { s[k] = JSON.parse(v); } catch(e) { s[k] = v; } }
         });
@@ -3730,6 +3731,7 @@
             if (sm.notificationSettings) { Object.assign(notificationSettings, sm.notificationSettings); localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings)); }
             if (sm.favoritePages) { favoritePages = sm.favoritePages; localStorage.setItem('favoritePages', JSON.stringify(favoritePages)); }
             if (sm.dnSeenVersions) { dnSeenVersions = sm.dnSeenVersions; localStorage.setItem('dnSeenVersions', JSON.stringify(dnSeenVersions)); }
+            if (sm.businesses) { businesses = sm.businesses; localStorage.setItem('businesses', JSON.stringify(businesses)); }
             if (sm.bae_done && Object.keys(sm.bae_done).length > 0) {
               dnDone = sm.bae_done; localStorage.setItem('bae_done', JSON.stringify(dnDone));
             } else {
@@ -9578,6 +9580,9 @@
     var workItems = [];
     var workItemDraft = null;
     var workItemEditId = null;
+    /* 비즈니스 */
+    var businesses = [];
+    var workBizFilter = null;  /* null = 전체, 'none' = 미지정, businessId = 해당 비즈니스 */
 
     function getWorkStatus(item) {
       if (item.status) return item.status;
@@ -9902,6 +9907,97 @@
       localStorage.setItem('workItems', JSON.stringify(workItems));
       if (window.FS && FS.isConnected()) FS.sync(['할일']);
     }
+    function loadBusinesses() {
+      try { businesses = JSON.parse(localStorage.getItem('businesses') || '[]'); } catch(e) { businesses = []; }
+    }
+    function saveBusinesses() {
+      localStorage.setItem('businesses', JSON.stringify(businesses));
+      if (window.FS && FS.isConnected()) FS.sync(['사용자설정']);
+    }
+    function getBizById(id) {
+      return businesses.find(function(b) { return b.id === id; }) || null;
+    }
+    /* 비즈니스 이름에 색상 배정 (8색 사이클) */
+    var BIZ_COLORS = ['#74b9ff','#a29bfe','#fd79a8','#ffeaa7','#55efc4','#fdcb6e','#e17055','#81ecec'];
+    function bizColor(biz) {
+      if (!biz) return '#ccc';
+      return biz.color || BIZ_COLORS[businesses.indexOf(biz) % BIZ_COLORS.length] || '#74b9ff';
+    }
+
+    function addBusiness(name, color) {
+      if (!name || !name.trim()) return null;
+      var biz = { id: 'biz' + Date.now(), name: name.trim(), color: color || BIZ_COLORS[businesses.length % BIZ_COLORS.length], createdAt: today() };
+      businesses.push(biz);
+      saveBusinesses();
+      return biz;
+    }
+    function updateBusiness(id, fields) {
+      var biz = getBizById(id);
+      if (!biz) return;
+      Object.assign(biz, fields);
+      saveBusinesses();
+    }
+    function deleteBusiness(id) {
+      var idx = businesses.findIndex(function(b) { return b.id === id; });
+      if (idx === -1) return;
+      /* 이 비즈니스를 쓰는 할일들 → businessId 제거 */
+      workItems.forEach(function(it) { if (it.businessId === id) delete it.businessId; });
+      businesses.splice(idx, 1);
+      saveBusinesses();
+      saveWorkItems();
+    }
+
+    /* 비즈니스 관리 모달 열기/닫기/렌더링 */
+    function openBizManageModal() {
+      renderBizManageModal();
+      var m = document.getElementById('bizManageModal');
+      if (m) { m.style.display = 'flex'; bringModalToFront(m); }
+    }
+    function closeBizManageModal() {
+      var m = document.getElementById('bizManageModal');
+      if (m) m.style.display = 'none';
+    }
+    function renderBizManageModal() {
+      var content = document.getElementById('bizManageContent');
+      if (!content) return;
+      var html = '';
+      if (businesses.length === 0) {
+        html += '<div style="text-align:center;color:var(--text-secondary);padding:16px;font-size:13px;">아직 비즈니스가 없습니다</div>';
+      } else {
+        html += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">';
+        businesses.forEach(function(biz) {
+          html += '<div class="biz-manage-row" data-id="' + biz.id + '">';
+          html += '<span class="biz-color-dot" style="background:' + escapeHtml(biz.color) + '"></span>';
+          html += '<input class="input-field biz-name-input" value="' + escapeHtml(biz.name) + '" onchange="updateBusiness(\'' + biz.id + '\',{name:this.value.trim()})" style="flex:1;min-width:0;padding:5px 8px;">';
+          html += '<input type="color" class="biz-color-input" value="' + escapeHtml(biz.color) + '" title="색상" onchange="updateBusiness(\'' + biz.id + '\',{color:this.value});renderBizManageModal()" style="width:30px;height:30px;border:none;border-radius:4px;cursor:pointer;padding:0;">';
+          html += '<button class="btn-icon" onclick="_confirmDeleteBiz(\'' + biz.id + '\')" style="color:var(--text-secondary);">🗑</button>';
+          html += '</div>';
+        });
+        html += '</div>';
+      }
+      /* 새 비즈니스 추가 입력 */
+      html += '<div class="biz-add-row">';
+      html += '<input class="input-field" id="bizNewNameInput" placeholder="새 비즈니스 이름" style="flex:1;min-width:0;padding:7px 10px;" onkeydown="if(event.key===\'Enter\'){addBizFromInput();}">';
+      html += '<button class="btn-confirm" style="padding:7px 14px;" onclick="addBizFromInput()">추가</button>';
+      html += '</div>';
+      content.innerHTML = html;
+    }
+    function _confirmDeleteBiz(bizId) {
+      var biz = getBizById(bizId);
+      if (!biz) return;
+      var cnt = workItems.filter(function(it) { return it.businessId === bizId; }).length;
+      var msg = biz.name + ' 비즈니스를 삭제할까요?';
+      if (cnt > 0) msg += '\n(이 비즈니스의 할일 ' + cnt + '개에서 연결이 해제됩니다)';
+      showConfirm(msg, function() { deleteBusiness(bizId); renderBizManageModal(); if (workView === 'today' || workView === 'week' || workView === 'biz') renderWorkView(); });
+    }
+    function addBizFromInput() {
+      var inp = document.getElementById('bizNewNameInput');
+      if (!inp || !inp.value.trim()) return;
+      addBusiness(inp.value.trim());
+      renderBizManageModal();
+      /* 오늘/주별 필터 바도 갱신 */
+      if (workView === 'today' || workView === 'week' || workView === 'biz') renderWorkView();
+    }
 
     function getMondayOf(dateStr) {
       var d = new Date(dateStr + 'T00:00:00');
@@ -9935,6 +10031,7 @@
       html += '<button class="tab-btn' + (workView === 'month' ? ' active' : '') + '" onclick="switchWorkView(\'month\')">월별</button>';
       html += '<button class="tab-btn' + (workView === 'basket' ? ' active' : '') + '" onclick="switchWorkView(\'basket\')">🧺 할일 바구니' + (basketCount > 0 ? ' <span class="work-basket-tab-count">' + basketCount + '</span>' : '') + '</button>';
       html += '<button class="tab-btn' + (workView === 'hall' ? ' active' : '') + '" onclick="switchWorkView(\'hall\')">🏆 한 일의 전당' + (hallCount > 0 ? ' <span class="work-hall-tab-count">' + hallCount + '</span>' : '') + '</button>';
+      html += '<button class="tab-btn' + (workView === 'biz' ? ' active' : '') + '" onclick="switchWorkView(\'biz\')">🏢 비즈니스별</button>';
       html += '</div>';
       html += '<div id="workViewContent"></div>';
       html += '</div>';
@@ -9945,7 +10042,7 @@
     function switchWorkView(view) {
       workView = view;
       document.querySelectorAll('#workTabNav .tab-btn').forEach(function(btn, i) {
-        btn.classList.toggle('active', i === ['today','week','month','basket','hall'].indexOf(view));
+        btn.classList.toggle('active', i === ['today','week','month','basket','hall','biz'].indexOf(view));
       });
       renderWorkView();
     }
@@ -9977,6 +10074,7 @@
       else if (workView === 'week') renderWorkWeek();
       else if (workView === 'basket') renderWorkBasketTab();
       else if (workView === 'hall') renderWorkHall();
+      else if (workView === 'biz') renderWorkBizView();
       else renderWorkMonth();
       _updateWorkTabCounts();
       refreshPomodoroTaskList();
@@ -10005,6 +10103,11 @@
       html += '<span style="font-size:20px;min-width:24px;text-align:center;flex-shrink:0;">' + (item.emoji || '📋') + '</span>';
       html += '<div style="flex:1;min-width:0;">';
       if (item.isBonus) html += '<span style="font-size:10px;color:#fdcb6e;font-weight:700;">⭐ 보너스 </span>';
+      /* 비즈니스 배지 */
+      if (item.businessId) {
+        var _biz = getBizById(item.businessId);
+        if (_biz) html += '<span class="work-biz-badge" style="background:' + escapeHtml(bizColor(_biz)) + '22;color:' + escapeHtml(bizColor(_biz)) + ';border:1px solid ' + escapeHtml(bizColor(_biz)) + '44;">' + escapeHtml(_biz.name) + '</span>';
+      }
       html += '<div class="work-kanban-title' + (isDone ? ' done' : '') + '">' + escapeHtml(item.title) + '</div>';
       if (item.memo) html += '<div class="work-kanban-memo">' + escapeHtml(item.memo) + '</div>';
       var _focusStr = formatFocusTime(item.focusTime);
@@ -10046,13 +10149,44 @@
         + '</div>';
     }
 
+    /* 비즈니스 필터 적용 헬퍼 */
+    function _applyBizFilter(items) {
+      if (!workBizFilter) return items;
+      if (workBizFilter === 'none') return items.filter(function(it) { return !it.businessId; });
+      return items.filter(function(it) { return it.businessId === workBizFilter; });
+    }
+    /* 비즈니스 필터 바 HTML 생성 */
+    function _renderWorkBizFilterBar(items) {
+      if (businesses.length === 0) return '';
+      /* 현재 아이템 중 사용된 비즈니스 id 목록 */
+      var usedIds = {};
+      items.forEach(function(it) { if (it.businessId) usedIds[it.businessId] = true; });
+      var hasNone = items.some(function(it) { return !it.businessId; });
+      var html = '<div class="work-biz-filter-bar">';
+      html += '<button class="work-biz-chip' + (!workBizFilter ? ' active' : '') + '" onclick="setWorkBizFilter(null)">전체</button>';
+      businesses.forEach(function(biz) {
+        var isActive = workBizFilter === biz.id;
+        html += '<button class="work-biz-chip' + (isActive ? ' active' : '') + '" onclick="setWorkBizFilter(\'' + biz.id + '\')" style="' + (isActive ? 'background:' + escapeHtml(bizColor(biz)) + ';color:#fff;border-color:' + escapeHtml(bizColor(biz)) + ';' : 'border-color:' + escapeHtml(bizColor(biz)) + ';color:' + escapeHtml(bizColor(biz)) + ';') + '">' + escapeHtml(biz.name) + '</button>';
+      });
+      if (hasNone) html += '<button class="work-biz-chip' + (workBizFilter === 'none' ? ' active' : '') + '" onclick="setWorkBizFilter(\'none\')">미지정</button>';
+      html += '<button class="work-biz-chip work-biz-manage-btn" onclick="openBizManageModal()" title="비즈니스 관리">⚙</button>';
+      html += '</div>';
+      return html;
+    }
+    function setWorkBizFilter(val) {
+      workBizFilter = val;
+      renderWorkView();
+    }
+
     function renderWorkToday() {
       var c = document.getElementById('workViewContent');
       if (!c) return;
       var todayStr = today();
-      var dateItems = workItems.filter(function(it) { return it.date === workSelectedDate; });
-      var normalItems = dateItems.filter(function(it) { return !it.isBonus; });
-      var bonusItems = dateItems.filter(function(it) { return it.isBonus; });
+      var allDateItems = workItems.filter(function(it) { return it.date === workSelectedDate; });
+      var normalItems = allDateItems.filter(function(it) { return !it.isBonus; });
+      var bonusItems = allDateItems.filter(function(it) { return it.isBonus; });
+      /* 비즈니스 필터 적용 */
+      var dateItems = _applyBizFilter(allDateItems);
       var pendingItems = dateItems.filter(function(it) { return getWorkStatus(it) === 'pending'; });
       var inProgressItems = dateItems.filter(function(it) { return getWorkStatus(it) === 'in-progress'; });
       var doneItems = dateItems.filter(function(it) { return getWorkStatus(it) === 'done'; });
@@ -10062,6 +10196,8 @@
       var canAddNormal = normalItems.length < getDailyWorkLimit(workSelectedDate);
 
       var html = '<div class="work-today">';
+      /* 비즈니스 필터 바 */
+      html += _renderWorkBizFilterBar(allDateItems);
       html += '<div class="work-date-nav">';
       html += '<button class="btn-icon" onclick="workGoToDate(\'' + prevDate + '\')">&#8249;</button>';
       html += '<div style="text-align:center;">';
@@ -10373,6 +10509,16 @@
 
     var _workModalBasketSelectedId = null;
 
+    function _populateWorkBizSelect(selectedId) {
+      var sel = document.getElementById('workBizSelect');
+      if (!sel) return;
+      var opts = '<option value="">미지정</option>';
+      businesses.forEach(function(biz) {
+        opts += '<option value="' + escapeHtml(biz.id) + '"' + (selectedId === biz.id ? ' selected' : '') + '>' + escapeHtml(biz.name) + '</option>';
+      });
+      sel.innerHTML = opts;
+    }
+
     function openWorkItemModal(dateStr, isBonus, parentId) {
       var initEmoji;
       if (parentId) {
@@ -10381,7 +10527,7 @@
       } else {
         initEmoji = randomWorkEmoji();
       }
-      workItemDraft = { emoji: initEmoji, color: null, isBonus: !!isBonus, date: dateStr || null, parentId: parentId || null };
+      workItemDraft = { emoji: initEmoji, color: null, isBonus: !!isBonus, date: dateStr || null, parentId: parentId || null, businessId: null };
       workItemEditId = null;
       _workModalBasketSelectedId = null;
       var modal = document.getElementById('workItemModal');
@@ -10411,6 +10557,8 @@
       /* 바구니 모드(날짜 없음)에서는 "바구니에서 선택" 탭 숨김 */
       var tabNav = document.getElementById('workModalTabNav');
       if (tabNav) tabNav.style.display = dateStr ? '' : 'none';
+      /* 비즈니스 드롭다운 채우기 */
+      _populateWorkBizSelect(null);
       /* 항상 새로 만들기 탭부터 */
       switchWorkModalTab('new');
       modal.style.display = 'flex';
@@ -10500,6 +10648,8 @@
       if (parentInfoEl) { parentInfoEl.style.display = 'none'; parentInfoEl.innerHTML = ''; }
       document.getElementById('workModalNewTab').style.display = '';
       document.getElementById('workModalBasketTab').style.display = 'none';
+      /* 비즈니스 드롭다운 채우기 */
+      _populateWorkBizSelect(item.businessId || null);
       closeWorkDetailModal();
       modal.style.display = 'flex';
       bringModalToFront(modal);
@@ -10524,6 +10674,8 @@
           item.emoji = workItemDraft ? (workItemDraft.emoji || '📋') : item.emoji;
           item.color = emojiToWorkColor(item.emoji);
           item.memo = memo;
+          var _bizSel = document.getElementById('workBizSelect');
+          item.businessId = (_bizSel && _bizSel.value) ? _bizSel.value : null;
           /* 날짜 수정 */
           var dateInput = document.getElementById('workEditDateInput');
           if (dateInput) {
@@ -10574,6 +10726,7 @@
       } else {
         var dateInputEl = document.getElementById('workEditDateInput');
         var pickedDate = dateInputEl ? (dateInputEl.value || null) : (workItemDraft ? workItemDraft.date : null);
+        var _bizSelN = document.getElementById('workBizSelect');
         var newItem = {
           id: 'w' + Date.now(),
           emoji: workItemDraft ? (workItemDraft.emoji || '📋') : '📋',
@@ -10585,6 +10738,7 @@
           memo: memo,
           isBonus: workItemDraft ? !!workItemDraft.isBonus : false,
           parentId: workItemDraft ? (workItemDraft.parentId || null) : null,
+          businessId: (_bizSelN && _bizSelN.value) ? _bizSelN.value : null,
           createdAt: today()
         };
         newItem.color = emojiToWorkColor(newItem.emoji);
@@ -10633,6 +10787,15 @@
       html += '<span style="color:var(--text-secondary);min-width:60px;">날짜</span>';
       html += '<span>' + (item.date ? formatDateKR(item.date) : '날짜 미정 (바구니)') + '</span>';
       html += '</div>';
+      if (item.businessId) {
+        var _detailBiz = getBizById(item.businessId);
+        if (_detailBiz) {
+          html += '<div style="display:flex;gap:8px;align-items:center;font-size:13px;">';
+          html += '<span style="color:var(--text-secondary);min-width:60px;">비즈니스</span>';
+          html += '<span class="work-biz-badge" style="background:' + escapeHtml(bizColor(_detailBiz)) + '22;color:' + escapeHtml(bizColor(_detailBiz)) + ';border:1px solid ' + escapeHtml(bizColor(_detailBiz)) + '44;">' + escapeHtml(_detailBiz.name) + '</span>';
+          html += '</div>';
+        }
+      }
       var focusStr = formatFocusTime(item.focusTime);
       if (focusStr) {
         html += '<div style="display:flex;gap:8px;align-items:center;font-size:13px;">';
@@ -10741,6 +10904,84 @@
       });
     }
 
+    function renderWorkBizView() {
+      var c = document.getElementById('workViewContent');
+      if (!c) return;
+      var datedItems = workItems.filter(function(it) { return !!it.date; });
+      /* 비즈니스별 그룹화 */
+      var groups = [];
+      businesses.forEach(function(biz) {
+        var items = datedItems.filter(function(it) { return it.businessId === biz.id; });
+        if (items.length > 0) groups.push({ biz: biz, items: items });
+      });
+      var unassignedItems = datedItems.filter(function(it) { return !it.businessId; });
+      var html = '<div class="work-biz-view">';
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">';
+      html += '<div style="font-size:14px;font-weight:700;flex:1;">🏢 비즈니스별 할일</div>';
+      html += '<button class="btn-accent btn-sm" onclick="openBizManageModal()">⚙ 비즈니스 관리</button>';
+      html += '</div>';
+      if (groups.length === 0 && businesses.length === 0) {
+        html += '<div class="work-biz-empty"><div style="font-size:32px;margin-bottom:10px;">🏢</div><div style="font-size:14px;color:var(--text-secondary);">비즈니스를 추가하면 할일을 그룹별로 볼 수 있어요</div><button class="btn-accent" style="margin-top:12px;" onclick="openBizManageModal()">+ 비즈니스 추가</button></div>';
+      } else {
+        groups.forEach(function(g) {
+          var done = g.items.filter(function(it) { return getWorkStatus(it) === 'done'; }).length;
+          var pct = g.items.length > 0 ? Math.round(done / g.items.length * 100) : 0;
+          html += '<div class="work-biz-group">';
+          html += '<div class="work-biz-group-header" style="border-left:3px solid ' + escapeHtml(bizColor(g.biz)) + ';">';
+          html += '<span class="work-biz-group-name" style="color:' + escapeHtml(bizColor(g.biz)) + ';">' + escapeHtml(g.biz.name) + '</span>';
+          html += '<span class="work-biz-group-stats">' + done + '/' + g.items.length + ' 완료 <span style="color:var(--text-secondary);font-size:11px;">(' + pct + '%)</span></span>';
+          html += '</div>';
+          /* 진행률 바 */
+          html += '<div class="work-biz-progress-bar"><div class="work-biz-progress-fill" style="width:' + pct + '%;background:' + escapeHtml(bizColor(g.biz)) + ';"></div></div>';
+          /* 할일 목록 — 미완료 우선, 날짜순 */
+          var sorted = g.items.slice().sort(function(a, b) {
+            var sa = getWorkStatus(a), sb = getWorkStatus(b);
+            if (sa === 'done' && sb !== 'done') return 1;
+            if (sb === 'done' && sa !== 'done') return -1;
+            return (a.date || '').localeCompare(b.date || '');
+          });
+          html += '<div class="work-biz-item-list">';
+          sorted.forEach(function(it) {
+            var st = getWorkStatus(it);
+            html += '<div class="work-biz-item' + (st === 'done' ? ' done' : '') + '" onclick="showWorkItemDetail(\'' + it.id + '\')">';
+            html += workStatusSVG(st, 16);
+            html += '<span class="work-biz-item-emoji">' + (it.emoji || '📋') + '</span>';
+            html += '<span class="work-biz-item-title">' + escapeHtml(it.title) + '</span>';
+            html += '<span class="work-biz-item-date">' + (it.date || '') + '</span>';
+            html += '</div>';
+          });
+          html += '</div>';
+          html += '</div>';
+        });
+        if (unassignedItems.length > 0) {
+          html += '<div class="work-biz-group">';
+          html += '<div class="work-biz-group-header" style="border-left:3px solid var(--border-color);">';
+          html += '<span class="work-biz-group-name" style="color:var(--text-secondary);">미지정</span>';
+          html += '<span class="work-biz-group-stats">' + unassignedItems.length + '개</span>';
+          html += '</div>';
+          html += '<div class="work-biz-item-list">';
+          var sortedU = unassignedItems.slice().sort(function(a, b) {
+            var sa = getWorkStatus(a), sb = getWorkStatus(b);
+            if (sa === 'done' && sb !== 'done') return 1;
+            if (sb === 'done' && sa !== 'done') return -1;
+            return (a.date || '').localeCompare(b.date || '');
+          });
+          sortedU.forEach(function(it) {
+            var st = getWorkStatus(it);
+            html += '<div class="work-biz-item' + (st === 'done' ? ' done' : '') + '" onclick="showWorkItemDetail(\'' + it.id + '\')">';
+            html += workStatusSVG(st, 16);
+            html += '<span class="work-biz-item-emoji">' + (it.emoji || '📋') + '</span>';
+            html += '<span class="work-biz-item-title">' + escapeHtml(it.title) + '</span>';
+            html += '<span class="work-biz-item-date">' + (it.date || '') + '</span>';
+            html += '</div>';
+          });
+          html += '</div></div>';
+        }
+      }
+      html += '</div>';
+      c.innerHTML = html;
+    }
+
     function renderWorkWeek() {
       var c = document.getElementById('workViewContent');
       if (!c) return;
@@ -10759,7 +11000,11 @@
         workWeekDayIndex = (workWeekOffset === 0) ? todayKr : 0;
       }
 
+      /* 이번 주 전체 할일 (필터 바용) */
+      var allWeekItems = workItems.filter(function(it) { var d = it.date; return d && d >= monday && d <= sunday; });
       var html = '<div class="work-week">';
+      /* 비즈니스 필터 바 */
+      html += _renderWorkBizFilterBar(allWeekItems);
       html += '<div class="work-nav">';
       html += '<button class="btn-icon" onclick="workWeekMove(-1)">&#8249;</button>';
       var mParts = monday.split('-');
@@ -10789,7 +11034,7 @@
 
         // 선택된 요일의 할일 카드
         var selDs = addDays(monday, selIdx);
-        var selItems = workItems.filter(function(it) { return it.date === selDs; });
+        var selItems = _applyBizFilter(workItems.filter(function(it) { return it.date === selDs; }));
         var selDp = selDs.split('-');
         var isTodaySel = selDs === todayStr;
         html += '<div class="work-week-single">';
@@ -10809,7 +11054,7 @@
         for (var i = 0; i < 7; i++) {
           var ds = addDays(monday, i);
           var isToday = ds === todayStr;
-          var dayItems = workItems.filter(function(it) { return it.date === ds; });
+          var dayItems = _applyBizFilter(workItems.filter(function(it) { return it.date === ds; }));
           var dp = ds.split('-');
           html += '<div class="work-week-col' + (isToday ? ' is-today' : '') + '">';
           html += '<div class="work-week-day-header" onclick="workGoToDate(\'' + ds + '\')">';

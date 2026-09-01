@@ -3517,6 +3517,12 @@ firebase deploy --only functions</pre>
           <input type="date" class="input-field" id="workEditDateInput" style="width:100%;box-sizing:border-box;">
         </div>
         <div class="work-form-row work-form-row-col">
+          <div class="work-form-label">비즈니스 (선택)</div>
+          <select class="input-field" id="workBizSelect" style="width:100%;box-sizing:border-box;">
+            <option value="">미지정</option>
+          </select>
+        </div>
+        <div class="work-form-row work-form-row-col">
           <div class="work-form-label">메모 (선택)</div>
           <textarea class="input-field" id="workMemoInput" placeholder="메모를 입력하세요" rows="3" style="resize:none;width:100%;box-sizing:border-box;"></textarea>
         </div>
@@ -3545,6 +3551,17 @@ firebase deploy --only functions</pre>
         <button class="btn-cancel" style="flex:1;min-width:80px;padding:10px;" id="workDetailEditBtn">수정</button>
         <button class="btn-cancel work-delete-btn" style="flex:1;min-width:80px;padding:10px;" id="workDetailDeleteBtn">삭제</button>
         <button class="btn-confirm" style="flex:1;min-width:80px;padding:10px;" onclick="closeWorkDetailModal()">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 비즈니스 관리 모달 -->
+  <div id="bizManageModal" class="modal-overlay" style="display:none;z-index:1250;" onclick="if(event.target===this)closeBizManageModal()">
+    <div class="modal-box" style="max-width:380px;width:100%;">
+      <h3 style="margin:0 0 14px;font-size:16px;font-weight:700;">🏢 비즈니스 관리</h3>
+      <div id="bizManageContent"></div>
+      <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+        <button class="btn-confirm" style="padding:9px 20px;" onclick="closeBizManageModal()">닫기</button>
       </div>
     </div>
   </div>
