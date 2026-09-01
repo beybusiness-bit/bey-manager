@@ -9524,7 +9524,8 @@
     // ========================================
     // 일(업무) 페이지
     // ========================================
-    var workView = 'today';
+    var workView = 'date';       /* 'date'|'biz'|'basket'|'hall' */
+    var workDatePeriod = 'day'; /* 날짜별 탭 내 구간: 'day'|'week'|'month' */
     var workWeekOffset = 0;
     var workMonthOffset = 0;
     var workSelectedDate = today();
@@ -9988,7 +9989,7 @@
       var cnt = workItems.filter(function(it) { return it.businessId === bizId; }).length;
       var msg = biz.name + ' 비즈니스를 삭제할까요?';
       if (cnt > 0) msg += '\n(이 비즈니스의 할일 ' + cnt + '개에서 연결이 해제됩니다)';
-      showConfirm(msg, function() { deleteBusiness(bizId); renderBizManageModal(); if (workView === 'today' || workView === 'week' || workView === 'biz') renderWorkView(); });
+      showConfirm(msg, function() { deleteBusiness(bizId); renderBizManageModal(); if (workView === 'date' || workView === 'biz') renderWorkView(); });
     }
     function addBizFromInput() {
       var inp = document.getElementById('bizNewNameInput');
@@ -9996,7 +9997,7 @@
       addBusiness(inp.value.trim());
       renderBizManageModal();
       /* 오늘/주별 필터 바도 갱신 */
-      if (workView === 'today' || workView === 'week' || workView === 'biz') renderWorkView();
+      if (workView === 'date' || workView === 'biz') renderWorkView();
     }
 
     function getMondayOf(dateStr) {
@@ -10026,12 +10027,10 @@
       var hallCount   = workItems.filter(function(it) { return getWorkStatus(it) === 'done'; }).length;
       var html = '<div class="work-page">';
       html += '<div class="tab-nav" id="workTabNav">';
-      html += '<button class="tab-btn' + (workView === 'today' ? ' active' : '') + '" onclick="switchWorkView(\'today\')">오늘</button>';
-      html += '<button class="tab-btn' + (workView === 'week' ? ' active' : '') + '" onclick="switchWorkView(\'week\')">주별</button>';
-      html += '<button class="tab-btn' + (workView === 'month' ? ' active' : '') + '" onclick="switchWorkView(\'month\')">월별</button>';
+      html += '<button class="tab-btn' + (workView === 'date' ? ' active' : '') + '" onclick="switchWorkView(\'date\')">날짜별</button>';
+      html += '<button class="tab-btn' + (workView === 'biz' ? ' active' : '') + '" onclick="switchWorkView(\'biz\')">🏢 비즈니스별</button>';
       html += '<button class="tab-btn' + (workView === 'basket' ? ' active' : '') + '" onclick="switchWorkView(\'basket\')">🧺 할일 바구니' + (basketCount > 0 ? ' <span class="work-basket-tab-count">' + basketCount + '</span>' : '') + '</button>';
       html += '<button class="tab-btn' + (workView === 'hall' ? ' active' : '') + '" onclick="switchWorkView(\'hall\')">🏆 한 일의 전당' + (hallCount > 0 ? ' <span class="work-hall-tab-count">' + hallCount + '</span>' : '') + '</button>';
-      html += '<button class="tab-btn' + (workView === 'biz' ? ' active' : '') + '" onclick="switchWorkView(\'biz\')">🏢 비즈니스별</button>';
       html += '</div>';
       html += '<div id="workViewContent"></div>';
       html += '</div>';
@@ -10042,7 +10041,7 @@
     function switchWorkView(view) {
       workView = view;
       document.querySelectorAll('#workTabNav .tab-btn').forEach(function(btn, i) {
-        btn.classList.toggle('active', i === ['today','week','month','basket','hall','biz'].indexOf(view));
+        btn.classList.toggle('active', i === ['date','biz','basket','hall'].indexOf(view));
       });
       renderWorkView();
     }
@@ -10050,8 +10049,7 @@
     function _updateWorkTabCounts() {
       var basketCount = workItems.filter(function(it) { return !it.date; }).length;
       var hallCount   = workItems.filter(function(it) { return getWorkStatus(it) === 'done'; }).length;
-      var basketBtns = document.querySelectorAll('#workPage .tab-btn');
-      basketBtns.forEach(function(btn) {
+      document.querySelectorAll('#workTabNav .tab-btn').forEach(function(btn) {
         if (btn.textContent.indexOf('할일 바구니') !== -1) {
           var sp = btn.querySelector('.work-basket-tab-count');
           if (basketCount > 0) {
@@ -10070,12 +10068,11 @@
     }
 
     function renderWorkView() {
-      if (workView === 'today') renderWorkToday();
-      else if (workView === 'week') renderWorkWeek();
+      if (workView === 'date') renderWorkDateView();
       else if (workView === 'basket') renderWorkBasketTab();
       else if (workView === 'hall') renderWorkHall();
       else if (workView === 'biz') renderWorkBizView();
-      else renderWorkMonth();
+      else renderWorkDateView(); /* fallback */
       _updateWorkTabCounts();
       refreshPomodoroTaskList();
     }
@@ -10149,6 +10146,38 @@
         + '</div>';
     }
 
+    /* ── 날짜별 탭 (일별/주별/월별 구간 포함) ── */
+    function renderWorkDateView() {
+      var c = document.getElementById('workViewContent');
+      if (!c) return;
+      var html = '<div class="work-date-view">';
+      /* 구간 선택 버튼 (bt-period-tabs 패턴 참고) */
+      html += '<div class="work-period-tabs">';
+      var periods = [{v:'day',l:'일별'},{v:'week',l:'주별'},{v:'month',l:'월별'}];
+      periods.forEach(function(p) {
+        html += '<button class="work-period-btn' + (workDatePeriod === p.v ? ' active' : '') + '" onclick="setWorkDatePeriod(\'' + p.v + '\')">' + p.l + '</button>';
+      });
+      html += '</div>';
+      html += '<div id="workDateInner"></div>';
+      html += '</div>';
+      c.innerHTML = html;
+      _renderWorkDateInner();
+    }
+    function setWorkDatePeriod(p) {
+      workDatePeriod = p;
+      /* 구간 전환 시 offset 초기화 */
+      workWeekOffset = 0; workMonthOffset = 0; workSelectedDate = today();
+      workWeekDayIndex = null;
+      _renderWorkDateInner();
+    }
+    function _renderWorkDateInner() {
+      var inner = document.getElementById('workDateInner');
+      if (!inner) { renderWorkDateView(); return; }
+      if (workDatePeriod === 'day')   inner.innerHTML = _buildWorkDayView();
+      else if (workDatePeriod === 'week')  inner.innerHTML = _buildWorkWeekView();
+      else inner.innerHTML = _buildWorkMonthView();
+    }
+
     /* 비즈니스 필터 적용 헬퍼 */
     function _applyBizFilter(items) {
       if (!workBizFilter) return items;
@@ -10178,9 +10207,7 @@
       renderWorkView();
     }
 
-    function renderWorkToday() {
-      var c = document.getElementById('workViewContent');
-      if (!c) return;
+    function _buildWorkDayView() {
       var todayStr = today();
       var allDateItems = workItems.filter(function(it) { return it.date === workSelectedDate; });
       var normalItems = allDateItems.filter(function(it) { return !it.isBonus; });
@@ -10230,12 +10257,14 @@
       });
       html += '</div>';
       html += '</div>';
-      c.innerHTML = html;
+      return html;
     }
 
     function workGoToDate(dateStr) {
       workSelectedDate = dateStr;
-      switchWorkView('today');
+      workDatePeriod = 'day';
+      if (workView !== 'date') { switchWorkView('date'); return; }
+      _renderWorkDateInner();
     }
 
     function toggleWorkItemComplete(id) { toggleWorkItemStatus(id); }
@@ -10509,14 +10538,34 @@
 
     var _workModalBasketSelectedId = null;
 
+    var _workBizSelectedId = null;
     function _populateWorkBizSelect(selectedId) {
-      var sel = document.getElementById('workBizSelect');
-      if (!sel) return;
-      var opts = '<option value="">미지정</option>';
+      _workBizSelectedId = selectedId || null;
+      _renderWorkBizChips();
+    }
+    function _renderWorkBizChips() {
+      var container = document.getElementById('workBizChips');
+      var hidden = document.getElementById('workBizSelect');
+      var row = document.getElementById('workBizRow');
+      if (!container) return;
+      /* 비즈니스 없으면 행 숨기기 */
+      if (businesses.length === 0) { if (row) row.style.display = 'none'; return; }
+      if (row) row.style.display = '';
+      if (hidden) hidden.value = _workBizSelectedId || '';
+      var html = '<button class="work-biz-modal-chip' + (!_workBizSelectedId ? ' active' : '') + '" onclick="_selectWorkBizChip(null)">미지정</button>';
       businesses.forEach(function(biz) {
-        opts += '<option value="' + escapeHtml(biz.id) + '"' + (selectedId === biz.id ? ' selected' : '') + '>' + escapeHtml(biz.name) + '</option>';
+        var isActive = _workBizSelectedId === biz.id;
+        html += '<button class="work-biz-modal-chip' + (isActive ? ' active' : '') + '" '
+          + 'style="' + (isActive ? 'background:' + escapeHtml(bizColor(biz)) + ';color:#fff;border-color:' + escapeHtml(bizColor(biz)) + ';' : 'border-color:' + escapeHtml(bizColor(biz)) + ';color:' + escapeHtml(bizColor(biz)) + ';') + '"'
+          + ' onclick="_selectWorkBizChip(\'' + biz.id + '\')">' + escapeHtml(biz.name) + '</button>';
       });
-      sel.innerHTML = opts;
+      container.innerHTML = html;
+    }
+    function _selectWorkBizChip(id) {
+      _workBizSelectedId = id || null;
+      var hidden = document.getElementById('workBizSelect');
+      if (hidden) hidden.value = _workBizSelectedId || '';
+      _renderWorkBizChips();
     }
 
     function openWorkItemModal(dateStr, isBonus, parentId) {
@@ -10674,8 +10723,7 @@
           item.emoji = workItemDraft ? (workItemDraft.emoji || '📋') : item.emoji;
           item.color = emojiToWorkColor(item.emoji);
           item.memo = memo;
-          var _bizSel = document.getElementById('workBizSelect');
-          item.businessId = (_bizSel && _bizSel.value) ? _bizSel.value : null;
+          item.businessId = _workBizSelectedId || null;
           /* 날짜 수정 */
           var dateInput = document.getElementById('workEditDateInput');
           if (dateInput) {
@@ -10726,7 +10774,6 @@
       } else {
         var dateInputEl = document.getElementById('workEditDateInput');
         var pickedDate = dateInputEl ? (dateInputEl.value || null) : (workItemDraft ? workItemDraft.date : null);
-        var _bizSelN = document.getElementById('workBizSelect');
         var newItem = {
           id: 'w' + Date.now(),
           emoji: workItemDraft ? (workItemDraft.emoji || '📋') : '📋',
@@ -10738,7 +10785,7 @@
           memo: memo,
           isBonus: workItemDraft ? !!workItemDraft.isBonus : false,
           parentId: workItemDraft ? (workItemDraft.parentId || null) : null,
-          businessId: (_bizSelN && _bizSelN.value) ? _bizSelN.value : null,
+          businessId: _workBizSelectedId || null,
           createdAt: today()
         };
         newItem.color = emojiToWorkColor(newItem.emoji);
@@ -10982,9 +11029,7 @@
       c.innerHTML = html;
     }
 
-    function renderWorkWeek() {
-      var c = document.getElementById('workViewContent');
-      if (!c) return;
+    function _buildWorkWeekView() {
       var baseMonday = getMondayOf(today());
       var monday = addDays(baseMonday, workWeekOffset * 7);
       var sunday = addDays(monday, 6);
@@ -11075,23 +11120,22 @@
       }
 
       html += '</div>';
-      c.innerHTML = html;
+      return html;
     }
 
     function setWorkWeekDay(idx) {
       workWeekDayIndex = idx;
-      renderWorkWeek();
+      _renderWorkDateInner();
     }
 
     function workWeekMove(delta) {
       if (delta === 0) { workWeekOffset = 0; workWeekDayIndex = null; }
       else { workWeekOffset += delta; workWeekDayIndex = 0; }
-      renderWorkWeek();
+      _renderWorkDateInner();
     }
 
-    function renderWorkMonth() {
-      var c = document.getElementById('workViewContent');
-      if (!c) return;
+    function renderWorkMonth() { /* legacy alias */ _renderWorkDateInner(); }
+    function _buildWorkMonthView() {
       var now = new Date();
       var yr = now.getFullYear();
       var mo = now.getMonth() + 1 + workMonthOffset;
@@ -11147,20 +11191,20 @@
         html += '</div>';
       }
       html += '</div></div>';
-      c.innerHTML = html;
+      return html;
     }
 
     function workMonthMove(delta) {
       if (delta === 0) { workMonthOffset = 0; }
       else { workMonthOffset += delta; }
-      renderWorkMonth();
+      _renderWorkDateInner();
     }
 
     // ── 바구니 탭 ──
 
     function updateWorkBasketBadge() { /* badge 없음 — 탭 카운트로 대체 */ }
     function openWorkBasket() { switchWorkView('basket'); }
-    function closeWorkBasket() { switchWorkView('today'); }
+    function closeWorkBasket() { switchWorkView('date'); }
 
     function renderWorkBasketTab() {
       var c = document.getElementById('workViewContent');
