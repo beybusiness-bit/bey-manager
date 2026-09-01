@@ -3516,11 +3516,14 @@ firebase deploy --only functions</pre>
           <div class="work-form-label">날짜 <span style="font-size:10px;color:var(--text-tertiary);">(비우면 바구니로)</span></div>
           <input type="date" class="input-field" id="workEditDateInput" style="width:100%;box-sizing:border-box;">
         </div>
-        <div class="work-form-row work-form-row-col">
-          <div class="work-form-label">비즈니스 (선택)</div>
-          <select class="input-field" id="workBizSelect" style="width:100%;box-sizing:border-box;">
-            <option value="">미지정</option>
-          </select>
+        <div class="work-form-row work-form-row-col" id="workBizRow">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+            <div class="work-form-label" style="margin:0;">비즈니스 (선택)</div>
+            <button class="btn-text" style="font-size:11px;color:var(--text-secondary);padding:0;background:none;border:none;cursor:pointer;" onclick="openBizManageModal()">+ 관리</button>
+          </div>
+          <div id="workBizChips" class="work-biz-modal-chips"></div>
+          <!-- hidden input to carry selected value -->
+          <input type="hidden" id="workBizSelect" value="">
         </div>
         <div class="work-form-row work-form-row-col">
           <div class="work-form-label">메모 (선택)</div>

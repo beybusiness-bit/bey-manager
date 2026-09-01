@@ -4263,3 +4263,13 @@
       .work-biz-filter-bar { gap: 5px; }
       .work-biz-chip { padding: 3px 9px; font-size: 11px; }
     }
+    /* 비즈니스 모달 선택 칩 */
+    .work-biz-modal-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .work-biz-modal-chip { display: inline-flex; align-items: center; padding: 5px 13px; border-radius: 20px; border: 1.5px solid var(--border-color); background: none; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-secondary); transition: background .12s, color .12s, border-color .12s; }
+    .work-biz-modal-chip:hover { background: var(--bg-hover, rgba(0,0,0,.05)); }
+    .work-biz-modal-chip.active { background: var(--primary-yellow, #ffde59); color: #1a1a1a; border-color: var(--primary-yellow, #ffde59); }
+    /* 날짜별 탭 내 구간 선택 */
+    .work-period-tabs { display: flex; gap: 4px; padding: 8px 0 4px; }
+    .work-period-btn { padding: 5px 16px; border-radius: 20px; border: 1.5px solid var(--border-color); background: none; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-secondary); transition: background .12s, color .12s; }
+    .work-period-btn:hover { background: var(--bg-hover, rgba(0,0,0,.05)); }
+    .work-period-btn.active { background: var(--primary-yellow, #ffde59); color: #1a1a1a; border-color: var(--primary-yellow, #ffde59); }
