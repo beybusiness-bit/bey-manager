@@ -7187,6 +7187,19 @@
       }
       h += '</div>';
 
+      // ─ 카테고리 필터 버튼 ─
+      if (cats.length > 1) {
+        h += '<div class="bt-cat-filter-bar">';
+        h += '<button class="bt-cat-filter-btn' + (btDailyFilterCat === '__all' ? ' active' : '') + '" onclick="btSetDailyFilter(\'__all\')">전체</button>';
+        cats.forEach(function(cat) {
+          var isActive = btDailyFilterCat === cat.id;
+          h += '<button class="bt-cat-filter-btn' + (isActive ? ' active' : '') + '" '
+            + 'style="' + (isActive ? 'background:' + escapeHtml(cat.color||'#ccc') + ';color:#fff;border-color:' + escapeHtml(cat.color||'#ccc') + ';' : 'border-color:' + escapeHtml(cat.color||'#ccc') + ';color:' + escapeHtml(cat.color||'#ccc') + ';') + '"'
+            + ' onclick="btSetDailyFilter(\'' + cat.id + '\')">' + (cat.icon||'') + ' ' + escapeHtml(cat.name) + '</button>';
+        });
+        h += '</div>';
+      }
+
       // ─ 기간 합계 + 목표 대비 + Objective (분기+objective 있으면 2열: 좌=Obj+요약 / 우=달성률) ─
       var _dQObjData = btDailyPeriod === 'quarter' && range.quarterObj && range.quarterObj.objective ? range.quarterObj : null;
       var _dSumEntries = btDailyPeriod === 'day' ? btDailyEntries.filter(function(e) { return e.date === btInputDate; }) : btEntriesInRange(range.start, range.end);
@@ -7259,6 +7272,9 @@
         var items = dateEntry ? (dateEntry.items || []).slice().sort(function(a,b) {
           var ak = a.time || 'zz', bk = b.time || 'zz'; return ak < bk ? -1 : ak > bk ? 1 : 0;
         }) : [];
+        if (btDailyFilterCat && btDailyFilterCat !== '__all') {
+          items = items.filter(function(it) { return it.catId === btDailyFilterCat; });
+        }
         if (cats.length === 0 && items.length === 0) {
           h += '<div class="bt-empty">설정 탭에서 카테고리를 먼저 추가하세요.</div>';
         } else if (items.length === 0) {
@@ -7903,6 +7919,19 @@
       }
       h += '</div>';
 
+      // ─ 카테고리 필터 버튼 ─
+      if (cats.length > 1) {
+        h += '<div class="bt-cat-filter-bar">';
+        h += '<button class="bt-cat-filter-btn' + (btActionFilterCat === '__all' ? ' active' : '') + '" onclick="btSetActionFilter(\'__all\')">전체</button>';
+        cats.forEach(function(cat) {
+          var isActive = btActionFilterCat === cat.id;
+          h += '<button class="bt-cat-filter-btn' + (isActive ? ' active' : '') + '" '
+            + 'style="' + (isActive ? 'background:' + escapeHtml(cat.color||'#ccc') + ';color:#fff;border-color:' + escapeHtml(cat.color||'#ccc') + ';' : 'border-color:' + escapeHtml(cat.color||'#ccc') + ';color:' + escapeHtml(cat.color||'#ccc') + ';') + '"'
+            + ' onclick="btSetActionFilter(\'' + cat.id + '\')">' + (cat.icon||'') + ' ' + escapeHtml(cat.name) + '</button>';
+        });
+        h += '</div>';
+      }
+
       // ─ Objective(좌, 1fr) + 4지표 비교 패널(우, 2fr) ─
       var _aQObjData = btActionPeriod === 'quarter' && aRange.quarterObj && aRange.quarterObj.objective ? aRange.quarterObj : null;
       if (_aQObjData) {
@@ -7971,6 +8000,9 @@
       var filtActions = btActions.filter(function(a) {
         if (!a.date) return btActionPeriod === 'quarter';
         return a.date >= aRange.start && a.date <= aRange.end;
+      }).filter(function(a) {
+        if (!btActionFilterCat || btActionFilterCat === '__all') return true;
+        return a.catId === btActionFilterCat;
       }).slice().sort(function(a, b) {
         var aKey = (a.date || '9999-99-99') + 'T' + (a.time || '99:99');
         var bKey = (b.date || '9999-99-99') + 'T' + (b.time || '99:99');
