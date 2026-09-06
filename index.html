@@ -3529,6 +3529,15 @@ firebase deploy --only functions</pre>
           <div class="work-form-label">메모 (선택)</div>
           <textarea class="input-field" id="workMemoInput" placeholder="메모를 입력하세요" rows="3" style="resize:none;width:100%;box-sizing:border-box;"></textarea>
         </div>
+        <!-- 순차 연결 할일 섹션 (신규 추가 + 연결할일이 아닌 경우에만 표시) -->
+        <div id="workSequelSection" style="display:none;margin-top:14px;border-top:1px solid var(--border-color);padding-top:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <div style="font-size:13px;font-weight:600;">🔗 순차 연결 할일</div>
+            <button class="btn-text" style="font-size:12px;padding:3px 8px;border-radius:6px;border:1px solid var(--border-color);background:none;cursor:pointer;" onclick="_addWorkSequel()">+ 추가</button>
+          </div>
+          <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;">이전 할일 완료 시 순서대로 시작 전 상태로 추가됩니다</div>
+          <div id="workSequelList"></div>
+        </div>
         <div style="display:flex;gap:8px;margin-top:16px;">
           <button class="btn-cancel" style="flex:1;padding:10px;" onclick="closeWorkItemModal()">취소</button>
           <button class="btn-confirm" style="flex:1;padding:10px;" onclick="saveWorkItem()">저장</button>

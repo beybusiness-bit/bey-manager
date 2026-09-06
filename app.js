@@ -9880,6 +9880,11 @@
         showToast(newStatus === 'done' ? '✅ 완료!' : newStatus === 'in-progress' ? '⏳ 진행 중' : '↩ 시작 전으로');
       }
 
+      /* 순차 연결 할일 트리거: 완료 시 다음 sequel 자동 생성 */
+      if (newStatus === 'done') {
+        _triggerSequelTask(item);
+      }
+
       saveWorkItems();
       renderWorkView();
     }
@@ -10153,6 +10158,14 @@
             + ' <span class="work-sub-title' + (cs === 'done' ? ' done' : '') + '">' + escapeHtml(child.title) + '</span></div>';
         });
         html += '</div>';
+      }
+      /* 순차 연결 할일 대기 표시 — sequelTasks가 있고 완료되지 않은 것이 남아있으면 */
+      if (item.sequelTasks && item.sequelTasks.length > 0) {
+        var spawnedCount = workItems.filter(function(it) { return it.parentId === item.id && it.sequelOrder !== undefined && it.sequelOrder !== null; }).length;
+        var remaining = item.sequelTasks.length - spawnedCount;
+        if (remaining > 0) {
+          html += '<div class="work-sequel-badge" onclick="event.stopPropagation()">🔗 연결 할일 ' + remaining + '개 대기 중</div>';
+        }
       }
       /* 연결 할일 추가 버튼 — 완료 상태인 경우 표시 (연결할일이어도 루트 기준으로 추가) */
       if (isDone) {
@@ -10569,6 +10582,8 @@
     }
 
     var _workModalBasketSelectedId = null;
+    var _workSequelDrafts = []; /* 신규 할일 추가 시 순차 연결 할일 목록 [{emoji, title}] */
+    var _workSequelEmojiTargetIdx = -1;
 
     var _workBizSelectedId = null;
     function _populateWorkBizSelect(selectedId) {
@@ -10640,6 +10655,11 @@
       if (tabNav) tabNav.style.display = dateStr ? '' : 'none';
       /* 비즈니스 드롭다운 채우기 */
       _populateWorkBizSelect(null);
+      /* 순차 연결 할일 섹션 — parentId 없을 때만 표시 */
+      _workSequelDrafts = [];
+      var sequelSection = document.getElementById('workSequelSection');
+      if (sequelSection) sequelSection.style.display = parentId ? 'none' : '';
+      _renderWorkSequelDrafts();
       /* 항상 새로 만들기 탭부터 */
       switchWorkModalTab('new');
       modal.style.display = 'flex';
@@ -10698,6 +10718,108 @@
       closeWorkItemModal();
       renderWorkView();
       showToast('바구니에서 할일을 가져왔습니다');
+    }
+
+    /* ── 순차 연결 할일 (sequel) ── */
+    function _triggerSequelTask(item) {
+      /* case 1: 이 item이 sequelTasks를 가진 부모 → 첫 번째 sequel 생성 */
+      if (item.sequelTasks && item.sequelTasks.length > 0) {
+        var alreadySpawned = workItems.some(function(it) {
+          return it.parentId === item.id && it.sequelOrder === 0;
+        });
+        if (!alreadySpawned) {
+          _createSequelTask(item, 0);
+          return;
+        }
+      }
+      /* case 2: 이 item이 sequel 자체 → parent의 다음 sequel 생성 */
+      if (item.parentId && item.sequelOrder !== undefined && item.sequelOrder !== null) {
+        var parent = workItems.find(function(it) { return it.id === item.parentId; });
+        if (parent && parent.sequelTasks) {
+          var nextOrder = item.sequelOrder + 1;
+          if (nextOrder < parent.sequelTasks.length) {
+            var alreadySpawned2 = workItems.some(function(it) {
+              return it.parentId === parent.id && it.sequelOrder === nextOrder;
+            });
+            if (!alreadySpawned2) {
+              _createSequelTask(parent, nextOrder);
+            }
+          }
+        }
+      }
+    }
+
+    function _createSequelTask(parent, order) {
+      var def = parent.sequelTasks[order];
+      if (!def) return;
+      var newTask = {
+        id: 'w' + Date.now() + '_sq' + order,
+        emoji: def.emoji || parent.emoji || '📋',
+        color: null,
+        title: def.title,
+        date: today(),
+        completed: false,
+        status: 'pending',
+        memo: '',
+        isBonus: false,
+        parentId: parent.id,
+        sequelOrder: order,
+        businessId: parent.businessId || null,
+        createdAt: today()
+      };
+      newTask.color = emojiToWorkColor(newTask.emoji);
+      workItems.push(newTask);
+      logWorkEvent('created', newTask, '', newTask.date);
+      showToast('🔗 연결 할일 추가: ' + def.title, 'info');
+    }
+
+    /* sequel 모달 UI 함수 */
+    function _addWorkSequel() {
+      _workSequelDrafts.push({ emoji: '📋', title: '' });
+      _renderWorkSequelDrafts();
+      setTimeout(function() {
+        var inputs = document.querySelectorAll('.work-sequel-title-input');
+        if (inputs.length) inputs[inputs.length - 1].focus();
+      }, 50);
+    }
+
+    function _removeWorkSequel(idx) {
+      _workSequelDrafts.splice(idx, 1);
+      _renderWorkSequelDrafts();
+    }
+
+    function _syncWorkSequelTitle(idx, val) {
+      if (_workSequelDrafts[idx]) _workSequelDrafts[idx].title = val;
+    }
+
+    function _openWorkSequelEmoji(idx) {
+      _workSequelEmojiTargetIdx = idx;
+      var cur = (_workSequelDrafts[idx] && _workSequelDrafts[idx].emoji) || '📋';
+      openEmojiPicker(cur, function(emoji) {
+        if (!emoji) return;
+        if (_workSequelDrafts[_workSequelEmojiTargetIdx]) {
+          _workSequelDrafts[_workSequelEmojiTargetIdx].emoji = emoji;
+          _renderWorkSequelDrafts();
+        }
+      });
+    }
+
+    function _renderWorkSequelDrafts() {
+      var list = document.getElementById('workSequelList');
+      if (!list) return;
+      if (_workSequelDrafts.length === 0) { list.innerHTML = ''; return; }
+      var html = '';
+      _workSequelDrafts.forEach(function(sq, idx) {
+        html += '<div class="work-sequel-row">';
+        html += '<span class="work-sequel-order">' + (idx + 1) + '</span>';
+        html += '<button class="work-sequel-emoji-btn" onclick="_openWorkSequelEmoji(' + idx + ')">' + (sq.emoji || '📋') + '</button>';
+        html += '<input class="input-field work-sequel-title-input" placeholder="연결 할일 제목" value="' + escapeHtml(sq.title || '') + '" '
+          + 'oninput="_syncWorkSequelTitle(' + idx + ',this.value)" '
+          + 'onkeydown="if(event.key===\'Enter\'&&!event.isComposing){event.preventDefault();_addWorkSequel();}if(event.key===\'Escape\')closeWorkItemModal();">';
+        html += '<button class="work-sequel-remove-btn" onclick="_removeWorkSequel(' + idx + ')" title="삭제">✕</button>';
+        html += '</div>';
+      });
+      list.innerHTML = html;
     }
 
     function addConnectedTask(parentId) {
@@ -10821,6 +10943,15 @@
           createdAt: today()
         };
         newItem.color = emojiToWorkColor(newItem.emoji);
+        /* 순차 연결 할일 저장 (제목이 있는 항목만) */
+        if (!newItem.parentId && _workSequelDrafts.length > 0) {
+          var validSequels = _workSequelDrafts.filter(function(sq) { return (sq.title || '').trim(); });
+          if (validSequels.length > 0) {
+            newItem.sequelTasks = validSequels.map(function(sq) {
+              return { id: 'sq' + Date.now() + Math.random().toString(36).slice(2,6), emoji: sq.emoji || '📋', title: sq.title.trim() };
+            });
+          }
+        }
         workItems.push(newItem);
         logWorkEvent('created', newItem, '', newItem.date || 'basket');
         showToast('할일을 추가했습니다');
