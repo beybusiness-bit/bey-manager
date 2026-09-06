@@ -4283,3 +4283,14 @@
     .work-sequel-remove-btn { font-size: 12px; color: var(--text-secondary); background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 4px; flex-shrink: 0; line-height: 1; }
     .work-sequel-remove-btn:hover { background: var(--bg-hover, rgba(0,0,0,.05)); color: var(--text-primary); }
     .work-sequel-badge { font-size: 11px; color: var(--text-secondary); background: var(--bg-hover, rgba(0,0,0,.04)); border: 1px solid var(--border-color); border-radius: 12px; padding: 3px 8px; margin-top: 6px; display: inline-block; }
+
+/* 날짜 이동 칩 바 */
+    .work-date-move-bar { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+    .work-date-chip { position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; padding: 5px 10px; border: 1.5px solid var(--border-color); border-radius: 8px; background: var(--card-bg, #fff); cursor: pointer; min-width: 44px; transition: background .12s, border-color .12s; line-height: 1; }
+    .work-date-chip:hover { background: var(--bg-hover, rgba(0,0,0,.05)); border-color: var(--primary-yellow, #ffde59); }
+    .work-date-chip.current { border-color: var(--border-color); background: var(--bg-main, #f5f5f5); opacity: .5; cursor: default; pointer-events: none; }
+    .work-date-chip-label { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+    .work-date-chip-sub { font-size: 10px; color: var(--text-secondary); margin-top: 1px; }
+    .work-date-chip-basket { font-size: 16px; padding: 5px 8px; min-width: auto; }
+    .work-date-chip-picker { font-size: 16px; padding: 5px 8px; min-width: auto; cursor: pointer; }
+    .work-date-chip-divider { width: 1px; height: 28px; background: var(--border-color); margin: 0 2px; flex-shrink: 0; }

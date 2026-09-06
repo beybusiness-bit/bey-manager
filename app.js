@@ -10045,6 +10045,11 @@
       return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     }
 
+    function _fmtMD(dateStr) {
+      var d = new Date(dateStr + 'T00:00:00');
+      return (d.getMonth() + 1) + '/' + d.getDate();
+    }
+
     function addDays(dateStr, n) {
       var d = new Date(dateStr + 'T00:00:00');
       d.setDate(d.getDate() + n);
@@ -10655,10 +10660,10 @@
       if (tabNav) tabNav.style.display = dateStr ? '' : 'none';
       /* 비즈니스 드롭다운 채우기 */
       _populateWorkBizSelect(null);
-      /* 순차 연결 할일 섹션 — parentId 없을 때만 표시 */
+      /* 순차 연결 할일 섹션 — 항상 표시 (연결할일에도 sequel 등록 가능) */
       _workSequelDrafts = [];
       var sequelSection = document.getElementById('workSequelSection');
-      if (sequelSection) sequelSection.style.display = parentId ? 'none' : '';
+      if (sequelSection) sequelSection.style.display = '';
       _renderWorkSequelDrafts();
       /* 항상 새로 만들기 탭부터 */
       switchWorkModalTab('new');
@@ -11050,17 +11055,33 @@
       if (actionRow) {
         var todayStr = today();
         var isPending = (status === 'pending' || status === 'in-progress');
-        var btnStyle = 'font-size:12px;padding:5px 10px;border:1px solid var(--border-color);border-radius:6px;background:none;color:var(--text-secondary);cursor:pointer;';
         var actionHtml = '';
         if (item.date && isPending) {
-          actionHtml += '<button style="' + btnStyle + '" onclick="moveDetailItemToBasket(\'' + id + '\')">🧺 바구니로</button>';
-        }
-        if (item.date && item.date < todayStr && isPending) {
-          actionHtml += '<button style="' + btnStyle + '" onclick="moveDetailItemToDate(\'' + id + '\',\'' + todayStr + '\',\'오늘\')">오늘 다시 하기</button>';
-        }
-        if (item.date && item.date === todayStr && isPending) {
-          var tomorrow = addDays(todayStr, 1);
-          actionHtml += '<button style="' + btnStyle + '" onclick="moveDetailItemToDate(\'' + id + '\',\'' + tomorrow + '\',\'내일\')">내일 하기</button>';
+          /* 날짜 칩 — 바구니 + 오늘~+3일 + 날짜 직접선택 */
+          var dateChipLabels = [
+            { date: todayStr,             label: '오늘',   sub: _fmtMD(todayStr) },
+            { date: addDays(todayStr, 1), label: '내일',   sub: _fmtMD(addDays(todayStr, 1)) },
+            { date: addDays(todayStr, 2), label: '모레',   sub: _fmtMD(addDays(todayStr, 2)) },
+            { date: addDays(todayStr, 3), label: '+3일',   sub: _fmtMD(addDays(todayStr, 3)) },
+          ];
+          actionHtml += '<div class="work-date-move-bar">';
+          actionHtml += '<button class="work-date-chip work-date-chip-basket" onclick="moveDetailItemToBasket(\'' + id + '\')" title="바구니로 이동">🧺</button>';
+          actionHtml += '<div class="work-date-chip-divider"></div>';
+          dateChipLabels.forEach(function(dc) {
+            var isCurrent = item.date === dc.date;
+            actionHtml += '<button class="work-date-chip' + (isCurrent ? ' current' : '') + '"'
+              + ' onclick="moveDetailItemToDate(\'' + id + '\',\'' + dc.date + '\',\'' + dc.label + '\')"'
+              + (isCurrent ? ' title="현재 날짜"' : ' title="' + dc.date + '로 이동"') + '>'
+              + '<span class="work-date-chip-label">' + dc.label + '</span>'
+              + '<span class="work-date-chip-sub">' + dc.sub + '</span>'
+              + '</button>';
+          });
+          actionHtml += '<div class="work-date-chip-divider"></div>';
+          actionHtml += '<label class="work-date-chip work-date-chip-picker" title="날짜 직접 선택">📅'
+            + '<input type="date" style="position:absolute;opacity:0;width:100%;height:100%;top:0;left:0;cursor:pointer;" min="' + todayStr + '"'
+            + ' onchange="if(this.value)moveDetailItemToDate(\'' + id + '\',this.value,this.value)">'
+            + '</label>';
+          actionHtml += '</div>';
         }
         actionRow.innerHTML = actionHtml;
       }
