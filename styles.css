@@ -4273,3 +4273,13 @@
     .work-period-btn { padding: 5px 16px; border-radius: 20px; border: 1.5px solid var(--border-color); background: none; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-secondary); transition: background .12s, color .12s; }
     .work-period-btn:hover { background: var(--bg-hover, rgba(0,0,0,.05)); }
     .work-period-btn.active { background: var(--primary-yellow, #ffde59); color: #1a1a1a; border-color: var(--primary-yellow, #ffde59); }
+
+/* 순차 연결 할일 모달 UI */
+    .work-sequel-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+    .work-sequel-order { font-size: 11px; font-weight: 700; color: var(--text-secondary); min-width: 14px; text-align: center; }
+    .work-sequel-emoji-btn { font-size: 18px; line-height: 1; padding: 4px 6px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--card-bg, #fff); cursor: pointer; flex-shrink: 0; }
+    .work-sequel-emoji-btn:hover { background: var(--bg-hover, rgba(0,0,0,.05)); }
+    .work-sequel-title-input { flex: 1; font-size: 13px; padding: 6px 8px; min-width: 0; }
+    .work-sequel-remove-btn { font-size: 12px; color: var(--text-secondary); background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 4px; flex-shrink: 0; line-height: 1; }
+    .work-sequel-remove-btn:hover { background: var(--bg-hover, rgba(0,0,0,.05)); color: var(--text-primary); }
+    .work-sequel-badge { font-size: 11px; color: var(--text-secondary); background: var(--bg-hover, rgba(0,0,0,.04)); border: 1px solid var(--border-color); border-radius: 12px; padding: 3px 8px; margin-top: 6px; display: inline-block; }
