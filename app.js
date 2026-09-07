@@ -10658,8 +10658,13 @@
       /* 바구니 모드(날짜 없음)에서는 "바구니에서 선택" 탭 숨김 */
       var tabNav = document.getElementById('workModalTabNav');
       if (tabNav) tabNav.style.display = dateStr ? '' : 'none';
-      /* 비즈니스 드롭다운 채우기 */
-      _populateWorkBizSelect(null);
+      /* 비즈니스 드롭다운 채우기 — 연결 할일이면 부모의 비즈니스를 기본 선택 */
+      var _initBizId = null;
+      if (parentId) {
+        var _par = workItems.find(function(it) { return it.id === parentId; });
+        _initBizId = (_par && _par.businessId) || null;
+      }
+      _populateWorkBizSelect(_initBizId);
       /* 순차 연결 할일 섹션 — 항상 표시 (연결할일에도 sequel 등록 가능) */
       _workSequelDrafts = [];
       var sequelSection = document.getElementById('workSequelSection');
@@ -10769,7 +10774,7 @@
         isBonus: false,
         parentId: parent.id,
         sequelOrder: order,
-        businessId: parent.businessId || null,
+        businessId: (def.businessId !== undefined ? def.businessId : parent.businessId) || null,
         createdAt: today()
       };
       newTask.color = emojiToWorkColor(newTask.emoji);
@@ -10953,7 +10958,7 @@
           var validSequels = _workSequelDrafts.filter(function(sq) { return (sq.title || '').trim(); });
           if (validSequels.length > 0) {
             newItem.sequelTasks = validSequels.map(function(sq) {
-              return { id: 'sq' + Date.now() + Math.random().toString(36).slice(2,6), emoji: sq.emoji || '📋', title: sq.title.trim() };
+              return { id: 'sq' + Date.now() + Math.random().toString(36).slice(2,6), emoji: sq.emoji || '📋', title: sq.title.trim(), businessId: newItem.businessId || null };
             });
           }
         }
