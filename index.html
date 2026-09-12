@@ -72,8 +72,11 @@
     <div class="modal-box" style="max-width:380px;width:100%;">
       <h3 id="hsItemModalTitle" style="margin:0 0 14px;font-size:16px;font-weight:700;">항목 추가</h3>
       <div class="hs-form-row">
-        <div class="hs-form-label">항목명</div>
-        <input id="hsItemNameInput" class="input-field" placeholder="예: 월세" style="width:100%;box-sizing:border-box;">
+        <div class="hs-form-label">아이콘 · 항목명</div>
+        <div style="display:flex;gap:8px;">
+          <button class="work-form-emoji-btn" id="hsItemEmojiBtn" onclick="hsOpenItemEmoji()">📋</button>
+          <input id="hsItemNameInput" class="input-field" placeholder="예: 월세" style="flex:1;box-sizing:border-box;">
+        </div>
       </div>
       <div class="hs-form-row">
         <div class="hs-form-label">구분</div>

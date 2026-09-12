@@ -14033,12 +14033,12 @@
 
     // Notion "숩&베이 월주거비 정산" 이력 마이그레이션 (2025-11-03 항목 등록 ~ 2026-09 최신)
     var DEFAULT_HOUSING_ITEMS = [
-      { id:'hi-rent',     name:'월세',    type:'fixed',    ratio:100, amount:300000, order:1, note:'매월 1일 납부',                 autoGenerate:true,  createdAt:'2025-11-03' },
-      { id:'hi-assoc',    name:'부녀회비', type:'fixed',    ratio:50,  amount:20000,  order:2, note:'매월 1일 납부',                 autoGenerate:true,  createdAt:'2025-11-03' },
-      { id:'hi-internet', name:'인터넷',   type:'fixed',    ratio:50,  amount:16500,  order:3, note:'매월 14일 납부',                autoGenerate:true,  createdAt:'2025-11-03' },
-      { id:'hi-elec',     name:'전기',    type:'variable', ratio:50,  amount:null,   order:4, note:'측정기간 매월 19일~익월 18일',  autoGenerate:false, createdAt:'2025-11-03' },
-      { id:'hi-water',    name:'수도',    type:'variable', ratio:50,  amount:null,   order:5, note:'두 달 단위 청구',               autoGenerate:false, createdAt:'2025-11-03' },
-      { id:'hi-gas',      name:'가스',    type:'variable', ratio:50,  amount:null,   order:6, note:'측정 기준 불명확(약 한 달 단위)', autoGenerate:false, createdAt:'2025-11-03' }
+      { id:'hi-rent',     name:'월세',    emoji:'🏠', type:'fixed',    ratio:100, amount:300000, order:1, note:'매월 1일 납부',                 autoGenerate:true,  createdAt:'2025-11-03' },
+      { id:'hi-assoc',    name:'부녀회비', emoji:'🤝', type:'fixed',    ratio:50,  amount:20000,  order:2, note:'매월 1일 납부',                 autoGenerate:true,  createdAt:'2025-11-03' },
+      { id:'hi-internet', name:'인터넷',   emoji:'📶', type:'fixed',    ratio:50,  amount:16500,  order:3, note:'매월 14일 납부',                autoGenerate:true,  createdAt:'2025-11-03' },
+      { id:'hi-elec',     name:'전기',    emoji:'⚡', type:'variable', ratio:50,  amount:null,   order:4, note:'측정기간 매월 19일~익월 18일',  autoGenerate:false, createdAt:'2025-11-03' },
+      { id:'hi-water',    name:'수도',    emoji:'🚰', type:'variable', ratio:50,  amount:null,   order:5, note:'두 달 단위 청구',               autoGenerate:false, createdAt:'2025-11-03' },
+      { id:'hi-gas',      name:'가스',    emoji:'🔥', type:'variable', ratio:50,  amount:null,   order:6, note:'측정 기준 불명확(약 한 달 단위)', autoGenerate:false, createdAt:'2025-11-03' }
     ];
     // [id, month, itemId, occurredAmount(null=발생액 없어 고정항목 기준금액 사용), paid]
     var _HR_RAW = [
@@ -14127,7 +14127,7 @@
       var occurred = (r[3] != null) ? r[3] : (item.type === 'fixed' ? item.amount : null);
       var settle = (occurred != null) ? Math.floor(occurred * (item.ratio || 0) / 100) : null;
       return {
-        id: r[0], month: r[1], itemId: r[2], itemName: item.name,
+        id: r[0], month: r[1], itemId: r[2], itemName: item.name, itemEmoji: item.emoji || '📋',
         occurredAmount: occurred, settleAmount: settle,
         paid: r[4], paidAt: null, paidBy: null, receiptImage: null,
         createdAt: r[1] + '-01T00:00:00.000Z'
@@ -14231,7 +14231,7 @@
         if (!exists) {
           var rec = {
             id: 'hr' + month.replace('-', '') + '-' + item.id.replace('hi-', ''),
-            month: month, itemId: item.id, itemName: item.name,
+            month: month, itemId: item.id, itemName: item.name, itemEmoji: item.emoji || '📋',
             occurredAmount: item.amount || 0, settleAmount: hsSettle(item, item.amount || 0),
             paid: false, paidAt: null, paidBy: null, receiptImage: null,
             createdAt: new Date().toISOString()
@@ -14262,8 +14262,8 @@
       var c = document.getElementById('housingPageContent');
       if (!c) return;
       var tabs = [
-        { v:'month', l:'이번 달 청구' }, { v:'records', l:'월별 내역' },
-        { v:'items', l:'항목 관리' }, { v:'cumulative', l:'누적 현황' }, { v:'share', l:'공유 링크' }
+        { v:'cumulative', l:'정산미완료' }, { v:'month', l:'이번 달 청구' }, { v:'records', l:'월별 내역' },
+        { v:'items', l:'항목 관리' }, { v:'share', l:'공유 링크' }
       ];
       var h = '<div class="tab-nav" id="housingTabNav">';
       tabs.forEach(function(t) {
@@ -14285,9 +14285,9 @@
     }
 
     function _hsBuildRecordCard(r) {
-      var item = housingItems.find(function(it) { return it.id === r.itemId; }) || { name: r.itemName || '?', ratio: 0 };
+      var item = housingItems.find(function(it) { return it.id === r.itemId; }) || { name: r.itemName || '?', emoji: r.itemEmoji, ratio: 0 };
       var h = '<div class="hs-record-card' + (r.paid ? ' paid' : '') + '">';
-      h += '<div class="hs-record-top"><span class="hs-record-name">' + escapeHtml(item.name || r.itemName || '') + '</span>';
+      h += '<div class="hs-record-top"><span class="hs-record-name">' + renderEmoji(item.emoji || r.itemEmoji || '📋') + ' ' + escapeHtml(item.name || r.itemName || '') + '</span>';
       h += '<span class="hs-record-ratio">' + (item.ratio != null ? item.ratio : '?') + '% 청구</span></div>';
       if (r.occurredAmount !== null && r.occurredAmount !== undefined) {
         h += '<div class="hs-record-amt">발생 ' + hsFmtWon(r.occurredAmount) + '</div>';
@@ -14305,7 +14305,7 @@
     }
     function _hsBuildMissingCard(item, month) {
       var h = '<div class="hs-record-card hs-missing">';
-      h += '<div class="hs-record-top"><span class="hs-record-name">' + escapeHtml(item.name) + '</span><span class="hs-record-ratio">' + item.ratio + '% 청구</span></div>';
+      h += '<div class="hs-record-top"><span class="hs-record-name">' + renderEmoji(item.emoji || '📋') + ' ' + escapeHtml(item.name) + '</span><span class="hs-record-ratio">' + item.ratio + '% 청구</span></div>';
       h += '<button class="btn-accent btn-sm" onclick="hsOpenRecordModal(null,\'' + item.id + '\',\'' + month + '\')">+ 이번 달 발생액 입력</button>';
       h += '</div>';
       return h;
@@ -14356,7 +14356,7 @@
       h += '<div class="hs-item-grid">';
       housingItems.slice().sort(function(a, b) { return (a.order || 0) - (b.order || 0); }).forEach(function(it) {
         h += '<div class="hs-item-card">';
-        h += '<div class="hs-item-top"><span class="hs-item-name">' + escapeHtml(it.name) + '</span>';
+        h += '<div class="hs-item-top"><span class="hs-item-name">' + renderEmoji(it.emoji || '📋') + ' ' + escapeHtml(it.name) + '</span>';
         h += '<span class="hs-item-type">' + (it.type === 'fixed' ? '고정' : '변동') + '</span></div>';
         h += '<div class="hs-item-detail">청구비율 ' + it.ratio + '%' + (it.type === 'fixed' ? (' · 금액 ' + hsFmtWon(it.amount)) : '') + '</div>';
         if (it.note) h += '<div class="hs-item-note">' + escapeHtml(it.note) + '</div>';
@@ -14372,12 +14372,13 @@
     function _hsBuildCumulativeTab() {
       var unpaid = housingRecords.filter(function(r) { return !r.paid && r.settleAmount != null; });
       var total = unpaid.reduce(function(s, r) { return s + r.settleAmount; }, 0);
-      var h = '<div class="hs-summary-card"><div class="hs-summary-row"><span>숩의 누적 미납액</span><strong>' + hsFmtWon(total) + '</strong></div></div>';
+      var h = '<div class="hs-summary-card"><div class="hs-summary-row"><span>입금 필요액</span><strong>' + hsFmtWon(total) + '</strong></div></div>';
       if (unpaid.length === 0) { h += '<div class="bt-empty">미납 항목이 없습니다 🎉</div>'; return h; }
       h += '<div class="hs-cumulative-list">';
       unpaid.slice().sort(function(a, b) { return a.month < b.month ? -1 : 1; }).forEach(function(r) {
         var item = housingItems.find(function(it) { return it.id === r.itemId; });
-        h += '<div class="hs-cumulative-row"><span>' + _hsFmtMonth(r.month) + ' · ' + escapeHtml(item ? item.name : r.itemName) + '</span><strong>' + hsFmtWon(r.settleAmount) + '</strong></div>';
+        var emoji = (item && item.emoji) || r.itemEmoji || '📋';
+        h += '<div class="hs-cumulative-row"><span>' + emoji + ' ' + _hsFmtMonth(r.month) + ' · ' + escapeHtml(item ? item.name : r.itemName) + '</span><strong>' + hsFmtWon(r.settleAmount) + '</strong></div>';
       });
       h += '</div>';
       return h;
@@ -14484,6 +14485,7 @@
       var occurred = item.type === 'fixed' ? (item.amount || 0) : (amtInput !== '' ? Number(amtInput) : null);
       hsRecordDraft.itemId = itemId;
       hsRecordDraft.itemName = item.name;
+      hsRecordDraft.itemEmoji = item.emoji || '📋';
       hsRecordDraft.month = monthVal;
       hsRecordDraft.occurredAmount = occurred;
       hsRecordDraft.settleAmount = hsSettle(item, occurred);
@@ -14507,8 +14509,9 @@
     }
     function hsOpenItemModal(id) {
       var it = id ? housingItems.find(function(x) { return x.id === id; }) : null;
-      hsItemDraft = it ? JSON.parse(JSON.stringify(it)) : { id: null, name: '', type: 'fixed', ratio: 50, amount: null, order: (housingItems.length + 1), note: '', autoGenerate: true };
+      hsItemDraft = it ? JSON.parse(JSON.stringify(it)) : { id: null, name: '', emoji: '📋', type: 'fixed', ratio: 50, amount: null, order: (housingItems.length + 1), note: '', autoGenerate: true };
       document.getElementById('hsItemModalTitle').textContent = it ? '항목 수정' : '항목 추가';
+      document.getElementById('hsItemEmojiBtn').innerHTML = renderEmoji(hsItemDraft.emoji || '📋');
       document.getElementById('hsItemNameInput').value = hsItemDraft.name;
       document.getElementById('hsItemTypeSelect').value = hsItemDraft.type;
       document.getElementById('hsItemRatioInput').value = hsItemDraft.ratio;
@@ -14520,10 +14523,20 @@
       bringModalToFront(modal);
     }
     function closeHsItemModal() { document.getElementById('hsItemModal').style.display = 'none'; hsItemDraft = null; }
+    function hsOpenItemEmoji() {
+      if (!hsItemDraft) return;
+      openEmojiPicker(hsItemDraft.emoji || '', function(emoji) {
+        if (!emoji) return;
+        hsItemDraft.emoji = emoji;
+        var btn = document.getElementById('hsItemEmojiBtn');
+        if (btn) btn.innerHTML = renderEmoji(emoji);
+      });
+    }
     function hsSaveItemModal() {
       var name = document.getElementById('hsItemNameInput').value.trim();
       if (!name) { showAlert('오류', '항목명을 입력하세요.'); return; }
       hsItemDraft.name = name;
+      hsItemDraft.emoji = hsItemDraft.emoji || '📋';
       hsItemDraft.type = document.getElementById('hsItemTypeSelect').value;
       hsItemDraft.ratio = Number(document.getElementById('hsItemRatioInput').value) || 0;
       hsItemDraft.amount = hsItemDraft.type === 'fixed' ? (Number(document.getElementById('hsItemAmountInput').value) || 0) : null;
@@ -14627,7 +14640,7 @@
         h += '<div class="hpv-month-group"><div class="hpv-month-title">' + _hsFmtMonth(m) + '</div>';
         records.filter(function(r) { return r.month === m; }).forEach(function(r) {
           h += '<div class="hpv-record' + (r.paid ? ' paid' : '') + '">';
-          h += '<div class="hpv-record-top"><span>' + escapeHtml(r.itemName || '') + '</span>';
+          h += '<div class="hpv-record-top"><span>' + renderEmoji(r.itemEmoji || '📋') + ' ' + escapeHtml(r.itemName || '') + '</span>';
           h += '<strong>' + (r.settleAmount != null ? hsFmtWon(r.settleAmount) : '금액 미확정') + '</strong></div>';
           if (r.receiptImage) h += '<img class="hpv-receipt" src="' + r.receiptImage + '" onclick="window.open(this.src)">';
           h += '<label class="hpv-paid-toggle"><input type="checkbox" ' + (r.paid ? 'checked' : '') + (r.settleAmount == null ? ' disabled' : '') + ' onchange="hpvTogglePaid(\'' + r.id + '\',this.checked)"> 입금 완료</label>';
