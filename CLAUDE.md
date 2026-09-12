@@ -564,17 +564,36 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 
 **⚠️ 22단계(숩과의 정산) 추가로 규칙 갱신 필요 — 아래 전체를 Firebase Console → Firestore Database → 규칙에 붙여넣기**
 
+**⚠️ 중요**: `beyhome-admin` Firebase 프로젝트는 bey-manager 전용이 아니라, 다른 앱(숩업스/CMS 계열 — brands, vendor_accounts, cms_* 등)과 **Firestore 프로젝트를 공유**하고 있음. 따라서 실제 배포된 규칙은 아래처럼 훨씬 큼. `bey-manager/{document=**}`와 `housingRecords/{recordId}` 블록만 이 프로젝트(베이 관리자) 소유이고, 나머지는 손대지 말 것.
+
 ```
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
+
+    function isAdmin() {
+      return request.auth != null &&
+        request.auth.token.email in ['itsbeybusiness@gmail.com', 'baekeun0@gmail.com'];
+    }
+    function getManagerDoc() {
+      return get(/databases/$(database)/documents/managers/$(request.auth.token.email.lower())).data;
+    }
+    function isBrandMember(brandId) {
+      let mgr = getManagerDoc();
+      return mgr != null && mgr.status == '연결됨' && mgr.brand_ids.hasAny([brandId]);
+    }
+    function isLinkedVendor() {
+      let mgr = getManagerDoc();
+      return mgr != null && mgr.status == '연결됨';
+    }
+
+    match /bey-manager/{document=**} {
       allow read, write: if request.auth != null
         && request.auth.token.email == 'baekeun0@gmail.com';
     }
 
     // 숩과의 정산 — 공개 링크(익명 인증)가 입금 체크만 할 수 있도록 별도 컬렉션 + 완화 규칙
-    // (위 전역 규칙과 OR로 합쳐져 적용됨 — 소유자는 항상 전체 권한, 익명은 아래 범위만 추가 허용)
+    // (아래는 다른 규칙과 OR로 합쳐져 적용됨 — 소유자는 항상 전체 권한, 익명은 이 범위만 추가 허용)
     match /housingRecords/{recordId} {
       allow read: if request.auth != null;
       allow create, delete: if request.auth != null
@@ -587,13 +606,239 @@ service cloud.firestore {
         )
       );
     }
+
+    // ── Admin 전용 컬렉션 (다른 앱 소유 — bey-manager와 무관) ──
+    match /brands/{document=**}               { allow read, write: if isAdmin(); }
+    match /products/{document=**}             { allow read, write: if isAdmin(); }
+    match /persons/{document=**}              { allow read, write: if isAdmin(); }
+    match /managers/{document=**}             { allow read, write: if isAdmin(); }
+    match /settlements/{document=**}          { allow read, write: if isAdmin(); }
+    match /activity_log/{document=**}         { allow read, write: if isAdmin(); }
+    match /notices/{document=**}              { allow read, write: if isAdmin(); }
+    match /inquiries/{document=**}            { allow read, write: if isAdmin(); }
+    match /settings/{document=**}             { allow read, write: if isAdmin(); }
+    match /email_configs/{document=**}        { allow read, write: if isAdmin(); }
+    match /brand_applications/{document=**}   { allow read, write: if isAdmin(); }
+    match /brand_join_requests/{document=**}  { allow read, write: if isAdmin(); }
+    match /vendor_accounts/{document=**}      { allow read, write: if isAdmin(); }
+    match /users/{document=**}                { allow read, write: if isAdmin(); }
+    match /inventory/{document=**}            { allow read, write: if isAdmin(); }
+    match /inventory_transactions/{document=**} { allow read, write: if isAdmin(); }
+    match /onboarding_cards/{cardId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /faq_items/{itemId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /customer_inquiries/{document=**}   { allow read, write: if isAdmin(); }
+    match /contract_templates/{document=**}   { allow read, write: if isAdmin(); }
+    match /app_configs/{document=**}          { allow read, write: if isAdmin(); }
+    match /brand_public_meta/{document=**}    { allow read, write: if isAdmin(); }
+
+    // ── Vendor 접근 규칙 ──
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    match /vendor_accounts/{email} {
+      allow read: if request.auth != null && request.auth.token.email.lower() == email;
+      allow update: if request.auth != null && request.auth.token.email.lower() == email
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['uid','status','linked_at']);
+      allow create: if request.auth != null;
+    }
+
+    match /managers/{email} {
+      allow read: if request.auth != null && request.auth.token.email.lower() == email;
+      allow update: if request.auth != null && request.auth.token.email.lower() == email
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['uid','status','linked_at','updated_at','name']);
+    }
+
+    match /brand_applications/{docId} {
+      allow read: if request.auth != null
+        && (resource.data.applicant_uid == request.auth.uid
+            || resource.data.applicant_email == request.auth.token.email);
+      allow create: if request.auth != null
+        && request.resource.data.applicant_uid == request.auth.uid
+        && request.resource.data.status == '제출됨';
+      allow update: if request.auth != null
+        && resource.data.applicant_uid == request.auth.uid
+        && resource.data.status == '제출됨'
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status','cancelled_at'])
+        && request.resource.data.status == '취소됨';
+    }
+
+    match /brand_join_requests/{docId} {
+      allow read: if request.auth != null
+        && (resource.data.applicant_uid == request.auth.uid
+            || resource.data.applicant_email == request.auth.token.email);
+      allow create: if request.auth != null
+        && request.resource.data.applicant_uid == request.auth.uid
+        && request.resource.data.status == '제출됨';
+      allow update: if request.auth != null
+        && resource.data.applicant_uid == request.auth.uid
+        && resource.data.status == '제출됨'
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status','cancelled_at'])
+        && request.resource.data.status == '취소됨';
+      allow delete: if request.auth != null && resource.data.applicant_uid == request.auth.uid;
+    }
+
+    match /brands/{brandId} {
+      allow read: if request.auth != null;
+      allow update: if request.auth != null && isBrandMember(brandId)
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['brand_desc','website_urls','settlement_info',
+                       'brand_photo_url','logo_url','updated_at']);
+
+      match /contracts/{contractId} {
+        allow read: if request.auth != null && isBrandMember(brandId);
+      }
+      match /managers/{mgr} {
+        allow read: if request.auth != null;
+      }
+      match /persons/{personId} {
+        allow read: if request.auth != null && isBrandMember(brandId);
+        allow create: if request.auth != null && isBrandMember(brandId);
+        allow update: if request.auth != null && isBrandMember(brandId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['name','role','phone','contact_email','updated_at']);
+        allow delete: if request.auth != null && isBrandMember(brandId);
+      }
+    }
+
+    match /persons/{personId} {
+      allow read: if request.auth != null
+        && resource.data.brand_id != null
+        && isBrandMember(resource.data.brand_id);
+      allow create: if request.auth != null
+        && request.resource.data.login_google_email == request.auth.token.email;
+      allow update: if request.auth != null
+        && resource.data.brand_id != null
+        && isBrandMember(resource.data.brand_id)
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['name','role','phone','contact_email','updated_at']);
+      allow update: if request.auth != null
+        && resource.data.login_google_email == request.auth.token.email
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['name','login_google_email','updated_at']);
+    }
+
+    match /products/{productId} {
+      allow read: if request.auth != null
+        && resource.data.brand_id != null
+        && isBrandMember(resource.data.brand_id);
+      allow create: if request.auth != null
+        && isBrandMember(request.resource.data.brand_id)
+        && request.resource.data.status == '등록신청'
+        && !request.resource.data.keys().hasAny(['supply_price','commission_rate','approved_at']);
+      allow update: if request.auth != null
+        && isBrandMember(resource.data.brand_id)
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['pending_changes','approval_status','updated_at']);
+    }
+
+    match /settlements/{settlementId} {
+      allow read: if request.auth != null
+        && resource.data.brand_id != null
+        && isBrandMember(resource.data.brand_id);
+    }
+    match /inventory/{docId} {
+      allow read: if request.auth != null
+        && resource.data.brand_id != null
+        && isBrandMember(resource.data.brand_id);
+    }
+    match /inventory_transactions/{docId} {
+      allow read: if request.auth != null
+        && resource.data.brand_id != null
+        && isBrandMember(resource.data.brand_id);
+    }
+    match /sales/{docId} {
+      allow read: if request.auth != null
+        && resource.data.brand_id != null
+        && isBrandMember(resource.data.brand_id);
+    }
+
+    match /customer_inquiries/{docId} {
+      allow read: if request.auth != null && isBrandMember(resource.data.brand_id);
+      allow update: if request.auth != null && isBrandMember(resource.data.brand_id)
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status','updated_at']);
+      match /responses/{respId} {
+        allow read: if request.auth != null &&
+          isBrandMember(get(/databases/$(database)/documents/customer_inquiries/$(docId)).data.brand_id);
+        allow create: if request.auth != null &&
+          isBrandMember(get(/databases/$(database)/documents/customer_inquiries/$(docId)).data.brand_id) &&
+          request.resource.data.author_type == 'vendor';
+        allow update, delete: if false;
+      }
+    }
+
+    match /notices/{noticeId}         { allow read: if request.auth != null; }
+    match /onboarding_cards/{docId}   { allow read: if true; }
+    match /faq_items/{docId}          { allow read: if true; }
+    match /email_configs/{docId}      { allow read: if request.auth != null; }
+    match /settings/config            { allow read: if request.auth != null; }
+    match /app_configs/{docId}        { allow read: if request.auth != null; }
+    match /brand_public_meta/{docId}  { allow read: if request.auth != null; }
+
+    match /inquiries/{inquiryId} {
+      allow read: if request.auth != null && resource.data.author_uid == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.author_uid == request.auth.uid;
+      allow update: if request.auth != null && resource.data.author_uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['title','content','updated_at']);
+    }
+
+    // ── CMS / 공개 컬렉션 ──
+    match /gmbf_sellers/{doc}                         { allow read: if true; }
+    match /gmbf_settings/{doc}                        { allow read: if true; }
+    match /gmbf_event_log/{doc}                       { allow write: if true; }
+    match /cms_projects/{document=**}                 { allow read, write: if true; }
+    match /cms_guides/{doc}                           { allow read, write: if true; }
+    match /cms_admin_settings/{document=**}           { allow read, write: if true; }
+    match /cms_form_configs/{document=**}             { allow read, write: if true; }
+    match /cms_form_responses/{document=**}           { allow read, write: if true; }
+    match /cms_payment_configs/{document=**}          { allow read, write: if true; }
+    match /cms_payment_records/{document=**}          { allow read, write: if true; }
+    match /cms_schedule_configs/{document=**}         { allow read, write: if true; }
+    match /cms_schedule_bookings/{document=**}        { allow read, write: if true; }
+    match /cms_copy_gen_configs/{document=**}         { allow read, write: if true; }
+    match /cms_copy_gen_usages/{document=**}          { allow read, write: if true; }
+    match /cms_copy_gen_results/{document=**}         { allow read, write: if true; }
+    match /cms_youtube_submissions/{document=**}      { allow read, write: if true; }
+    match /cms_youtube_playlists/{document=**}        { allow read, write: if true; }
+    match /cms_youtube_search_cache/{document=**}     { allow read, write: if true; }
+    match /cms_booth_gallery/{document=**}            { allow read, write: if true; }
+    match /cms_guestbook_configs/{document=**}        { allow read, write: if true; }
+    match /cms_guestbook_entries/{document=**}        { allow read, write: if true; }
+    match /cms_page_views/{document=**}               { allow read, write: if true; }
+    match /game_configs/{document=**}                 { allow read, write: if true; }
+    match /cms_utm_configs/{document=**}              { allow read, write: if true; }
+    match /cms_utm_links/{document=**}                { allow read, write: if true; }
+    match /tickets/{document=**}                      { allow read, write: if true; }
+    match /ticket_types/{document=**}                 { allow read, write: if true; }
+    match /cms_lottery_configs/{document=**}          { allow read, write: if true; }
+    match /cms_raffle_configs/{document=**}           { allow read, write: if true; }
+    match /cms_raffle_records/{document=**}           { allow read, write: if true; }
+    match /cms_raffle_results/{document=**}           { allow read, write: if true; }
+    match /sessions/{document=**}                     { allow read, write: if true; }
+    match /sessionStats/{document=**}                 { allow read, write: if request.auth != null; }
+    match /{col}/{doc}                                { allow read, write: if col.matches('cms_users_.*'); }
+    match /cms_chat_configs/{document=**}             { allow read, write: if true; }
+    match /cms_chat_messages/{chatId}/messages/{msgId}{ allow read, write: if true; }
+    match /cms_chat_presence/{document=**}            { allow read, write: if true; }
   }
 }
 ```
 
 - `housingRecords` 컬렉션은 `bey-manager` 문서 트리 밖의 **별도 최상위 컬렉션**임 (다른 데이터와 격리해서 익명 접근 범위를 문서 단위로 제한하기 위함)
 - 익명 사용자는 `paid`/`paidAt`/`paidBy` 세 필드만 수정 가능 — 금액·항목 등은 절대 건드릴 수 없음
-- **필수**: Firebase Console → Authentication → Sign-in method → **Anonymous(익명)** 공급자를 반드시 활성화해야 공개 링크가 작동함 (기본은 비활성 상태)
+- **필수**: Firebase Console → Authentication → Sign-in method → **Anonymous(익명)** 공급자를 반드시 활성화해야 공개 링크가 작동함 (2026-09-12 활성화 완료 ✅)
 
 ### Firebase Auth 승인 도메인 (Firebase Console → Authentication → 설정)
 - `beybusiness-bit.github.io` 추가 필요
