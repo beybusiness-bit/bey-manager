@@ -4328,8 +4328,9 @@
     .hs-item-note { font-size:11px; color:var(--text-tertiary,#999); }
     .hs-autogen-toggle { font-size:12px; display:flex; align-items:center; gap:5px; cursor:pointer; }
     .hs-item-actions { display:flex; gap:6px; margin-top:4px; }
-    .hs-cumulative-list { display:flex; flex-direction:column; gap:6px; }
-    .hs-cumulative-row { display:flex; justify-content:space-between; font-size:13px; padding:8px 12px; background:var(--card-bg,#fff); border:1px solid var(--border-color); border-radius:8px; }
+    .hs-cumulative-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; }
+    .hs-cumulative-row { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:13px; padding:10px 14px; background:var(--card-bg,#fff); border:1px solid var(--border-color); border-radius:10px; }
+    @media (max-width:768px) { .hs-cumulative-list { display:block; } .hs-cumulative-row { margin-bottom:8px; } }
     .hs-share-card { background:var(--card-bg,#fff); border:1px solid var(--border-color); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px; max-width:420px; }
     .hs-share-desc { font-size:13px; line-height:1.6; }
     .hs-share-url-row input { width:100%; box-sizing:border-box; font-family:'DM Mono',monospace; font-size:12px; }
