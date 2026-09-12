@@ -556,8 +556,14 @@ console.log(JSON.parse(localStorage.getItem('designSettings')));
 | `pomodoroLogs` | `{ logs: [...pomodoroLogs], _updatedAt }` |
 | `workItemLogs` | `{ logs: [...workItemLogs], _updatedAt }` |
 | `config` | 기존 FCM 토큰 (건드리지 않음) |
+| `housing` | `{ items: [...housingItems 항목 마스터], publicEnabled, _updatedAt }` |
+
+**별도 최상위 컬렉션 `housingRecords/{recordId}`** (⚠️ `bey-manager` 문서 안이 아니라 DB 최상위): 월별 발생·정산 내역 각 1건씩 개별 문서. `_config` 문서(`{publicEnabled}`)에 공개 링크 on/off 저장. 공개 링크(익명 인증)가 문서 단위 필드 제한 규칙으로 `paid`/`paidAt`/`paidBy`만 쓸 수 있게 하려고 일부러 배열-단일문서 패턴을 깨고 분리함 — §8 보안 규칙 참고.
 
 ### Firestore 보안 규칙 (Firebase Console에서 설정 필요)
+
+**⚠️ 22단계(숩과의 정산) 추가로 규칙 갱신 필요 — 아래 전체를 Firebase Console → Firestore Database → 규칙에 붙여넣기**
+
 ```
 rules_version = '2';
 service cloud.firestore {
@@ -566,9 +572,28 @@ service cloud.firestore {
       allow read, write: if request.auth != null
         && request.auth.token.email == 'baekeun0@gmail.com';
     }
+
+    // 숩과의 정산 — 공개 링크(익명 인증)가 입금 체크만 할 수 있도록 별도 컬렉션 + 완화 규칙
+    // (위 전역 규칙과 OR로 합쳐져 적용됨 — 소유자는 항상 전체 권한, 익명은 아래 범위만 추가 허용)
+    match /housingRecords/{recordId} {
+      allow read: if request.auth != null;
+      allow create, delete: if request.auth != null
+        && request.auth.token.email == 'baekeun0@gmail.com';
+      allow update: if request.auth != null && (
+        request.auth.token.email == 'baekeun0@gmail.com' ||
+        (
+          !('email' in request.auth.token) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['paid', 'paidAt', 'paidBy'])
+        )
+      );
+    }
   }
 }
 ```
+
+- `housingRecords` 컬렉션은 `bey-manager` 문서 트리 밖의 **별도 최상위 컬렉션**임 (다른 데이터와 격리해서 익명 접근 범위를 문서 단위로 제한하기 위함)
+- 익명 사용자는 `paid`/`paidAt`/`paidBy` 세 필드만 수정 가능 — 금액·항목 등은 절대 건드릴 수 없음
+- **필수**: Firebase Console → Authentication → Sign-in method → **Anonymous(익명)** 공급자를 반드시 활성화해야 공개 링크가 작동함 (기본은 비활성 상태)
 
 ### Firebase Auth 승인 도메인 (Firebase Console → Authentication → 설정)
 - `beybusiness-bit.github.io` 추가 필요

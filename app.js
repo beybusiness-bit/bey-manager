@@ -43,7 +43,13 @@
         ]
       },
       {
-        id: 'group-storage', type: 'group', icon: '🎁', name: '보관보관', order: 4,
+        id: 'group-etc', type: 'group', icon: '📦', name: '기타', order: 4,
+        children: [
+          { id: 'housing-settle', type: 'page', icon: '🏠', name: '숩과의 정산', slug: 'housing-settle', order: 0 },
+        ]
+      },
+      {
+        id: 'group-storage', type: 'group', icon: '🎁', name: '보관보관', order: 5,
         children: [
           { id: 'habit', type: 'page', icon: '🍎', name: '습관', slug: 'habit', order: 0 },
           { id: 'daily', type: 'page', icon: '📅', name: '시간표', slug: 'daily', order: 1 },
@@ -53,7 +59,7 @@
           { id: 'idea', type: 'page', icon: '💡', name: '아이디어', slug: 'idea', order: 5 },
         ]
       },
-      { id: 'settings', type: 'page', icon: '⚙️', name: '설정', slug: 'settings', order: 5 },
+      { id: 'settings', type: 'page', icon: '⚙️', name: '설정', slug: 'settings', order: 6 },
     ];
 
     // 이모지 데이터
@@ -1589,10 +1595,15 @@
     }
 
     // DOMContentLoaded 이벤트 리스너
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initLogin);
-    } else {
+    // 공개 링크(?public=housing)면 로그인 게이트를 완전히 건너뛰고 별도 공개 뷰만 띄움
+    function _bootEntry() {
+      if (isHousingPublicView()) { initHousingPublicView(); return; }
       initLogin();
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', _bootEntry);
+    } else {
+      _bootEntry();
     }
 
     function initLogin() {
@@ -1691,6 +1702,7 @@
       loadPomodoroSettings();
       loadNotificationSettings();
       loadMoimData();
+      loadHousing();
       /* 뽀모도로 초기 상태 설정 */
       initPomodoroPhase('work');
       _restorePomodoroState();
@@ -2168,6 +2180,7 @@
       if (pageId === 'quirk') renderQuirkPage();
       if (pageId === 'devnotes') { dnUpdateAll(); dnUpdateTabBadges(); }
       if (pageId === 'moim') renderMoimPage && renderMoimPage();
+      if (pageId === 'housing-settle') renderHousingPage();
       var dnFab = document.getElementById('dnQuestionFab');
       if (dnFab) dnFab.style.display = (pageId === 'devnotes') ? 'flex' : 'none';
 
@@ -3616,7 +3629,8 @@
         devnotesLogs:    function() { return { items: dnNoteLogs }; },
         quirks:          function() { return { items: quirks }; },
         businessTracker: function() { return { config: btConfig, dailyEntries: btDailyEntries, actions: btActions }; },
-        moimData: function() { return { ingredients: moimIngredients, categories: moimCategories, programs: moimPrograms, recipes: moimRecipes, inventoryLog: moimInventoryLog }; }
+        moimData: function() { return { ingredients: moimIngredients, categories: moimCategories, programs: moimPrograms, recipes: moimRecipes, inventoryLog: moimInventoryLog }; },
+        housing: function() { return { items: housingItems, publicEnabled: housingPublicEnabled }; }
       };
 
       // 시트 이름 → Firestore 문서 이름 매핑
@@ -3814,6 +3828,10 @@
             if (data.moimData.recipes) moimRecipes = data.moimData.recipes;
             if (data.moimData.inventoryLog) moimInventoryLog = data.moimData.inventoryLog;
             localStorage.setItem('moimData', JSON.stringify({ ingredients: moimIngredients, categories: moimCategories, programs: moimPrograms, recipes: moimRecipes, inventoryLog: moimInventoryLog }));
+          }
+          if (data.housing) {
+            if (data.housing.items) { housingItems = data.housing.items; localStorage.setItem('housingItems', JSON.stringify(housingItems)); }
+            if (data.housing.publicEnabled !== undefined) { housingPublicEnabled = !!data.housing.publicEnabled; localStorage.setItem('housingPublicEnabled', housingPublicEnabled ? '1' : '0'); }
           }
           _updateUI('ok', 'Firebase 연결됨');
           console.log('[FS] ✅ 전체 로드 완료');
@@ -13967,6 +13985,640 @@
         saveMoimData();
         renderMoimPage();
         showToast('기록 삭제 완료', 'success');
+      });
+    }
+
+    // ========================================
+    // 숩과의 정산 (주거비 정산) — 22단계
+    // ========================================
+    // 역할: 베이(집주인, 로그인 사용자)가 월세/공과금을 먼저 전액 지불하고,
+    //       그중 정해진 비율만큼을 숩(세입자, 로그인 없음)에게 청구한다.
+    // 데이터: housingItems(항목 마스터, Firestore bey-manager/housing 문서, 소유자 전용)
+    //         housingRecords(월별 발생·정산 내역, Firestore 별도 컬렉션 housingRecords/{id},
+    //           공개 링크(익명 인증)가 paid/paidAt/paidBy 필드만 쓸 수 있도록 문서 단위로 분리)
+
+    var housingItems = [];
+    var housingRecords = [];
+    var housingPublicEnabled = false;
+    var housingTab = 'month';        // 'month'|'records'|'items'|'cumulative'|'share'
+    var housingViewMonth = null;     // 'YYYY-MM', null = 이번 달
+    var hsRecordDraft = null;
+    var hsItemDraft = null;
+
+    // Notion "숩&베이 월주거비 정산" 이력 마이그레이션 (2025-11-03 항목 등록 ~ 2026-09 최신)
+    var DEFAULT_HOUSING_ITEMS = [
+      { id:'hi-rent',     name:'월세',    type:'fixed',    ratio:100, amount:300000, order:1, note:'매월 1일 납부',                 autoGenerate:true,  createdAt:'2025-11-03' },
+      { id:'hi-assoc',    name:'부녀회비', type:'fixed',    ratio:50,  amount:20000,  order:2, note:'매월 1일 납부',                 autoGenerate:true,  createdAt:'2025-11-03' },
+      { id:'hi-internet', name:'인터넷',   type:'fixed',    ratio:50,  amount:16500,  order:3, note:'매월 14일 납부',                autoGenerate:true,  createdAt:'2025-11-03' },
+      { id:'hi-elec',     name:'전기',    type:'variable', ratio:50,  amount:null,   order:4, note:'측정기간 매월 19일~익월 18일',  autoGenerate:false, createdAt:'2025-11-03' },
+      { id:'hi-water',    name:'수도',    type:'variable', ratio:50,  amount:null,   order:5, note:'두 달 단위 청구',               autoGenerate:false, createdAt:'2025-11-03' },
+      { id:'hi-gas',      name:'가스',    type:'variable', ratio:50,  amount:null,   order:6, note:'측정 기준 불명확(약 한 달 단위)', autoGenerate:false, createdAt:'2025-11-03' }
+    ];
+    // [id, month, itemId, occurredAmount(null=발생액 없어 고정항목 기준금액 사용), paid]
+    var _HR_RAW = [
+      ['hr202506-gas','2025-06','hi-gas',14970,true],
+      ['hr202507-internet','2025-07','hi-internet',2662,true],
+      ['hr202507-rent','2025-07','hi-rent',48387,true],
+      ['hr202507-assoc','2025-07','hi-assoc',3226,true],
+      ['hr202507-elec','2025-07','hi-elec',42306,true],
+      ['hr202507-gas','2025-07','hi-gas',1352,true],
+      ['hr202507-water','2025-07','hi-water',914,true],
+      ['hr202508-gas','2025-08','hi-gas',4194,true],
+      ['hr202508-rent','2025-08','hi-rent',154839,true],
+      ['hr202508-elec','2025-08','hi-elec',43774,true],
+      ['hr202508-internet','2025-08','hi-internet',8516,true],
+      ['hr202508-assoc','2025-08','hi-assoc',10322,true],
+      ['hr202509-water','2025-09','hi-water',15353,true],
+      ['hr202509-elec','2025-09','hi-elec',24420,true],
+      ['hr202509-internet','2025-09','hi-internet',null,true],
+      ['hr202509-assoc','2025-09','hi-assoc',null,true],
+      ['hr202509-rent','2025-09','hi-rent',null,true],
+      ['hr202509-gas','2025-09','hi-gas',8640,true],
+      ['hr202510-assoc','2025-10','hi-assoc',null,true],
+      ['hr202510-internet','2025-10','hi-internet',null,true],
+      ['hr202510-rent','2025-10','hi-rent',null,true],
+      ['hr202510-gas','2025-10','hi-gas',19040,true],
+      ['hr202510-elec','2025-10','hi-elec',25490,true],
+      ['hr202511-rent','2025-11','hi-rent',null,true],
+      ['hr202511-internet','2025-11','hi-internet',null,true],
+      ['hr202511-assoc','2025-11','hi-assoc',null,true],
+      ['hr202511-water','2025-11','hi-water',9720,true],
+      ['hr202511-elec','2025-11','hi-elec',25020,true],
+      ['hr202512-rent','2025-12','hi-rent',null,true],
+      ['hr202512-internet','2025-12','hi-internet',null,true],
+      ['hr202512-assoc','2025-12','hi-assoc',null,true],
+      ['hr202512-water','2025-12','hi-water',20360,true],
+      ['hr202512-elec','2025-12','hi-elec',24730,true],
+      ['hr202512-gas','2025-12','hi-gas',58610,true],
+      ['hr202601-internet','2026-01','hi-internet',null,true],
+      ['hr202601-rent','2026-01','hi-rent',null,true],
+      ['hr202601-assoc','2026-01','hi-assoc',null,true],
+      ['hr202601-gas','2026-01','hi-gas',88920,true],
+      ['hr202601-elec','2026-01','hi-elec',24880,true],
+      ['hr202602-internet','2026-02','hi-internet',null,true],
+      ['hr202602-assoc','2026-02','hi-assoc',null,true],
+      ['hr202602-rent','2026-02','hi-rent',null,true],
+      ['hr202602-water','2026-02','hi-water',18550,true],
+      ['hr202602-gas','2026-02','hi-gas',37890,true],
+      ['hr202602-elec','2026-02','hi-elec',19890,true],
+      ['hr202603-internet','2026-03','hi-internet',null,true],
+      ['hr202603-rent','2026-03','hi-rent',null,true],
+      ['hr202603-assoc','2026-03','hi-assoc',null,true],
+      ['hr202603-elec','2026-03','hi-elec',21710,true],
+      ['hr202603-gas','2026-03','hi-gas',19140,true],
+      ['hr202604-internet','2026-04','hi-internet',null,true],
+      ['hr202604-assoc','2026-04','hi-assoc',null,true],
+      ['hr202604-rent','2026-04','hi-rent',null,true],
+      ['hr202604-gas','2026-04','hi-gas',17010,true],
+      ['hr202604-water','2026-04','hi-water',17950,true],
+      ['hr202604-elec','2026-04','hi-elec',21100,true],
+      ['hr202605-rent','2026-05','hi-rent',null,true],
+      ['hr202605-assoc','2026-05','hi-assoc',null,true],
+      ['hr202605-internet','2026-05','hi-internet',null,true],
+      ['hr202605-elec','2026-05','hi-elec',28380,true],
+      ['hr202605-gas','2026-05','hi-gas',14970,true],
+      ['hr202606-internet','2026-06','hi-internet',null,true],
+      ['hr202606-rent','2026-06','hi-rent',null,true],
+      ['hr202606-assoc','2026-06','hi-assoc',null,true],
+      ['hr202606-elec','2026-06','hi-elec',47590,true],
+      ['hr202606-gas','2026-06','hi-gas',12800,true],
+      ['hr202606-water','2026-06','hi-water',19180,true],
+      ['hr202607-internet','2026-07','hi-internet',null,true],
+      ['hr202607-rent','2026-07','hi-rent',null,true],
+      ['hr202607-assoc','2026-07','hi-assoc',null,true],
+      ['hr202607-gas','2026-07','hi-gas',8630,false],
+      ['hr202607-elec','2026-07','hi-elec',58180,false],
+      ['hr202608-rent','2026-08','hi-rent',null,true],
+      ['hr202608-assoc','2026-08','hi-assoc',null,true],
+      ['hr202608-internet','2026-08','hi-internet',null,false],
+      ['hr202608-water','2026-08','hi-water',21640,false],
+      ['hr202609-assoc','2026-09','hi-assoc',null,true],
+      ['hr202609-internet','2026-09','hi-internet',null,false],
+      ['hr202609-rent','2026-09','hi-rent',null,true]
+    ];
+    var DEFAULT_HOUSING_RECORDS = _HR_RAW.map(function(r) {
+      var item = DEFAULT_HOUSING_ITEMS.find(function(it) { return it.id === r[2]; });
+      var occurred = (r[3] != null) ? r[3] : (item.type === 'fixed' ? item.amount : null);
+      var settle = (occurred != null) ? Math.floor(occurred * (item.ratio || 0) / 100) : null;
+      return {
+        id: r[0], month: r[1], itemId: r[2], itemName: item.name,
+        occurredAmount: occurred, settleAmount: settle,
+        paid: r[4], paidAt: null, paidBy: null, receiptImage: null,
+        createdAt: r[1] + '-01T00:00:00.000Z'
+      };
+    });
+
+    function hsMonthStr(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+    function _hsFmtMonth(m) { var p = m.split('-'); return p[0] + '년 ' + Number(p[1]) + '월'; }
+    function hsFmtWon(n) { if (n === null || n === undefined) return '-'; return Number(n).toLocaleString('ko-KR') + '원'; }
+    function hsSettle(item, occurred) {
+      if (occurred === null || occurred === undefined) return null;
+      return Math.floor(occurred * (item.ratio || 0) / 100);
+    }
+
+    function loadHousing() {
+      try { housingItems = JSON.parse(localStorage.getItem('housingItems') || 'null') || DEFAULT_HOUSING_ITEMS.slice(); }
+      catch(e) { housingItems = DEFAULT_HOUSING_ITEMS.slice(); }
+      try { housingRecords = JSON.parse(localStorage.getItem('housingRecords') || 'null') || DEFAULT_HOUSING_RECORDS.slice(); }
+      catch(e) { housingRecords = DEFAULT_HOUSING_RECORDS.slice(); }
+      housingPublicEnabled = localStorage.getItem('housingPublicEnabled') === '1';
+    }
+    function saveHousingItems() {
+      localStorage.setItem('housingItems', JSON.stringify(housingItems));
+      localStorage.setItem('housingPublicEnabled', housingPublicEnabled ? '1' : '0');
+      if (window.FS && FS.isConnected()) FS.sync(['housing']);
+    }
+
+    // Firestore 'housingRecords' 컬렉션 — 문서 단위 분리로 공개 링크(익명 인증)가
+    // paid/paidAt/paidBy 필드만 쓸 수 있도록 보안 규칙을 걸 수 있게 함 (CLAUDE.md §8 참고)
+    async function hsMigrateSeedRecordsIfEmpty() {
+      if (!window.firebase || !firebase.firestore) return;
+      try {
+        var db = firebase.firestore();
+        var batch = db.batch();
+        DEFAULT_HOUSING_RECORDS.forEach(function(r) {
+          var data = Object.assign({}, r);
+          delete data.id;
+          batch.set(db.collection('housingRecords').doc(r.id), data);
+        });
+        await batch.commit();
+        localStorage.setItem('housingRecordsMigrated', '1');
+        housingRecords = DEFAULT_HOUSING_RECORDS.slice();
+        localStorage.setItem('housingRecords', JSON.stringify(housingRecords));
+        console.log('[housing] Notion 이력 마이그레이션 완료 (' + DEFAULT_HOUSING_RECORDS.length + '건)');
+      } catch(e) { console.warn('[housing] 마이그레이션 실패', e); }
+    }
+    async function hsLoadRecordsFromFirestore() {
+      if (!window.firebase || !firebase.firestore) return false;
+      try {
+        var db = firebase.firestore();
+        var snap = await db.collection('housingRecords').get();
+        if (snap.size === 0 && localStorage.getItem('housingRecordsMigrated') !== '1') {
+          await hsMigrateSeedRecordsIfEmpty();
+          return true;
+        }
+        var records = [], cfg = null;
+        snap.forEach(function(doc) {
+          if (doc.id === '_config') { cfg = doc.data(); return; }
+          records.push(Object.assign({ id: doc.id }, doc.data()));
+        });
+        housingRecords = records;
+        if (cfg && cfg.publicEnabled !== undefined) {
+          housingPublicEnabled = !!cfg.publicEnabled;
+          localStorage.setItem('housingPublicEnabled', housingPublicEnabled ? '1' : '0');
+        }
+        localStorage.setItem('housingRecords', JSON.stringify(housingRecords));
+        return true;
+      } catch(e) { console.warn('[housing] 레코드 로드 실패', e); return false; }
+    }
+    async function hsSaveRecordToFirestore(record) {
+      if (!window.firebase || !firebase.firestore) return false;
+      try {
+        var db = firebase.firestore();
+        var data = Object.assign({}, record);
+        delete data.id;
+        await db.collection('housingRecords').doc(record.id).set(data);
+        return true;
+      } catch(e) { console.warn('[housing] 레코드 저장 실패', e); showToast('저장 실패 — Firebase 연결을 확인하세요', 'warning'); return false; }
+    }
+    async function hsDeleteRecordFromFirestore(id) {
+      if (!window.firebase || !firebase.firestore) return false;
+      try { await firebase.firestore().collection('housingRecords').doc(id).delete(); return true; }
+      catch(e) { console.warn('[housing] 레코드 삭제 실패', e); return false; }
+    }
+    async function hsSetPublicEnabled(enabled) {
+      housingPublicEnabled = !!enabled;
+      if (window.firebase && firebase.firestore) {
+        try { await firebase.firestore().collection('housingRecords').doc('_config').set({ publicEnabled: housingPublicEnabled }, { merge: true }); }
+        catch(e) { console.warn('[housing] 공개 설정 실패', e); }
+      }
+      return true;
+    }
+
+    // 고정 항목 자동 생성 — 앱 접속(정산 페이지 진입) 시점에 이번 달 것이 없으면 즉시 생성
+    function hsCheckAutoGenerate() {
+      var month = hsMonthStr(new Date());
+      var created = false;
+      housingItems.forEach(function(item) {
+        if (item.type !== 'fixed' || item.autoGenerate === false) return;
+        var exists = housingRecords.some(function(r) { return r.itemId === item.id && r.month === month; });
+        if (!exists) {
+          var rec = {
+            id: 'hr' + month.replace('-', '') + '-' + item.id.replace('hi-', ''),
+            month: month, itemId: item.id, itemName: item.name,
+            occurredAmount: item.amount || 0, settleAmount: hsSettle(item, item.amount || 0),
+            paid: false, paidAt: null, paidBy: null, receiptImage: null,
+            createdAt: new Date().toISOString()
+          };
+          housingRecords.push(rec);
+          hsSaveRecordToFirestore(rec);
+          created = true;
+        }
+      });
+      if (created) localStorage.setItem('housingRecords', JSON.stringify(housingRecords));
+      return created;
+    }
+
+    function renderHousingPage() {
+      if (!localStorage.getItem('housingItemsSynced') && window.FS && FS.isConnected()) {
+        saveHousingItems();
+        localStorage.setItem('housingItemsSynced', '1');
+      }
+      _renderHousingTabs();
+      hsLoadRecordsFromFirestore().then(function(ok) {
+        if (ok) hsCheckAutoGenerate();
+        var pageEl = document.getElementById('housing-settlePage');
+        if (pageEl && pageEl.classList.contains('active')) _renderHousingTabs();
+      });
+    }
+
+    function _renderHousingTabs() {
+      var c = document.getElementById('housingPageContent');
+      if (!c) return;
+      var tabs = [
+        { v:'month', l:'이번 달 청구' }, { v:'records', l:'월별 내역' },
+        { v:'items', l:'항목 관리' }, { v:'cumulative', l:'누적 현황' }, { v:'share', l:'공유 링크' }
+      ];
+      var h = '<div class="tab-nav" id="housingTabNav">';
+      tabs.forEach(function(t) {
+        h += '<button class="tab-btn' + (housingTab === t.v ? ' active' : '') + '" onclick="hsSetTab(\'' + t.v + '\')">' + t.l + '</button>';
+      });
+      h += '</div><div id="housingTabContent"></div>';
+      c.innerHTML = h;
+      _renderHousingTabContent();
+    }
+    function hsSetTab(t) { housingTab = t; _renderHousingTabs(); }
+    function _renderHousingTabContent() {
+      var el = document.getElementById('housingTabContent');
+      if (!el) return;
+      if (housingTab === 'month') el.innerHTML = _hsBuildMonthTab();
+      else if (housingTab === 'records') el.innerHTML = _hsBuildRecordsTab();
+      else if (housingTab === 'items') el.innerHTML = _hsBuildItemsTab();
+      else if (housingTab === 'cumulative') el.innerHTML = _hsBuildCumulativeTab();
+      else if (housingTab === 'share') el.innerHTML = _hsBuildShareTab();
+    }
+
+    function _hsBuildRecordCard(r) {
+      var item = housingItems.find(function(it) { return it.id === r.itemId; }) || { name: r.itemName || '?', ratio: 0 };
+      var h = '<div class="hs-record-card' + (r.paid ? ' paid' : '') + '">';
+      h += '<div class="hs-record-top"><span class="hs-record-name">' + escapeHtml(item.name || r.itemName || '') + '</span>';
+      h += '<span class="hs-record-ratio">' + (item.ratio != null ? item.ratio : '?') + '% 청구</span></div>';
+      if (r.occurredAmount !== null && r.occurredAmount !== undefined) {
+        h += '<div class="hs-record-amt">발생 ' + hsFmtWon(r.occurredAmount) + '</div>';
+        h += '<div class="hs-record-settle">청구액 <strong>' + hsFmtWon(r.settleAmount) + '</strong></div>';
+      } else {
+        h += '<div class="hs-record-amt hs-pending">발생금액 미입력</div>';
+      }
+      h += '<div class="hs-record-actions">';
+      h += '<label class="hs-paid-toggle"><input type="checkbox" ' + (r.paid ? 'checked' : '') + ' onchange="hsTogglePaid(\'' + r.id + '\',this.checked)"> 입금 완료</label>';
+      if (r.receiptImage) h += '<img class="hs-receipt-thumb" src="' + r.receiptImage + '" onclick="hsViewReceipt(\'' + r.id + '\')">';
+      h += '<button class="btn-icon-sm" onclick="hsOpenRecordModal(\'' + r.id + '\')" title="수정">✎</button>';
+      h += '<button class="btn-icon-sm" onclick="hsDeleteRecord(\'' + r.id + '\')" title="삭제">🗑</button>';
+      h += '</div></div>';
+      return h;
+    }
+    function _hsBuildMissingCard(item, month) {
+      var h = '<div class="hs-record-card hs-missing">';
+      h += '<div class="hs-record-top"><span class="hs-record-name">' + escapeHtml(item.name) + '</span><span class="hs-record-ratio">' + item.ratio + '% 청구</span></div>';
+      h += '<button class="btn-accent btn-sm" onclick="hsOpenRecordModal(null,\'' + item.id + '\',\'' + month + '\')">+ 이번 달 발생액 입력</button>';
+      h += '</div>';
+      return h;
+    }
+    function _hsBuildMonthTab() {
+      var month = housingViewMonth || hsMonthStr(new Date());
+      var h = '<div class="bt-date-nav" style="margin-bottom:12px;">';
+      h += '<button class="btn-icon" onclick="hsMoveMonth(-1)">◀</button>';
+      h += '<div class="bt-date-label-wrap"><button class="bt-date-label-btn">' + _hsFmtMonth(month) + '</button></div>';
+      h += '<button class="btn-icon" onclick="hsMoveMonth(1)">▶</button>';
+      h += '<button class="btn-icon" onclick="hsGoCurrentMonth()">이번달</button>';
+      h += '</div>';
+      var recs = housingRecords.filter(function(r) { return r.month === month; }).slice().sort(function(a, b) {
+        var ai = housingItems.findIndex(function(it) { return it.id === a.itemId; });
+        var bi = housingItems.findIndex(function(it) { return it.id === b.itemId; });
+        return ai - bi;
+      });
+      var totalSettle = 0, unpaidCount = 0;
+      recs.forEach(function(r) { if (r.settleAmount != null) totalSettle += r.settleAmount; if (!r.paid) unpaidCount++; });
+      h += '<div class="hs-summary-card">';
+      h += '<div class="hs-summary-row"><span>이번 달 총 청구액</span><strong>' + hsFmtWon(totalSettle) + '</strong></div>';
+      h += '<div class="hs-summary-row"><span>미정산 항목</span><strong>' + unpaidCount + '개</strong></div>';
+      h += '</div>';
+      var missingItems = housingItems.filter(function(it) { return !recs.some(function(r) { return r.itemId === it.id; }); });
+      h += '<div class="hs-record-grid">';
+      recs.forEach(function(r) { h += _hsBuildRecordCard(r); });
+      missingItems.forEach(function(it) { h += _hsBuildMissingCard(it, month); });
+      h += '</div>';
+      if (recs.length === 0 && missingItems.length === 0) h += '<div class="bt-empty">항목을 먼저 등록하세요 (항목 관리 탭)</div>';
+      return h;
+    }
+    function _hsBuildRecordsTab() {
+      var months = {};
+      housingRecords.forEach(function(r) { months[r.month] = true; });
+      var monthList = Object.keys(months).sort().reverse();
+      var h = '<button class="btn-accent" style="margin-bottom:12px;" onclick="hsOpenRecordModal(null)">+ 발생 내역 추가</button>';
+      if (monthList.length === 0) { h += '<div class="bt-empty">아직 내역이 없습니다.</div>'; return h; }
+      monthList.forEach(function(m) {
+        h += '<div class="hs-month-group"><div class="hs-month-group-title">' + _hsFmtMonth(m) + '</div>';
+        h += '<div class="hs-record-grid">';
+        housingRecords.filter(function(r) { return r.month === m; }).forEach(function(r) { h += _hsBuildRecordCard(r); });
+        h += '</div></div>';
+      });
+      return h;
+    }
+    function _hsBuildItemsTab() {
+      var h = '<button class="btn-accent" style="margin-bottom:12px;" onclick="hsOpenItemModal(null)">+ 항목 추가</button>';
+      h += '<div class="hs-item-grid">';
+      housingItems.slice().sort(function(a, b) { return (a.order || 0) - (b.order || 0); }).forEach(function(it) {
+        h += '<div class="hs-item-card">';
+        h += '<div class="hs-item-top"><span class="hs-item-name">' + escapeHtml(it.name) + '</span>';
+        h += '<span class="hs-item-type">' + (it.type === 'fixed' ? '고정' : '변동') + '</span></div>';
+        h += '<div class="hs-item-detail">청구비율 ' + it.ratio + '%' + (it.type === 'fixed' ? (' · 금액 ' + hsFmtWon(it.amount)) : '') + '</div>';
+        if (it.note) h += '<div class="hs-item-note">' + escapeHtml(it.note) + '</div>';
+        if (it.type === 'fixed') {
+          h += '<label class="hs-autogen-toggle"><input type="checkbox" ' + (it.autoGenerate !== false ? 'checked' : '') + ' onchange="hsToggleAutoGen(\'' + it.id + '\',this.checked)"> 매월 자동 생성</label>';
+        }
+        h += '<div class="hs-item-actions"><button class="btn-icon-sm" onclick="hsOpenItemModal(\'' + it.id + '\')" title="수정">✎</button><button class="btn-icon-sm" onclick="hsDeleteItem(\'' + it.id + '\')" title="삭제">🗑</button></div>';
+        h += '</div>';
+      });
+      h += '</div>';
+      return h;
+    }
+    function _hsBuildCumulativeTab() {
+      var unpaid = housingRecords.filter(function(r) { return !r.paid && r.settleAmount != null; });
+      var total = unpaid.reduce(function(s, r) { return s + r.settleAmount; }, 0);
+      var h = '<div class="hs-summary-card"><div class="hs-summary-row"><span>숩의 누적 미납액</span><strong>' + hsFmtWon(total) + '</strong></div></div>';
+      if (unpaid.length === 0) { h += '<div class="bt-empty">미납 항목이 없습니다 🎉</div>'; return h; }
+      h += '<div class="hs-cumulative-list">';
+      unpaid.slice().sort(function(a, b) { return a.month < b.month ? -1 : 1; }).forEach(function(r) {
+        var item = housingItems.find(function(it) { return it.id === r.itemId; });
+        h += '<div class="hs-cumulative-row"><span>' + _hsFmtMonth(r.month) + ' · ' + escapeHtml(item ? item.name : r.itemName) + '</span><strong>' + hsFmtWon(r.settleAmount) + '</strong></div>';
+      });
+      h += '</div>';
+      return h;
+    }
+    function _hsBuildShareTab() {
+      var url = location.origin + location.pathname + '?public=housing';
+      var h = '<div class="hs-share-card">';
+      h += '<div class="hs-share-desc">숩님이 로그인 없이 이 링크로 들어와서 이번 달 청구 내역을 확인하고 입금 완료를 체크할 수 있어요.</div>';
+      h += '<div class="hs-share-url-row"><input class="input-field" id="hsShareUrlInput" value="' + url + '" readonly onclick="this.select()"></div>';
+      h += '<label class="hs-share-toggle"><input type="checkbox" ' + (housingPublicEnabled ? 'checked' : '') + ' onchange="hsSetPublicToggle(this.checked)"> 공개 링크 활성화</label>';
+      h += '<div class="hs-share-note">비활성화하면 숩님이 링크로 들어와도 "비활성화됨" 화면만 보여요. 링크를 정리하고 싶을 때 언제든 꺼둘 수 있어요.</div>';
+      h += '</div>';
+      return h;
+    }
+
+    function hsMoveMonth(delta) {
+      var cur = housingViewMonth || hsMonthStr(new Date());
+      var parts = cur.split('-');
+      var d = new Date(Number(parts[0]), Number(parts[1]) - 1 + delta, 1);
+      housingViewMonth = hsMonthStr(d);
+      _renderHousingTabContent();
+    }
+    function hsGoCurrentMonth() { housingViewMonth = null; _renderHousingTabContent(); }
+    function hsSetPublicToggle(checked) {
+      hsSetPublicEnabled(checked).then(function() {
+        saveHousingItems();
+        showToast(checked ? '공개 링크를 활성화했습니다' : '공개 링크를 비활성화했습니다');
+      });
+    }
+    function hsTogglePaid(id, checked) {
+      var r = housingRecords.find(function(x) { return x.id === id; });
+      if (!r) return;
+      r.paid = checked;
+      r.paidAt = checked ? new Date().toISOString() : null;
+      r.paidBy = checked ? 'bey' : null;
+      localStorage.setItem('housingRecords', JSON.stringify(housingRecords));
+      hsSaveRecordToFirestore(r);
+      _renderHousingTabContent();
+    }
+    function hsDeleteRecord(id) {
+      showConfirm('삭제', '이 발생 내역을 삭제할까요?', function(ok) {
+        if (!ok) return;
+        housingRecords = housingRecords.filter(function(r) { return r.id !== id; });
+        localStorage.setItem('housingRecords', JSON.stringify(housingRecords));
+        hsDeleteRecordFromFirestore(id);
+        _renderHousingTabContent();
+        showToast('삭제했습니다');
+      });
+    }
+    function hsViewReceipt(id) {
+      var r = housingRecords.find(function(x) { return x.id === id; });
+      if (!r || !r.receiptImage) return;
+      showAlert('청구자료', '<img src="' + r.receiptImage + '" style="max-width:100%;border-radius:8px;">');
+    }
+    function _hsPopulateItemSelect(selectedId, disabled) {
+      var sel = document.getElementById('hsRecordItemSelect');
+      if (!sel) return;
+      sel.innerHTML = housingItems.map(function(it) {
+        return '<option value="' + it.id + '"' + (it.id === selectedId ? ' selected' : '') + '>' + escapeHtml(it.name) + '</option>';
+      }).join('');
+      sel.disabled = !!disabled;
+    }
+    function hsOnRecordItemChange() {
+      var id = document.getElementById('hsRecordItemSelect').value;
+      var item = housingItems.find(function(it) { return it.id === id; });
+      document.getElementById('hsRecordAmountRow').style.display = (item && item.type === 'fixed') ? 'none' : '';
+    }
+    function hsOpenRecordModal(recordId, itemId, month) {
+      var rec = recordId ? housingRecords.find(function(r) { return r.id === recordId; }) : null;
+      var initItemId = rec ? rec.itemId : (itemId || (housingItems[0] && housingItems[0].id));
+      var item = housingItems.find(function(it) { return it.id === initItemId; });
+      hsRecordDraft = rec ? JSON.parse(JSON.stringify(rec)) : {
+        id: null, month: month || hsMonthStr(new Date()), itemId: initItemId,
+        occurredAmount: null, settleAmount: null, paid: false, paidAt: null, paidBy: null, receiptImage: null
+      };
+      document.getElementById('hsRecordModalTitle').textContent = rec ? '발생 내역 수정' : '발생 내역 추가';
+      _hsPopulateItemSelect(initItemId, !!rec);
+      document.getElementById('hsRecordMonthInput').value = hsRecordDraft.month;
+      document.getElementById('hsRecordAmountInput').value = hsRecordDraft.occurredAmount != null ? hsRecordDraft.occurredAmount : '';
+      document.getElementById('hsRecordAmountRow').style.display = (item && item.type === 'fixed') ? 'none' : '';
+      document.getElementById('hsRecordReceiptPreview').innerHTML = hsRecordDraft.receiptImage ? '<img src="' + hsRecordDraft.receiptImage + '" style="max-width:100%;border-radius:8px;">' : '';
+      var modal = document.getElementById('hsRecordModal');
+      modal.style.display = 'flex';
+      bringModalToFront(modal);
+    }
+    function closeHsRecordModal() { document.getElementById('hsRecordModal').style.display = 'none'; hsRecordDraft = null; }
+    function hsRecordReceiptChange(input) {
+      var file = input.files && input.files[0];
+      if (!file) return;
+      if (file.size > 300 * 1024) { showAlert('파일 너무 큼', '300KB 이하 이미지를 사용해주세요.'); return; }
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        hsRecordDraft.receiptImage = e.target.result;
+        document.getElementById('hsRecordReceiptPreview').innerHTML = '<img src="' + e.target.result + '" style="max-width:100%;border-radius:8px;">';
+      };
+      reader.readAsDataURL(file);
+    }
+    function hsSaveRecordModal() {
+      var itemId = document.getElementById('hsRecordItemSelect').value;
+      var item = housingItems.find(function(it) { return it.id === itemId; });
+      if (!item) { showAlert('오류', '항목을 선택하세요.'); return; }
+      var monthVal = document.getElementById('hsRecordMonthInput').value || hsRecordDraft.month;
+      var amtInput = document.getElementById('hsRecordAmountInput').value;
+      var occurred = item.type === 'fixed' ? (item.amount || 0) : (amtInput !== '' ? Number(amtInput) : null);
+      hsRecordDraft.itemId = itemId;
+      hsRecordDraft.itemName = item.name;
+      hsRecordDraft.month = monthVal;
+      hsRecordDraft.occurredAmount = occurred;
+      hsRecordDraft.settleAmount = hsSettle(item, occurred);
+      if (!hsRecordDraft.id) {
+        hsRecordDraft.id = 'hr' + Date.now() + Math.random().toString(36).slice(2, 6);
+        hsRecordDraft.createdAt = new Date().toISOString();
+        housingRecords.push(hsRecordDraft);
+      } else {
+        var idx = housingRecords.findIndex(function(r) { return r.id === hsRecordDraft.id; });
+        if (idx >= 0) housingRecords[idx] = hsRecordDraft;
+      }
+      localStorage.setItem('housingRecords', JSON.stringify(housingRecords));
+      hsSaveRecordToFirestore(hsRecordDraft);
+      closeHsRecordModal();
+      _renderHousingTabContent();
+      showToast('저장했습니다');
+    }
+    function hsUpdateItemAmountRow() {
+      var type = document.getElementById('hsItemTypeSelect').value;
+      document.getElementById('hsItemAmountRow').style.display = type === 'fixed' ? '' : 'none';
+    }
+    function hsOpenItemModal(id) {
+      var it = id ? housingItems.find(function(x) { return x.id === id; }) : null;
+      hsItemDraft = it ? JSON.parse(JSON.stringify(it)) : { id: null, name: '', type: 'fixed', ratio: 50, amount: null, order: (housingItems.length + 1), note: '', autoGenerate: true };
+      document.getElementById('hsItemModalTitle').textContent = it ? '항목 수정' : '항목 추가';
+      document.getElementById('hsItemNameInput').value = hsItemDraft.name;
+      document.getElementById('hsItemTypeSelect').value = hsItemDraft.type;
+      document.getElementById('hsItemRatioInput').value = hsItemDraft.ratio;
+      document.getElementById('hsItemAmountInput').value = hsItemDraft.amount != null ? hsItemDraft.amount : '';
+      document.getElementById('hsItemNoteInput').value = hsItemDraft.note || '';
+      hsUpdateItemAmountRow();
+      var modal = document.getElementById('hsItemModal');
+      modal.style.display = 'flex';
+      bringModalToFront(modal);
+    }
+    function closeHsItemModal() { document.getElementById('hsItemModal').style.display = 'none'; hsItemDraft = null; }
+    function hsSaveItemModal() {
+      var name = document.getElementById('hsItemNameInput').value.trim();
+      if (!name) { showAlert('오류', '항목명을 입력하세요.'); return; }
+      hsItemDraft.name = name;
+      hsItemDraft.type = document.getElementById('hsItemTypeSelect').value;
+      hsItemDraft.ratio = Number(document.getElementById('hsItemRatioInput').value) || 0;
+      hsItemDraft.amount = hsItemDraft.type === 'fixed' ? (Number(document.getElementById('hsItemAmountInput').value) || 0) : null;
+      hsItemDraft.note = document.getElementById('hsItemNoteInput').value.trim();
+      if (!hsItemDraft.id) {
+        hsItemDraft.id = 'hi' + Date.now();
+        hsItemDraft.createdAt = today();
+        if (hsItemDraft.autoGenerate === undefined) hsItemDraft.autoGenerate = true;
+        housingItems.push(hsItemDraft);
+      } else {
+        var idx = housingItems.findIndex(function(x) { return x.id === hsItemDraft.id; });
+        if (idx >= 0) housingItems[idx] = hsItemDraft;
+      }
+      saveHousingItems();
+      closeHsItemModal();
+      _renderHousingTabContent();
+      showToast('저장했습니다');
+    }
+    function hsToggleAutoGen(id, checked) {
+      var it = housingItems.find(function(x) { return x.id === id; });
+      if (!it) return;
+      it.autoGenerate = checked;
+      saveHousingItems();
+    }
+    function hsDeleteItem(id) {
+      var hasRecords = housingRecords.some(function(r) { return r.itemId === id; });
+      showConfirm('항목 삭제', hasRecords ? '이 항목과 연결된 발생 내역이 있습니다. 항목만 삭제하고 내역은 그대로 둘까요?' : '이 항목을 삭제할까요?', function(ok) {
+        if (!ok) return;
+        housingItems = housingItems.filter(function(x) { return x.id !== id; });
+        saveHousingItems();
+        _renderHousingTabContent();
+        showToast('삭제했습니다');
+      });
+    }
+
+    // ── 공개 링크 (숩 전용, 로그인 없음, 익명 인증) ──
+    function isHousingPublicView() {
+      try { return new URLSearchParams(location.search).get('public') === 'housing'; } catch(e) { return false; }
+    }
+    function initHousingPublicView() {
+      var el = document.getElementById('housingPublicView');
+      if (el) el.style.display = 'flex';
+      /* 공개 뷰에서는 뽀모도로 플로팅 버튼 등 앱 전용 UI 숨김 */
+      ['pomodoroFab', 'pomodoroPanel'].forEach(function(id) {
+        var e = document.getElementById(id);
+        if (e) e.style.display = 'none';
+      });
+      if (!window.firebase || !firebase.auth || !firebase.firestore) {
+        _hpvRenderError('Firebase를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+        return;
+      }
+      if (!firebase.apps || !firebase.apps.length) {
+        try {
+          firebase.initializeApp({
+            apiKey: "AIzaSyC8uy09XOeEYIs1m3Rga5BMqd7gS7o3roI",
+            authDomain: "beyhome-admin.firebaseapp.com",
+            projectId: "beyhome-admin",
+            storageBucket: "beyhome-admin.firebasestorage.app",
+            messagingSenderId: "849320781553",
+            appId: "1:849320781553:web:5a78f9c2bd936b60aa2b50"
+          });
+        } catch(e) {}
+      }
+      firebase.auth().signInAnonymously().then(function() {
+        _hpvLoad();
+      }).catch(function(e) {
+        _hpvRenderError('로그인에 실패했습니다 (' + (e.code || e.message) + ').');
+      });
+    }
+    function _hpvRenderError(msg) {
+      var body = document.getElementById('housingPublicBody');
+      if (body) body.innerHTML = '<div class="hpv-error">⚠️ ' + escapeHtml(msg) + '</div>';
+    }
+    function _hpvLoad() {
+      var db = firebase.firestore();
+      db.collection('housingRecords').get().then(function(snap) {
+        var cfg = null, records = [];
+        snap.forEach(function(doc) {
+          if (doc.id === '_config') { cfg = doc.data(); return; }
+          records.push(Object.assign({ id: doc.id }, doc.data()));
+        });
+        if (!cfg || !cfg.publicEnabled) {
+          _hpvRenderError('이 링크는 현재 비활성화되어 있습니다. 베이에게 문의해주세요.');
+          return;
+        }
+        _hpvRender(records);
+      }).catch(function(e) {
+        _hpvRenderError('데이터를 불러오지 못했습니다 (' + (e.code || e.message) + ').');
+      });
+    }
+    function _hpvRender(records) {
+      var body = document.getElementById('housingPublicBody');
+      if (!body) return;
+      var unpaid = records.filter(function(r) { return !r.paid && r.settleAmount != null; });
+      var totalUnpaid = unpaid.reduce(function(s, r) { return s + r.settleAmount; }, 0);
+      var months = {};
+      records.forEach(function(r) { months[r.month] = true; });
+      var monthList = Object.keys(months).sort().reverse();
+      var h = '<div class="hpv-summary">현재 누적 미납액 <strong>' + hsFmtWon(totalUnpaid) + '</strong></div>';
+      monthList.forEach(function(m) {
+        h += '<div class="hpv-month-group"><div class="hpv-month-title">' + _hsFmtMonth(m) + '</div>';
+        records.filter(function(r) { return r.month === m; }).forEach(function(r) {
+          h += '<div class="hpv-record' + (r.paid ? ' paid' : '') + '">';
+          h += '<div class="hpv-record-top"><span>' + escapeHtml(r.itemName || '') + '</span>';
+          h += '<strong>' + (r.settleAmount != null ? hsFmtWon(r.settleAmount) : '금액 미확정') + '</strong></div>';
+          if (r.receiptImage) h += '<img class="hpv-receipt" src="' + r.receiptImage + '" onclick="window.open(this.src)">';
+          h += '<label class="hpv-paid-toggle"><input type="checkbox" ' + (r.paid ? 'checked' : '') + (r.settleAmount == null ? ' disabled' : '') + ' onchange="hpvTogglePaid(\'' + r.id + '\',this.checked)"> 입금 완료</label>';
+          h += '</div>';
+        });
+        h += '</div>';
+      });
+      body.innerHTML = h;
+    }
+    function hpvTogglePaid(id, checked) {
+      var db = firebase.firestore();
+      db.collection('housingRecords').doc(id).update({
+        paid: !!checked,
+        paidAt: checked ? new Date().toISOString() : null,
+        paidBy: checked ? 'suup' : null
+      }).then(function() { _hpvLoad(); }).catch(function(e) {
+        alert('저장에 실패했습니다: ' + (e.code || e.message));
       });
     }
 
