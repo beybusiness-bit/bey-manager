@@ -4294,3 +4294,59 @@
     .work-date-chip-basket { font-size: 16px; padding: 5px 8px; min-width: auto; }
     .work-date-chip-picker { font-size: 16px; padding: 5px 8px; min-width: auto; cursor: pointer; }
     .work-date-chip-divider { width: 1px; height: 28px; background: var(--border-color); margin: 0 2px; flex-shrink: 0; }
+
+/* 숩과의 정산 (주거비 정산) — 22단계 */
+    .btn-icon-sm { font-size:13px; padding:3px 6px; border:1px solid var(--border-color); border-radius:5px; background:none; cursor:pointer; color:var(--text-secondary); line-height:1; }
+    .btn-icon-sm:hover { background:var(--bg-hover,rgba(0,0,0,.05)); }
+    .hs-form-row { margin-bottom:12px; }
+    .hs-form-label { font-size:12px; color:var(--text-secondary); margin-bottom:5px; font-weight:600; }
+    .hs-summary-card { background:var(--card-bg,#fff); border:1px solid var(--border-color); border-radius:12px; padding:14px 16px; margin-bottom:14px; display:flex; flex-direction:column; gap:6px; }
+    .hs-summary-row { display:flex; justify-content:space-between; align-items:center; font-size:13px; }
+    .hs-summary-row strong { font-size:16px; }
+    .hs-record-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; }
+    .hs-record-card { background:var(--card-bg,#fff); border:1px solid var(--border-color); border-radius:10px; padding:12px 14px; display:flex; flex-direction:column; gap:6px; }
+    .hs-record-card.paid { opacity:.6; }
+    .hs-record-card.hs-missing { align-items:flex-start; justify-content:center; }
+    .hs-record-top { display:flex; justify-content:space-between; align-items:center; gap:6px; }
+    .hs-record-name { font-weight:700; font-size:13px; }
+    .hs-record-ratio { font-size:11px; color:var(--text-secondary); white-space:nowrap; }
+    .hs-record-amt { font-size:12px; color:var(--text-secondary); }
+    .hs-record-amt.hs-pending { color:#e17055; }
+    .hs-record-settle { font-size:13px; }
+    .hs-record-settle strong { font-size:15px; color:var(--primary-yellow,#ffde59); background:none; }
+    .hs-record-actions { display:flex; align-items:center; gap:8px; margin-top:4px; flex-wrap:wrap; }
+    .hs-paid-toggle { display:flex; align-items:center; gap:5px; font-size:12px; cursor:pointer; }
+    .hs-receipt-thumb { width:28px; height:28px; object-fit:cover; border-radius:5px; cursor:pointer; border:1px solid var(--border-color); }
+    .hs-month-group { margin-bottom:18px; }
+    .hs-month-group-title { font-size:13px; font-weight:700; margin-bottom:8px; color:var(--text-secondary); }
+    .hs-item-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; }
+    .hs-item-card { background:var(--card-bg,#fff); border:1px solid var(--border-color); border-radius:10px; padding:12px 14px; display:flex; flex-direction:column; gap:6px; }
+    .hs-item-top { display:flex; justify-content:space-between; align-items:center; }
+    .hs-item-name { font-weight:700; font-size:13px; }
+    .hs-item-type { font-size:11px; padding:2px 7px; border-radius:10px; background:var(--bg-hover,rgba(0,0,0,.06)); color:var(--text-secondary); }
+    .hs-item-detail { font-size:12px; color:var(--text-secondary); }
+    .hs-item-note { font-size:11px; color:var(--text-tertiary,#999); }
+    .hs-autogen-toggle { font-size:12px; display:flex; align-items:center; gap:5px; cursor:pointer; }
+    .hs-item-actions { display:flex; gap:6px; margin-top:4px; }
+    .hs-cumulative-list { display:flex; flex-direction:column; gap:6px; }
+    .hs-cumulative-row { display:flex; justify-content:space-between; font-size:13px; padding:8px 12px; background:var(--card-bg,#fff); border:1px solid var(--border-color); border-radius:8px; }
+    .hs-share-card { background:var(--card-bg,#fff); border:1px solid var(--border-color); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px; max-width:420px; }
+    .hs-share-desc { font-size:13px; line-height:1.6; }
+    .hs-share-url-row input { width:100%; box-sizing:border-box; font-family:'DM Mono',monospace; font-size:12px; }
+    .hs-share-toggle { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer; }
+    .hs-share-note { font-size:11px; color:var(--text-secondary); line-height:1.5; }
+
+    /* 공개 링크 뷰 (숩) */
+    .hpv-loading { text-align:center; color:var(--text-secondary,#888); padding:30px 0; font-size:13px; }
+    .hpv-error { text-align:center; color:#e17055; padding:30px 16px; font-size:13px; background:var(--card-bg,#fff); border-radius:10px; }
+    .hpv-summary { background:var(--card-bg,#fff); border:1px solid var(--border-color); border-radius:12px; padding:14px 16px; margin-bottom:16px; font-size:13px; text-align:center; }
+    .hpv-summary strong { font-size:18px; display:block; margin-top:4px; color:#e17055; }
+    .hpv-month-group { margin-bottom:16px; }
+    .hpv-month-title { font-size:13px; font-weight:700; margin-bottom:8px; color:var(--text-secondary,#888); }
+    .hpv-record { background:var(--card-bg,#fff); border:1px solid var(--border-color); border-radius:10px; padding:12px 14px; margin-bottom:8px; }
+    .hpv-record.paid { opacity:.55; }
+    .hpv-record-top { display:flex; justify-content:space-between; align-items:center; font-size:13px; margin-bottom:6px; }
+    .hpv-receipt { width:100%; max-height:140px; object-fit:cover; border-radius:8px; margin-bottom:6px; cursor:pointer; }
+    .hpv-paid-toggle { display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer; }
+    .work-sequel-row.work-sequel-locked { opacity: .55; }
+    .work-sequel-locked-badge { font-size: 11px; color: #1a8c60; white-space: nowrap; font-weight: 600; flex-shrink: 0; }
