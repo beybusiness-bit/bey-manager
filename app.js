@@ -9867,7 +9867,9 @@
       var dateStr = item.date;
       var oldStatus = getWorkStatus(item);
       if (oldStatus === newStatus) return;
-      if (oldStatus === 'done' && newStatus !== 'done' && dateStr && !item.isBonus) {
+      /* 보너스 잠금 체크 — 연결 할일(parentId 있음)은 원래 보너스 슬롯 계산에서 제외되는 항목이라
+         완료 취소가 슬롯 수에 영향을 주지 않음. 이 체크에서도 반드시 제외해야 함 */
+      if (oldStatus === 'done' && newStatus !== 'done' && dateStr && !item.isBonus && !item.parentId) {
         var bonusUsed = getBonusUsedCount(dateStr);
         var completedCnt = getCompletedNormalCount(dateStr);
         if (completedCnt - 1 < bonusUsed) {
@@ -9878,6 +9880,11 @@
       item.status = newStatus;
       item.completed = (newStatus === 'done');
       logWorkEvent('status_changed', item, oldStatus, newStatus);
+
+      /* 완료 취소 시, 이 완료로 막 생성됐고 아직 손대지 않은 순차 연결 할일이 있으면 대기 상태로 되돌림(삭제) */
+      if (oldStatus === 'done' && newStatus !== 'done') {
+        _retractSequelIfUntouched(item);
+      }
 
       /* 완료로 변경할 때 뽀모도로에 연결된 할일이면 타이머 일시정지 */
       if (newStatus === 'done' && pomodoroState.taskId === id && pomodoroState.running) {
@@ -10777,6 +10784,27 @@
           }
         }
       }
+    }
+
+    /* 완료 취소 시 호출 — item의 완료로 막 생성됐던 다음 sequel이 있고, 아직 아무 진행도 없으면(pending, 하위 sequel 없음) 대기 상태로 되돌림(삭제) */
+    function _retractSequelIfUntouched(item) {
+      var rootId, order;
+      if (item.sequelTasks && item.sequelTasks.length > 0) {
+        rootId = item.id; order = 0;
+      } else if (item.parentId && item.sequelOrder !== undefined && item.sequelOrder !== null) {
+        rootId = item.parentId; order = item.sequelOrder + 1;
+      } else {
+        return;
+      }
+      var spawned = workItems.find(function(it) { return it.parentId === rootId && it.sequelOrder === order; });
+      if (!spawned) return;
+      if (getWorkStatus(spawned) !== 'pending') return; /* 이미 진행/완료됐으면 손대지 않음 */
+      if (spawned.memo || spawned.focusTime) return; /* 메모나 뽀모도로 사용 기록이 있으면 이미 손댄 것으로 보고 유지 */
+      var hasGrandchild = workItems.some(function(it) { return it.parentId === rootId && it.sequelOrder === order + 1; });
+      if (hasGrandchild) return; /* 이미 그 다음 sequel까지 생성됐으면(사실상 진행된 것) 손대지 않음 */
+      var spawnedTitle = spawned.title;
+      workItems = workItems.filter(function(it) { return it.id !== spawned.id; });
+      showToast('🔙 연결 할일 "' + spawnedTitle + '"을 대기 상태로 되돌렸습니다', 'info');
     }
 
     function _createSequelTask(parent, order) {
