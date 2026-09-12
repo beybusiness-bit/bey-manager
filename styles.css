@@ -4348,3 +4348,5 @@
     .hpv-record-top { display:flex; justify-content:space-between; align-items:center; font-size:13px; margin-bottom:6px; }
     .hpv-receipt { width:100%; max-height:140px; object-fit:cover; border-radius:8px; margin-bottom:6px; cursor:pointer; }
     .hpv-paid-toggle { display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer; }
+    .work-sequel-row.work-sequel-locked { opacity: .55; }
+    .work-sequel-locked-badge { font-size: 11px; color: #1a8c60; white-space: nowrap; font-weight: 600; flex-shrink: 0; }

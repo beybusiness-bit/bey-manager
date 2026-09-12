@@ -10605,8 +10605,9 @@
     }
 
     var _workModalBasketSelectedId = null;
-    var _workSequelDrafts = []; /* 신규 할일 추가 시 순차 연결 할일 목록 [{emoji, title}] */
+    var _workSequelDrafts = []; /* 순차 연결 할일 목록 [{emoji, title}] — 신규 추가 + 수정 공용 */
     var _workSequelEmojiTargetIdx = -1;
+    var _workSequelLockedCount = 0; /* 이미 실제 할일로 생성(spawn)된 앞쪽 항목 개수 — 수정 불가, 표시만 */
 
     var _workBizSelectedId = null;
     function _populateWorkBizSelect(selectedId) {
@@ -10685,6 +10686,7 @@
       _populateWorkBizSelect(_initBizId);
       /* 순차 연결 할일 섹션 — 항상 표시 (연결할일에도 sequel 등록 가능) */
       _workSequelDrafts = [];
+      _workSequelLockedCount = 0;
       var sequelSection = document.getElementById('workSequelSection');
       if (sequelSection) sequelSection.style.display = '';
       _renderWorkSequelDrafts();
@@ -10812,6 +10814,7 @@
     }
 
     function _removeWorkSequel(idx) {
+      if (idx < _workSequelLockedCount) return; /* 이미 생성된 항목은 삭제 불가 */
       _workSequelDrafts.splice(idx, 1);
       _renderWorkSequelDrafts();
     }
@@ -10821,6 +10824,7 @@
     }
 
     function _openWorkSequelEmoji(idx) {
+      if (idx < _workSequelLockedCount) return; /* 이미 생성된 항목은 수정 불가 */
       _workSequelEmojiTargetIdx = idx;
       var cur = (_workSequelDrafts[idx] && _workSequelDrafts[idx].emoji) || '📋';
       openEmojiPicker(cur, function(emoji) {
@@ -10838,13 +10842,17 @@
       if (_workSequelDrafts.length === 0) { list.innerHTML = ''; return; }
       var html = '';
       _workSequelDrafts.forEach(function(sq, idx) {
-        html += '<div class="work-sequel-row">';
+        var locked = idx < _workSequelLockedCount;
+        html += '<div class="work-sequel-row' + (locked ? ' work-sequel-locked' : '') + '">';
         html += '<span class="work-sequel-order">' + (idx + 1) + '</span>';
-        html += '<button class="work-sequel-emoji-btn" onclick="_openWorkSequelEmoji(' + idx + ')">' + (sq.emoji || '📋') + '</button>';
+        html += '<button class="work-sequel-emoji-btn" onclick="_openWorkSequelEmoji(' + idx + ')"' + (locked ? ' disabled' : '') + '>' + (sq.emoji || '📋') + '</button>';
         html += '<input class="input-field work-sequel-title-input" placeholder="연결 할일 제목" value="' + escapeHtml(sq.title || '') + '" '
-          + 'oninput="_syncWorkSequelTitle(' + idx + ',this.value)" '
-          + 'onkeydown="if(event.key===\'Enter\'&&!event.isComposing){event.preventDefault();_addWorkSequel();}if(event.key===\'Escape\')closeWorkItemModal();">';
-        html += '<button class="work-sequel-remove-btn" onclick="_removeWorkSequel(' + idx + ')" title="삭제">✕</button>';
+          + (locked ? 'disabled' : (
+            'oninput="_syncWorkSequelTitle(' + idx + ',this.value)" '
+            + 'onkeydown="if(event.key===\'Enter\'&&!event.isComposing){event.preventDefault();_addWorkSequel();}if(event.key===\'Escape\')closeWorkItemModal();"'
+          )) + '>';
+        if (locked) html += '<span class="work-sequel-locked-badge" title="이미 생성된 할일이라 수정할 수 없어요">✓ 생성됨</span>';
+        else html += '<button class="work-sequel-remove-btn" onclick="_removeWorkSequel(' + idx + ')" title="삭제">✕</button>';
         html += '</div>';
       });
       list.innerHTML = html;
@@ -10881,6 +10889,12 @@
       document.getElementById('workModalBasketTab').style.display = 'none';
       /* 비즈니스 드롭다운 채우기 */
       _populateWorkBizSelect(item.businessId || null);
+      /* 순차 연결 할일 섹션 — 기존 sequelTasks 불러오기 + 이미 생성된 개수만큼 잠금 */
+      _workSequelDrafts = (item.sequelTasks || []).map(function(sq) { return { emoji: sq.emoji || '📋', title: sq.title || '' }; });
+      _workSequelLockedCount = workItems.filter(function(it) { return it.parentId === id && it.sequelOrder !== undefined && it.sequelOrder !== null; }).length;
+      var sequelSection = document.getElementById('workSequelSection');
+      if (sequelSection) sequelSection.style.display = '';
+      _renderWorkSequelDrafts();
       closeWorkDetailModal();
       modal.style.display = 'flex';
       bringModalToFront(modal);
@@ -10892,6 +10906,8 @@
       if (modal) modal.style.display = 'none';
       workItemDraft = null;
       workItemEditId = null;
+      _workSequelDrafts = [];
+      _workSequelLockedCount = 0;
     }
 
     function saveWorkItem() {
@@ -10906,6 +10922,16 @@
           item.color = emojiToWorkColor(item.emoji);
           item.memo = memo;
           item.businessId = _workBizSelectedId || null;
+          /* 순차 연결 할일 저장 (제목이 있는 항목만, 이미 생성된 앞쪽 항목은 그대로 유지) */
+          var validSequelsEdit = _workSequelDrafts.filter(function(sq) { return (sq.title || '').trim(); });
+          if (validSequelsEdit.length > 0) {
+            item.sequelTasks = validSequelsEdit.map(function(sq, i) {
+              var existing = (item.sequelTasks || [])[i];
+              return { id: (existing && existing.id) || ('sq' + Date.now() + Math.random().toString(36).slice(2,6)), emoji: sq.emoji || '📋', title: sq.title.trim(), businessId: item.businessId };
+            });
+          } else {
+            delete item.sequelTasks;
+          }
           /* 날짜 수정 */
           var dateInput = document.getElementById('workEditDateInput');
           if (dateInput) {
